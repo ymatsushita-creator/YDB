@@ -8,11 +8,15 @@ import type { Db } from './client.ts'
  * PGlite のインメモリインスタンスはテストごとに独立している。
  * トランザクションでロールバックする方式より遅いが、
  * DDL やトリガの検証が主目的なので分離の確実さを取る。
+ *
+ * 参照データは既定では入れない。テストが数える対象に、そのテストが
+ * 作っていない行が混ざると、何を検証しているのか読んで分からなくなる。
+ * 参照データそのものを検証したいテストだけ withSeeds を立てる。
  */
 export async function freshDb(opts: { withSeeds?: boolean } = {}): Promise<Db> {
   const db = await openPglite()
   await migrate(db)
-  if (opts.withSeeds !== false) await seed(db)
+  if (opts.withSeeds === true) await seed(db)
   return db
 }
 
