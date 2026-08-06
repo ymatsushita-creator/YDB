@@ -53,6 +53,9 @@ basic/                原典。設計の出発点。変更しない
   academy_schema.sql
   academy_views_revised.sql
 
+REPORT-1.0.md         2026-08-06 送付の作業報告。凍結（更新しない）
+REPORT-1.1.md         その後の補足
+
 db/
   DECISIONS.md        原典から変えたところと、その理由。まずここを読む
   migrations/         スキーマとビュー。適用済みのファイルは編集しない
