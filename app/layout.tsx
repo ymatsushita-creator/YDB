@@ -19,6 +19,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </Link>
             <nav className="nav">
               <Link href="/" className="button-ghost">ファネル</Link>
+              <Link href="/sources" className="button-ghost">流入元</Link>
               <Link href="/operations" className="button-ghost">選考オペレーション</Link>
             </nav>
           </div>

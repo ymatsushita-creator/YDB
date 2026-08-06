@@ -116,6 +116,12 @@ table.data td {
   vertical-align: top;
 }
 table.data tr:last-child td { border-bottom: 0; }
+table.data tfoot th {
+  border-top: 1px solid var(--color-hairline);
+  border-bottom: 0;
+  color: var(--color-ink);
+  font-size: 13px; letter-spacing: 0; text-transform: none;
+}
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-wrap { overflow-x: auto; }
 

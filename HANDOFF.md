@@ -16,7 +16,7 @@ YouthDB（`/Volumes/KIOXIA_2TB/NEO/YouthDB`）の開発を引き継いでほし�
 cd /Volumes/KIOXIA_2TB/NEO/YouthDB && pnpm install && pnpm db:reset && pnpm test
 ```
 
-テスト97件が通れば正常。通らなければ、そこが最初の作業。
+テスト111件が通れば正常。通らなければ、そこが最初の作業。
 
 画面は `pnpm dev`（ポート3111）。**開発サーバを起動したまま `db:reset` を
 実行しないこと。** サーバが削除前のデータファイルを掴んだままになる。
@@ -26,7 +26,7 @@ cd /Volumes/KIOXIA_2TB/NEO/YouthDB && pnpm install && pnpm db:reset && pnpm test
 1. `README.md` — 起動手順と、触る前に知るべきこと
 2. `db/DECISIONS.md` — **これが記録の本体。** 原典から変えた点と理由。
    特に冒頭の宣言、D 節（確定した仕様と保留）、E 節（記録漏れだった差分）
-3. `REPORT-1.0.md` → `REPORT-1.1.md` — これまでの経緯。1.0 は凍結済み
+3. `REPORT-1.0.md` → `REPORT-1.1.md` → `REPORT-1.2.md` — これまでの経緯。過去の版は凍結済み
 4. `basic/*.sql` — 原典。設計原則7つが冒頭にある。**変更しない**
 
 ## この プロジェクトの規律
@@ -90,8 +90,8 @@ cd /Volumes/KIOXIA_2TB/NEO/YouthDB && pnpm install && pnpm db:reset && pnpm test
 
 優先順位は指示を仰ぐこと。候補は `DECISIONS.md` の D-9 にある。
 
-- ダッシュボード(4)（流入元）。森 `partner_reaches` が画面のどこにも
-  出ていない。`f_partner_reach_summary` は実装済みだが集計値のテストが無い
+- ダッシュボード(4)（流入元）は `app/sources/page.tsx` に作った（`DECISIONS.md` C-11）。
+  残っているのは観測窓 90 日の正式な値と、`partners.category` の自由入力（D-5）
 - 本番 PostgreSQL 対応。`src/db/server.ts` に node-postgres アダプタを足す。
   そのとき `pg.types.setTypeParser` で `int8`(20) と `date`(1082) を
   同時に直さないと、数値が文字列で返り、表示日付が1日ずれる

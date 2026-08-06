@@ -297,6 +297,148 @@ export const getWithdrawReasons = (db: Db, seasonId: string) =>
      GROUP BY wr.label ORDER BY count DESC`, [seasonId])
 
 // -------------------------------------------------------------
+// (4) 流入元
+// -------------------------------------------------------------
+
+/**
+ * 森の観測窓。最後のリーチから何日後までの識別を、そのリーチに帰属させるか。
+ *
+ * 林の ACTIVE_WINDOW_DAYS とは別の概念なので、同じ 90 でも定数を分ける。
+ * 片方を運用データに合わせて動かしたときに、もう片方まで動くと困る。
+ * こちらも仮の値である。
+ */
+export const REACH_WINDOW_DAYS = 90
+
+export interface PartnerReachRow {
+  partner_id: string
+  partner_name: string
+  /** 推定値。実人数と同じ軸に並べない。 */
+  estimated_reach_total: number | null
+  contact_occasions: number
+  first_reach_on: Date
+  last_reach_on: Date
+  /** 観測窓に入った実人数。団体をまたいで重複しうるので縦に足さない。 */
+  identified_count: number
+}
+
+/** 団体別のリーチ。年度で絞る。 */
+export const getPartnerReach = (db: Db, seasonId: string, windowDays = REACH_WINDOW_DAYS) =>
+  all<PartnerReachRow>(db, `
+    SELECT r.partner_id, p.name AS partner_name,
+           COALESCE(r.estimated_reach_total, 0) AS estimated_reach_total,
+           r.contact_occasions, r.first_reach_on, r.last_reach_on, r.identified_count
+      FROM f_partner_reach_summary($2) r
+      JOIN partners p ON p.id = r.partner_id
+     WHERE r.season_id = $1
+     ORDER BY r.estimated_reach_total DESC NULLS LAST, r.identified_count DESC, p.name`,
+    [seasonId, windowDays])
+
+export interface ReachTotals {
+  /** 推定値の合計。接触機会は重複を含む概念なので足してよい。 */
+  estimated_reach_total: number
+  contact_occasions: number
+  partners: number
+  /** 年度全体の実人数。団体別の identified_count の合計とは一致しない。 */
+  identified_persons: number
+  /** 年度に紐づかないリーチ。この画面のどの表にも出ないので件数だけ示す。 */
+  season_less_occasions: number
+  season_less_reach: number
+}
+
+/**
+ * 森の年度合計。
+ *
+ * identified_persons を団体別の合計から作らない。同じ人が2団体から
+ * 接触されていれば両方の行で1と数えられており、足すと重複したまま増える。
+ * 人の集合まで戻る f_partner_reach_persons を数える。
+ */
+export const getReachTotals = (db: Db, seasonId: string, windowDays = REACH_WINDOW_DAYS) =>
+  maybeOne<ReachTotals>(db, `
+    SELECT
+      (SELECT COALESCE(sum(pr.estimated_reach), 0)::bigint
+         FROM partner_reaches pr WHERE pr.season_id = $1)      AS estimated_reach_total,
+      (SELECT count(*) FROM partner_reaches pr
+        WHERE pr.season_id = $1)                               AS contact_occasions,
+      (SELECT count(DISTINCT pr.partner_id) FROM partner_reaches pr
+        WHERE pr.season_id = $1)                               AS partners,
+      (SELECT count(DISTINCT pp.person_id)
+         FROM f_partner_reach_persons($2) pp
+        WHERE pp.season_id = $1)                               AS identified_persons,
+      (SELECT count(*) FROM partner_reaches pr
+        WHERE pr.season_id IS NULL)                            AS season_less_occasions,
+      (SELECT COALESCE(sum(pr.estimated_reach), 0)::bigint
+         FROM partner_reaches pr WHERE pr.season_id IS NULL)    AS season_less_reach`,
+    [seasonId, windowDays])
+
+export interface ChannelAttributionRow {
+  channel: string
+  self_report_group: string | null
+  /** 3方式とも合計は同じ実人数になる。配り方だけが違う。numeric は文字列で返る。 */
+  first_touch: string
+  last_touch: string
+  linear: string
+}
+
+/**
+ * チャネル別のアトリビューション3方式。
+ *
+ * (1)のチャネル別表は初回接触だけを出している。投資判断には初回を使うが、
+ * 初回だけを見ると「最初に見つけてもらう経路」と「最後に背中を押す経路」の
+ * 区別がつかない。3方式を並べると、その差がそのまま読める。
+ *
+ * 3方式は同じ実人数を違う重みで配るので、列の合計は3つとも一致する。
+ * 一致しないなら、どれかが人を落としているか二重に数えている。
+ *
+ * 削除済み Person を除く。他の集計もすべて除いており、ここだけ残すと
+ * 個人情報削除の依頼（資料9-2）がこの画面から漏れる。
+ */
+export const getChannelAttribution = (db: Db, seasonId: string) =>
+  all<ChannelAttributionRow>(db, `
+    WITH attributed AS (
+      SELECT 'first' AS method, person_id, channel_id, weight
+        FROM v_attribution_first  WHERE season_id = $1
+      UNION ALL
+      SELECT 'last',  person_id, channel_id, weight
+        FROM v_attribution_last   WHERE season_id = $1
+      UNION ALL
+      SELECT 'linear', person_id, channel_id, weight
+        FROM v_attribution_linear WHERE season_id = $1
+    )
+    SELECT c.name AS channel, c.self_report_group,
+           COALESCE(sum(a.weight) FILTER (WHERE a.method = 'first'), 0)  AS first_touch,
+           COALESCE(sum(a.weight) FILTER (WHERE a.method = 'last'), 0)   AS last_touch,
+           -- 丸めない。表示の桁で丸めると、行ごとの誤差が積もって
+           -- 縦計が3列で食い違い、「合計は一致する」という注記が嘘になる。
+           COALESCE(sum(a.weight) FILTER (WHERE a.method = 'linear'), 0) AS linear
+      FROM attributed a
+      JOIN persons p ON p.id = a.person_id AND p.deleted_at IS NULL
+      JOIN channels c ON c.id = a.channel_id
+     GROUP BY c.name, c.self_report_group
+     ORDER BY first_touch DESC, c.name`, [seasonId])
+
+export interface UnattributedTouchpoints {
+  touchpoints: number
+  persons: number
+}
+
+/**
+ * どの年度にも属さない接点。
+ *
+ * 原典は「該当 Season が存在しない接点は(4)で『未割当』として表示する」と
+ * 指示している。集計から落とすだけだと、チャネル別の人数の合計が
+ * 実際の接点数に届かない理由が画面のどこにも出ない。
+ *
+ * 年度で絞らない。どの年度にも属さないものを数えているので、
+ * 年度ごとに違う値になりようがない。
+ */
+export const getUnattributedTouchpoints = (db: Db) =>
+  maybeOne<UnattributedTouchpoints>(db, `
+    SELECT count(*) AS touchpoints, count(DISTINCT ts.person_id) AS persons
+      FROM v_touchpoint_season ts
+      JOIN persons p ON p.id = ts.person_id AND p.deleted_at IS NULL
+     WHERE ts.season_id IS NULL`)
+
+// -------------------------------------------------------------
 // (2) 選考オペレーション
 // -------------------------------------------------------------
 
