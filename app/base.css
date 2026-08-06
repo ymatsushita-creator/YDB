@@ -116,11 +116,13 @@ table.data td {
   vertical-align: top;
 }
 table.data tr:last-child td { border-bottom: 0; }
+/* 合計行。見出しの micro-uppercase ではなく caption-bold（13/600/1.4）に寄せる。
+   列見出しと同じ字面だと、合計が見出しの一部に見える。 */
 table.data tfoot th {
   border-top: 1px solid var(--color-hairline);
   border-bottom: 0;
   color: var(--color-ink);
-  font-size: 13px; letter-spacing: 0; text-transform: none;
+  font-size: 13px; line-height: 1.4; letter-spacing: 0; text-transform: none;
 }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-wrap { overflow-x: auto; }

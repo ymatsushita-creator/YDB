@@ -54,9 +54,11 @@ basic/                原典。設計の出発点。変更しない
   academy_views_revised.sql
 
 HANDOFF.md            引き継ぎプロンプト。常に最新に保つ
-REPORT-1.0.md         2026-08-06 送付の作業報告。凍結（更新しない）
-REPORT-1.1.md         その後の補足。凍結
-REPORT-1.2.md         (4)流入元と森の集計。凍結
+REPORT-1.0.md         実行① 送付の作業報告。凍結（更新しない）
+REPORT-1.1.md         実行① 補足。凍結
+REPORT-2.0.md         実行② (4)流入元と森の集計。凍結
+REPORT-2.1.md         実行② UI 素材ライブラリの検証と整理。凍結
+                      版は REPORT-<実行番号>.<連番>。規約は HANDOFF.md
 
 db/
   DECISIONS.md        原典から変えたところと、その理由。まずここを読む
