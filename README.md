@@ -53,6 +53,7 @@ basic/                原典。設計の出発点。変更しない
   academy_schema.sql
   academy_views_revised.sql
 
+HANDOFF.md            引き継ぎプロンプト。常に最新に保つ
 REPORT-1.0.md         2026-08-06 送付の作業報告。凍結（更新しない）
 REPORT-1.1.md         その後の補足
 
