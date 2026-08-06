@@ -4,6 +4,7 @@ import { getDb } from '../../../src/db/server.ts'
 import { ACTIVE_WINDOW_DAYS } from '../../../src/queries/dashboard.ts'
 import {
   getPerson, getPersonSeasonStates, getPersonApplications, getPersonTouchpoints,
+  OUTCOME_LABEL,
 } from '../../../src/queries/drilldown.ts'
 import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime,
@@ -161,11 +162,11 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                       </td>
                       <td className="nowrap">{jstDateTime(a.submitted_at)}</td>
                       <td>
-                        {a.is_accepted ? <span className="badge-tag-green">合格</span>
-                          : a.is_withdrawn ? <span className="badge-tag-orange">辞退</span>
-                          : a.is_rejected ? <span className="badge-tag-gray">不合格</span>
-                          : a.is_countable ? <span className="badge-tag-blue">選考中</span>
-                          : <span className="section-note">—</span>}
+                        {/* 結末の定義は v_application_outcome。応募の画面と同じ値を出す。
+                            画面ごとにラダーを書くと、同じ応募の結末が食い違う（A-14）。 */}
+                        <span className={OUTCOME_LABEL[a.outcome].cls}>
+                          {OUTCOME_LABEL[a.outcome].label}
+                        </span>
                       </td>
                       <td>
                         {a.is_countable

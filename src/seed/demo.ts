@@ -37,16 +37,40 @@ const CRITERIA: Record<string, Array<[string, number]>> = {
 }
 
 const iso = (d: Date) => d.toISOString()
+
+/**
+ * JST の暦日に日数を足し、`YYYY-MM-DD` で返す。
+ *
+ * 暦日の足し算に Date を使うなら、基準を UTC 深夜に取る。
+ * JST 深夜（`T00:00:00+09:00`）を基準にすると、その瞬間の UTC 日付は
+ * 前日なので、`toISOString().slice(0, 10)` が1日ずれる。
+ * A-1 と同じ間違いを、集計ではなくデータの生成側でやることになる。
+ */
 const addDays = (base: string, n: number) => {
-  const d = new Date(`${base}T00:00:00+09:00`)
+  const d = new Date(`${base}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + n)
-  return d
+  return d.toISOString().slice(0, 10)
 }
-/** JST の指定日の指定時刻。 */
+
+/**
+ * JST の指定日の指定時刻。
+ *
+ * かつては UTC の時刻を `hour - 9` で組み立てていた。JST 深夜を基準にした
+ * Date の UTC 日付が前日になるため、**どの時刻を渡しても指定日の1日前**に
+ * なっていた。応募は at(applicationOpen, 0, ...) から作るので、
+ * 最初の応募が応募開始日より前に発生していた。
+ *
+ * ファネルは応募開始日より前の出来事を初日に寄せる（0004 の clamped）ので
+ * 集計値の辻褄は合ってしまい、表に出なかった。丸め込みが欠陥を隠す形は
+ * 実行②の「表示の丸めで注記が嘘になった」と同じ。
+ *
+ * タイムゾーンつきのリテラルを組み立てて、暦の解釈を Date に任せない。
+ */
 const at = (base: string, dayOffset: number, hour: number, minute = 0) => {
-  const d = addDays(base, dayOffset)
-  d.setUTCHours(hour - 9, minute, 0, 0)
-  return iso(d)
+  const day = addDays(base, dayOffset)
+  const hh = String(hour).padStart(2, '0')
+  const mm = String(minute).padStart(2, '0')
+  return iso(new Date(`${day}T${hh}:${mm}:00+09:00`))
 }
 const daysBetween = (a: string, b: string) =>
   Math.round((+new Date(`${b}T00:00:00Z`) - +new Date(`${a}T00:00:00Z`)) / 86400000)
@@ -209,7 +233,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     for (const pid of partnerIds) {
       for (let k = 0; k < int(1, 3); k++) {
         rows.push([pid, s.id,
-          iso(addDays(s.plan.outreachStart, int(0, 55))).slice(0, 10),
+          addDays(s.plan.outreachStart, int(0, 55)),
           pick(['出張授業', '合同説明会', 'メール配信', '校内掲示']),
           int(20, 300)])
       }
@@ -542,6 +566,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
       staffIds,
       voidMergeErrorId: voidNotCounts.id,
       voidWithdrawnId: voidCounts.id,
+      activeSeason: seasons.find((s) => s.plan.year === 2027),
       stats,
     })
   }
@@ -580,6 +605,11 @@ interface PersonaContext {
   voidMergeErrorId: string
   /** counts_as_application = true。代替が生まれないので木に数える。 */
   voidWithdrawnId: string
+  /**
+   * 進行中の年度。「数えるが、動いていない」応募を置くために要る。
+   * 終わった年度では判断待ちがそもそも残らないので、その形が作れない。
+   */
+  activeSeason?: SeededSeason
   stats: DemoStats
 }
 
@@ -741,6 +771,54 @@ async function seedPersonas(db: Db, ctx: PersonaContext): Promise<void> {
   await evaluate(retried, 3, 8, '2026-01-10', '2026-01-16', [5, 4],
     'プログラムで何を得たいかを、いまの活動の続きとして説明できていた')
   await advance(retried, 3, '2026-01-20', 0)
+
+  // どの年度の期間にも入らない接点。合格の連絡のあと、次年度の集客が
+  // 始まる前に届いた1件（2026年度の選考終了 2026-02-20 と、
+  // 2027年度の集客開始 2026-04-01 のあいだ）。
+  //
+  // この形は、かつて at() の1日ずれが偶然に作っていた（A-15）。
+  // ずれを直したら消えたので、明示的に置き直した。年度の切れ目に届く
+  // 連絡は実データでは必ずあり、(4)流入元が「未割当」として数えている。
+  await touch(restarted, '友人からの紹介', '2026-03-10')
+
+  // -----------------------------------------------------------
+  // 3. 数えるが、動いていない。取り下げたのに判断待ちが残っている
+  // -----------------------------------------------------------
+  // 選考が始まる前に本人が取り下げた。無効化理由の counts_as_application は
+  // true なので、応募が起きた事実として木には数える（A-2）。しかし選考は
+  // 止まっており、面接官が判断すべきものは何も無い。
+  //
+  // ところが評価行はステップ到達時に生成済みで、pending のまま残る。
+  // 判断待ち・保留・担当未割当が v_countable_applications を母集団に
+  // していたため、この評価が催促され続ける形だった（A-14）。
+  // 「数えるか」と「動いているか」を同じ述語で扱った結果である。
+  //
+  // 進行中の年度に置く。終わった年度では判断待ちがそもそも残らないので、
+  // この形が一度も作られない。同じ見落としをこれで4回目にしないため。
+  const active = ctx.activeSeason
+  if (!active) return
+
+  const cancelled = await person({
+    familyName: '堀川', givenName: '奈々', kana: ['ほりかわ', 'なな'],
+    email: 'nana.horikawa@example.test', createdAt: ts('2026-05-18', 14),
+    note: 'デモ用の登場人物。応募後、選考が始まる前に取り下げた。'
+      + '木には数えるが、いま動いてはいない。判断待ちに出てはいけない。',
+  })
+  await touch(cancelled, '学校訪問', '2026-05-18', 14)
+  const { id: cancelledApp } = await insertOne<{ id: string }>(db,
+    `INSERT INTO applications (person_id, season_id, submitted_at) VALUES ($1,$2,$3)
+     RETURNING id`, [cancelled, active.id, ts('2026-07-10', 20)])
+  stats.applications++
+  // 担当未割当のまま残す。第1ステップは面接官なしで評価行が生成される。
+  await db.query(
+    `INSERT INTO evaluations (application_id, selection_step_id, state, assigned_at)
+     VALUES ($1,$2,'pending',$3)`,
+    [cancelledApp, active.stepIds[0], ts('2026-07-11', 10)])
+  stats.evaluations++
+  await db.query(
+    `UPDATE applications SET voided_at = $2, void_reason_id = $3 WHERE id = $1`,
+    [cancelledApp, ts('2026-07-18', 10), ctx.voidWithdrawnId])
+  stats.voided++
 }
 
 // -------------------------------------------------------------

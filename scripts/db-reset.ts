@@ -40,8 +40,11 @@ const { rows } = await db.query<Record<string, string>>(`
          (SELECT count(*) FROM v_application_state a WHERE a.season_id = se.id) AS applicants,
          (SELECT count(*) FROM v_application_state a WHERE a.season_id = se.id AND a.is_accepted) AS accepted,
          (SELECT count(*) FROM v_application_state a WHERE a.season_id = se.id AND a.is_withdrawn) AS withdrawn,
+         -- 画面の「判断待ち」と同じ母集団を数える（v_active_applications）。
+         -- 生の applications で数えると、取り下げられた応募に残った評価まで
+         -- 入り、この行と /operations の数字が食い違う（A-14）。
          (SELECT count(*) FROM evaluations e
-            JOIN applications ap ON ap.id = e.application_id
+            JOIN v_active_applications ap ON ap.id = e.application_id
            WHERE ap.season_id = se.id AND e.state = 'pending') AS pending_evals
     FROM seasons se ORDER BY se.enrollment_year`)
 

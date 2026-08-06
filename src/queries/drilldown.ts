@@ -236,12 +236,33 @@ export const getPersonSeasonStates = (
      ORDER BY enrollment_year DESC`, [id, windowDays])
 }
 
+/**
+ * 応募の結末。定義は v_application_outcome（0011）にある。
+ *
+ * 画面がこれを自前で組み立てると、同じ応募の結末が画面ごとに変わる。
+ * 実際、実行③の画面2枚は同じラダーを別々に書いており、遷移が1行も
+ * 無い応募をどちらも「選考中」にしていた（A-14）。
+ */
+export type ApplicationOutcome =
+  'accepted' | 'withdrawn' | 'rejected' | 'voided' | 'in_selection'
+
+export const OUTCOME_LABEL: Record<ApplicationOutcome, { label: string; cls: string }> = {
+  accepted:     { label: '幹（合格）', cls: 'badge-tag-green' },
+  withdrawn:    { label: '辞退',       cls: 'badge-tag-orange' },
+  rejected:     { label: '不合格',     cls: 'badge-tag-gray' },
+  voided:       { label: '無効化',     cls: 'badge-tag-gray' },
+  in_selection: { label: '選考中',     cls: 'badge-tag-blue' },
+}
+
 export interface PersonApplicationRow {
   application_id: string
   season_id: string
   enrollment_year: number
   submitted_at: Date
   is_reapplication: boolean
+  outcome: ApplicationOutcome
+  /** いま誰かが判断すべき状態にあるか。結末が付いていれば偽。 */
+  is_in_selection: boolean
   is_voided: boolean
   voided_at: Date | null
   void_reason_label: string | null
@@ -267,6 +288,7 @@ export const getPersonApplications = (db: Db, personId: string | string[] | unde
   return all<PersonApplicationRow>(db, `
     SELECT a.id AS application_id, a.season_id, se.enrollment_year, a.submitted_at,
            a.is_reapplication,
+           o.outcome, (o.outcome = 'in_selection') AS is_in_selection,
            -- v_application_state.is_voided を読む。集計に数えつつ無効化されて
            -- いる応募（取り下げ）は、この列でしか区別できない（E-4）。
            COALESCE(s.is_voided, a.voided_at IS NOT NULL) AS is_voided,
@@ -280,6 +302,7 @@ export const getPersonApplications = (db: Db, personId: string | string[] | unde
       FROM applications a
       JOIN persons p ON p.id = a.person_id AND p.deleted_at IS NULL
       JOIN seasons se ON se.id = a.season_id
+      JOIN v_application_outcome o ON o.application_id = a.id
       LEFT JOIN void_reasons vr ON vr.id = a.void_reason_id
       LEFT JOIN v_application_state s ON s.application_id = a.id
      WHERE a.person_id = $1 AND a.deleted_at IS NULL
@@ -333,6 +356,8 @@ export interface ApplicationDetail {
   submitted_at: Date
   form_response_id: string | null
   is_reapplication: boolean
+  outcome: ApplicationOutcome
+  is_in_selection: boolean
   is_voided: boolean
   voided_at: Date | null
   void_reason_label: string | null
@@ -353,6 +378,7 @@ export const getApplication = (db: Db, applicationId: string | string[] | undefi
            sc.name AS school_name,
            a.season_id, se.enrollment_year, a.submitted_at, a.form_response_id,
            a.is_reapplication,
+           o.outcome, (o.outcome = 'in_selection') AS is_in_selection,
            COALESCE(s.is_voided, a.voided_at IS NOT NULL) AS is_voided,
            a.voided_at, vr.label AS void_reason_label,
            (s.application_id IS NOT NULL) AS is_countable,
@@ -363,6 +389,7 @@ export const getApplication = (db: Db, applicationId: string | string[] | undefi
       JOIN schools sc ON sc.id = p.school_id
       JOIN seasons se ON se.id = a.season_id
       JOIN v_final_selection_step fs ON fs.season_id = a.season_id
+      JOIN v_application_outcome o ON o.application_id = a.id
       LEFT JOIN void_reasons vr ON vr.id = a.void_reason_id
       LEFT JOIN v_application_state s ON s.application_id = a.id
      WHERE a.id = $1 AND a.deleted_at IS NULL`, [id])

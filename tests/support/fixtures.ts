@@ -240,6 +240,54 @@ export async function voidApplication(
   )
 }
 
+/**
+ * 評価行を1つ作る。
+ *
+ * 実運用ではステップ到達時に生成される。担当未割当（interviewer_staff_id が
+ * NULL）も正規の状態なので、既定は未割当のままにしてある。
+ */
+export async function makeEvaluation(
+  db: Db,
+  args: {
+    applicationId: string
+    stepId: string
+    staffId?: string
+    state?: 'pending' | 'submitted' | 'held'
+    assignedAt: string
+    submittedAt?: string
+    holdReason?: string
+  },
+): Promise<string> {
+  const state = args.state ?? 'pending'
+  return scalar<string>(
+    db,
+    `INSERT INTO evaluations
+       (application_id, selection_step_id, interviewer_staff_id, state,
+        assigned_at, submitted_at, hold_reason)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+    [
+      args.applicationId,
+      args.stepId,
+      args.staffId ?? null,
+      state,
+      args.assignedAt,
+      state === 'submitted' ? args.submittedAt ?? args.assignedAt : args.submittedAt ?? null,
+      state === 'held' ? args.holdReason ?? '本人と連絡が取れない' : args.holdReason ?? null,
+    ],
+  )
+}
+
+/**
+ * 個人情報削除（資料9-2）を受けた状態にする。
+ *
+ * 削除は集計から外すだけでは足りない。氏名の見える窓が1つでも残っていたら
+ * 依頼に応えたことにならないので、テストは「画面に出る問い合わせ」の側で
+ * 確かめる必要がある。
+ */
+export async function deletePerson(db: Db, personId: string, at: string): Promise<void> {
+  await db.query(`UPDATE persons SET deleted_at = $2 WHERE id = $1`, [personId, at])
+}
+
 /** ある日のファネル1行を取り出す。 */
 export async function funnelOn(
   db: Db,

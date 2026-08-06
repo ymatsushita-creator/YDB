@@ -460,6 +460,11 @@ export interface PendingEvaluation {
  * 滞留の起点は assigned_at（ステップ到達時に評価行が生成される時刻）。
  * 基準日は jst_today()。CURRENT_DATE を使うと接続のタイムゾーン次第で
  * 滞留日数が1日ずれる。
+ *
+ * 母集団は v_active_applications。v_countable_applications ではない。
+ * あれは「木に数えるか」であって「いま動いているか」ではないため、
+ * 選考開始前に取り下げられた応募（数えるが動いていない）が残り、
+ * 面接官に催促し続けることになっていた（0011、A-14）。
  */
 export const getPendingEvaluations = (db: Db, seasonId: string) =>
   all<PendingEvaluation>(db, `
@@ -474,7 +479,7 @@ export const getPendingEvaluations = (db: Db, seasonId: string) =>
             AND (jst_today() - jst_date(e.assigned_at)) > ss.sla_days) AS over_sla
       FROM evaluations e
       JOIN selection_steps ss ON ss.id = e.selection_step_id
-      JOIN v_countable_applications a ON a.id = e.application_id
+      JOIN v_active_applications a ON a.id = e.application_id
       JOIN persons p ON p.id = a.person_id
       LEFT JOIN staffs st ON st.id = e.interviewer_staff_id
      WHERE ss.season_id = $1 AND e.state = 'pending'
@@ -499,7 +504,7 @@ export const getHeldEvaluations = (db: Db, seasonId: string) =>
            (jst_today() - jst_date(e.assigned_at)) AS waiting_days
       FROM evaluations e
       JOIN selection_steps ss ON ss.id = e.selection_step_id
-      JOIN v_countable_applications a ON a.id = e.application_id
+      JOIN v_active_applications a ON a.id = e.application_id
       JOIN persons p ON p.id = a.person_id
       LEFT JOIN staffs st ON st.id = e.interviewer_staff_id
      WHERE ss.season_id = $1 AND e.state = 'held'
@@ -538,7 +543,14 @@ export interface ConflictRow {
   state: string
 }
 
-/** 利益相反。紹介者が面接官、または面接官が応募者本人。 */
+/**
+ * 利益相反。紹介者が面接官、または面接官が応募者本人。
+ *
+ * 検出そのものは v_conflict_of_interest が行う。ここは「担当を替える
+ * 必要が残っているか」を出す画面なので、動いている応募だけに絞る。
+ * 生の applications に結合していたため、個人情報削除を受けた応募者の
+ * 氏名が運用の画面に出うる形でもあった（0011、A-14）。
+ */
 export const getConflicts = (db: Db, seasonId: string) =>
   all<ConflictRow>(db, `
     SELECT p.family_name || ' ' || p.given_name AS applicant_name,
@@ -549,7 +561,7 @@ export const getConflicts = (db: Db, seasonId: string) =>
       FROM v_conflict_of_interest coi
       JOIN evaluations e ON e.id = coi.evaluation_id
       JOIN selection_steps ss ON ss.id = e.selection_step_id
-      JOIN applications a ON a.id = coi.application_id
+      JOIN v_active_applications a ON a.id = coi.application_id
       JOIN persons p ON p.id = coi.applicant_person_id
       JOIN staffs st ON st.id = coi.interviewer_staff_id
      WHERE a.season_id = $1
@@ -560,12 +572,20 @@ export interface UnassignedRow {
   oldest_days: number | null
 }
 
-/** 担当未割当。第1ステップは面接官なしで評価行が生成される。 */
+/**
+ * 担当未割当。第1ステップは面接官なしで評価行が生成される。
+ *
+ * この問い合わせは applications にも persons にも結合していなかった。
+ * すぐ隣に並ぶ判断待ちの一覧は v_countable_applications を通っており、
+ * 同じ画面の2つの数字が別の母集団から出ていた。個人情報削除を受けた
+ * 人の評価まで数える形でもあった（0011、A-14）。
+ */
 export const getUnassignedSummary = (db: Db, seasonId: string) =>
   maybeOne<UnassignedRow>(db, `
     SELECT count(*) AS count,
            max(jst_today() - jst_date(e.assigned_at)) AS oldest_days
       FROM evaluations e
       JOIN selection_steps ss ON ss.id = e.selection_step_id
+      JOIN v_active_applications a ON a.id = e.application_id
      WHERE ss.season_id = $1 AND e.interviewer_staff_id IS NULL AND e.state = 'pending'`,
     [seasonId])

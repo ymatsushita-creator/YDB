@@ -73,7 +73,7 @@ describe('マイグレーション', () => {
 
   test('原典のビューはすべて存在する（改訂で置き換えられたものを除く）', async () => {
     const db = await freshDb()
-    const expected = [
+    const fromOriginal = [
       'v_application_state',
       'v_attribution_first',
       'v_attribution_last',
@@ -86,6 +86,15 @@ describe('マイグレーション', () => {
       'v_person_season_state',
       'v_touchpoint_season',
     ]
+    // 実装で足したもの。原典と混ぜて並べると、どれが正典由来かが
+    // 読んで分からなくなる。足すたびにここに理由ごと1行増える。
+    const added = [
+      // 0011: 応募の結末。数えるかどうかとは別の軸（A-14）
+      'v_application_outcome',
+      // 0011: いま動いている応募。判断待ち・保留・担当未割当・利益相反の母集団
+      'v_active_applications',
+    ]
+    const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(
       db,
       `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace

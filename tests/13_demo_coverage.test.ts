@@ -123,6 +123,45 @@ describe('デモデータが踏んでいる経路', () => {
     await fixed[0].close()
   })
 
+  test('「数えるが、動いていない」応募に、判断待ちの評価が残っている', async () => {
+    // 木には数えるのに選考は止まっている形（選考開始前の取り下げ）。
+    // 評価行はステップ到達時に生成済みなので pending のまま残り、
+    // 判断待ちの母集団を v_countable_applications にしていると催促され続ける。
+    // A-14 で直した分岐が、デモで実際に踏まれていることを固定する。
+    const stranded = await count(`
+      SELECT count(*) FROM evaluations e
+        JOIN v_countable_applications a ON a.id = e.application_id
+       WHERE e.state = 'pending' AND a.voided_at IS NOT NULL`)
+    assert.ok(stranded >= 1, '「数えるが、動いていない」応募に判断待ちが残る形が必要')
+
+    const active = await count(`
+      SELECT count(*) FROM evaluations e
+        JOIN v_active_applications a ON a.id = e.application_id
+       WHERE e.state = 'pending' AND a.voided_at IS NOT NULL`)
+    assert.equal(active, 0, 'その評価は「いま動いている応募」には入らない')
+  })
+
+  test('デモの出来事が、年度の期間より前に起きていない', async () => {
+    // demo.ts の at() は「JST の指定日の指定時刻」と書いてある。
+    // 実際は JST 深夜の UTC 日付が前日になるため、指定日の1日前を返していた。
+    // 応募は at(applicationOpen, 0, ...) から作られるので、
+    // 最初の応募が応募開始日より前に発生する。
+    //
+    // ファネルは応募開始日より前の出来事を初日に寄せる（0004 の clamped）ため、
+    // 集計値としては辻褄が合ってしまい、この形が表に出なかった。
+    // 丸め込みが欠陥を隠すのは、実行②の「表示の丸めで注記が嘘になった」と同じ。
+    const early = await count(`
+      SELECT count(*) FROM applications a
+        JOIN seasons se ON se.id = a.season_id
+       WHERE jst_date(a.submitted_at) < se.application_open_date`)
+    assert.equal(early, 0, '応募開始日より前の応募は作らない')
+
+    const earlyTouch = await count(`
+      SELECT count(*) FROM touchpoints t
+       WHERE jst_date(t.occurred_at) < (SELECT min(outreach_start_date) FROM seasons)`)
+    assert.equal(earlyTouch, 0, '最初の集客開始日より前の接点は作らない')
+  })
+
   test('団体経由の接点と、年度に紐づかない接点がある', async () => {
     assert.ok(await count(`SELECT count(*) FROM touchpoints WHERE partner_id IS NOT NULL`) >= 1)
     assert.ok(await count(`

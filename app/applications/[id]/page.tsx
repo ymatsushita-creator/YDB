@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
 import {
-  getApplication, getApplicationTimeline, getApplicationEvaluations,
+  getApplication, getApplicationTimeline, getApplicationEvaluations, OUTCOME_LABEL,
 } from '../../../src/queries/drilldown.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 
@@ -33,12 +33,9 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
     getApplicationEvaluations(db, app.application_id),
   ])
 
-  const result =
-    app.is_accepted ? { label: '幹（合格）', cls: 'badge-tag-green' }
-    : app.is_withdrawn ? { label: '辞退', cls: 'badge-tag-orange' }
-    : app.is_rejected ? { label: '不合格', cls: 'badge-tag-gray' }
-    : app.is_countable ? { label: '選考中', cls: 'badge-tag-blue' }
-    : { label: '集計対象外', cls: 'badge-tag-gray' }
+  // 結末は v_application_outcome（0011）が決める。画面では組み立てない。
+  // 「数える／数えない」は結末とは別の軸なので、別のバッジで出す。
+  const result = OUTCOME_LABEL[app.outcome]
 
   return (
     <>
@@ -58,6 +55,10 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
               <span className="badge-tag-purple" style={{ marginLeft: 8 }}>再応募</span>
             )}
             <span className={result.cls} style={{ marginLeft: 8 }}>{result.label}</span>
+            {/* 結末と、木に数えるかは別の軸。1つのバッジに畳むと片方が消える。 */}
+            {!app.is_countable && (
+              <span className="badge-tag-gray" style={{ marginLeft: 6 }}>集計対象外</span>
+            )}
           </p>
         </div>
       </div>
