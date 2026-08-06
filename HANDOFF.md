@@ -14,15 +14,17 @@ YouthDB の開発を引き継いでほしい。
 
 ## まず状態を確認する
 
-リポジトリは GitHub にある（`https://github.com/NEO-AX/YDB.git`）。
-直近の作業環境では `/Volumes/KIOXIA_2TB/NEO/YouthDB` だった。
-以降このディレクトリを `<repo>` と書く。
+リポジトリは GitHub にある（`https://github.com/NEO-AX/YDB.git`、`main`）。
+直近の作業環境では `/Volumes/KIOXIA_2TB/NEO/YouthDB` に置いてあった。
+以降このディレクトリを `<repo>` と書く。手元に無ければ clone する。
 
 ```bash
+git clone https://github.com/NEO-AX/YDB.git   # 手元に無い場合だけ
 pnpm install && pnpm db:reset && pnpm test
 ```
 
 テスト138件が通れば正常。通らなければ、そこが最初の作業。
+`pnpm exec tsc --noEmit` も通ることを確かめる。
 
 画面は `pnpm dev`（ポート3111）。**開発サーバを起動したまま `db:reset` を
 実行しないこと。** サーバが削除前のデータファイルを掴んだままになる。
