@@ -473,6 +473,51 @@ Season 境界での絞り込みには変更しない。
 `outreach_start_date` 〜 `application_close_date` と解釈した。
 違うなら `getReachConversion` の1箇所を直せばよい。
 
+### D-8. 実データの値が未確定（seasons）
+
+2026-08-06 の指示で「`seasons` の年度・定員(36)・目標応募数(100)は実数値」と
+伝えられた。ただしそれがどの年度のもので、4つの日付
+（`outreach_start_date` / `application_open_date` / `application_close_date` /
+`selection_end_date`）がいつなのかを確認できていない。
+
+そのため本番のシードに `seasons` の行は入れていない。
+デモの `src/seed/demo.ts` にある4年度（定員 24/30/36/40、目標 150/220/300/340）は
+すべて創作で、実数値ではない。
+
+年度と4つの日付が分かった時点で、定員36・目標100の年度を
+本番のシードに追加する。
+
+### D-9. 自己レビューで挙がったが、今回は見送った指摘
+
+2026-08-06 の指示6で明示的に見送りとしたもの。忘れないよう残す。
+
+- **`ymd()` / `md()` が本番ドライバで1日ずれる。**
+  `app/_components/ui.tsx`。PGlite は `date` 列を UTC 深夜の Date で返すため
+  `toISOString().slice(0,10)` が正しく効くが、node-postgres は既定で
+  ローカル深夜の Date を返す。JST 環境では表示だけが1日前になる。
+  集計値は `jst_date()` を通っているので影響しない。
+  node-postgres アダプタを足すときに、型パーサ（`int8` が文字列で返る件も含む）と
+  同時に対応する。
+- **`getInterviewerLoad` が `display_name` で集約している。**
+  同名のスタッフがいると別人の負荷が合算され、React の key も重複する。
+  実例が出てから直す。
+- **PGlite の dataDir にプロセス間ロックが無い。**
+  同じディレクトリを2プロセスから開くと、エラーも警告もなく後勝ちで壊れる。
+  本番は PostgreSQL なので影響は開発時のみ。README に
+  「開発サーバを起動したまま `db:reset` を実行しない」と書いてある。
+
+あわせて、レビューで挙がったが未着手のもの。
+
+- **森（`partner_reaches`）が画面のどこにも出ていない。**
+  README は「森 → 林 → 木 → 幹 を同じ場所で見る」と書いており、
+  `f_partner_reach_summary` も実装されているが、`src/queries/dashboard.ts` からも
+  `app/` からも参照していない。(4)（流入元）の画面を作るときに使う。
+  この関数にあるテストは引数ガードの1本だけで、集計値の正しさは未検証。
+- **`identity_resolutions` を書く処理が無い。**
+  テーブルは[1]で作ってあるが、名寄せ候補の提示は実装段階[4]。
+  `applications.is_reapplication` の「名寄せ確定処理から必ず再計算する」も
+  同じ理由で未実装（E-7 参照）。
+
 ---
 
 ## E. 記録漏れだった差分
