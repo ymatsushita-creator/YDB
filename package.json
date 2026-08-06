@@ -1,0 +1,21 @@
+{
+  "name": "youthdb",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "起業家アカデミー 集客〜選考 一元管理DB",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "db:reset": "node scripts/db-reset.ts",
+    "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}
