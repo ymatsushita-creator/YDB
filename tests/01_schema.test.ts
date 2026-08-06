@@ -1,5 +1,8 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { openPglite } from '../src/db/pglite.ts'
 import { migrate } from '../src/db/migrate.ts'
 import { freshDb } from '../src/db/testing.ts'
@@ -23,6 +26,48 @@ describe('マイグレーション', () => {
       '0001_schema.sql',
     ])
     await assert.rejects(() => migrate(db), /was modified after it was applied/)
+    await db.close()
+  })
+
+  test('適用済みなのにファイルが無い状態を検出する', async () => {
+    // 誤って消した、あるいは別のブランチを見ている。素通りさせると、
+    // そのマイグレーションが入っている前提で以降が進む。
+    const db = await openPglite()
+    await migrate(db)
+    await db.query(
+      `INSERT INTO schema_migrations (name, checksum) VALUES ('9999_ghost.sql', 'x')`)
+    await assert.rejects(() => migrate(db), /missing from db\/migrations/)
+    await db.close()
+  })
+
+  test('適用と記録は同一トランザクションで行われる', async () => {
+    // 途中で失敗したとき、スキーマの変更も記録も両方が巻き戻ること。
+    // 片方だけ残ると、次回以降 migrate() が同じ位置で永久に失敗する。
+    //
+    // あわせて、失敗後にコネクションが使える状態で返ること。
+    // 明示 BEGIN の中で失敗するとトランザクションは中断状態のまま開くので、
+    // ROLLBACK しないと以降のクエリがすべて別のエラーで弾かれ、
+    // 本当の失敗理由が見えなくなる。
+    const db = await openPglite()
+    const dir = await mkdtemp(join(tmpdir(), 'youthdb-mig-'))
+    await writeFile(join(dir, '0001_broken.sql'), 'CREATE TABLE half_applied (id int);\nSELECT 1/0;')
+
+    await assert.rejects(
+      () => migrate(db, { migrationsDir: dir }), /0001_broken\.sql failed.*division by zero/s)
+
+    // 失敗理由が「トランザクションが中断している」に化けていないこと
+    assert.equal(
+      Number(await scalar(db, `SELECT 1`)), 1, '失敗後もコネクションが使える')
+
+    const leftovers = await scalar<string>(db, `
+      SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relname = 'half_applied'`)
+    assert.equal(Number(leftovers), 0, 'テーブルは残らない')
+    assert.equal(
+      Number(await scalar(db, `SELECT count(*) FROM schema_migrations`)), 0,
+      '記録も残らない')
+
+    await rm(dir, { recursive: true, force: true })
     await db.close()
   })
 

@@ -24,7 +24,8 @@ const db = await openPglite(DATA_DIR)
 const applied = await migrate(db, { verbose: true })
 console.log(`migrations: ${applied.length}`)
 
-await seed(db, { verbose: true })
+// 開発環境なのでサンプルの参照データも入れる。本番では絶対に立てない。
+await seed(db, { verbose: true, includeExamples: true })
 
 if (withDemo) {
   const stats = await seedDemo(db)

@@ -35,10 +35,20 @@ export const listSeasons = (db: Db) =>
     SELECT s.*, (jst_today() BETWEEN s.outreach_start_date AND s.selection_end_date) AS is_live
       FROM seasons s ORDER BY s.enrollment_year DESC`)
 
-export const getSeason = (db: Db, seasonId: string) =>
-  maybeOne<Season>(db, `
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * URL の ?season= はユーザが自由に書ける。UUID でない文字列をそのまま
+ * WHERE s.id = $1 に渡すと invalid input syntax で 500 になる。
+ * 「知らない年度」と「壊れた入力」はどちらも「見つからない」でよい。
+ */
+export const getSeason = (db: Db, seasonId: string | string[] | undefined) => {
+  const id = Array.isArray(seasonId) ? seasonId[0] : seasonId
+  if (!id || !UUID.test(id)) return Promise.resolve(null)
+  return maybeOne<Season>(db, `
     SELECT s.*, (jst_today() BETWEEN s.outreach_start_date AND s.selection_end_date) AS is_live
-      FROM seasons s WHERE s.id = $1`, [seasonId])
+      FROM seasons s WHERE s.id = $1`, [id])
+}
 
 // -------------------------------------------------------------
 // (1) 全体サマリとファネル
@@ -96,12 +106,80 @@ export const getSummary = (db: Db, seasonId: string, windowDays = ACTIVE_WINDOW_
       COALESCE(l.net_accepted_cum, 0)      AS net_accepted,
       COALESCE(l.rejected_cum, 0)          AS rejected,
       COALESCE(l.withdrawn_cum, 0)         AS withdrawn,
+      -- 「まだ結論が出ていない」も今日時点で判定する。ここだけ期間無制限に
+      -- すると、選考終了後に記録された遷移がこの項目にだけ効いて、
+      -- 木 = 幹 + 不合格 + 辞退 + 選考中 が合わなくなる。
       (SELECT count(*) FROM v_application_state a
         WHERE a.season_id = $1
-          AND NOT a.is_accepted AND NOT a.is_rejected AND NOT a.is_withdrawn) AS in_progress,
+          AND jst_date(a.submitted_at) <= jst_today()
+          AND NOT EXISTS (
+                SELECT 1 FROM v_effective_status_histories sh
+                 WHERE sh.application_id = a.application_id
+                   AND sh.transition_type IN ('reject', 'withdraw')
+                   AND jst_date(sh.occurred_at) <= jst_today())
+          AND NOT EXISTS (
+                SELECT 1 FROM v_effective_status_histories sh
+                  JOIN v_final_selection_step fs ON fs.season_id = a.season_id
+                 WHERE sh.application_id = a.application_id
+                   AND sh.transition_type = 'advance'
+                   AND sh.selection_step_id = fs.selection_step_id
+                   AND jst_date(sh.occurred_at) <= jst_today())
+      ) AS in_progress,
       (SELECT count(*) FROM v_application_state a
-        WHERE a.season_id = $1 AND a.is_reapplication) AS reapplicant
-      FROM latest l`, [seasonId, windowDays])
+        WHERE a.season_id = $1 AND a.is_reapplication
+          AND jst_date(a.submitted_at) <= jst_today()) AS reapplicant
+      -- latest が0行でも1行返す。FROM latest だけだと、応募開始前の年度で
+      -- COALESCE が効かず結果そのものが消える。
+      FROM (SELECT 1) AS present
+      LEFT JOIN latest l ON true`, [seasonId, windowDays])
+
+export interface ReachConversion {
+  /** 募集期間中に一度でも接点があった Person の実人数。 */
+  reached_persons: number
+  /** その年度に応募した Person の実人数。応募件数ではない。 */
+  applied_persons: number
+  /** 募集期間の範囲。分母がどこまでの話かを画面に出すため。 */
+  period_from: Date
+  period_to: Date
+  /** 選考完了日を過ぎていれば確定。それまでは分母が増え続ける。 */
+  is_final: boolean
+}
+
+/**
+ * 年度単位の 林 → 木 転換率。
+ *
+ * 日次の転換率は出さない。日次の林はローリングウィンドウ（その日から遡って
+ * N 日）、日次の木は年度累積で、母集団の定義が日ごとに違う。
+ * 定義の違うものを割っても分析にならない。
+ *
+ * こちらは期間全体の EXISTS で数える。「募集期間中に一度でも接点があったか」
+ * なので、ウィンドウの幅に依存しない。分母は年度が進むにつれて増え、
+ * 応募締切を過ぎれば動かなくなる。
+ *
+ * 募集期間を outreach_start_date 〜 application_close_date と解釈している。
+ * 林は集客期に積み上がるので応募開始日からでは足りず、応募締切より後に
+ * 接点を持った人はその年度の応募母集団ではない、という読み。
+ * ここは定義が明文化されていないので、違うなら直す（DECISIONS D-7）。
+ *
+ * 分子は応募「件数」ではなく「実人数」。分母が人なので揃える。
+ */
+export const getReachConversion = (db: Db, seasonId: string) =>
+  maybeOne<ReachConversion>(db, `
+    SELECT
+      (SELECT count(DISTINCT t.person_id)
+         FROM touchpoints t
+         JOIN persons p ON p.id = t.person_id AND p.deleted_at IS NULL
+        WHERE jst_date(t.occurred_at)
+              BETWEEN s.outreach_start_date AND s.application_close_date
+          AND jst_date(t.occurred_at) <= jst_today())          AS reached_persons,
+      (SELECT count(DISTINCT a.person_id)
+         FROM v_application_state a
+        WHERE a.season_id = s.id
+          AND jst_date(a.submitted_at) <= jst_today())         AS applied_persons,
+      s.outreach_start_date                                    AS period_from,
+      s.application_close_date                                 AS period_to,
+      (jst_today() > s.selection_end_date)                     AS is_final
+      FROM seasons s WHERE s.id = $1`, [seasonId])
 
 export interface StepFlow {
   sort_order: number
@@ -130,9 +208,14 @@ export const getStepFlow = (db: Db, seasonId: string) =>
            count(DISTINCT e.application_id)   AS reached,
            count(DISTINCT adv.application_id) AS passed
       FROM selection_steps ss
-      LEFT JOIN evaluations e ON e.selection_step_id = ss.id
+      -- 到達・通過とも v_countable_applications を通す。ここだけ生テーブルを
+      -- 見ていると、無効化済み・個人情報削除済みの応募がこの表にだけ残る。
+      LEFT JOIN v_countable_applications ca ON ca.season_id = ss.season_id
+      LEFT JOIN evaluations e
+             ON e.selection_step_id = ss.id AND e.application_id = ca.id
       LEFT JOIN v_effective_status_histories adv
              ON adv.selection_step_id = ss.id AND adv.transition_type = 'advance'
+            AND adv.application_id = ca.id
      WHERE ss.season_id = $1
      GROUP BY ss.sort_order, ss.name
      ORDER BY ss.sort_order`, [seasonId])
@@ -140,7 +223,8 @@ export const getStepFlow = (db: Db, seasonId: string) =>
 export interface ChannelRow {
   channel: string
   self_report_group: string | null
-  identified: number
+  /** その年度に初回接触した実人数。林（直近N日のローリング）とは別物。 */
+  first_touch_persons: number
   applicants: number
   accepted: number
 }
@@ -148,33 +232,67 @@ export interface ChannelRow {
 /**
  * チャネル別の成果。初回接触アトリビューションで見る。
  * 3方式のうち初回を既定にするのは、集客の投資判断に使う指標だから。
+ *
+ * この表の人数列を「林」と呼ばない。林は「その日から遡って N 日以内に
+ * 接点がある人」で、ここは「その年度に初回接触した人の累積」。
+ * 定義も単位の取り方も違うものを同じ名前で1画面に並べると、
+ * 二つの数が合わないことが不具合に見える。
+ *
+ * 削除済み Person を除く。ファネルの林も生涯サマリも森の集計も除いており、
+ * ここだけ残すと個人情報削除の依頼（資料9-2）が集客画面から漏れる。
+ *
+ * 当該年度に接点が帰属しない応募者は「（年度内に接点なし）」に集める。
+ * 原典は「該当 Season が存在しない接点は…(4)で『未割当』として表示する」と
+ * 指示している。WHERE で落とすと、チャネル別の応募数の合計が
+ * 実際の応募数に届かないのに、その差が画面のどこにも出ない。
  */
 export const getChannelPerformance = (db: Db, seasonId: string) =>
   all<ChannelRow>(db, `
-    SELECT c.name AS channel, c.self_report_group,
-           count(DISTINCT af.person_id)                                     AS identified,
-           count(DISTINCT a.application_id)                                 AS applicants,
-           count(DISTINCT a.application_id) FILTER (WHERE a.is_accepted)    AS accepted
-      FROM v_attribution_first af
-      JOIN channels c ON c.id = af.channel_id
-      LEFT JOIN v_application_state a
-             ON a.person_id = af.person_id AND a.season_id = $1
-     WHERE af.season_id = $1
+    WITH attributed AS (
+      SELECT af.person_id, af.channel_id
+        FROM v_attribution_first af
+        JOIN persons p ON p.id = af.person_id AND p.deleted_at IS NULL
+       WHERE af.season_id = $1
+    ),
+    apps AS (
+      SELECT a.application_id, a.person_id, a.is_accepted
+        FROM v_application_state a
+       WHERE a.season_id = $1
+    )
+    SELECT COALESCE(c.name, '（年度内に接点なし）')                  AS channel,
+           c.self_report_group,
+           count(DISTINCT at.person_id)                             AS first_touch_persons,
+           count(DISTINCT ap.application_id)                        AS applicants,
+           count(DISTINCT ap.application_id) FILTER (WHERE ap.is_accepted) AS accepted
+      FROM attributed at
+      FULL OUTER JOIN apps ap ON ap.person_id = at.person_id
+      LEFT JOIN channels c ON c.id = at.channel_id
      GROUP BY c.name, c.self_report_group
-     ORDER BY identified DESC`, [seasonId])
+     ORDER BY first_touch_persons DESC, applicants DESC`, [seasonId])
 
 export interface WithdrawReasonRow {
   label: string
   count: number
 }
 
-/** 辞退理由の分布。チャネルの質を表す指標として(4)で読む。 */
+/**
+ * 辞退理由の分布。チャネルの質を表す指標として(4)で読む。
+ *
+ * 応募単位で数える。有効な withdraw 行が1応募に2本残る形があるため
+ * （訂正の訂正で深さ0と深さ2の両方が有効になる）、行を数えると
+ * KPI の「辞退」より多く出る。同じ画面で数が合わないのは事故のもと。
+ *
+ * withdraw_reason_id は原典で NULL 可のまま。理由なしの辞退を
+ * INNER JOIN で落とすと、分布の合計が辞退件数に届かないのに
+ * その差が画面のどこにも出ない。未記録として明示する。
+ */
 export const getWithdrawReasons = (db: Db, seasonId: string) =>
   all<WithdrawReasonRow>(db, `
-    SELECT wr.label, count(*) AS count
+    SELECT COALESCE(wr.label, '（理由未記録）') AS label,
+           count(DISTINCT sh.application_id)    AS count
       FROM v_effective_status_histories sh
       JOIN v_countable_applications a ON a.id = sh.application_id
-      JOIN withdraw_reasons wr ON wr.id = sh.withdraw_reason_id
+      LEFT JOIN withdraw_reasons wr ON wr.id = sh.withdraw_reason_id
      WHERE a.season_id = $1 AND sh.transition_type = 'withdraw'
      GROUP BY wr.label ORDER BY count DESC`, [seasonId])
 

@@ -204,8 +204,10 @@ CREATE TABLE selection_steps (
     sla_days      integer,                -- 運用時に決定
     CONSTRAINT selection_steps_order_key UNIQUE (season_id, sort_order),
     CONSTRAINT selection_steps_name_key  UNIQUE (season_id, name),
-    -- [追加] sort_order の符号は最終ステップの判定（ORDER BY DESC LIMIT 1）に効く。
-    -- 負値や重複しない飛び番は許すが、正の整数であることは担保する。
+    -- [追加] sort_order は最終ステップの判定（ORDER BY DESC LIMIT 1）に効く。
+    -- 飛び番は許す（あとから中間ステップを挿し込めるようにするため）が、
+    -- 0 と負値は禁じる。順序の意味を持たない値が混じると、
+    -- 「いちばん大きい sort_order が最終ステップ」という定義が成り立たない。
     CONSTRAINT selection_steps_order_positive CHECK (sort_order > 0),
     CONSTRAINT selection_steps_sla_positive   CHECK (sla_days IS NULL OR sla_days > 0)
 );
@@ -535,7 +537,10 @@ CREATE TABLE touchpoints (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     person_id         uuid        NOT NULL REFERENCES persons(id),
     channel_id        uuid        NOT NULL REFERENCES channels(id),
-    partner_id        uuid        REFERENCES partners(id),  -- 団体経由の場合のみ
+    -- 団体経由の場合のみ。制約名は原典の ALTER TABLE に合わせて明示する。
+    -- 自動命名に任せると touchpoints_partner_id_fkey になり、
+    -- 制約名で分岐するコードが原典と実装で食い違う。
+    partner_id        uuid        CONSTRAINT touchpoints_partner_fk REFERENCES partners(id),
     occurred_at       timestamptz NOT NULL,
     applied_at        timestamptz,
     attended_at       timestamptz,

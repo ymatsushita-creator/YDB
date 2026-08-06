@@ -17,14 +17,27 @@ interface Series {
   dashed?: boolean
 }
 
-/** 目盛りを人間が読める刻みに丸める。 */
+/**
+ * 目盛りを人間が読める刻みに丸める。
+ *
+ * 返す最後の値が軸の上端になる。**必ず max 以上にすること。**
+ * max で打ち切ると上端がデータ最大値を下回り、上の方の点が y &lt; 0 に落ちて
+ * viewBox の外に描かれる。SVG は既定で overflow: hidden なので、
+ * エラーも警告もなく折れ線の頭が切れる。実際にそうなっていた。
+ *
+ * 刻みは1以上の整数に丸める。人数・件数を数えるチャートなので、
+ * 0.25 のような刻みは目盛りラベルが重複するだけで読めない。
+ */
 function niceTicks(max: number, count = 4): number[] {
-  if (max <= 0) return [0]
-  const raw = max / count
-  const mag = 10 ** Math.floor(Math.log10(raw))
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? mag * 10
+  if (!(max > 0)) return [0, 1]
+  const magnitude = 10 ** Math.floor(Math.log10(max / count))
+  const candidate =
+    [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((s) => s * count >= max) ?? magnitude * 10
+  const step = Math.max(1, Math.round(candidate))
+
   const ticks: number[] = []
-  for (let v = 0; v <= max + step * 0.01; v += step) ticks.push(Math.round(v))
+  for (let v = 0; v < max; v += step) ticks.push(v)
+  ticks.push(ticks.length > 0 ? ticks[ticks.length - 1]! + step : step)
   return ticks
 }
 
@@ -105,16 +118,25 @@ export function Legend({ series }: { series: Series[] }) {
 
 /**
  * 段のバー。林・木・幹は単位が違う（林は人、木と幹は応募）ため
- * 同じ折れ線には載せず、段として並べて転換率を添える。
+ * 同じ折れ線には載せない。
+ *
+ * 転換率は単位が揃っている段の間でだけ出す。林（人）と木（応募）の間の
+ * 割り算は showRatio: false で抑える。日次断面では林がローリング
+ * ウィンドウ、木が年度累積で、母集団の定義そのものが日ごとに違うため、
+ * 割った値に意味がない。年度単位の 林 → 木 は別指標として出す。
  */
 export function FunnelStages({
   stages,
-}: { stages: Array<{ label: string; value: number; note?: string; color: string }> }) {
+}: {
+  stages: Array<{
+    label: string; value: number; note?: string; color: string; showRatio?: boolean
+  }>
+}) {
   const top = Math.max(1, ...stages.map((s) => s.value))
   return (
     <div className="stack" style={{ gap: 14 }}>
       {stages.map((s, i) => {
-        const prev = i > 0 ? stages[i - 1]!.value : null
+        const prev = i > 0 && s.showRatio !== false ? stages[i - 1]!.value : null
         return (
           <div key={s.label}>
             <div className="row-between" style={{ marginBottom: 4 }}>

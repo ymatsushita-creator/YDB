@@ -1,4 +1,4 @@
-import { one, scalar, type Db } from '../../src/db/client.ts'
+import { one, maybeOne, scalar, type Db } from '../../src/db/client.ts'
 
 /**
  * テスト用のデータ組み立て。
@@ -146,6 +146,24 @@ export async function makeApplication(
 
 export type TransitionType = 'advance' | 'reject' | 'withdraw' | 'revert'
 
+/**
+ * 「未確認」の辞退理由を用意して返す。
+ *
+ * 辞退には理由が必須（0008）。理由そのものを検証したいテスト以外では
+ * どの理由でもよいので、本番の参照データと同じ 'unconfirmed' を使う。
+ * テストごとに理由マスタを作らせると、辞退を1件作るたびに
+ * 検証と関係のない準備が3行増える。
+ */
+export async function unconfirmedWithdrawReason(db: Db): Promise<string> {
+  const existing = await maybeOne<{ id: string }>(
+    db, `SELECT id FROM withdraw_reasons WHERE code = 'unconfirmed'`)
+  if (existing) return existing.id
+  return scalar<string>(
+    db,
+    `INSERT INTO withdraw_reasons (code, label) VALUES ('unconfirmed', '未確認') RETURNING id`,
+  )
+}
+
 /** 状態遷移を1行追記する。訂正行を作るときは correctsHistoryId を渡す。 */
 export async function addHistory(
   db: Db,
@@ -159,6 +177,12 @@ export async function addHistory(
     correctsHistoryId?: string
   },
 ): Promise<string> {
+  // 辞退には理由が要る。指定が無ければ「未確認」を充てる。
+  const withdrawReasonId =
+    args.type === 'withdraw'
+      ? args.withdrawReasonId ?? (await unconfirmedWithdrawReason(db))
+      : args.withdrawReasonId ?? null
+
   return scalar<string>(
     db,
     `INSERT INTO status_histories
@@ -171,7 +195,7 @@ export async function addHistory(
       args.stepId ?? null,
       args.occurredAt,
       args.staffId,
-      args.withdrawReasonId ?? null,
+      withdrawReasonId,
       args.correctsHistoryId ?? null,
     ],
   )

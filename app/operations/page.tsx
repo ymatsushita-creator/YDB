@@ -16,9 +16,8 @@ export default async function OperationsPage(
     return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
   }
 
-  const requested = (await searchParams).season
   const season =
-    (requested ? await getSeason(db, requested) : null) ??
+    (await getSeason(db, (await searchParams).season)) ??
     seasons.find((s) => s.is_live) ?? seasons[0]!
 
   const [pending, held, load, conflicts, unassigned] = await Promise.all([

@@ -23,7 +23,7 @@ function rng(seed: number) {
 const FAMILY = ['佐藤','鈴木','高橋','田中','伊藤','渡辺','山本','中村','小林','加藤',
   '吉田','山田','佐々木','山口','松本','井上','木村','林','清水','斎藤']
 const GIVEN = ['陽菜','蓮','結衣','悠真','咲良','大翔','葵','湊','杏','颯太',
-  '莉子','樹','美咲','悠人','花','律','菜月','optimism','翼','琉生'].filter((s) => /[ぁ-ん一-龥ァ-ヶ]/.test(s))
+  '莉子','樹','美咲','悠人','花','律','菜月','奏','翼','琉生']
 const SCHOOLS = ['第一高等学校','明星学園高校','桜丘高等学校','北稜高校','東雲学院',
   '緑ヶ丘高等学校','中央高校','西湖高等学校','南陽高校','啓明学園','清和高等学校','天籟高校']
 const PARTNERS = ['NPO法人みらい教育','県教育委員会','市立図書館連携事業','起業支援センターK',
@@ -88,6 +88,8 @@ export interface DemoStats {
   persons: number
   touchpoints: number
   applications: number
+  voided: number
+  deleted_persons: number
   histories: number
   evaluations: number
   scores: number
@@ -135,6 +137,13 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
 
   const withdrawReasons = (await db.query<{ id: string }>(
     `SELECT id FROM withdraw_reasons WHERE code <> 'other'`)).rows.map((r) => r.id)
+
+  // 無効化理由。counts_as_application の両方を引く。
+  // どちらか片方しか使わないデータだと、A-2 の分岐が一度も踏まれない。
+  const voidCounts = await insertOne<{ id: string }>(db,
+    `SELECT id FROM void_reasons WHERE code = 'withdrawn_before_screening'`, [])
+  const voidNotCounts = await insertOne<{ id: string }>(db,
+    `SELECT id FROM void_reasons WHERE code = 'identity_merge_error'`, [])
 
   // --- Season と選考フロー ---
   interface Criterion { id: string; reapplicantOnly: boolean }
@@ -200,7 +209,8 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
 
   // --- 人・接点・応募 ---
   const stats: DemoStats = {
-    persons: 0, touchpoints: 0, applications: 0, histories: 0, evaluations: 0, scores: 0,
+    persons: 0, touchpoints: 0, applications: 0, voided: 0, deleted_persons: 0,
+    histories: 0, evaluations: 0, scores: 0,
   }
   /** 過去に応募して不合格・辞退になった人。翌年度の再応募母集団になる。 */
   let returning: string[] = []
@@ -298,6 +308,25 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
       cols(appRows))
     stats.applications += appIds.length
 
+    // 一部を無効化する。集計に残るもの（選考前の取り下げ）と、
+    // 代替が生まれるので残さないもの（名寄せ誤り）の両方を作る。
+    // 実データには必ず現れる形なので、デモにも無いと画面が検証できない。
+    const voided: Array<[string, string, string]> = []
+    for (const [ai, appId] of appIds.entries()) {
+      if (rand() >= 0.03) continue
+      const voidedAt = new Date(+new Date(appRows[ai]![2]) + int(1, 20) * 86400000)
+      if (+voidedAt > horizon) continue
+      voided.push([appId, rand() < 0.5 ? voidCounts.id : voidNotCounts.id, iso(voidedAt)])
+    }
+    if (voided.length > 0) {
+      await db.query(
+        `UPDATE applications a
+            SET voided_at = v.at, void_reason_id = v.reason
+           FROM unnest($1::uuid[], $2::uuid[], $3::timestamptz[]) AS v(id, reason, at)
+          WHERE a.id = v.id`, cols(voided))
+      stats.voided += voided.length
+    }
+
     // 選考の進行
     const nextReturning: string[] = []
     const acceptedPersons: string[] = []
@@ -307,12 +336,17 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     > = []
     const scoreRows: Array<[number, string, number, string]> = []  // evalIndex は後で解決
 
+    const voidedIds = new Set(voided.map((v) => v[0]))
     for (const [ai, appId] of appIds.entries()) {
+      if (voidedIds.has(appId)) continue
       const personId = appRows[ai]![0]
       const isReapplication = appRows[ai]![3]
       const submitted = new Date(appRows[ai]![2])
       let cursor = +submitted
       let alive = true
+      // 地平線に達して選考が途中で止まったのか、最終ステップまで通ったのか。
+      // 区別しないと、まだ選考中の人が「合格者」として卒業生スタッフになる。
+      let reachedFinal = false
 
       for (const [si, stepId] of s.stepIds.entries()) {
         if (!alive) break
@@ -320,7 +354,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
         const assignedAt = iso(new Date(cursor))
         const interviewer = si === 0 ? null : pick(staffIds)
 
-        if (cursor > horizon) break   // このステップにはまだ到達していない
+        if (cursor > horizon) { alive = false; break }   // まだ到達していない
 
         // 評価行はステップ到達時に生成される。第1ステップのみ担当未割当。
         // 判断がまだ下りていない（今日より後の）評価は pending のまま残り、
@@ -358,6 +392,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
 
         if (rand() < plan.passRates[si]!) {
           histories.push([appId, 'advance', stepId, iso(new Date(cursor)), pick(staffIds), null])
+          if (si === s.stepIds.length - 1) reachedFinal = true
         } else {
           histories.push([appId, 'reject', null, iso(new Date(cursor)), pick(staffIds), null])
           nextReturning.push(personId)
@@ -365,10 +400,10 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
         }
       }
 
-      if (alive) acceptedPersons.push(personId)
+      if (reachedFinal) acceptedPersons.push(personId)
 
       // 内定辞退
-      if (alive && rand() < 0.12) {
+      if (reachedFinal && rand() < 0.12) {
         cursor += int(2, 14) * 86400000
         if (cursor <= horizon) {
           histories.push([appId, 'withdraw', null, iso(new Date(cursor)),
@@ -432,23 +467,33 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   // ならない。評価行のないステップに advance を入れると、
   // 「到達0・通過3」という読めない集計ができる。
   // 不合格の直前に割り当てられた評価が、落ちたステップを指している。
+  // 並べ替えの第1キーを sh.id にすると、gen_random_uuid() で毎回別の6件が
+  // 選ばれる。訂正データは「訂正が来た日に壊れないこと」を確かめるために
+  // 入れているのに、そこだけ再現しないのでは意味がない。
+  // occurred_at と application_id で決定的に並べる。
   const toCorrect = (await db.query<{
     id: string; application_id: string; selection_step_id: string
   }>(`
-    SELECT DISTINCT ON (sh.id) sh.id, sh.application_id, e.selection_step_id
+    SELECT DISTINCT ON (sh.occurred_at, sh.application_id)
+           sh.id, sh.application_id, e.selection_step_id
       FROM status_histories sh
       JOIN evaluations e ON e.application_id = sh.application_id
                         AND e.assigned_at <= sh.occurred_at
      WHERE sh.transition_type = 'reject' AND sh.corrects_history_id IS NULL
-     ORDER BY sh.id, e.assigned_at DESC`)).rows.slice(0, 6)
+     ORDER BY sh.occurred_at, sh.application_id, e.assigned_at DESC`)).rows.slice(0, 6)
 
   for (const [i, h] of toCorrect.entries()) {
     // 不合格を取り消して通過に訂正する（半分）、取り消しをさらに訂正する（半分）
+    // 訂正の時刻に now() を使わない。過去の年度の記録を「今日」訂正すると、
+    // 元の不合格は年度の系列から消えるのに訂正後の合格は系列に載らない、
+    // という読めない状態になる。訂正は元の記録の翌日に起きたことにする。
     const { id: correction } = await insertOne<{ id: string }>(db,
       `INSERT INTO status_histories
          (application_id, transition_type, selection_step_id, occurred_at,
           changed_by_staff_id, is_correction, corrects_history_id)
-       VALUES ($1, 'advance', $2, now(), (SELECT id FROM staffs LIMIT 1), true, $3)
+       SELECT $1, 'advance', $2, orig.occurred_at + interval '1 day',
+              orig.changed_by_staff_id, true, $3
+         FROM status_histories orig WHERE orig.id = $3
        RETURNING id`, [h.application_id, h.selection_step_id, h.id])
     stats.histories++
 
@@ -457,11 +502,26 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
         `INSERT INTO status_histories
            (application_id, transition_type, occurred_at, changed_by_staff_id,
             is_correction, corrects_history_id)
-         VALUES ($1, 'reject', now(), (SELECT id FROM staffs LIMIT 1), true, $2)`,
+         SELECT $1, 'reject', prev.occurred_at + interval '1 day',
+                prev.changed_by_staff_id, true, $2
+           FROM status_histories prev WHERE prev.id = $2`,
         [h.application_id, correction])
       stats.histories++
     }
   }
+
+  // 個人情報削除の依頼（資料9-2）。応募していない Person から選ぶ。
+  // 削除済みが1件も無いと、集計から外れているかを画面で確かめられない。
+  const deleted = await db.query(`
+    UPDATE persons SET deleted_at = now()
+     WHERE id IN (
+       SELECT p.id FROM persons p
+        WHERE p.deleted_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.person_id = p.id)
+          AND NOT EXISTS (SELECT 1 FROM staffs st WHERE st.person_id = p.id)
+        ORDER BY p.created_at LIMIT 3)
+     RETURNING id`)
+  stats.deleted_persons = deleted.rows.length
 
   return stats
 }

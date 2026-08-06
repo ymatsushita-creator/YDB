@@ -30,6 +30,12 @@ export function getDb(): Promise<Db> {
       'src/db/server.ts に node-postgres の実装を足すこと。',
     )
   }
-  cache.__youthdb ??= openPglite(DATA_DIR)
+  // ??= は rejected な Promise を置き換えない。一度でも開けなかったら、
+  // 原因が消えてもプロセスを再起動するまで全リクエストが同じエラーを返す。
+  // 失敗したらキャッシュから外し、次のリクエストでやり直せるようにする。
+  cache.__youthdb ??= openPglite(DATA_DIR).catch((e: unknown) => {
+    delete cache.__youthdb
+    throw e
+  })
   return cache.__youthdb
 }

@@ -1,7 +1,7 @@
 import { getDb } from '../src/db/server.ts'
 import {
   listSeasons, getSeason, getFunnel, getSummary, getStepFlow,
-  getChannelPerformance, getWithdrawReasons, ACTIVE_WINDOW_DAYS,
+  getChannelPerformance, getWithdrawReasons, getReachConversion, ACTIVE_WINDOW_DAYS,
 } from '../src/queries/dashboard.ts'
 import { Card, Kpi, SeasonTabs, Empty, num, pct, ymd } from './_components/ui.tsx'
 import { TimeSeries, Legend, FunnelStages } from './_components/charts.tsx'
@@ -30,17 +30,17 @@ export default async function FunnelPage(
     return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
   }
 
-  const requested = (await searchParams).season
   const season =
-    (requested ? await getSeason(db, requested) : null) ??
+    (await getSeason(db, (await searchParams).season)) ??
     seasons.find((s) => s.is_live) ?? seasons[0]!
 
-  const [summary, funnel, steps, channels, withdrawals] = await Promise.all([
+  const [summary, funnel, steps, channels, withdrawals, reach] = await Promise.all([
     getSummary(db, season.id),
     getFunnel(db, season.id),
     getStepFlow(db, season.id),
     getChannelPerformance(db, season.id),
     getWithdrawReasons(db, season.id),
+    getReachConversion(db, season.id),
   ])
 
   const s = summary ?? {
@@ -81,12 +81,14 @@ export default async function FunnelPage(
       </div>
 
       <div className="section grid grid-2">
-        <Card title="段" note="林は人、木と幹は応募。単位が違うので同じ軸には載せない">
+        <Card title="段">
           <FunnelStages stages={[
             { label: '林 identified_person', value: s.identified_person,
               note: '（人）', color: 'var(--color-brand-purple)' },
+            // 林（人）→ 木（応募）は単位が違ううえ、日次では母集団の定義も違う。
+            // 割り算を出さない。年度単位の転換率は下のカードで出す。
             { label: '木 applicant', value: s.applicant,
-              note: '（応募）', color: 'var(--color-primary)' },
+              note: '（応募）', color: 'var(--color-primary)', showRatio: false },
             { label: '幹 accepted', value: s.accepted,
               note: '（応募）', color: 'var(--color-brand-green)' },
             { label: '純幹 net accepted', value: s.net_accepted,
@@ -94,6 +96,11 @@ export default async function FunnelPage(
           ]} />
           <p className="section-note" style={{ marginTop: 16 }}>
             不合格 {num(s.rejected)} ・ 辞退 {num(s.withdrawn)} ・ 再応募 {num(s.reapplicant)}
+          </p>
+          <p className="unit-note">
+            林は人数、木・幹は応募件数。同一人物が複数年度に応募すると
+            木・幹は重複しうる。林は直近 {ACTIVE_WINDOW_DAYS} 日のローリング、
+            木・幹は年度の累積なので、この2段の間で割り算はしていない。
           </p>
         </Card>
 
@@ -126,6 +133,40 @@ export default async function FunnelPage(
       </div>
 
       <div className="section">
+        <Card
+          title="年度の 林 → 木 転換率"
+          note="日次ではなく期間全体で数える。分母も分子も実人数"
+        >
+          {!reach ? <Empty>年度が取得できない</Empty> : (
+            <div className="row-between" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <span className="kpi-value">
+                  {pct(Number(reach.applied_persons), Number(reach.reached_persons))}
+                </span>
+                <span className="kpi-meta">
+                  {'  '}{num(reach.reached_persons)} 人が接点を持ち、
+                  {num(reach.applied_persons)} 人が応募した
+                </span>
+              </div>
+              <span className={reach.is_final ? 'badge-tag-green' : 'badge-tag-orange'}>
+                {reach.is_final ? '確定' : '暫定'}
+              </span>
+            </div>
+          )}
+          {reach && (
+            <p className="unit-note">
+              分母は募集期間（{ymd(reach.period_from)} 〜 {ymd(reach.period_to)}）に
+              一度でも接点があった人の実人数。ローリングウィンドウではないので
+              窓の幅に依存しない。
+              {reach.is_final
+                ? ' 選考完了日を過ぎたため確定値。'
+                : ' 選考完了日までは分母が増え続けるため暫定値。'}
+            </p>
+          )}
+        </Card>
+      </div>
+
+      <div className="section">
         <Card title="日次の累積" note="到達したことがあるかで数える。差し戻しがあっても戻らない">
           <TimeSeries points={funnel} series={[...SERIES]} valueLabel="応募と選考結果" />
           <Legend series={[...SERIES]} />
@@ -135,18 +176,23 @@ export default async function FunnelPage(
       <div className="section">
         <Card title="林の推移" note={`その日から遡って ${ACTIVE_WINDOW_DAYS} 日以内に接点がある人。累積ではない`}>
           <TimeSeries points={funnel} series={[...GROVE]} height={160} valueLabel="林" />
+          <p className="unit-note">
+            アクティブ判定の窓 {ACTIVE_WINDOW_DAYS} 日は<strong>仮の値</strong>。
+            運用データが溜まってから、スコアリングの減衰半減期と合わせて決める。
+            窓を変えると林の人数も、上の年度転換率以外の転換率もすべて動く。
+          </p>
         </Card>
       </div>
 
       <div className="section grid grid-2">
-        <Card title="チャネル別" note="初回接触アトリビューション">
+        <Card title="チャネル別" note="初回接触アトリビューション。人数列は林ではなく、その年度の初回接触の累積">
           {channels.length === 0 ? <Empty>接点がまだない</Empty> : (
             <div className="table-wrap">
               <table className="data">
                 <thead>
                   <tr>
                     <th>チャネル</th>
-                    <th className="num">林</th>
+                    <th className="num">初回接触</th>
                     <th className="num">木</th>
                     <th className="num">幹</th>
                     <th className="num">応募率</th>
@@ -161,10 +207,12 @@ export default async function FunnelPage(
                           <span className="section-note"> · {c.self_report_group}</span>
                         )}
                       </td>
-                      <td className="num">{num(c.identified)}</td>
+                      <td className="num">{num(c.first_touch_persons)}</td>
                       <td className="num">{num(c.applicants)}</td>
                       <td className="num">{num(c.accepted)}</td>
-                      <td className="num">{pct(Number(c.applicants), Number(c.identified))}</td>
+                      <td className="num">
+                        {pct(Number(c.applicants), Number(c.first_touch_persons))}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -196,6 +244,7 @@ export default async function FunnelPage(
         すべての日付境界は <code>jst_date()</code> を通している。
         接続のタイムゾーンが変わっても集計値は動かない。
         訂正された遷移は <code>v_effective_status_histories</code> で解決済み。
+        林のアクティブ判定窓 <code>{ACTIVE_WINDOW_DAYS}</code> 日は仮の値で、正式な日数は未決定。
       </p>
     </>
   )

@@ -1,20 +1,18 @@
 -- =============================================================
 -- 0005 状態ビューの書き直し
 --
--- 0004 と同じ問題が v_application_state と v_person_lifetime_summary にも
--- あった。実測（応募947件）:
---
---     v_application_state       1,148ms   947行
---     v_person_season_state     1,192ms  6365行
---
--- 応募1件ごとに EXISTS が3本走り、そのたびに訂正チェーンの再帰CTEが
--- 先頭から評価されていた。947 × 3 回。
+-- 0004 と同じ構造の問題が v_application_state と v_person_lifetime_summary にも
+-- ある。応募1件ごとに EXISTS が3本走り、そのたびに訂正チェーンの再帰CTEが
+-- 先頭から評価される。訂正の解決が「応募数 × 3」回起きる。
+-- v_person_season_state は v_application_state を引くので、そのまま巻き込まれる。
 --
 -- 相関副問い合わせを LEFT JOIN + FILTER 付き集約に置き換える。
 -- 訂正チェーンの解決は結合の中で1回だけ起きる。
 --
 -- 意味論は変えない。EXISTS は bool_or と同値で、
 -- 行が1つも無いときの false は COALESCE で明示する。
+-- この同値性は tests/08_state_equivalence.test.ts で、
+-- 原典 basic/ の EXISTS 版を参照実装として突き合わせている。
 -- =============================================================
 
 CREATE OR REPLACE VIEW v_application_state AS

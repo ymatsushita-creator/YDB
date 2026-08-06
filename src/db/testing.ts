@@ -11,29 +11,18 @@ import type { Db } from './client.ts'
  *
  * 参照データは既定では入れない。テストが数える対象に、そのテストが
  * 作っていない行が混ざると、何を検証しているのか読んで分からなくなる。
- * 参照データそのものを検証したいテストだけ withSeeds を立てる。
+ *
+ * 参照データそのものを検証したいテストは seeds を渡す。
+ *   'production' … db/seeds/*.sql のみ（本番と同じ）
+ *   'examples'   … サンプル（*.example.sql）も含める
+ * 実際に使っているのは tests/09_definition_fidelity.test.ts。
  */
-export async function freshDb(opts: { withSeeds?: boolean } = {}): Promise<Db> {
+export async function freshDb(
+  opts: { seeds?: 'none' | 'production' | 'examples' } = {},
+): Promise<Db> {
   const db = await openPglite()
   await migrate(db)
-  if (opts.withSeeds === true) await seed(db)
+  if (opts.seeds === 'production') await seed(db)
+  if (opts.seeds === 'examples') await seed(db, { includeExamples: true })
   return db
-}
-
-/** SQL が特定のメッセージで失敗することを確かめる。 */
-export async function expectFailure(
-  fn: () => Promise<unknown>,
-  match: RegExp,
-): Promise<Error> {
-  let err: Error | undefined
-  try {
-    await fn()
-  } catch (e) {
-    err = e as Error
-  }
-  if (!err) throw new Error(`expected a failure matching ${match}, but it succeeded`)
-  if (!match.test(err.message)) {
-    throw new Error(`expected failure matching ${match}, got: ${err.message}`)
-  }
-  return err
 }

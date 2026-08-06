@@ -167,3 +167,14 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   font-family: var(--font-mono); font-size: 12px;
   background: var(--color-surface); padding: 1px 5px; border-radius: var(--rounded-xs);
 }
+
+/* 単位や母集団の定義が違うことの注記。読み飛ばされない程度の強さで置く。 */
+.unit-note {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--rounded-sm);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-slate);
+}
