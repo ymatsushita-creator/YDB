@@ -17,7 +17,7 @@ const setup = async () => {
   const season = await makeSeason(db, {
     year: 2026, applicationOpen: OPEN, applicationClose: CLOSE, selectionEnd: END,
   })
-  return { db, ...base, season }
+  return { ...base, season }
 }
 
 describe('ファネルは累積で数える', () => {

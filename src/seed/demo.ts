@@ -143,7 +143,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   }> = []
 
   for (const plan of PLANS) {
-    const [{ id }] = await insertRows<{ id: string }>(db,
+    const { id } = await insertOne<{ id: string }>(db,
       `INSERT INTO seasons (enrollment_year, outreach_start_date, application_open_date,
                             application_close_date, selection_end_date, capacity,
                             target_application_count)
@@ -154,7 +154,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     const stepIds: string[] = []
     const criteriaByStep: Criterion[][] = []
     for (const [i, name] of STEPS.entries()) {
-      const [{ id: stepId }] = await insertRows<{ id: string }>(db,
+      const { id: stepId } = await insertOne<{ id: string }>(db,
         `INSERT INTO selection_steps (season_id, sort_order, name, sla_days)
          VALUES ($1,$2,$3,$4) RETURNING id`, [id, i + 1, name, [10, 7, 7, 5][i]])
       stepIds.push(stepId)
@@ -170,7 +170,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
 
       // 再応募者限定の軸は最終面接にだけ置く。
       if (name === '最終面接') {
-        const [{ id: reapp }] = await insertRows<{ id: string }>(db,
+        const { id: reapp } = await insertOne<{ id: string }>(db,
           `INSERT INTO evaluation_criteria
              (selection_step_id, name, scale_max, applies_to, sort_order)
            VALUES ($1, '前回からの変化', 5, 'reapplicant_only', 99) RETURNING id`, [stepId])
@@ -204,6 +204,12 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   }
   /** 過去に応募して不合格・辞退になった人。翌年度の再応募母集団になる。 */
   let returning: string[] = []
+  /**
+   * 卒業生スタッフの person_id。
+   * この人たちが紹介者にも面接官にもなりうるため、利益相反が自然に生まれる。
+   * 利益相反が一件も起きないデータでは、検出ビューが動いているか分からない。
+   */
+  const alumniPersonIds: string[] = []
 
   for (const s of seasons) {
     const { plan } = s
@@ -215,7 +221,9 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     const newPeople = Math.round(plan.target / plan.applyRate)
 
     // 識別（林に入る）。集客期間に一様に散らし、今日より後は切る。
-    const personRows: Array<[string, string, string, string, string, string]> = []
+    const personRows: Array<
+      [string, string, string, string, string, string, string | null]
+    > = []
     for (let i = 0; i < newPeople; i++) {
       const day = int(0, outreachDays)
       const createdAtIso = at(plan.outreachStart, day, int(9, 21), int(0, 59))
@@ -226,12 +234,17 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
         pick(schoolIds),
         `demo${plan.year}_${i}@example.test`,
         createdAtIso,
+        // 卒業生からの紹介。紹介チャネルの合格率が実力かバイアスかを
+        // 後から検証できるよう、紹介の事実を Person に残す（資料3-4）。
+        alumniPersonIds.length > 0 && rand() < 0.12 ? pick(alumniPersonIds) : null,
       ])
     }
     if (personRows.length === 0) continue
     const newIds = await insertReturning(db,
-      `INSERT INTO persons (family_name, given_name, birth_date, school_id, email, created_at)
-       SELECT * FROM unnest($1::text[],$2::text[],$3::date[],$4::uuid[],$5::text[],$6::timestamptz[])
+      `INSERT INTO persons
+         (family_name, given_name, birth_date, school_id, email, created_at, referrer_person_id)
+       SELECT * FROM unnest($1::text[],$2::text[],$3::date[],$4::uuid[],$5::text[],
+                            $6::timestamptz[],$7::uuid[])
        RETURNING id`, cols(personRows))
     stats.persons += newIds.length
 
@@ -287,8 +300,11 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
 
     // 選考の進行
     const nextReturning: string[] = []
+    const acceptedPersons: string[] = []
     const histories: Array<[string, string, string | null, string, string, string | null]> = []
-    const evals: Array<[string, string, string | null, string, string, string | null]> = []
+    const evals: Array<
+      [string, string, string | null, string, string, string | null, string | null]
+    > = []
     const scoreRows: Array<[number, string, number, string]> = []  // evalIndex は後で解決
 
     for (const [ai, appId] of appIds.entries()) {
@@ -311,9 +327,17 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
         // これが(2)の滞留・担当未割当として見えるものになる。
         const decided = cursor + int(1, 9) * 86400000
         const stillOpen = decided > horizon
+        // 保留は「判断を止めている」状態。理由が必須なので必ず読める形で残る。
+        const held = stillOpen && rand() < 0.12
         evals.push([appId, stepId, interviewer,
-          stillOpen ? 'pending' : 'submitted', assignedAt,
-          stillOpen ? null : iso(new Date(decided))])
+          held ? 'held' : stillOpen ? 'pending' : 'submitted', assignedAt,
+          stillOpen ? null : iso(new Date(decided)),
+          held ? pick([
+            '追加提出を依頼して返答待ち',
+            '面接官の間で評価が割れており再面接を検討中',
+            '本人の都合で日程を再調整中',
+            '保護者の同意確認待ち',
+          ]) : null])
 
         const evalIndex = evals.length - 1
         if (!stillOpen) {
@@ -341,6 +365,8 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
         }
       }
 
+      if (alive) acceptedPersons.push(personId)
+
       // 内定辞退
       if (alive && rand() < 0.12) {
         cursor += int(2, 14) * 86400000
@@ -365,9 +391,10 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
 
     const evalIds = evals.length === 0 ? [] : await insertReturning(db,
       `INSERT INTO evaluations
-         (application_id, selection_step_id, interviewer_staff_id, state, assigned_at, submitted_at)
+         (application_id, selection_step_id, interviewer_staff_id, state,
+          assigned_at, submitted_at, hold_reason)
        SELECT * FROM unnest($1::uuid[],$2::uuid[],$3::uuid[],$4::text[],
-                            $5::timestamptz[],$6::timestamptz[]) RETURNING id`,
+                            $5::timestamptz[],$6::timestamptz[],$7::text[]) RETURNING id`,
       cols(evals))
     stats.evaluations += evalIds.length
 
@@ -380,27 +407,49 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
       stats.scores += resolved.length
     }
 
+    // 合格者の一部が翌年度から運営に入る。面接官として選考にも関わる。
+    for (let k = 0; k < 2 && acceptedPersons.length > 0; k++) {
+      const personId = pick(acceptedPersons)
+      if (alumniPersonIds.includes(personId)) continue
+      const existing = await db.query(
+        `SELECT 1 FROM staffs WHERE person_id = $1`, [personId])
+      if (existing.rows.length > 0) continue
+      const { id: staffId } = await insertOne<{ id: string }>(db,
+        `INSERT INTO staffs (person_id, display_name, email)
+         SELECT $1, p.family_name || ' ' || p.given_name,
+                'alumni_' || left(p.id::text, 8) || '@example.test'
+           FROM persons p WHERE p.id = $1 RETURNING id`, [personId])
+      staffIds.push(staffId)
+      alumniPersonIds.push(personId)
+    }
+
     returning = nextReturning
   }
 
   // --- 訂正が入った実例を少しだけ混ぜる ---
   // 訂正のないデータで作ったダッシュボードは、訂正が来た日に壊れる。
-  const toCorrect = (await db.query<{ id: string; application_id: string }>(
-    `SELECT sh.id, sh.application_id FROM status_histories sh
-      WHERE sh.transition_type = 'reject' AND sh.corrects_history_id IS NULL
-      ORDER BY sh.occurred_at DESC LIMIT 6`)).rows
+  // 訂正で「通過」にするステップは、その不合格が起きたステップでなければ
+  // ならない。評価行のないステップに advance を入れると、
+  // 「到達0・通過3」という読めない集計ができる。
+  // 不合格の直前に割り当てられた評価が、落ちたステップを指している。
+  const toCorrect = (await db.query<{
+    id: string; application_id: string; selection_step_id: string
+  }>(`
+    SELECT DISTINCT ON (sh.id) sh.id, sh.application_id, e.selection_step_id
+      FROM status_histories sh
+      JOIN evaluations e ON e.application_id = sh.application_id
+                        AND e.assigned_at <= sh.occurred_at
+     WHERE sh.transition_type = 'reject' AND sh.corrects_history_id IS NULL
+     ORDER BY sh.id, e.assigned_at DESC`)).rows.slice(0, 6)
 
   for (const [i, h] of toCorrect.entries()) {
-    const fs = await db.query<{ selection_step_id: string }>(
-      `SELECT fs.selection_step_id FROM v_final_selection_step fs
-         JOIN applications a ON a.season_id = fs.season_id WHERE a.id = $1`, [h.application_id])
-    // 不合格を取り消して合格に訂正する（半分）、取り消しをさらに訂正する（半分）
-    const [{ id: correction }] = await insertRows<{ id: string }>(db,
+    // 不合格を取り消して通過に訂正する（半分）、取り消しをさらに訂正する（半分）
+    const { id: correction } = await insertOne<{ id: string }>(db,
       `INSERT INTO status_histories
          (application_id, transition_type, selection_step_id, occurred_at,
           changed_by_staff_id, is_correction, corrects_history_id)
        VALUES ($1, 'advance', $2, now(), (SELECT id FROM staffs LIMIT 1), true, $3)
-       RETURNING id`, [h.application_id, fs.rows[0]?.selection_step_id ?? null, h.id])
+       RETURNING id`, [h.application_id, h.selection_step_id, h.id])
     stats.histories++
 
     if (i % 2 === 1) {
@@ -429,6 +478,13 @@ function cols<T extends readonly unknown[]>(rows: T[]): unknown[][] {
 async function insertRows<T>(db: Db, sql: string, params: unknown[]): Promise<T[]> {
   const { rows } = await db.query<T>(sql, params)
   return rows
+}
+
+/** RETURNING が必ず1行返す INSERT。返らなければ組み立ての前提が崩れている。 */
+async function insertOne<T>(db: Db, sql: string, params: unknown[]): Promise<T> {
+  const rows = await insertRows<T>(db, sql, params)
+  if (rows.length !== 1) throw new Error(`expected 1 returned row, got ${rows.length}`)
+  return rows[0]!
 }
 
 async function insertReturning(db: Db, sql: string, params: unknown[]): Promise<string[]> {

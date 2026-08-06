@@ -11,7 +11,7 @@ const setup = async () => {
   const db = await freshDb()
   const base = await baseFixture(db)
   const season = await makeSeason(db, { year: 2026 })
-  return { db, ...base, season }
+  return { ...base, season }
 }
 
 const makeCriteria = (db: Db, stepId: string, name: string, scaleMax: number, appliesTo = 'all') =>
