@@ -34,7 +34,8 @@ pnpm install && pnpm db:reset && pnpm test
 - **実行①** … 原典 `basic/` を実行可能にし、計測して欠陥を潰した。
   `REPORT-1.0.md`（送付・凍結）、`REPORT-1.1.md`（補足・凍結）
 - **実行②** … ダッシュボード(4)流入元と森の集計の検証（`REPORT-2.0.md`）、
-  UI 素材データセットの検証と整理（`REPORT-2.1.md`）。いずれも凍結
+  UI 素材データセットの検証と整理（`REPORT-2.1.md`）、版の規約・DESIGN.md 準拠の確認・
+  `CLAUDE.md` の制定（`REPORT-2.2.md`）。いずれも凍結。**締めは 2.2 を読めば足りる**
 - **実行③** … これから
 
 規約は次のとおり。
@@ -57,7 +58,7 @@ pnpm install && pnpm db:reset && pnpm test
 1. `README.md` — 起動手順と、触る前に知るべきこと
 2. `db/DECISIONS.md` — **これが記録の本体。** 原典から変えた点と理由。
    特に冒頭の宣言、C-11、D 節（確定した仕様と保留）、E 節（記録漏れだった差分）
-3. `REPORT-1.0.md` → `REPORT-1.1.md` → `REPORT-2.0.md` → `REPORT-2.1.md` — これまでの経緯
+3. `REPORT-2.2.md`（実行②の締め）→ 遡って `2.1` `2.0` `1.1` `1.0` — これまでの経緯
 4. `basic/*.sql` — 原典。設計原則7つが冒頭にある。**変更しない**
 
 ## リポジトリの外にあるもの
@@ -143,19 +144,31 @@ git 管理下に入っていないため、環境が変わると付いてこな�
 
 ## 次にやりうること
 
-優先順位は指示を仰ぐこと。候補は `DECISIONS.md` の D-9 にある。
+**並べ方の基準は `CLAUDE.md` の4つの問い**（誰がどんな状態か／誰が何を評価したか／
+いま何が起きているか／次に何をすべきか）。効きの大きい順に並べてある。
+最終的な優先順位は指示を仰ぐこと。積み残しは `DECISIONS.md` の D-9 にもある。
 
-- ダッシュボード(4)（流入元）は `app/sources/page.tsx` に作った（`DECISIONS.md` C-11）。
-  残っているのは観測窓 90 日の正式な値と、`partners.category` の自由入力（D-5）
-- 本番 PostgreSQL 対応。`src/db/server.ts` に node-postgres アダプタを足す。
-  そのとき `pg.types.setTypeParser` で `int8`(20) と `date`(1082) を
-  同時に直さないと、数値が文字列で返り、表示日付が1日ずれる
-- 実装段階[2]（Touchpoint 分析、Partner 系）以降
-- 森ビュー（森・林・木・幹を樹木の比喩で見せる可視化）。実行②で計画だけ作った。
-  P1〜P4（器・個体表現・表示用 seed・根と葉と枝）は**追加素材なしで着手できる**。
-  設計は `../academy-ui-assets/reports/IMPLEMENTATION_PLAN.md`、経緯は `REPORT-2.1.md`。
-  前提は3つ ―― 可視化コンポーネントに SQL を書かせない／Recharts を既定にしない
-  （既存はサーバ SVG）／Person ごとの seed は鍵付きハッシュから作る
+1. **個人・応募のドリルダウン（①②に直結。最有力）**
+   `src/queries/dashboard.ts` の問い合わせはすべて年度単位の集計で、
+   Person 1人 / Application 1件を引くものが無い。「この人はいまどこにいて、
+   誰が何を評価したか」を1画面で見られない。**記録層は既に足りており、
+   足りないのは集計と画面だけ。** 現状の一覧は `CLAUDE.md` 8節
+2. **「次の一手」の提示（④）**
+   `/operations` は滞留・未割当・保留・利益相反を一覧するところまで。
+   誰が何をすべきかの提示にはなっていない
+3. **森ビュー（①を直感的にする）**
+   実行②で計画だけ作った。P1〜P4（器・個体表現・表示用 seed・根と葉と枝）は
+   **追加素材なしで着手できる**。設計は
+   `../academy-ui-assets/reports/IMPLEMENTATION_PLAN.md`、経緯は `REPORT-2.1.md`。
+   前提は3つ ―― 可視化コンポーネントに SQL を書かせない／Recharts を既定にしない
+   （既存はサーバ SVG）／Person ごとの seed は鍵付きハッシュから作る
+4. **本番 PostgreSQL 対応**
+   `src/db/server.ts` に node-postgres アダプタを足す。そのとき
+   `pg.types.setTypeParser` で `int8`(20) と `date`(1082) を同時に直さないと、
+   数値が文字列で返り、表示日付が1日ずれる
+5. **実装段階[2]（Touchpoint 分析、Partner 系）以降**
+   ダッシュボード(4)流入元は `app/sources/page.tsx` に作った（`DECISIONS.md` C-11）。
+   残っているのは観測窓 90 日の正式な値と、`partners.category` の自由入力（D-5）
 
 ## 技術構成
 

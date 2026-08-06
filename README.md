@@ -60,6 +60,7 @@ REPORT-1.0.md         実行① 送付の作業報告。凍結（更新しない
 REPORT-1.1.md         実行① 補足。凍結
 REPORT-2.0.md         実行② (4)流入元と森の集計。凍結
 REPORT-2.1.md         実行② UI 素材ライブラリの検証と整理。凍結
+REPORT-2.2.md         実行② 版の規約・DESIGN.md 準拠・CLAUDE.md 制定。締め。凍結
                       版は REPORT-<実行番号>.<連番>。規約は HANDOFF.md
 
 db/
