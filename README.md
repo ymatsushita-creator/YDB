@@ -48,6 +48,8 @@ pnpm tokens
 ## 構成
 
 ```
+CLAUDE.md             この開発が達成すべきことと、守る規律。まずこれを読む
+
 basic/                原典。設計の出発点。変更しない
   DESIGN.md           デザイントークン（frontmatter が tokens.css の入力）
   academy_schema.sql
