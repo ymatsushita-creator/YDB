@@ -78,3 +78,40 @@ export const pct = (a: number, b: number) =>
 /** date 列は UTC 深夜の Date として返る。暦日をそのまま読む。 */
 export const ymd = (d: Date) => new Date(d).toISOString().slice(0, 10)
 export const md = (d: Date) => new Date(d).toISOString().slice(5, 10).replace('-', '/')
+
+/**
+ * timestamptz の表示。
+ *
+ * こちらは実際の瞬間なので、`toISOString()` で切ると UTC の壁時計になり、
+ * JST の朝9時より前の出来事が前日に見える。集計側で `jst_date()` を通して
+ * 潰した A-1 と同じ間違いを、表示側でやらないようにする。
+ * 運用タイムゾーンを明示して書き出す。
+ */
+const jstFormat = (opts: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', ...opts })
+
+const DATETIME = jstFormat({
+  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+})
+const DAY = jstFormat({ year: 'numeric', month: '2-digit', day: '2-digit' })
+
+export const jstDateTime = (d: Date | null | undefined) =>
+  d ? DATETIME.format(new Date(d)) : '—'
+export const jstDay = (d: Date | null | undefined) => (d ? DAY.format(new Date(d)) : '—')
+
+/**
+ * 段（林・木・幹）のタグ。
+ *
+ * 林だけは「窓の内側にいるか」を併記する。段は年度内の最高到達点、
+ * 窓は基準日時点で接点が生きているかで、そもそも別の軸である。
+ * ここを1語で済ませると、年度サマリの林（直近 N 日に接点がある人）と
+ * 桁が違うのに同じ名前になり、①の答えが画面ごとに変わる。
+ */
+export function LevelBadge({
+  level, inWindow,
+}: { level: string; inWindow?: boolean | null }) {
+  if (level === 'accepted') return <span className="badge-tag-green">幹 合格</span>
+  if (level === 'applicant') return <span className="badge-tag-blue">木 応募</span>
+  if (inWindow === false) return <span className="badge-tag-gray">林 休眠</span>
+  return <span className="badge-tag-purple">林 接点あり</span>
+}

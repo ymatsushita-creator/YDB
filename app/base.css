@@ -176,6 +176,45 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   background: var(--color-surface); padding: 1px 5px; border-radius: var(--rounded-xs);
 }
 
+/* tokens.css が持たない色味のタグ。字面は badge-tag-*（caption-bold 13/600/1.4）に揃える。
+   木＝primary、林の休眠＝steel。ファネルの線の色と対応させる。 */
+.badge-tag-blue, .badge-tag-gray {
+  font-family: var(--type-caption-bold-font-family);
+  font-size: var(--type-caption-bold-font-size);
+  font-weight: var(--type-caption-bold-font-weight);
+  line-height: var(--type-caption-bold-line-height);
+  border-radius: var(--rounded-sm);
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.badge-tag-blue { background-color: var(--color-card-tint-sky); color: var(--color-primary-deep); }
+.badge-tag-gray { background-color: var(--color-card-tint-gray); color: var(--color-steel); }
+
+/* 取り消された記録。消さずに残し、消えていることを字面で示す。 */
+.struck { text-decoration: line-through; color: var(--color-stone); }
+
+/* 時系列。左の罫と点で、行が1本の流れであることを示す。 */
+.timeline { display: flex; flex-direction: column; }
+.timeline-row {
+  display: grid; grid-template-columns: 150px 12px 1fr;
+  gap: var(--space-md); align-items: start;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.timeline-row:last-child { border-bottom: 0; }
+.timeline-rail { position: relative; height: 100%; }
+.timeline-rail::before {
+  content: ''; position: absolute; left: 5px; top: 4px; bottom: -12px;
+  width: 1px; background: var(--color-hairline);
+}
+.timeline-row:last-child .timeline-rail::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 4px;
+  width: 11px; height: 11px; border-radius: var(--rounded-full);
+  background: var(--color-canvas); border: 2px solid var(--color-stone);
+}
+.timeline-dot.on { border-color: var(--color-primary); }
+
 /* 単位や母集団の定義が違うことの注記。読み飛ばされない程度の強さで置く。 */
 .unit-note {
   margin-top: var(--space-md);

@@ -95,20 +95,36 @@ export interface DemoStats {
   scores: number
 }
 
+interface Criterion { id: string; reapplicantOnly: boolean }
+
+interface SeededSeason {
+  id: string
+  plan: SeasonPlan
+  stepIds: string[]
+  criteriaByStep: Criterion[][]
+}
+
 export interface DemoOptions {
   /** 乱数のシード。同じ値なら同じデータになる。 */
   seed?: number
   /**
-   * 「今日」。これより後の出来事は生成しない。
+   * 「今日」（JST の暦日）。これより後の出来事は生成しない。
    * 進行中の年度では、まだ起きていない選考が pending の評価として残り、
    * ダッシュボード(2)の滞留・担当未割当がデータに現れる。
+   *
+   * 省略すると JST の今日。**時刻まで含めた「いま」ではない。**
+   * かつて Date.now() を既定にしていたため、同じ日に2回流しただけで
+   * 地平線が数分ぶん動き、判断待ちの件数が食い違った。
+   * 「何度流しても同じデータになる」と書いてあるのに、そうでなかった。
    */
   asOf?: string
 }
 
 export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStats> {
   const rand = rng(opts.seed ?? 20260806)
-  const asOf = opts.asOf ? +new Date(`${opts.asOf}T23:59:59+09:00`) : Date.now()
+  // 既定は JST の今日の終わり。Date.now() だと同じ日でも実行時刻で動く。
+  const jstToday = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+  const asOf = +new Date(`${opts.asOf ?? jstToday()}T23:59:59+09:00`)
   const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)]!
   const int = (lo: number, hi: number) => lo + Math.floor(rand() * (hi - lo + 1))
 
@@ -146,10 +162,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     `SELECT id FROM void_reasons WHERE code = 'identity_merge_error'`, [])
 
   // --- Season と選考フロー ---
-  interface Criterion { id: string; reapplicantOnly: boolean }
-  const seasons: Array<{
-    id: string; plan: SeasonPlan; stepIds: string[]; criteriaByStep: Criterion[][]
-  }> = []
+  const seasons: SeededSeason[] = []
 
   for (const plan of PLANS) {
     const { id } = await insertOne<{ id: string }>(db,
@@ -510,6 +523,29 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     }
   }
 
+  // --- 経路を確実に踏ませる登場人物 ---
+  //
+  // 乱数に任せると、実データでは必ず起きるのに一度も生成されない形がある。
+  // 実際、無効化された応募に評価と遷移がぶら下がる形と、同一年度に集計対象の
+  // 応募が2件ある形は、どちらも一度も作られていなかった。
+  // 「デモデータが検証したい経路を踏んでいない」を3回繰り返しているので、
+  // 確率ではなく明示的に置く。踏んでいることは tests/13 が検査する。
+  //
+  // 終わった年度（2026）に置く。進行中の年度だと、選考が途中で切れて
+  // 経緯が最後まで見えない。
+  const season2026 = seasons.find((s) => s.plan.year === 2026)
+  if (season2026) {
+    await seedPersonas(db, {
+      season: season2026,
+      schoolId: schoolIds[0]!,
+      channelIds: new Map(channels.rows.map((c) => [c.name, c.id])),
+      staffIds,
+      voidMergeErrorId: voidNotCounts.id,
+      voidWithdrawnId: voidCounts.id,
+      stats,
+    })
+  }
+
   // 個人情報削除の依頼（資料9-2）。応募していない Person から選ぶ。
   // 削除済みが1件も無いと、集計から外れているかを画面で確かめられない。
   const deleted = await db.query(`
@@ -524,6 +560,187 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   stats.deleted_persons = deleted.rows.length
 
   return stats
+}
+
+// -------------------------------------------------------------
+// 経路を確実に踏ませる登場人物
+//
+// 乱数で作る大勢とは別に、名前と経緯を決め打ちで置く。
+// 目的は見栄えではなく、記録層のどの形が画面に出るかを固定すること。
+// 何を確かめるために置いたかは persons.note に書いてあり、
+// 個人の画面でそのまま読める。実在の人物ではない。
+// -------------------------------------------------------------
+
+interface PersonaContext {
+  season: SeededSeason
+  schoolId: string
+  channelIds: Map<string, string>
+  staffIds: string[]
+  /** counts_as_application = false。代替の応募が生まれるので木に数えない。 */
+  voidMergeErrorId: string
+  /** counts_as_application = true。代替が生まれないので木に数える。 */
+  voidWithdrawnId: string
+  stats: DemoStats
+}
+
+async function seedPersonas(db: Db, ctx: PersonaContext): Promise<void> {
+  const { season, stats } = ctx
+  /** JST の指定日 指定時刻。 */
+  const ts = (day: string, hour: number) => at(day, 0, hour)
+  const staff = (i: number) => ctx.staffIds[i % ctx.staffIds.length]!
+
+  const person = async (spec: {
+    familyName: string; givenName: string; kana: [string, string]
+    email: string; createdAt: string; note: string
+  }) => {
+    const { id } = await insertOne<{ id: string }>(db,
+      `INSERT INTO persons (family_name, given_name, family_name_kana, given_name_kana,
+                            birth_date, school_id, email, created_at, note)
+       VALUES ($1,$2,$3,$4,'2008-04-11',$5,$6,$7,$8) RETURNING id`,
+      [spec.familyName, spec.givenName, spec.kana[0], spec.kana[1],
+       ctx.schoolId, spec.email, spec.createdAt, spec.note])
+    stats.persons++
+    return id
+  }
+
+  const touch = async (personId: string, channel: string, day: string, hour = 15) => {
+    await db.query(
+      `INSERT INTO touchpoints (person_id, channel_id, occurred_at) VALUES ($1,$2,$3)`,
+      [personId, ctx.channelIds.get(channel)!, ts(day, hour)])
+    stats.touchpoints++
+  }
+
+  const application = async (personId: string, day: string) => {
+    const { id } = await insertOne<{ id: string }>(db,
+      `INSERT INTO applications (person_id, season_id, submitted_at) VALUES ($1,$2,$3)
+       RETURNING id`, [personId, season.id, ts(day, 20)])
+    stats.applications++
+    return id
+  }
+
+  /** ステップの評価を提出済みで作り、軸ごとに点と根拠を残す。 */
+  const evaluate = async (
+    applicationId: string, stepIndex: number, interviewerIndex: number,
+    assignedDay: string, submittedDay: string, scores: number[], rationale: string,
+  ) => {
+    const { id } = await insertOne<{ id: string }>(db,
+      `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                state, assigned_at, submitted_at)
+       VALUES ($1,$2,$3,'submitted',$4,$5) RETURNING id`,
+      [applicationId, season.stepIds[stepIndex], staff(interviewerIndex),
+       ts(assignedDay, 10), ts(submittedDay, 18)])
+    stats.evaluations++
+
+    // 再応募者限定の軸は付けない。ここの登場人物はいずれも再応募ではない。
+    const criteria = season.criteriaByStep[stepIndex]!.filter((c) => !c.reapplicantOnly)
+    for (const [i, c] of criteria.entries()) {
+      await db.query(
+        `INSERT INTO evaluation_scores (evaluation_id, criteria_id, score, rationale)
+         VALUES ($1,$2,$3,$4)`,
+        [id, c.id, scores[i] ?? scores[scores.length - 1] ?? 3, rationale])
+      stats.scores++
+    }
+    return id
+  }
+
+  const advance = async (applicationId: string, stepIndex: number, day: string, by: number) => {
+    await db.query(
+      `INSERT INTO status_histories (application_id, transition_type, selection_step_id,
+                                     occurred_at, changed_by_staff_id, note)
+       VALUES ($1,'advance',$2,$3,$4,$5)`,
+      [applicationId, season.stepIds[stepIndex], ts(day, 19), staff(by),
+       `${STEPS[stepIndex]} 通過`])
+    stats.histories++
+  }
+
+  const reject = async (applicationId: string, day: string, by: number, note: string) => {
+    await db.query(
+      `INSERT INTO status_histories (application_id, transition_type, occurred_at,
+                                     changed_by_staff_id, note)
+       VALUES ($1,'reject',$2,$3,$4)`, [applicationId, ts(day, 19), staff(by), note])
+    stats.histories++
+  }
+
+  // -----------------------------------------------------------
+  // 1. 名寄せ誤り。集計から外れた応募に、評価と遷移が残っている
+  // -----------------------------------------------------------
+  // 同じ人が別のメールアドレスで二重に登録され、後から一方の応募を
+  // 名寄せ誤りとして無効化した。無効化理由の counts_as_application は false
+  // なので、この応募は木に数えない（A-2）。しかし選考は実際に2ステップ
+  // 進んでおり、面接官の評価も根拠も記録層に残っている。
+  //
+  // 集計に出ないものを個別の画面からも消すと、この記録がどこにも
+  // 出なくなる。ドリルダウンが集計と同じ絞り込みをしてはいけない理由。
+  const duplicate = await person({
+    familyName: '三浦', givenName: '千夏', kana: ['みうら', 'ちなつ'],
+    email: 'c.miura.dup@example.test', createdAt: ts('2025-10-02', 11),
+    note: 'デモ用の登場人物。二重登録された側。この応募は名寄せ誤りとして'
+      + '無効化されており、集計には出ないが評価と遷移は記録層に残っている。',
+  })
+  await touch(duplicate, 'SNS自然流入', '2025-10-02', 11)
+  await touch(duplicate, '単独説明会', '2025-10-26')
+  const wrongApp = await application(duplicate, '2025-11-18')
+  await evaluate(wrongApp, 0, 1, '2025-11-20', '2025-11-24', [4, 4],
+    '応募書類に、地域の子ども食堂で在庫管理の仕組みを作った経緯が具体的に書かれていた')
+  await advance(wrongApp, 0, '2025-11-25', 1)
+  await evaluate(wrongApp, 1, 2, '2025-11-27', '2025-12-02', [4, 3, 4],
+    '「なぜその課題を選んだか」を自分の言葉で言い直せていた')
+  await db.query(
+    `UPDATE applications SET voided_at = $2, void_reason_id = $3 WHERE id = $1`,
+    [wrongApp, ts('2025-12-05', 12), ctx.voidMergeErrorId])
+  stats.voided++
+
+  const surviving = await person({
+    familyName: '三浦', givenName: '千夏', kana: ['みうら', 'ちなつ'],
+    email: 'chinatsu.miura@example.test', createdAt: ts('2025-09-20', 16),
+    note: 'デモ用の登場人物。名寄せで残った側。同姓同名・同生年月日・同校の'
+      + '行が2つあり、名寄せ候補の提示（実装段階[4]）が要る形。',
+  })
+  await touch(surviving, '学校訪問', '2025-09-20', 16)
+  await touch(surviving, '教員からの紹介', '2025-10-30')
+  const rightApp = await application(surviving, '2025-12-06')
+  await evaluate(rightApp, 0, 3, '2025-12-08', '2025-12-11', [4, 3],
+    '無効化した応募の書類と同一の内容であることを確認したうえで評価した')
+  await advance(rightApp, 0, '2025-12-12', 3)
+  await evaluate(rightApp, 1, 4, '2025-12-15', '2025-12-19', [3, 3, 2],
+    '取り組みの説明は具体的だったが、次に何をするかの見通しが定まっていなかった')
+  await reject(rightApp, '2025-12-20', 3, '一次面接の評価により不合格')
+
+  // -----------------------------------------------------------
+  // 2. 取り下げて出し直し。同一年度に集計対象の応募が2件
+  // -----------------------------------------------------------
+  // 無効化理由の counts_as_application が true なので、取り下げた応募も
+  // 木に数える（A-2）。同一 Person × Season に集計対象の応募が2件並ぶ。
+  // 0007 で v_person_season_state を「応募をまたいだ最高到達点」に
+  // 直したのはこの形が理由で、それを個人の画面で確かめられるようにする。
+  const restarted = await person({
+    familyName: '岩瀬', givenName: '悠', kana: ['いわせ', 'ゆう'],
+    email: 'yu.iwase@example.test', createdAt: ts('2025-09-10', 13),
+    note: 'デモ用の登場人物。一度取り下げてから出し直した。同一年度に'
+      + '集計対象の応募が2件あり、年度の段は2件をまたいだ最高到達点になる。',
+  })
+  await touch(restarted, '学校訪問', '2025-09-10', 13)
+  await touch(restarted, '単独説明会', '2025-10-12')
+  await touch(restarted, '友人からの紹介', '2025-11-02')
+  const abandoned = await application(restarted, '2025-11-05')
+  await db.query(
+    `UPDATE applications SET voided_at = $2, void_reason_id = $3 WHERE id = $1`,
+    [abandoned, ts('2025-11-12', 10), ctx.voidWithdrawnId])
+  stats.voided++
+
+  const retried = await application(restarted, '2025-11-20')
+  await evaluate(retried, 0, 5, '2025-11-22', '2025-11-26', [5, 4],
+    '一度取り下げた理由と、それでも出し直した経緯が書類に書かれていた')
+  await advance(retried, 0, '2025-11-27', 5)
+  await evaluate(retried, 1, 6, '2025-11-30', '2025-12-04', [4, 4, 5],
+    '文化祭の運営で起きた対立を、当事者双方に話を聞いて収めた経験を語った')
+  await advance(retried, 1, '2025-12-05', 5)
+  await evaluate(retried, 2, 7, '2025-12-10', '2025-12-16', [4, 5, 4],
+    '課題の範囲を自分で絞り直したうえで、協力者を集めるところまで進めていた')
+  await advance(retried, 2, '2025-12-17', 6)
+  await evaluate(retried, 3, 8, '2026-01-10', '2026-01-16', [5, 4],
+    'プログラムで何を得たいかを、いまの活動の続きとして説明できていた')
+  await advance(retried, 3, '2026-01-20', 0)
 }
 
 // -------------------------------------------------------------
