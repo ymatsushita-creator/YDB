@@ -48,12 +48,13 @@ export async function assignAction(formData: FormData): Promise<void> {
     redirect(`/cockpit?${season}assign=${code}`)
   }
 
-  if (!staffId) back('no_staff')
+  if (!staffId) return back('no_staff')
 
   const db = await getDb()
   const result = await assignInterviewer(db, { evaluationId, staffId })
 
-  if (!result.ok) back(result.reason)
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
 
   // やること・待っている人・森の集計が同時に変わる。画面ごとに別の数字が
   // 残らないよう、コックピットと森の画面をまとめて作り直す。
@@ -83,7 +84,8 @@ export async function unholdAction(formData: FormData): Promise<void> {
   const db = await getDb()
   const result = await unholdEvaluation(db, { evaluationId })
 
-  if (!result.ok) back(result.reason)
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
 
   revalidatePath('/cockpit')
   revalidatePath('/forests', 'layout')
@@ -108,12 +110,13 @@ export async function reassignAction(formData: FormData): Promise<void> {
     redirect(`/cockpit?${season}reassign=${code}`)
   }
 
-  if (!staffId) back('same_staff')
+  if (!staffId) return back('same_staff')
 
   const db = await getDb()
   const result = await reassignInterviewer(db, { evaluationId, staffId })
 
-  if (!result.ok) back(result.reason)
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
 
   revalidatePath('/cockpit')
   revalidatePath('/forests', 'layout')

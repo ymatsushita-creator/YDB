@@ -4,6 +4,9 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../../src/db/server.ts'
 import { saveScore, type SaveScoreCode } from '../../../src/commands/score.ts'
+import {
+  submitEvaluation, decideStep, type DecideCode,
+} from '../../../src/commands/decide.ts'
 
 /**
  * 1軸の点と根拠を保存する（E2）。
@@ -32,10 +35,63 @@ export async function saveScoreAction(formData: FormData): Promise<void> {
   const db = await getDb()
   const result = await saveScore(db, { evaluationId, criteriaId, score, rationale })
 
-  if (!result.ok) back(result.reason)
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
 
   // 運転席の「n/m 軸」も変わる。画面ごとに別の数字が残らないよう両方作り直す。
   revalidatePath(`/applications/${applicationId}`)
   revalidatePath('/cockpit')
   back('saved')
+}
+
+/**
+ * 評価を確定する（E3）と、選考を判定する（D1）。
+ *
+ * どちらも判定は `src/commands/decide.ts` にある。ここは受け渡しだけ。
+ */
+export async function submitEvaluationAction(formData: FormData): Promise<void> {
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const back = (code: DecideCode) => {
+    const id = /^[0-9a-f-]{36}$/i.test(applicationId) ? applicationId : ''
+    redirect(`/applications/${id}?decide=${code}`)
+  }
+
+  const db = await getDb()
+  const result = await submitEvaluation(db, { evaluationId })
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath(`/applications/${applicationId}`)
+  revalidatePath('/cockpit')
+  back('submitted')
+}
+
+export async function decideAction(formData: FormData): Promise<void> {
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const staffId = String(formData.get('staffId') ?? '')
+  const note = String(formData.get('note') ?? '')
+  const decision = String(formData.get('decision') ?? '')
+
+  const back = (code: DecideCode) => {
+    const id = /^[0-9a-f-]{36}$/i.test(applicationId) ? applicationId : ''
+    redirect(`/applications/${id}?decide=${code}`)
+  }
+
+  if (decision !== 'advance' && decision !== 'reject') return back('bad_decision')
+
+  const db = await getDb()
+  const result = await decideStep(db, {
+    applicationId,
+    decision: decision as 'advance' | 'reject',
+    staffId,
+    note,
+  })
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath(`/applications/${applicationId}`)
+  revalidatePath('/cockpit')
+  // 合格・通過・不合格で、運用者に返す言葉を変える。
+  back(result.decision === 'reject' ? 'rejected' : result.accepted ? 'accepted' : 'advanced')
 }

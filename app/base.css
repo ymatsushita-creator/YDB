@@ -382,3 +382,21 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* 入力欄が入るので、軸の行は縦に潰さず余白を持たせる。 */
 .criteria-row { flex-wrap: wrap; padding: 6px 8px; }
+
+/* ---- 選考の判定（D1） ---- */
+.decide-form {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.decide-form select, .decide-form input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+.decide-form button { font-size: 13px; padding: 6px 14px; border: 0; cursor: pointer; }

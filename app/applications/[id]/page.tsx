@@ -7,7 +7,12 @@ import {
 import {
   parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
 } from '../../../src/commands/score.ts'
-import { saveScoreAction } from './actions.ts'
+import {
+  getDecidableStep, listDecidingStaff, parseDecideCode, DECIDE_CODE_MESSAGE,
+} from '../../../src/commands/decide.ts'
+import {
+  saveScoreAction, submitEvaluationAction, decideAction,
+} from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 
 export const dynamic = 'force-dynamic'
@@ -66,18 +71,22 @@ export default async function ApplicationPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ score?: string }>
+  searchParams: Promise<{ score?: string; decide?: string }>
 }) {
   const db = await getDb()
   const { id } = await params
-  const saved = parseSaveScoreCode((await searchParams).score)
+  const query = await searchParams
+  const saved = parseSaveScoreCode(query.score)
+  const decided = parseDecideCode(query.decide)
 
   const app = await getApplication(db, id)
   if (!app) notFound()
 
-  const [timeline, evaluations] = await Promise.all([
+  const [timeline, evaluations, decidable, decidingStaff] = await Promise.all([
     getApplicationTimeline(db, app.application_id),
     getApplicationEvaluations(db, app.application_id),
+    getDecidableStep(db, app.application_id),
+    listDecidingStaff(db),
   ])
 
   // 結末は v_application_outcome（0011）が決める。画面では組み立てない。
@@ -85,17 +94,64 @@ export default async function ApplicationPage({
   const result = OUTCOME_LABEL[app.outcome]
 
   // 直前の保存の結果。知らないコードは「何も起きていない」として捨てる。
-  const savedNotice = saved && (
+  const savedNotice = (saved || decided) && (
     <div className="section">
-      <p className={`callout${saved === 'saved' ? ' ok' : ''}`}>
-        {SAVE_SCORE_CODE_MESSAGE[saved]}
-      </p>
+      {saved && (
+        <p className={`callout${saved === 'saved' ? ' ok' : ''}`}>
+          {SAVE_SCORE_CODE_MESSAGE[saved]}
+        </p>
+      )}
+      {decided && (
+        <p className={`callout${
+          ['submitted', 'advanced', 'accepted', 'rejected'].includes(decided) ? ' ok' : ''
+        }`}>
+          {DECIDE_CODE_MESSAGE[decided]}
+        </p>
+      )}
+    </div>
+  )
+
+  // いま判定できるステップがあれば、判定の欄を出す。
+  // 成立条件は src/commands/decide.ts が決める。画面では組み立てない。
+  const decisionPanel = decidable && (
+    <div className="section">
+      <Card
+        title={`${decidable.step_name} の判定`}
+        note={`評価は ${num(decidable.submitted_evaluations)} 件すべて確定済み。`
+          + (decidable.next_step_name
+            ? `通過にすると「${decidable.next_step_name}」の担当を決める段になる`
+            : '最終ステップなので、通過にすると合格になる')}
+      >
+        <form action={decideAction} className="decide-form">
+          <input type="hidden" name="applicationId" value={app.application_id} />
+          <label className="visually-hidden" htmlFor="decide-staff">判定した人</label>
+          <select id="decide-staff" name="staffId" defaultValue="" required>
+            <option value="" disabled>判定した人を選ぶ…</option>
+            {decidingStaff.map((s) => (
+              <option key={s.staff_id} value={s.staff_id}>{s.display_name}</option>
+            ))}
+          </select>
+          <label className="visually-hidden" htmlFor="decide-note">判定の補足</label>
+          <input id="decide-note" name="note" type="text" className="rationale-input"
+                 placeholder="補足（任意）" />
+          <button type="submit" name="decision" value="advance" className="button-primary">
+            {decidable.next_step_name ? '通過にする' : '合格にする'}
+          </button>
+          <button type="submit" name="decision" value="reject" className="button-secondary">
+            不合格にする
+          </button>
+        </form>
+        <p className="section-note" style={{ marginTop: 'var(--space-xs)' }}>
+          判定は打ち消しの追記でしか訂正できない。押す前に確かめる
+        </p>
+      </Card>
     </div>
   )
 
   return (
     <>
       {savedNotice}
+      {decisionPanel}
       <div className="page-head">
         <div>
           <p className="page-sub">
@@ -272,6 +328,21 @@ export default async function ApplicationPage({
                         ))}
                       </ul>
                     </div>
+                  )}
+
+                  {/* 全軸そろったら確定できる（E3）。そろう前は出さない。 */}
+                  {e.can_score && e.pending_criteria.length === 0 && (
+                    <form action={submitEvaluationAction} className="score-form"
+                          style={{ justifyContent: 'flex-start', marginTop: 'var(--space-sm)' }}>
+                      <input type="hidden" name="applicationId" value={app.application_id} />
+                      <input type="hidden" name="evaluationId" value={e.evaluation_id} />
+                      <button type="submit" className="button-primary">
+                        この評価を確定する
+                      </button>
+                      <span className="section-note">
+                        確定すると判断待ちから外れ、選考の判定に進める
+                      </span>
+                    </form>
                   )}
 
                   {e.scores.length === 0 ? (
