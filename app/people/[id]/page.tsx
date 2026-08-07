@@ -256,9 +256,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       <p className="footnote">
         表示している日時はすべて運用タイムゾーン（Asia/Tokyo）。
-        集計の日付境界は <code>jst_date()</code> を通しており、
-        表示側も同じタイムゾーンで書き出している。
-        年度の段と接点の鮮度は <code>f_person_season_state({ACTIVE_WINDOW_DAYS})</code> の値をそのまま出しており、
+        集計の日付境界も同じタイムゾーンで揃えており、表示側とずれない。
+        年度の段と接点の鮮度は、直近 {ACTIVE_WINDOW_DAYS} 日以内に接点があるかで集計側が決めており、
         画面側では数え直していない。
       </p>
     </>
