@@ -35,15 +35,28 @@ export const loadMigrations = (dir = MIGRATIONS_DIR) => loadSqlDir(dir)
 /**
  * 参照データを読む。
  *
+ * 種類が3つある。**混ぜてよい組み合わせは決まっている。**
+ *
+ *   0001_reference.sql              どちらの環境にも入る（辞退理由など）
+ *   *.example.sql                   サンプルの環境にだけ入る
+ *   *.production.sql                本番の環境にだけ入る
+ *
  * `*.example.sql` は作り物のサンプルで、本番には入れない。
  * 集計に関わるマスタは追加と非活性化でしか運用できない（原則3）ため、
  * 最初に入った値が事実上の初期値として固定化される。
  * サンプルと本番が同じ入口から入る構造になっていると、
  * 誰かが一度流した時点で創作物が正式なマスタになる。
+ *
+ * `*.production.sql` は逆向きの禁止である ―― **実在する年度が入る。**
+ * src/seed/demo.ts は 2024〜2027 を創作しており 2026 が重なる。
+ * 同じ DB に入れれば UNIQUE で衝突し、衝突を避ければ創作の応募が
+ * 実在の年度にぶら下がる。**後者のほうが悪い**（C-28）。
+ * したがってサンプルを入れると言った環境には、実年度を入れない。
  */
 export async function loadSeeds(opts: { includeExamples?: boolean } = {}) {
   const all = await loadSqlDir(SEEDS_DIR)
-  return opts.includeExamples ? all : all.filter((s) => !s.name.endsWith('.example.sql'))
+  const excluded = opts.includeExamples ? '.production.sql' : '.example.sql'
+  return all.filter((s) => !s.name.endsWith(excluded))
 }
 
 /**

@@ -12,6 +12,10 @@
 -- あちらは `*.example.sql` なので本番のシード対象から外れる
 -- （src/db/migrate.ts の loadSeeds を参照）。
 --
+-- 実在する年度は 0002_season_2026.production.sql にある。
+-- **こちらには書かない。** 実年度と創作のデモは同じ DB に同居できない
+-- （db/DECISIONS.md C-28）。
+--
 --   channels          0件  流入チャネルの分類が決まってから
 --   void_reasons      0件  無効化理由の分類が決まってから
 --   withdraw_reasons  1件  下記「未確認」のみ
