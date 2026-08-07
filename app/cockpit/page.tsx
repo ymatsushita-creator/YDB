@@ -5,6 +5,11 @@ import {
   getOpenTasks, getTaskTotals, getWaitingPersons, getForests,
   DORMANT_DAYS, type TaskKind, type ForestRow,
 } from '../../src/queries/cockpit.ts'
+import {
+  listAssignableStaff, parseAssignCode, ASSIGN_CODE_MESSAGE,
+  type AssignableStaff,
+} from '../../src/commands/assign.ts'
+import { assignAction } from './actions.ts'
 import { Card, Kpi, SeasonTabs, Empty, num } from '../_components/ui.tsx'
 
 export const dynamic = 'force-dynamic'
@@ -127,25 +132,67 @@ function ForestNode({ forest, seasonId }: { forest: ForestRow; seasonId: string 
   )
 }
 
+/**
+ * 担当を決めるフォーム。
+ *
+ * 素の `<form action={...}>` である。`'use client'` を1つも増やしていないので、
+ * **JavaScript を無効にしても動く。** 状態を持つ対話部品（`useActionState` など）
+ * を入れるとクライアント境界の新設になるため、そこには踏み込まない。
+ * 結果は同じ画面へコードを付けて戻すこと（PRG）で伝える。
+ *
+ * 面接官は「抱えている判断待ちが少ない順」に並ぶ。偏りが見えないまま
+ * 選ばせると、いつも同じ人に積む（/operations の面接官別の負荷と同じ狙い）。
+ */
+function AssignForm({
+  evaluationId, seasonId, staff,
+}: { evaluationId: string; seasonId: string; staff: AssignableStaff[] }) {
+  if (staff.length === 0) {
+    return <span className="section-note">選べる職員がいない</span>
+  }
+  return (
+    <form action={assignAction} className="assign-form">
+      <input type="hidden" name="evaluationId" value={evaluationId} />
+      <input type="hidden" name="seasonId" value={seasonId} />
+      <label className="visually-hidden" htmlFor={`staff-${evaluationId}`}>
+        担当にする面接官
+      </label>
+      <select id={`staff-${evaluationId}`} name="staffId" defaultValue="" required>
+        <option value="" disabled>担当を選ぶ…</option>
+        {staff.map((s) => (
+          <option key={s.staff_id} value={s.staff_id}>
+            {s.display_name}（待ち {s.pending}）
+          </option>
+        ))}
+      </select>
+      <button type="submit" className="button-primary">決める</button>
+    </form>
+  )
+}
+
 export default async function CockpitPage(
-  { searchParams }: { searchParams: Promise<{ season?: string }> },
+  { searchParams }: { searchParams: Promise<{ season?: string; assign?: string }> },
 ) {
   const db = await getDb()
+  const params = await searchParams
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
     return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
   }
 
   const season =
-    (await getSeason(db, (await searchParams).season)) ??
+    (await getSeason(db, params.season)) ??
     seasons.find((s) => s.is_live) ?? seasons[0]!
 
-  const [tasks, totals, waiting, forests] = await Promise.all([
+  const [tasks, totals, waiting, forests, staff] = await Promise.all([
     getOpenTasks(db, season.id),
     getTaskTotals(db, season.id),
     getWaitingPersons(db, season.id),
     getForests(db, season.id),
+    listAssignableStaff(db, season.id),
   ])
+
+  // 直前の書き込みの結果。知らないコードは「何も起きていない」として捨てる。
+  const assigned = parseAssignCode(params.assign)
 
   const overdue = tasks.filter((t) => t.is_overdue)
   const attention = forests.filter((f) => f.flags.length > 0)
@@ -179,6 +226,19 @@ export default async function CockpitPage(
              tone={attention.length ? undefined : 'muted'}
              meta={`旗が立った森（森）／全 ${num(forests.length)} 森`} />
       </div>
+
+      {assigned && (
+        <div className="section">
+          <p className={`callout${assigned === 'ok' ? ' ok' : ''}`}>
+            {ASSIGN_CODE_MESSAGE[assigned]}
+            {assigned === 'ok' && (
+              <span className="section-note">
+                やること・待っている人・森の数は、この画面で作り直してある
+              </span>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="section">
         {overdue.length > 0 ? (
@@ -247,7 +307,12 @@ export default async function CockpitPage(
                       </td>
                       <td className="nowrap">{t.step_order}. {t.step_name}</td>
                       <td>
-                        {t.owner ?? <span className="badge-tag-orange">未割当</span>}
+                        {t.owner ?? (t.kind === 'assign' ? (
+                          <AssignForm evaluationId={t.source_id}
+                                      seasonId={season.id} staff={staff} />
+                        ) : (
+                          <span className="badge-tag-orange">未割当</span>
+                        ))}
                       </td>
                       <td className="num">
                         {t.is_overdue ? (
