@@ -16,3 +16,4 @@ db/private/
 
 # 旧NEO-YouthからCodexが抽出した個人情報を含む移行データ
 Codexから移行した旧YouthDBデータ_*/
+scripts/sim-out/

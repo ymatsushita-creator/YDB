@@ -243,7 +243,7 @@ Rejected / Member）のうち、**Unknown だけは Person の状態として持
 | **Person（木）** | `persons` | 人 | 個人情報削除を受けた人が存在する |
 | **Application** | `applications` | 応募 | 独自の主キー。1人が複数年度に複数持つ |
 | Touchpoint | `touchpoints` | 接触 | `person_id` + `partner_id`。年度に紐づかない接触がありうる |
-| Season | `seasons` | 年度 | 実数値が未確定（D-8）。本番シードは空 |
+| Season | `seasons` | 年度 | 2026年度を実データの回答から確定済み（D-8）。4つの日付のうち1つは推測値 |
 | Selection Step | `selection_steps` | ステップ | |
 | Evaluation | `evaluations` / `evaluation_scores` | 評価 | `rationale` 必須 |
 | Status History | `status_histories` | 遷移 | 追記のみ。訂正は打ち消し行の追記 |
@@ -324,7 +324,7 @@ UX PHILOSOPHY 側の `Forest → Community → Person → Action` は本書と�
 
 ### 10-8. 以前からの未決（`db/DECISIONS.md`）
 
-- **D-8**: `seasons` の実数値（年度と4つの日付）が未確定
+- **D-8**: `seasons` の実数値は確定した。応募締切のみ推測値（`db/DECISIONS.md` D-8 追記）
 - **D-10**: 個人情報削除を受けた人の応募を数え続けるか
 - **D-5**: `partners.category` が自由入力
 - **E-7**: `is_reapplication` の再計算処理が無く、年輪の表示は保留

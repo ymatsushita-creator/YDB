@@ -155,7 +155,7 @@ export type DecideFailure =
   | 'not_decidable'
   /** 判定した職員が選ばれていない、または非活性化されている。 */
   | 'staff_not_available'
-  /** 判定の種類が不正。 */
+  /** 判定の種類が想定外（'advance' / 'reject' 以外）。 */
   | 'bad_decision'
 
 /**
@@ -233,7 +233,7 @@ export type DecideCode =
 
 export const DECIDE_CODE_MESSAGE: Record<DecideCode, string> = {
   submitted: '評価を確定した。次は選考の判定である。',
-  advanced: 'このステップを通過にした。次のステップの担当を決める。',
+  advanced: 'このステップを通過にした。次のステップの担当決めが「今日やること」に出る。',
   accepted: '最終選考を通過にした。合格である。',
   rejected: '不合格にした。この応募の選考は終わった。',
   evaluation_not_found: 'その評価は見つからなかった。画面を読み直す。',
@@ -241,7 +241,7 @@ export const DECIDE_CODE_MESSAGE: Record<DecideCode, string> = {
   criteria_missing: 'まだ点が付いていない軸がある。すべて付けてから確定する。',
   not_decidable: 'いま判定できるステップが無い。評価が残っているか、済んでいる。',
   staff_not_available: '判定した人が選ばれていない。',
-  bad_decision: '判定の種類が不正である。',
+  bad_decision: '判定の種類が正しくない。もう一度選ぶ。',
   corrected_to_advance: '判定を「通過」に訂正した。元の判定は打ち消し行で残っている。',
   corrected_to_reject: '判定を「不合格」に訂正した。元の判定は打ち消し行で残っている。',
   not_correctable: '訂正できる判定が無い。画面を読み直す。',
