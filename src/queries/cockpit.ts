@@ -195,7 +195,17 @@ export interface ForestRow {
  *   それを割って識別率にしてはならない（domain.md 8節）。実行②で
  *   作りかけて消した指標そのものである。旗として立てるだけにする。
  *
- * 並べ替えは 期限超過 → 未処理タスク → 休眠日数。この規則は画面に注記する。
+ * ★ 並べ替えは**旗が立っているかを最優先にする。**
+ *
+ *   実測で、旗の無い森が旗の立った森より上に並んでいた。
+ *   `overdue → open_tasks → 休眠日数` の順で並べていたため、
+ *   **未処理タスクを1件持つ「平常」の森が、「接点なし」の森より上**に来ていた。
+ *   画面には「要注意の順に並ぶ」と注記してあり、**注記が嘘になっていた。**
+ *   実行②で踏んだ「表示の丸めで注記が画面上の嘘になった」と同じ形である。
+ *
+ *   旗の意味（要注意）と並びの規則（作業量）が別物だったのが原因なので、
+ *   **並びを旗に合わせる。** 注記も実際の順に書き直す。
+ *
  * 森の数は団体の数（実測 9）なので、全件を並べても問題にならない。
  */
 export const getForests = async (db: Db, seasonId: string, dormantDays = DORMANT_DAYS) => {
@@ -216,7 +226,7 @@ export const getForests = async (db: Db, seasonId: string, dormantDays = DORMANT
               fa.days_since_touch DESC NULLS FIRST,
               fa.name`, [seasonId])
 
-  return rows.map((r): ForestRow => ({
+  const withFlags = rows.map((r): ForestRow => ({
     ...r,
     flags: [
       ...(Number(r.overdue_tasks) > 0 ? ['stalled'] : []),
@@ -225,6 +235,14 @@ export const getForests = async (db: Db, seasonId: string, dormantDays = DORMANT
         ? ['dormant'] : []),
     ],
   }))
+
+  // 旗の強さ。0 が最も注意を要する。SQL の並びは同順位の中の決着に残す。
+  const rank = (f: ForestRow) =>
+    f.flags.includes('stalled') ? 0
+      : f.flags.length > 0 ? 1
+        : 2
+
+  return withFlags.sort((a, b) => rank(a) - rank(b))
 }
 
 // -------------------------------------------------------------

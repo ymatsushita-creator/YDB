@@ -198,3 +198,57 @@ describe('森を1つ開く', () => {
     assert.equal(persons[1]!.via, '検証の森')
   })
 })
+
+describe('森の並びが、旗の意味と食い違わない', () => {
+  /**
+   * 実測で見つけた不具合。
+   *
+   * `overdue → open_tasks → 休眠日数` の順で並べていたため、
+   * **未処理タスクを1件持つ「平常」の森が、「接点なし」の森より上**に来ていた。
+   * 画面には「要注意の順に並ぶ」と注記してあり、**注記が嘘になっていた。**
+   *
+   * 旗の意味（要注意）と並びの規則（作業量）が別物だったのが原因である。
+   * 個別の順序を数え上げるのではなく、**性質**で固定する ――
+   * 旗の無い森が、旗の立った森より上に来ない。
+   */
+  test('旗の無い森が、旗の立った森より上に来ない', async () => {
+    // 平常だが未処理タスクを持つ森を作る（これが以前は先頭に来ていた）。
+    const busy = await scalar<string>(db,
+      `INSERT INTO partners (name, category) VALUES ('平常だが忙しい森','npo') RETURNING id`)
+    const person = await makePerson(db, fx.schoolId, { familyName: '忙中', givenName: '平常' })
+    await makeTouchpoint(db, person, channelId, jst('2025-10-05T10:00:00'), busy)
+    const app = await makeApplication(db, person, season.id, jst('2025-11-07T20:00:00'))
+    await db.query(`
+      INSERT INTO evaluations (application_id, selection_step_id, state, assigned_at)
+      VALUES ($1,$2,'pending', now())`, [app, season.stepIds[0]])
+
+    // 休眠の閾値を大きく取る。この年度の期間は今日より 160 日以上前に
+    // 終わっているため、既定値のままだと**すべての森が休眠**になり、
+    // 「旗の無い森」が1つも作れない（性質を試せない）。
+    const forests = await getForests(db, season.id, 100_000)
+    const flagged = forests.map((f) => f.flags.length > 0)
+
+    // 旗ありがすべて先。true が並んだあとに false が並ぶ形でなければならない。
+    const firstUnflagged = flagged.indexOf(false)
+    if (firstUnflagged !== -1) {
+      assert.ok(!flagged.slice(firstUnflagged).includes(true),
+        `旗の無い森のあとに旗の立った森が来ている: ${
+          forests.map((f) => `${f.name}[${f.flags.join(',') || '平常'}]`).join(' / ')}`)
+    }
+
+    // この森は平常で、未処理タスクを持つ（前提が崩れていないことの確認）。
+    const busyRow = forests.find((f) => f.forest_id === busy)!
+    assert.deepEqual(busyRow.flags, [], '前提が崩れている。この森は平常のはず')
+    assert.ok(Number(busyRow.open_tasks) >= 1, '前提が崩れている。未処理を持つはず')
+  })
+
+  test('滞留している森が、ほかの旗より先に来る', async () => {
+    // 旗の中の順序。滞留（いま止まっている）が、休眠や接点なしより先。
+    const forests = await getForests(db, season.id, 100_000)
+    const ranks = forests
+      .filter((f) => f.flags.length > 0)
+      .map((f) => (f.flags.includes('stalled') ? 0 : 1))
+    assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b),
+      '滞留の森が、休眠・接点なしの森より後ろに来ている')
+  })
+})

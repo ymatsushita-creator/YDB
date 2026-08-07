@@ -409,3 +409,47 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   background: var(--color-surface);
   border-radius: var(--rounded-sm);
 }
+
+/* ---- UX の手当て（実行⑥ / UX パス1） ---- */
+/* いずれも画面を見て見つけたもの。トークン（色・角丸・余白）は足していない。 */
+
+/* 1. 生成されたバッジ（tokens.css の badge-tag-purple / orange / green）に
+      nowrap が無く、「担当を決め／る」のように語の途中で折り返していた。
+      tokens.css は生成物なので手で直せない。ここで重ねる。 */
+.badge-tag-purple, .badge-tag-orange, .badge-tag-green {
+  white-space: nowrap;
+}
+
+/* 2. 「29 日」が「29／日」に割れていた。数と単位は分けない。 */
+table.data td.num, table.data th.num { white-space: nowrap; }
+
+/* 3. 表の中の操作を1つの見た目に揃える。
+      「決める」が塗りボタン、「保留を解く」が枠なしで、同じ列に2種類の
+      強さが混ざっていた。**表の中では操作をすべて同じ弱さにする** ――
+      いちばん強く見えるべきは操作ボタンではなく、期限を超えた日数である。 */
+.assign-form button,
+.assign-form button.button-primary,
+.assign-form button.button-secondary {
+  background: var(--color-canvas);
+  color: var(--color-charcoal);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  font-size: 13px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.assign-form button:hover {
+  background: var(--color-surface);
+  border-color: var(--color-slate);
+}
+
+/* 4. 担当欄の中で、いまの担当と操作を縦に積む。
+      「長瀬 巧」と選択欄が同じ行に流れて読みにくかった。 */
+.owner-cell { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.owner-current { font-weight: 500; }
+
+/* 5. 期限を超えた行の左に印を付ける。色だけに頼らない。 */
+table.data tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--color-semantic-error); }
+
+/* 6. KPI の警告。0 のときと 1 以上のときで見た目が同じだった。 */
+.kpi-value.alert { color: var(--color-semantic-error); }

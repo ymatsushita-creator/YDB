@@ -128,7 +128,13 @@ function ForestNode({ forest, seasonId }: { forest: ForestRow; seasonId: string 
         {!asleep && forest.days_since_touch !== null && (
           <span>最終接触 {num(forest.days_since_touch)} 日前</span>
         )}
-        <span>推定リーチ {num(forest.estimated_reach)}（接触機会）</span>
+        {/* リーチの記録が無い森に「—（接触機会）」と出ていた。単位だけが残って
+            意味をなさないので、記録が無いことをそのまま書く。 */}
+        <span>
+          {forest.estimated_reach === null
+            ? 'リーチの記録なし'
+            : `推定リーチ ${num(forest.estimated_reach)}（接触機会）`}
+        </span>
       </div>
     </div>
   )
@@ -257,8 +263,9 @@ export default async function CockpitPage(
       <div className="grid grid-kpi">
         <Kpi label="いま何をすべきか" value={num(tasks.length)}
              tone={tasks.length ? undefined : 'muted'} meta="未処理のやること（件）" />
+        {/* 0 でないこと自体が問題なので、0 のときと見た目を変える。 */}
         <Kpi label="何が止まっているか" value={num(overdue.length)}
-             tone={overdue.length ? undefined : 'muted'} meta="期限を超えたやること（件）" />
+             tone={overdue.length ? 'alert' : 'muted'} meta="期限を超えたやること（件）" />
         <Kpi label="誰が待っているか" value={num(totals?.waiting_persons ?? 0)}
              tone={Number(totals?.waiting_persons ?? 0) ? undefined : 'muted'}
              meta="判断を待っている人（人）" />
@@ -324,7 +331,7 @@ export default async function CockpitPage(
       <div className="section">
         <Card
           title="森のマップ（アプローチできる生態系）"
-          note="要注意の順に並ぶ（期限超過 → 未処理 → 休眠日数）。旗は事実そのままで、点数ではない"
+          note="旗が立った森が先（滞留 → 接点なし・休眠 → 平常）。旗は事実そのままで、点数ではない"
         >
           {forests.length === 0 ? <Empty>森が登録されていない</Empty> : (
             <div className="forest-map">
@@ -357,7 +364,8 @@ export default async function CockpitPage(
                 </thead>
                 <tbody>
                   {tasks.slice(0, 40).map((t) => (
-                    <tr key={`${t.kind}-${t.source_id}`}>
+                    <tr key={`${t.kind}-${t.source_id}`}
+                        className={t.is_overdue ? 'overdue' : undefined}>
                       <td>
                         <span className={KIND_CLASS[t.kind]}>{KIND_LABEL[t.kind]}</span>
                         {t.detail && (
@@ -384,12 +392,16 @@ export default async function CockpitPage(
                         )}
                       </td>
                       <td>
-                        {t.owner ?? (t.kind === 'assign' ? (
+                        <div className="owner-cell">
+                        {t.owner
+                          ? <span className="owner-current">{t.owner}</span>
+                          : t.kind === 'assign'
+                            ? null
+                            : <span className="badge-tag-orange">未割当</span>}
+                        {t.kind === 'assign' && (
                           <AssignForm evaluationId={t.source_id}
                                       seasonId={season.id} staff={staff} />
-                        ) : (
-                          <span className="badge-tag-orange">未割当</span>
-                        ))}
+                        )}
                         {/* 保留は担当が付いていても解く操作が要る。
                             担当欄の下に置き、行の意味（誰の手番か）を保つ。 */}
                         {t.kind === 'unhold' && (
@@ -401,6 +413,7 @@ export default async function CockpitPage(
                           <AssignForm evaluationId={t.source_id} seasonId={season.id}
                                       staff={staff} mode="reassign" />
                         )}
+                        </div>
                       </td>
                       <td className="num">
                         {t.is_overdue ? (

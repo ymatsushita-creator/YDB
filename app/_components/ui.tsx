@@ -24,14 +24,15 @@ export function Kpi({
   label: string
   value: ReactNode
   meta?: ReactNode
-  tone?: 'muted'
+  /** `alert` は「0 でないこと自体が問題」の数に使う（止まっている件数など）。 */
+  tone?: 'muted' | 'alert'
   /** 0..1 を超えると警告色。定員や目標に対する充足に使う。 */
   fill?: { ratio: number; over?: boolean }
 }) {
   return (
     <div className="card-base kpi">
       <span className="kpi-label">{label}</span>
-      <span className={`kpi-value${tone === 'muted' ? ' muted' : ''}`}>{value}</span>
+      <span className={`kpi-value${tone ? ` ${tone}` : ''}`}>{value}</span>
       {fill && (
         <div className="meter">
           <div
