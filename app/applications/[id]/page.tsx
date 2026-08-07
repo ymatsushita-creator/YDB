@@ -180,9 +180,35 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
                     <p className="unit-note">申し送り：{e.handover_note}</p>
                   )}
 
+                  {/* E1: 何を評価するのかを出す。
+                      かつては「判断がまだ下りていないため、点も根拠も無い」と
+                      しか出しておらず、運転席が「評価する」と言っている相手に
+                      ついて**何を見るのかがどこにも無かった**。
+                      点の入力そのものは次のサイクル（E2）。 */}
+                  {e.pending_criteria.length > 0 && (
+                    <div style={{ marginTop: 'var(--space-sm)' }}>
+                      <p className="section-note">
+                        これから点と根拠を付ける軸（{e.pending_criteria.length} 件）
+                      </p>
+                      <ul className="criteria-list">
+                        {e.pending_criteria.map((c) => (
+                          <li key={c.criteria_name} className="criteria-row">
+                            <span>{c.criteria_name}</span>
+                            <span className="section-note">
+                              {c.scale_max} 点満点
+                              {c.applies_to === 'reapplicant_only' && ' ・ 再応募者のみ'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {e.scores.length === 0 ? (
                     <p className="section-note" style={{ marginTop: 'var(--space-sm)' }}>
-                      判断がまだ下りていないため、点も根拠も無い
+                      {e.pending_criteria.length > 0
+                        ? '点はまだ1つも付いていない。根拠は必須なので、空では保存できない'
+                        : '判断がまだ下りていないため、点も根拠も無い'}
                     </p>
                   ) : (
                     <div className="table-wrap" style={{ marginTop: 'var(--space-sm)' }}>

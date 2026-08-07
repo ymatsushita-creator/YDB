@@ -43,6 +43,10 @@ export interface OpenTask {
   sla_days: number | null
   is_overdue: boolean
   detail: string | null
+  /** 適用される評価軸の数。 */
+  criteria_total: number
+  /** すでに点が付いた軸の数。 */
+  criteria_scored: number
 }
 
 /**
@@ -61,9 +65,20 @@ export const getOpenTasks = (db: Db, seasonId: string) =>
            p.family_name || ' ' || p.given_name AS person_name,
            t.step_name, t.step_order,
            st.display_name AS owner,
-           t.waiting_days, t.sla_days, t.is_overdue, t.detail
+           t.waiting_days, t.sla_days, t.is_overdue, t.detail,
+           -- 入力の進み具合。「評価する」と出ているだけでは、着手前か
+           -- 途中かが区別できない。1件ずつ開かないと分からないのは、
+           -- 5秒で読める画面ではない（E1）。
+           (SELECT count(*) FROM evaluation_criteria ec
+             WHERE ec.selection_step_id = t.selection_step_id
+               AND (ec.applies_to = 'all'
+                    OR (ec.applies_to = 'reapplicant_only' AND a.is_reapplication)))
+             AS criteria_total,
+           (SELECT count(*) FROM evaluation_scores es
+             WHERE es.evaluation_id = t.source_id) AS criteria_scored
       FROM v_open_tasks t
       JOIN persons p ON p.id = t.person_id
+      JOIN applications a ON a.id = t.application_id
       LEFT JOIN staffs st ON st.id = t.owner_staff_id
      WHERE t.season_id = $1
      ORDER BY t.is_overdue DESC, t.waiting_days DESC, t.step_order`, [seasonId])

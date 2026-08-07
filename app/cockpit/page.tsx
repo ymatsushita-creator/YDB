@@ -370,7 +370,19 @@ export default async function CockpitPage(
                       <td className="nowrap">
                         <Link href={`/applications/${t.application_id}`}>{t.person_name}</Link>
                       </td>
-                      <td className="nowrap">{t.step_order}. {t.step_name}</td>
+                      <td className="nowrap">
+                        {t.step_order}. {t.step_name}
+                        {/* 入力の進み具合。着手前か途中かが1行で読める。 */}
+                        {t.kind === 'evaluate' && Number(t.criteria_total) > 0 && (
+                          <>
+                            <br />
+                            <span className="section-note">
+                              {num(t.criteria_scored)}/{num(t.criteria_total)} 軸
+                              {Number(t.criteria_scored) === 0 && ' ・ 未着手'}
+                            </span>
+                          </>
+                        )}
+                      </td>
                       <td>
                         {t.owner ?? (t.kind === 'assign' ? (
                           <AssignForm evaluationId={t.source_id}

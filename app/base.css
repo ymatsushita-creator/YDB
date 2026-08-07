@@ -337,3 +337,22 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   white-space: nowrap;
   border: 0;
 }
+
+/* ---- 評価軸の一覧（E1） ---- */
+/* まだ点が付いていない軸を並べる。入力欄はまだ無い（E2）。 */
+.criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-xxs);
+}
+.criteria-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: 4px 8px;
+  border-radius: var(--rounded-sm);
+  background: var(--color-surface);
+  font-size: 13px;
+}

@@ -457,6 +457,19 @@ export interface EvaluationScore {
   applies_to: string
 }
 
+/**
+ * まだ点が付いていない評価軸。
+ *
+ * 「評価する」と言われた人が**何を評価するのか**を出すために要る。
+ * これが無いと、応募の画面は「判断がまだ下りていないため、点も根拠も無い」
+ * としか言えず、次の一手が画面から読めない（E1、C-24）。
+ */
+export interface PendingCriterion {
+  criteria_name: string
+  scale_max: number
+  applies_to: string
+}
+
 export interface EvaluationRow {
   evaluation_id: string
   step_name: string
@@ -471,6 +484,8 @@ export interface EvaluationRow {
   /** 利益相反の種別。無ければ null。 */
   conflict_type: string | null
   scores: EvaluationScore[]
+  /** 適用される軸のうち、まだ点が付いていないもの。 */
+  pending_criteria: PendingCriterion[]
 }
 
 /**
@@ -512,11 +527,40 @@ export const getApplicationEvaluations = async (
      WHERE e.application_id = $1
      ORDER BY ec.sort_order`, [id])
 
+  // まだ点が付いていない軸。適用の判定は「軸の applies_to」と
+  // 「その応募が再応募か」の2つの事実だけで決まる（トリガ
+  // evaluation_scores_applicability と同じ規則。あちらは書き込みを拒否し、
+  // こちらは何を書くべきかを出す。規則が2箇所にあるので、
+  // tests/19 が両者の一致を固定している）。
+  const pending = await all<PendingCriterion & { evaluation_id: string }>(db, `
+    SELECT e.id AS evaluation_id, ec.name AS criteria_name,
+           ec.scale_max, ec.applies_to
+      FROM evaluations e
+      JOIN applications a ON a.id = e.application_id
+      JOIN evaluation_criteria ec ON ec.selection_step_id = e.selection_step_id
+     WHERE e.application_id = $1
+       AND (ec.applies_to = 'all'
+            OR (ec.applies_to = 'reapplicant_only' AND a.is_reapplication))
+       AND NOT EXISTS (
+           SELECT 1 FROM evaluation_scores es
+            WHERE es.evaluation_id = e.id AND es.criteria_id = ec.id)
+     ORDER BY ec.sort_order`, [id])
+
   const byEvaluation = new Map<string, EvaluationScore[]>()
   for (const { evaluation_id, ...s } of scores) {
     const list = byEvaluation.get(evaluation_id)
     if (list) list.push(s)
     else byEvaluation.set(evaluation_id, [s])
   }
-  return evaluations.map((e) => ({ ...e, scores: byEvaluation.get(e.evaluation_id) ?? [] }))
+  const pendingBy = new Map<string, PendingCriterion[]>()
+  for (const { evaluation_id, ...c } of pending) {
+    const list = pendingBy.get(evaluation_id)
+    if (list) list.push(c)
+    else pendingBy.set(evaluation_id, [c])
+  }
+  return evaluations.map((e) => ({
+    ...e,
+    scores: byEvaluation.get(e.evaluation_id) ?? [],
+    pending_criteria: pendingBy.get(e.evaluation_id) ?? [],
+  }))
 }
