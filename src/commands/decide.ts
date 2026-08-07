@@ -228,7 +228,8 @@ export async function decideStep(
 
 export type DecideCode =
   | 'submitted' | 'advanced' | 'accepted' | 'rejected'
-  | SubmitFailure | DecideFailure
+  | 'corrected_to_advance' | 'corrected_to_reject'
+  | SubmitFailure | DecideFailure | CorrectFailure
 
 export const DECIDE_CODE_MESSAGE: Record<DecideCode, string> = {
   submitted: '評価を確定した。次は選考の判定である。',
@@ -241,6 +242,9 @@ export const DECIDE_CODE_MESSAGE: Record<DecideCode, string> = {
   not_decidable: 'いま判定できるステップが無い。評価が残っているか、済んでいる。',
   staff_not_available: '判定した人が選ばれていない。',
   bad_decision: '判定の種類が不正である。',
+  corrected_to_advance: '判定を「通過」に訂正した。元の判定は打ち消し行で残っている。',
+  corrected_to_reject: '判定を「不合格」に訂正した。元の判定は打ち消し行で残っている。',
+  not_correctable: '訂正できる判定が無い。画面を読み直す。',
 }
 
 const CODES = Object.keys(DECIDE_CODE_MESSAGE) as DecideCode[]
@@ -255,3 +259,144 @@ export const listDecidingStaff = (db: Db) =>
   all<{ staff_id: string; display_name: string }>(db, `
     SELECT id AS staff_id, display_name FROM staffs
      WHERE is_active ORDER BY display_name`)
+
+// -------------------------------------------------------------
+// D2. 判定の訂正（打ち消し行の追記）
+// -------------------------------------------------------------
+//
+// 記録層は最初からこの形を想定している ―― `corrects_history_id` と
+// `is_correction` があり、`v_effective_status_histories` が
+// 「深さ偶数＝有効」の逆仕訳で解決する。**新しい概念は足していない。**
+//
+// ★ 表せるのは**差し替え**だけである（通過↔不合格）。
+//   訂正行そのものが有効な遷移になるため、「判定を無かったことにして
+//   判断待ちへ戻す」は表せない。transition_type に「何も起きていない」が
+//   無いからである。
+//   TODO(MVP): 押し間違いを完全に消す運用が必要だと分かったら、そのとき決める。
+//   いまは差し替えで足りる（誤って不合格にした → 通過へ直す）。
+
+export interface CorrectableDecision {
+  history_id: string
+  application_id: string
+  /** いまの判定。 */
+  transition_type: 'advance' | 'reject'
+  selection_step_id: string | null
+  step_name: string | null
+  decided_at: Date
+  decided_by: string
+  note: string | null
+  /** 訂正して通過にしたときに進む先。無ければ最終ステップ。 */
+  next_step_id: string | null
+  next_step_name: string | null
+}
+
+/**
+ * いま訂正できる判定。
+ *
+ * **最後の有効な判定だけを対象にする。** 途中の判定を直せると、あとに続く
+ * 判定との整合が崩れる（3段目を通したあとで1段目を不合格に直す、など）。
+ *
+ * 母集団は `v_active_applications` ではない。**不合格にした応募こそ
+ * 直したい**ので、動いていない応募も対象に含める。
+ * 個人情報削除を受けた人だけは外す（運用の画面に氏名の窓を残さない）。
+ */
+export const getCorrectableDecision = (db: Db, applicationId: string) => {
+  if (!UUID.test(applicationId)) return Promise.resolve(null)
+  return maybeOne<CorrectableDecision>(db, `
+    SELECT sh.id AS history_id, sh.application_id, sh.transition_type,
+           sh.selection_step_id, ss.name AS step_name,
+           sh.occurred_at AS decided_at, st.display_name AS decided_by, sh.note,
+           nx.id AS next_step_id, nx.name AS next_step_name
+      FROM v_effective_status_histories sh
+      JOIN applications a ON a.id = sh.application_id AND a.deleted_at IS NULL
+      JOIN persons p ON p.id = a.person_id AND p.deleted_at IS NULL
+      JOIN staffs st ON st.id = sh.changed_by_staff_id
+      LEFT JOIN selection_steps ss ON ss.id = sh.selection_step_id
+      LEFT JOIN selection_steps nx
+             ON ss.id IS NOT NULL AND nx.season_id = ss.season_id
+            AND nx.sort_order = ss.sort_order + 1
+     WHERE sh.application_id = $1
+       AND sh.transition_type IN ('advance', 'reject')
+     ORDER BY sh.occurred_at DESC, sh.id DESC
+     LIMIT 1`, [applicationId])
+}
+
+export type CorrectResult =
+  | {
+      ok: true
+      /** 訂正後の判定。 */
+      decision: 'advance' | 'reject'
+      stepName: string | null
+      /** 訂正で新しく作った次のステップ。作らなかったときは null。 */
+      createdNextStep: string | null
+      accepted: boolean
+    }
+  | { ok: false; reason: CorrectFailure }
+
+export type CorrectFailure =
+  /** 訂正できる判定が無い（まだ判定していない、または対象がずれている）。 */
+  | 'not_correctable'
+  | 'staff_not_available'
+
+/**
+ * 判定を差し替える。打ち消し行を1行追記する。
+ *
+ * ★ **不合格 → 通過に直したときは、次のステップの評価行を作る。**
+ *   作らないと「通過したのに次にやることが無い」状態になり、
+ *   運用者の手が止まる。これは判定（D1）と同じ手当てである。
+ *   すでにその行があるときは作らない（一度通過 → 不合格 → また通過、の経路）。
+ *
+ * ★ 通過 → 不合格に直したときは、次のステップの評価行を**消さない。**
+ *   点が入っているかもしれない記録を消す判断は、ここでするものではない。
+ *   応募の結末が `rejected` になると `v_active_applications` から外れるので、
+ *   やることにも運用の画面にも出ない。
+ *   TODO(MVP): 宙に浮いた評価行が残る。集計はすべて結末で絞っているので
+ *   数字は狂わないが、行としては残る。
+ */
+export async function correctDecision(
+  db: Db,
+  args: { applicationId: string; historyId: string; staffId: string; note?: string },
+): Promise<CorrectResult> {
+  if (!UUID.test(args.staffId)) return { ok: false, reason: 'staff_not_available' }
+  const staff = await maybeOne(db,
+    `SELECT 1 FROM staffs WHERE id = $1 AND is_active`, [args.staffId])
+  if (!staff) return { ok: false, reason: 'staff_not_available' }
+
+  const current = await getCorrectableDecision(db, args.applicationId)
+  // 画面が見ていた判定と、いま訂正できる判定が同じでなければ通さない。
+  // 別の誰かが先に訂正していた場合に、見ていたのとは違う行を打ち消さない。
+  if (!current || current.history_id !== args.historyId) {
+    return { ok: false, reason: 'not_correctable' }
+  }
+
+  const flipped = current.transition_type === 'advance' ? 'reject' : 'advance'
+
+  await db.query(`
+    INSERT INTO status_histories
+      (application_id, transition_type, selection_step_id, occurred_at,
+       changed_by_staff_id, is_correction, corrects_history_id, note)
+    VALUES ($1, $2, $3, now(), $4, true, $5, $6)`,
+    [args.applicationId, flipped, current.selection_step_id, args.staffId,
+     current.history_id, args.note?.trim() || null])
+
+  let createdNextStep: string | null = null
+  if (flipped === 'advance' && current.next_step_id) {
+    // 無ければ作る。あれば触らない（evaluations_assignment_key に当たる）。
+    const { rows } = await db.query(`
+      INSERT INTO evaluations (application_id, selection_step_id, state, assigned_at)
+      SELECT $1, $2, 'pending', now()
+       WHERE NOT EXISTS (
+           SELECT 1 FROM evaluations e
+            WHERE e.application_id = $1 AND e.selection_step_id = $2)
+      RETURNING id`, [args.applicationId, current.next_step_id])
+    if (rows.length > 0) createdNextStep = current.next_step_name
+  }
+
+  return {
+    ok: true,
+    decision: flipped,
+    stepName: current.step_name,
+    createdNextStep,
+    accepted: flipped === 'advance' && current.next_step_id === null,
+  }
+}

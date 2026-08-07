@@ -8,10 +8,11 @@ import {
   parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
 } from '../../../src/commands/score.ts'
 import {
-  getDecidableStep, listDecidingStaff, parseDecideCode, DECIDE_CODE_MESSAGE,
+  getDecidableStep, getCorrectableDecision, listDecidingStaff,
+  parseDecideCode, DECIDE_CODE_MESSAGE,
 } from '../../../src/commands/decide.ts'
 import {
-  saveScoreAction, submitEvaluationAction, decideAction,
+  saveScoreAction, submitEvaluationAction, decideAction, correctDecisionAction,
 } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 
@@ -82,10 +83,11 @@ export default async function ApplicationPage({
   const app = await getApplication(db, id)
   if (!app) notFound()
 
-  const [timeline, evaluations, decidable, decidingStaff] = await Promise.all([
+  const [timeline, evaluations, decidable, correctable, decidingStaff] = await Promise.all([
     getApplicationTimeline(db, app.application_id),
     getApplicationEvaluations(db, app.application_id),
     getDecidableStep(db, app.application_id),
+    getCorrectableDecision(db, app.application_id),
     listDecidingStaff(db),
   ])
 
@@ -108,6 +110,45 @@ export default async function ApplicationPage({
           {DECIDE_CODE_MESSAGE[decided]}
         </p>
       )}
+    </div>
+  )
+
+  // 直前の判定を訂正する欄。**押し間違いを画面から戻せるようにする。**
+  // 記録層は打ち消し行の追記でしか直せないので、表せるのは差し替え
+  // （通過↔不合格）だけである。無かったことにはできない。
+  const correctionPanel = correctable && (
+    <div className="section">
+      <Card
+        title="直前の判定を訂正する"
+        note={`いまの判定は「${
+          correctable.transition_type === 'advance' ? '通過' : '不合格'
+        }」（${correctable.step_name ?? 'ステップ不明'}・${correctable.decided_by}）`}
+      >
+        <form action={correctDecisionAction} className="decide-form">
+          <input type="hidden" name="applicationId" value={app.application_id} />
+          <input type="hidden" name="historyId" value={correctable.history_id} />
+          <label className="visually-hidden" htmlFor="correct-staff">訂正した人</label>
+          <select id="correct-staff" name="staffId" defaultValue="" required>
+            <option value="" disabled>訂正した人を選ぶ…</option>
+            {decidingStaff.map((s) => (
+              <option key={s.staff_id} value={s.staff_id}>{s.display_name}</option>
+            ))}
+          </select>
+          <label className="visually-hidden" htmlFor="correct-note">訂正の理由</label>
+          <input id="correct-note" name="note" type="text" className="rationale-input"
+                 placeholder="訂正の理由（任意）" />
+          <button type="submit" className="button-secondary">
+            {correctable.transition_type === 'advance'
+              ? '「不合格」に訂正する'
+              : '「通過」に訂正する'}
+          </button>
+        </form>
+        <p className="section-note" style={{ marginTop: 'var(--space-xs)' }}>
+          元の判定は消えない。打ち消し行として履歴に残る（原則5）。
+          {correctable.transition_type === 'reject' && correctable.next_step_name
+            && `「通過」に訂正すると「${correctable.next_step_name}」の担当を決める段になる。`}
+        </p>
+      </Card>
     </div>
   )
 
@@ -152,6 +193,7 @@ export default async function ApplicationPage({
     <>
       {savedNotice}
       {decisionPanel}
+      {correctionPanel}
       <div className="page-head">
         <div>
           <p className="page-sub">

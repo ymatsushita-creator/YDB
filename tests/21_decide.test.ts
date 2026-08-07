@@ -9,6 +9,7 @@ import {
 import { saveScore } from '../src/commands/score.ts'
 import {
   submitEvaluation, decideStep, getDecidableStep, DECIDE_CODE_MESSAGE,
+  getCorrectableDecision, correctDecision,
 } from '../src/commands/decide.ts'
 
 /**
@@ -299,8 +300,155 @@ describe('選考を判定する（D1）', () => {
   test('すべてのコードに文言がある', () => {
     const codes = ['submitted', 'advanced', 'accepted', 'rejected',
       'evaluation_not_found', 'not_evaluatable', 'criteria_missing',
-      'not_decidable', 'staff_not_available', 'bad_decision'] as const
+      'not_decidable', 'staff_not_available', 'bad_decision',
+      'corrected_to_advance', 'corrected_to_reject', 'not_correctable'] as const
     for (const c of codes) assert.ok(DECIDE_CODE_MESSAGE[c]?.length > 0, c)
     assert.equal(Object.keys(DECIDE_CODE_MESSAGE).length, codes.length)
+  })
+})
+
+describe('判定を訂正する（D2）', () => {
+  /** 第1ステップを判定済みの応募を作る。 */
+  async function decided(decision: 'advance' | 'reject') {
+    const { app, evaluationId } = await application()
+    await scoreAll(evaluationId, 0)
+    await submitEvaluation(db, { evaluationId })
+    const r = await decideStep(db, { applicationId: app, decision, staffId: fx.staffId })
+    assert.equal(r.ok, true)
+    return { app }
+  }
+
+  const outcomeOf = (app: string) => scalar<string>(db,
+    `SELECT outcome FROM v_application_outcome WHERE application_id = $1`, [app])
+
+  test('不合格を通過に訂正すると、次のステップが立ち上がる', async () => {
+    // **これが訂正でいちばん危ない形である。** 直したのに次にやることが
+    // 無ければ、運用者の手はそこで止まる。
+    const { app } = await decided('reject')
+    assert.equal(await outcomeOf(app), 'rejected')
+
+    const target = await getCorrectableDecision(db, app)
+    assert.ok(target)
+    assert.equal(target.transition_type, 'reject')
+
+    const r = await correctDecision(db, {
+      applicationId: app, historyId: target.history_id, staffId: fx.staffId,
+      note: '一次面接へ進める判断に直した',
+    })
+    assert.equal(r.ok, true)
+    assert.equal(r.ok && r.decision, 'advance')
+    assert.equal(r.ok && r.createdNextStep, '一次面接')
+
+    assert.equal(await outcomeOf(app), 'in_selection', '結末が選考中に戻っていない')
+    const tasks = await all<{ kind: string; step_name: string }>(db,
+      `SELECT kind, step_name FROM v_open_tasks WHERE application_id = $1`, [app])
+    assert.deepEqual(tasks, [{ kind: 'assign', step_name: '一次面接' }])
+  })
+
+  test('通過を不合格に訂正すると、やることが消える', async () => {
+    const { app } = await decided('advance')
+    assert.equal(Number(await scalar<string>(db,
+      `SELECT count(*) FROM v_open_tasks WHERE application_id = $1`, [app])), 1)
+
+    const target = await getCorrectableDecision(db, app)
+    const r = await correctDecision(db, {
+      applicationId: app, historyId: target!.history_id, staffId: fx.staffId,
+    })
+    assert.equal(r.ok && r.decision, 'reject')
+    assert.equal(await outcomeOf(app), 'rejected')
+    assert.equal(Number(await scalar<string>(db,
+      `SELECT count(*) FROM v_open_tasks WHERE application_id = $1`, [app])), 0,
+      '不合格に直したのに、次のステップのやることが残っている')
+  })
+
+  test('元の判定は消えず、打ち消し行として残る', async () => {
+    // 原則5（訂正は打ち消しの追記で表現し、元の記録は残す）。
+    const { app } = await decided('reject')
+    const target = await getCorrectableDecision(db, app)
+    await correctDecision(db, {
+      applicationId: app, historyId: target!.history_id, staffId: fx.staffId,
+    })
+
+    const rows = await all<{ transition_type: string; is_correction: boolean }>(db, `
+      SELECT transition_type, is_correction FROM status_histories
+       WHERE application_id = $1 ORDER BY occurred_at`, [app])
+    assert.equal(rows.length, 2, '元の行が消えている')
+    assert.deepEqual(rows.map((r) => [r.transition_type, r.is_correction]),
+      [['reject', false], ['advance', true]])
+
+    // 有効なのは訂正のほうだけ（深さ偶数＝有効）。
+    const effective = await all<{ transition_type: string }>(db,
+      `SELECT transition_type FROM v_effective_status_histories
+        WHERE application_id = $1`, [app])
+    assert.deepEqual(effective.map((r) => r.transition_type), ['advance'])
+  })
+
+  test('訂正をさらに訂正できる（往復しても壊れない）', async () => {
+    const { app } = await decided('advance')
+    for (const expected of ['reject', 'advance', 'reject'] as const) {
+      const target = await getCorrectableDecision(db, app)
+      assert.ok(target, `訂正できる判定が見つからない（${expected} の手前）`)
+      const r = await correctDecision(db, {
+        applicationId: app, historyId: target.history_id, staffId: fx.staffId,
+      })
+      assert.equal(r.ok && r.decision, expected)
+      assert.equal(await outcomeOf(app), expected === 'reject' ? 'rejected' : 'in_selection')
+    }
+    // 往復しても次のステップの評価は1件だけ（二重に作らない）。
+    assert.equal(Number(await scalar<string>(db, `
+      SELECT count(*) FROM evaluations e
+        JOIN selection_steps ss ON ss.id = e.selection_step_id
+       WHERE e.application_id = $1 AND ss.sort_order = 2`, [app])), 1)
+  })
+
+  test('画面が見ていたのとは違う判定は訂正しない', async () => {
+    // 別の誰かが先に訂正していた場合に、見ていたのとは違う行を打ち消さない。
+    const { app } = await decided('reject')
+    const target = await getCorrectableDecision(db, app)
+    await correctDecision(db, {
+      applicationId: app, historyId: target!.history_id, staffId: fx.staffId,
+    })
+    // 同じ history_id でもう一度訂正しようとする（古い画面から押した形）。
+    const stale = await correctDecision(db, {
+      applicationId: app, historyId: target!.history_id, staffId: fx.staffId,
+    })
+    assert.equal(!stale.ok && stale.reason, 'not_correctable')
+    assert.equal(Number(await scalar<string>(db,
+      `SELECT count(*) FROM status_histories WHERE application_id = $1`, [app])), 2)
+  })
+
+  test('まだ判定していない応募は訂正できない', async () => {
+    const { app } = await application()
+    assert.equal(await getCorrectableDecision(db, app), null)
+    const r = await correctDecision(db, {
+      applicationId: app, historyId: '00000000-0000-0000-0000-000000000000',
+      staffId: fx.staffId,
+    })
+    assert.equal(!r.ok && r.reason, 'not_correctable')
+  })
+
+  test('個人情報削除を受けた人の判定は訂正できない', async () => {
+    const { app, evaluationId } = await application()
+    await scoreAll(evaluationId, 0)
+    await submitEvaluation(db, { evaluationId })
+    await decideStep(db, { applicationId: app, decision: 'reject', staffId: fx.staffId })
+    const personId = await scalar<string>(db,
+      `SELECT person_id FROM applications WHERE id = $1`, [app])
+    await db.query(`UPDATE persons SET deleted_at = now() WHERE id = $1`, [personId])
+
+    assert.equal(await getCorrectableDecision(db, app), null)
+  })
+
+  test('訂正した人が選ばれていなければ記録しない', async () => {
+    const { app } = await decided('reject')
+    const target = await getCorrectableDecision(db, app)
+    for (const staffId of ['', 'nope']) {
+      const r = await correctDecision(db, {
+        applicationId: app, historyId: target!.history_id, staffId,
+      })
+      assert.equal(!r.ok && r.reason, 'staff_not_available')
+    }
+    assert.equal(Number(await scalar<string>(db,
+      `SELECT count(*) FROM status_histories WHERE application_id = $1`, [app])), 1)
   })
 })
