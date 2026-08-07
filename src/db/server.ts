@@ -1,6 +1,8 @@
 import 'server-only'
 import { join } from 'node:path'
 import { openPglite } from './pglite.ts'
+import { migrate, seed } from './migrate.ts'
+import { seedDemo } from '../seed/demo.ts'
 import type { Db } from './client.ts'
 
 /**
@@ -23,7 +25,48 @@ const DATA_DIR = join(process.cwd(), '.pgdata')
 
 const cache = globalThis as unknown as { __youthdb?: Promise<Db> }
 
+/**
+ * デモモードかどうか。
+ *
+ * Vercel などのサーバレスでは**書き込めるディスクが無く、.pgdata も配られない**
+ * （git 管理外）。永続を諦めて、起動のたびに使い捨ての DB を組み立てる。
+ *
+ * `YOUTHDB_DEMO` を明示すれば、そちらが常に優先する。指定が無いときだけ
+ * Vercel を見て自動で入る（見せるためだけの環境で設定を1つも要らなくする）。
+ *
+ * **これは Pilot の本番ではない。** 判定は書けるが、インスタンスが入れ替わると
+ * 消える。実データも入っていないし、認証も無い。
+ * Pilot に必要なもの（バックアップ・認証・DB の分離）は
+ * docs/pilot/DEPLOY-READINESS.md にあり、どれも満たしていない。
+ */
+export const isDemoMode = (): boolean =>
+  process.env.YOUTHDB_DEMO !== undefined
+    ? process.env.YOUTHDB_DEMO === '1'
+    : process.env.VERCEL === '1'
+
+/**
+ * 使い捨ての DB を1つ組み立てる。
+ *
+ * デモの参照データ（*.example.sql）まで入れる。**実年度は入らない**
+ * ―― `*.production.sql` はサンプルを入れる環境から外れる（C-28）。
+ * 創作の応募が実在の年度にぶら下がるのを防ぐための境界で、ここでも同じに保つ。
+ */
+async function buildDemoDb(): Promise<Db> {
+  const db = await openPglite()          // 引数なし＝インメモリ
+  await migrate(db)
+  await seed(db, { includeExamples: true })
+  await seedDemo(db)
+  return db
+}
+
 export function getDb(): Promise<Db> {
+  if (isDemoMode()) {
+    cache.__youthdb ??= buildDemoDb().catch((e: unknown) => {
+      delete cache.__youthdb
+      throw e
+    })
+    return cache.__youthdb
+  }
   if (process.env.DATABASE_URL) {
     throw new Error(
       'DATABASE_URL が設定されているが、PostgreSQL アダプタは未実装。' +

@@ -1,11 +1,14 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
-import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import type { Db } from './client.ts'
 
-const MIGRATIONS_DIR = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
-const SEEDS_DIR = fileURLToPath(new URL('../../db/seeds/', import.meta.url))
+// new URL(..., import.meta.url) は Turbopack がモジュール参照として
+// 静的解決しようとして失敗する（src/db/server.ts の DATA_DIR と同じ罠）。
+// 実行時のパスとして組み立てる。cwd はリポジトリのルートを前提にする ――
+// テストも scripts/ も Next のサーバも、すべてそこから動く。
+const MIGRATIONS_DIR = join(process.cwd(), 'db', 'migrations')
+const SEEDS_DIR = join(process.cwd(), 'db', 'seeds')
 
 export interface Migration {
   name: string

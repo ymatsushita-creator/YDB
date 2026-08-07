@@ -293,3 +293,6 @@ table.data tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--color-sem
 /* 注意喚起も面で塗らない。左の線と文字色だけで出す。 */
 .callout { background: var(--color-canvas); border-left-width: 3px; }
 .callout.ok { background: var(--color-canvas); color: var(--color-semantic-success); }
+/* デモ環境の表示。警告なので線と文字だけ（面は塗らない）。 */
+.workspace-toolbar-status.is-demo { color: var(--color-semantic-error); font-weight: 600; }
+.workspace-toolbar-status.is-demo i { background: var(--color-semantic-error); }
