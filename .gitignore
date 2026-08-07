@@ -13,3 +13,6 @@ dist/
 # db/seeds/ は追跡下で GitHub の2リモートへ push されるため、
 # 実データは必ずこちらへ置く（docs/pilot/DATA-INTAKE.md）。
 db/private/
+
+# 旧NEO-YouthからCodexが抽出した個人情報を含む移行データ
+Codexから移行した旧YouthDBデータ_*/
