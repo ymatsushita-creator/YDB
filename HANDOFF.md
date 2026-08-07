@@ -45,7 +45,9 @@ pnpm install && pnpm db:reset && pnpm test
   （`REPORT-4.0.md`）。凍結。穴3つのうち2つを閉じ、1つ（`v_person_season_state` の
   直積）は残した。作業中に A-14（取り下げた応募が「選考中」として催促され続けていた）と
   A-15（デモの出来事が指定日の1日前に起きていた）を見つけて直している
-- **実行⑤** … これから
+- **実行⑤** … これから。**主題は機能追加ではなく土台の大改修。**
+  監督者プロンプトを書き込み、`CLAUDE.md` と `DESIGN.md` のレベルから作り直す。
+  詳細は下の「実行⑤の主題」
 
 規約は次のとおり。
 
@@ -61,7 +63,8 @@ pnpm install && pnpm db:reset && pnpm test
 
 ## 読む順番
 
-0. `CLAUDE.md` — **何のための開発かと、守る規律。まずこれ。**
+0. **監督者プロンプト**（実行⑤で書き込まれる。置き場所が決まったらここに書く）
+   → `CLAUDE.md` — **何のための開発かと、守る規律。**
    この開発は選考プロセスドリブンであり、主題は画面ではなく
    「記録と集計の構造が、集客〜選考を評価し・計画し・実行するに足りるか」
 1. `README.md` — 起動手順と、触る前に知るべきこと
@@ -193,11 +196,91 @@ git 管理下に入っていないため、環境が変わると付いてこな�
 すべて消える）のどちらにも筋があり、**過去年度の応募数と合格数が動く変更**
 なので触っていない。詳細は `DECISIONS.md` D-10。
 
+## 実行⑤の主題（決定済み）
+
+**監督者プロンプトを書き込み、`CLAUDE.md` と `DESIGN.md` のレベルから大改修する。**
+監督者プロンプトは開発を依頼する側が用意する。それを受けて、
+土台の文書そのものを作り直す。
+
+下の「次にやりうること」は**この大改修が済んでからの話**として読むこと。
+順番を入れ替えて機能から着手しない。土台を直す前に画面を足すと、
+直した土台に合わない画面が増えるだけになる。
+
+着手前に、次の2点を決める必要がある。**どちらも勝手に決めない。**
+
+### 1. `DESIGN.md` は `basic/` の中にある
+
+`CLAUDE.md` 5節は「**`basic/` は変更しない。正典として残す**」と定めている。
+`DESIGN.md` はその `basic/` にあり、`app/tokens.css` の生成元でもある
+（`scripts/build-tokens.ts` が `basic/DESIGN.md` を直接読む）。
+
+つまり「`DESIGN.md` レベルの大改修」は、この規律と正面からぶつかる。
+採りうる形は3つ。
+
+- (a) `basic/` の不可侵を、`DESIGN.md` についてだけ解く。
+  なぜ例外にするのかを `DECISIONS.md` に書く
+- (b) `basic/DESIGN.md` は正典として残し、後継を `basic/` の外に置く
+  （例: `docs/DESIGN.md`）。`scripts/build-tokens.ts` の読み先を移し、
+  正典との関係を記録する
+- (c) `basic/` の位置づけ自体を改める。原典が SQL 3点セットである以上、
+  デザイン文書だけ性質が違うという整理はありうる
+
+**(b) が既存の規律を壊さない。** ただし決めるのは開発を依頼する側。
+
+### 2. いまの `DESIGN.md` は、このプロダクトの設計ではない
+
+中身は Notion のブランド分析である。
+
+```
+name: Notion-design-analysis
+version: alpha
+description: Notion presents itself as the all-in-one workspace ...
+colors.primary: "#5645d4"      # Notion の CTA 紫
+colors.brand-navy: "#0a1530"   # Notion のヒーロー帯
+```
+
+この値が `pnpm tokens` を通って `app/tokens.css` になり、
+そのまま画面の色になっている。`version: alpha` のまま実行①〜④が過ぎた。
+
+**他社のブランド配色を、そのまま製品の意匠として使い続けている状態である。**
+起業家アカデミーの意匠として何が正しいかは、まだ一度も決めていない。
+大改修で最初に埋めるべき空白はここで、Forest Dashboard の見た目は
+その後に決まる。
+
+`app/tokens.css` は生成物なので手で編集しない。直すのは `DESIGN.md` のほう。
+生成の仕組み（`pnpm tokens` で差分が出ないこと）は改修後も保つ。
+
+## 進行中の相談（実行⑤で判断が要る）
+
+**Forest Dashboard の意匠を、別ツール（Fusion）で検討する話が動いている。**
+そこへ渡す調査指示は作成済みで、次の前提を明記してある。
+
+- このプロジェクトは Tailwind も shadcn も認証も lint 設定も持たない。
+  不足ではなく設計判断である
+- `'use client'` が0件。全画面がサーバコンポーネントで、
+  クライアント JavaScript を一切配信していない。
+  Rive / react-d3-tree / react-arborist はいずれもクライアント側なので、
+  採用は「クライアント境界を新設する」判断と同義になる
+- 林は `f_person_season_state(90).in_active_window` であって
+  `v_person_season_state.current_level = 'identified_person'` ではない（A-10）
+- 年輪（`is_reapplication`）は再計算処理が未実装のため表示保留（E-7）
+- 休眠木は `in_active_window = false` で表す。
+  「Reject 後」では引けない（`reject` に `selection_step_id` が無い）
+
+**未決が1つある。** `../academy-ui-assets/reports/` の8ファイル（80KB。
+`SELECTED_ASSETS.md` / `LICENSE_MANIFEST.md` / `SOURCE_MAP.json` /
+`IMPLEMENTATION_PLAN.md` ほか）は git 管理外にあり、環境が変わると付いてこない。
+リポジトリに入れる（`docs/ui-assets/` など）か、添付で渡し続けるかを決めていない。
+ZIP（10MB）と参考画像は入れない方針 ―― `quarantine/` と `reference-only/` の
+切り分けが崩れるため。
+
 ## 次にやりうること
 
 **並べ方の基準は `CLAUDE.md` の4つの問い**（誰がどんな状態か／誰が何を評価したか／
 いま何が起きているか／次に何をすべきか）。効きの大きい順に並べてある。
 最終的な優先順位は指示を仰ぐこと。積み残しは `DECISIONS.md` の D-9 にもある。
+
+**ただし、上の「実行⑤の主題」が先に来る。**
 
 0. ~~**実行③の残した穴**~~ **2つ閉じた（実行④、`REPORT-4.0.md`）。**
    残りは1つ ―― `v_person_season_state` が `persons × seasons` の直積である点。
