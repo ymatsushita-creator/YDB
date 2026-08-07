@@ -400,3 +400,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   color: var(--color-ink);
 }
 .decide-form button { font-size: 13px; padding: 6px 14px; border: 0; cursor: pointer; }
+
+/* ---- 試運転の手順（Pilot） ---- */
+.pilot-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.pilot-step {
+  padding: var(--space-sm);
+  border-left: 3px solid var(--color-brand-green);
+  background: var(--color-surface);
+  border-radius: var(--rounded-sm);
+}
