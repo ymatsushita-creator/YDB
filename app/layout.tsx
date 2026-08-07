@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { isDemoMode } from '../src/db/server.ts'
 import './tokens.css'
 import './base.css'
 
@@ -40,7 +41,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="app-content">
             <header className="workspace-toolbar">
               <span className="workspace-toolbar-title">採用エコシステム</span>
-              <span className="workspace-toolbar-status"><i />運用中</span>
+              {/*
+                デモ環境であることを画面に出す。URL を渡された人には、
+                これが実データかどうかを確かめる手段が無い。
+                出さなければ「実在の候補者が26人待っている」と読める。
+              */}
+              {isDemoMode()
+                ? <span className="workspace-toolbar-status is-demo"><i />デモ ・ 架空データ ・ 保存されません</span>
+                : <span className="workspace-toolbar-status"><i />運用中</span>}
             </header>
             <main className="shell">{children}</main>
           </div>
