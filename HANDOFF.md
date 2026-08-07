@@ -83,7 +83,9 @@ Relationship）は、寄せずに `process.md` 末尾の付記に残してある
    **C-16 〜 C-19（森の実体・いまやること・要注意の旗・件と人）**、
    **D-12（MVP で置いた仮定と TODO(MVP) 全部）**、
    D-11（段の語が再定義された。実装は未追随）、D-8 と D-10（未確定）、E 節
-7. `REPORT-6.8.md`（実行⑥の締め。**採用の1周が閉じた。ここから読む**）
+7. `REPORT-6.10.md`（**残課題の分類と優先順位。実装なし。ここから読む**）
+   → `REPORT-6.9.md`（判定の訂正。実運用フェーズ1件目）
+   → `REPORT-6.8.md`（採用の1周が閉じた）
    → `REPORT-6.7.md`（E2 点と根拠の保存。PM Report 形式の初回）
    → `REPORT-6.6.md`（評価の第1段 E1）
    → `REPORT-6.5.md`（**レトロスペクティブ。5サイクルの知見と設計更新**）
@@ -452,6 +454,23 @@ UI の目標4つは、実行⑥で一通り答えが出た。**次は運用し�
 Remaining Friction / Technical Debt / Risks / Recommendation（Option A/B）/
 Confidence）と **Validation Report**（誰が検証したか / 実データで確認した内容 /
 未検証のケース / 今後確認すべきケース）。
+
+### Operator Validation フェーズの進め方（実行⑥の途中で追加）
+
+**1機能を終えたら、次をすぐ実装しない。** 次の順で立ち止まる。
+
+1. PM Report を出す
+2. Validation Report を出す
+3. **残課題を4つに分類する** ―― Observed Operator Problem /
+   Developer Observation / Technical Debt / Product Backlog
+4. **Priority = Impact × Frequency × Confidence** で次を推奨する
+
+**「無いから作る」を理由にしない。** 実際の採用業務が改善する見込みが
+いちばん高いものを推す。目的は機能の完成ではなく**運営の生産性**である。
+
+**2026-08-07 時点で Observed Operator Problem は0件である**（誰も運営として
+使っていない）。そのため全候補の Confidence が 4 以下に留まっている。
+分類と見積りの全文は `REPORT-6.10.md`。
 
 成功基準は**「運営担当者が、より少ない判断・より少ないクリックで採用を
 進められるようになったか」**の1つだけ。
