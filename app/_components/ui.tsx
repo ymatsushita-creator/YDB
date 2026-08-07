@@ -8,7 +8,7 @@ export function Card({
   return (
     <section className={tint ?? 'card-base'}>
       {title && (
-        <h2 className="section-title" style={{ marginBottom: note ? 4 : 12 }}>
+        <h2 className={`section-title${note ? ' section-title-with-note' : ''}`}>
           {title}
           {note && <span className="section-note">{note}</span>}
         </h2>
@@ -34,12 +34,12 @@ export function Kpi({
       <span className="kpi-label">{label}</span>
       <span className={`kpi-value${tone ? ` ${tone}` : ''}`}>{value}</span>
       {fill && (
-        <div className="meter">
-          <div
-            className={`meter-fill${fill.over ? ' over' : fill.ratio >= 1 ? ' good' : ''}`}
-            style={{ width: `${Math.min(100, Math.max(0, fill.ratio * 100))}%` }}
-          />
-        </div>
+        <meter
+          className={`meter${fill.over ? ' over' : fill.ratio >= 1 ? ' good' : ''}`}
+          value={Math.min(1, Math.max(0, fill.ratio))}
+          min="0"
+          max="1"
+        />
       )}
       {meta && <span className="kpi-meta">{meta}</span>}
     </div>
@@ -55,8 +55,7 @@ export function SeasonTabs({
         <Link
           key={s.id}
           href={`${basePath}?season=${s.id}`}
-          className={s.id === currentId ? 'pill-tab-active' : 'pill-tab'}
-          style={{ padding: '8px 16px', textDecoration: 'none' }}
+          className={s.id === currentId ? 'season-tab pill-tab-active' : 'season-tab pill-tab'}
         >
           {s.is_live && <span className="live-dot" />}
           {s.enrollment_year} 年度
