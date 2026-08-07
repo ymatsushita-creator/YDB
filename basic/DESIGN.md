@@ -1,56 +1,79 @@
 ---
 version: alpha
-name: Notion-design-analysis
+name: NEO-ACADEMIA-brand
 description: Notion presents itself as the all-in-one workspace through a confident, illustration-rich brand voice — anchored by a deep navy hero band ({colors.brand-navy}) decorated with brand-colored sticky-note dots and mesh wire illustrations, a signature purple pill primary CTA ({colors.primary}), and a rich palette of pastel-tinted feature cards that echo the colorful database properties of the live product. The system uses a Notion-Sans (Inter-based) typeface across every UI surface, anchors a 4-tier pricing comparison (Free / Plus / Business / Enterprise), and presents the live workspace UI mockup directly inside the hero band. Coverage spans homepage, Enterprise, Product AI, Product Agents, Startups, and Pricing surfaces.
 
 colors:
-  primary: "#5645d4"
-  primary-pressed: "#4534b3"
-  primary-deep: "#3a2a99"
-  on-primary: "#ffffff"
-  brand-navy: "#0a1530"
-  brand-navy-deep: "#070f24"
-  brand-navy-mid: "#1a2a52"
-  link-blue: "#0075de"
-  link-blue-pressed: "#005bab"
-  brand-orange: "#dd5b00"
-  brand-orange-deep: "#793400"
-  brand-pink: "#ff64c8"
-  brand-pink-deep: "#a02e6d"
-  brand-purple: "#7b3ff2"
-  brand-purple-300: "#d6b6f6"
-  brand-purple-800: "#391c57"
-  brand-teal: "#2a9d99"
-  brand-green: "#1aae39"
-  brand-yellow: "#f5d75e"
-  brand-brown: "#523410"
-  card-tint-peach: "#ffe8d4"
-  card-tint-rose: "#fde0ec"
-  card-tint-mint: "#d9f3e1"
-  card-tint-lavender: "#e6e0f5"
-  card-tint-sky: "#dcecfa"
-  card-tint-yellow: "#fef7d6"
-  card-tint-yellow-bold: "#f9e79f"
-  card-tint-cream: "#f8f5e8"
-  card-tint-gray: "#f0eeec"
+  # -----------------------------------------------------------
+  # NEO ACADEMIA ブランド（2026-08-07 に依頼者の指示で差し替え）
+  #
+  # 出所はブランド規定（ロゴ・パレット・「色は線、面は黒」）。
+  # 画像から色を起こしたのではなく、規定に書かれた値をそのまま置いている。
+  #
+  # 最重要原則: **色は線と文字にだけ使い、面は黒でしか塗らない。**
+  # だから面に使われる token（primary / brand-navy / card-tint-*）は
+  # すべて白か黒か極薄のグレーにしてある。ネオン4色は線と文字に回す。
+  #
+  # ★印は規定に無く、コントラストのために派生させた値である。
+  #   ネオン色は白背景の文字として読めない（#F0F000 は特に）。
+  #   規定の色相を保ったまま暗くしてある。推測ではなく派生。
+  # -----------------------------------------------------------
+
+  # 面 —— 白と黒だけ
   canvas: "#ffffff"
-  surface: "#f6f5f4"
-  surface-soft: "#fafaf9"
-  hairline: "#e5e3df"
-  hairline-soft: "#ede9e4"
-  hairline-strong: "#c8c4be"
+  surface: "#f7f7f7"
+  surface-soft: "#fbfbfb"
+  primary: "#0a0a0a"
+  primary-pressed: "#000000"
+  primary-deep: "#000000"
+  on-primary: "#ffffff"
+  brand-navy: "#0a0a0a"
+  brand-navy-deep: "#000000"
+  brand-navy-mid: "#1a1a1a"
+  brand-purple: "#0a0a0a"
+  brand-purple-800: "#0a0a0a"
+  brand-purple-300: "#e5e5e5"
+
+  # 文字と罫線
   ink-deep: "#000000"
-  ink: "#1a1a1a"
-  charcoal: "#37352f"
-  slate: "#5d5b54"
-  steel: "#787671"
-  stone: "#a4a097"
-  muted: "#bbb8b1"
+  ink: "#0a0a0a"
+  charcoal: "#1a1a1a"
+  slate: "#4a4a4a"
+  steel: "#707070"
+  stone: "#909090"
+  muted: "#b0b0b0"
   on-dark: "#ffffff"
-  on-dark-muted: "#a4a097"
-  semantic-success: "#1aae39"
-  semantic-warning: "#dd5b00"
-  semantic-error: "#e03131"
+  on-dark-muted: "#b0b0b0"
+  hairline: "#e5e5e5"
+  hairline-soft: "#efefef"
+  hairline-strong: "#c9c9c9"
+
+  # アクセント4色 —— 線と短いラベルにだけ使う
+  brand-yellow: "#f0f000"
+  brand-pink: "#f03090"
+  brand-teal: "#00c0f0"
+  brand-green: "#50f000"
+  brand-orange: "#f01010"
+  link-blue: "#0090b4"        # ★シアン #00C0F0 は白背景の文字として薄い
+  link-blue-pressed: "#00708c" # ★同上
+  brand-orange-deep: "#a80b0b" # ★ネオンレッドの文字用
+  brand-brown: "#707070"
+
+  # 意味を持つ色 —— すべて文字とアイコンに使うので暗い派生を当てる
+  semantic-success: "#2f7a00"  # ★ネオングリーンの文字用
+  semantic-warning: "#8a6a00"  # ★ネオンイエローの文字用
+  semantic-error: "#c40c0c"    # ★ネオンレッドの文字用
+
+  # かつての淡色カード —— 面に色を塗らないので白と極薄グレーへ倒す
+  card-tint-peach: "#ffffff"
+  card-tint-rose: "#ffffff"
+  card-tint-mint: "#ffffff"
+  card-tint-lavender: "#ffffff"
+  card-tint-sky: "#ffffff"
+  card-tint-yellow: "#ffffff"
+  card-tint-yellow-bold: "#f7f7f7"
+  card-tint-cream: "#fbfbfb"
+  card-tint-gray: "#f7f7f7"
 
 typography:
   hero-display:
