@@ -41,6 +41,10 @@ ul { padding: 0; list-style: none; }
 .wordmark { color: var(--color-ink-deep); font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
 .wordmark span { color: var(--color-primary); }
 .workspace-wordmark { padding: 0 var(--space-sm); }
+/* ロゴ。比 3.15:1 を崩さないため width だけ与え、height は auto にする。
+   周囲の余白はロゴ高さの30%以上（ブランド規定のアイソレーションエリア）。 */
+.workspace-logo { display: block; padding: var(--space-sm); }
+.workspace-logo img { display: block; width: 148px; height: auto; }
 .workspace-label { margin: 4px var(--space-sm) var(--space-xl); color: var(--color-steel); font-size: 9px; font-weight: 600; letter-spacing: .8px; }
 .workspace-nav { display: flex; flex-direction: column; gap: 2px; }
 .workspace-nav-link { padding: 8px var(--space-sm); border-radius: var(--rounded-sm); color: var(--color-slate); font-size: 13px; font-weight: 500; }
@@ -242,3 +246,50 @@ table.data tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--color-sem
   .community-map { grid-template-columns: 1fr; }
   .section-heading-row { align-items: flex-start; flex-direction: column; gap: var(--space-xs); }
 }
+
+/* -------------------------------------------------------------
+   NEO ACADEMIA ブランド ―― 「色は線、面は黒」
+   -------------------------------------------------------------
+   ネオン4色は線と短いラベルにだけ使う。面はどこも白か黒。
+   淡色の面塗りを消したままだと種別が全部同じ黒文字になり、
+   一覧が読めなくなる。色は面から線へ移すのであって、消すのではない。
+
+   種別と色の対応（規定のグラフ系列順 シアン → ピンク → イエロー → グリーン）。
+     評価する      シアン
+     担当を替える  ピンク
+     担当を決める  イエロー
+     保留を解く    グレー（種別ではなく停止状態なので色を当てない）
+   ------------------------------------------------------------- */
+.badge-tag-blue, .badge-tag-purple, .badge-tag-orange,
+.badge-tag-green, .badge-tag-gray {
+  display: inline-block;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 0 1px 8px;
+  border-left: 2px solid var(--color-hairline-strong);
+  border-radius: 0;
+}
+.badge-tag-blue   { border-left-color: var(--color-brand-teal); }
+.badge-tag-orange { border-left-color: var(--color-brand-pink); }
+.badge-tag-purple { border-left-color: var(--color-brand-yellow); }
+.badge-tag-green  { border-left-color: var(--color-brand-green); }
+.badge-tag-gray   { color: var(--color-steel); }
+
+/* 選択中の行。淡い面ではなく黒い線で示す。期限超過（赤）とは
+   別の辺を使うので、両方立っても打ち消し合わない。 */
+.task-row.is-selected {
+  background: var(--color-surface-soft);
+  box-shadow: inset 3px 0 0 var(--color-ink-deep);
+  border-radius: 0;
+}
+.task-row.is-overdue { box-shadow: inset 3px 0 0 var(--color-semantic-error); }
+.task-row.is-selected.is-overdue {
+  box-shadow: inset 3px 0 0 var(--color-semantic-error), inset 0 -2px 0 var(--color-ink-deep);
+}
+
+/* 注意喚起も面で塗らない。左の線と文字色だけで出す。 */
+.callout { background: var(--color-canvas); border-left-width: 3px; }
+.callout.ok { background: var(--color-canvas); color: var(--color-semantic-success); }

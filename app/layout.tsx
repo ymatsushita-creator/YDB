@@ -14,8 +14,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <div className="app-frame">
           <aside className="app-sidebar">
-            <Link href="/cockpit" className="wordmark workspace-wordmark">
-              Youth<span>DB</span>
+            {/*
+              ブランド名は必ずロゴ画像で出す。極太テキストで「NEO ACADEMIA」と
+              書くとロゴと競合する（ブランド規定）。
+              比は 3.15:1 固定。歪めない・着色しない・装飾しない。
+              周囲にはロゴ高さの30〜50%以上の余白を取る（.workspace-logo）。
+            */}
+            <Link href="/cockpit" className="workspace-logo" aria-label="NEO ACADEMIA — 運転席へ">
+              <img src="/brand/logo_black.png" alt="NEO ACADEMIA" width={1274} height={404} />
             </Link>
             <p className="workspace-label">ENTREPRENEUR ACADEMY OS</p>
             <nav className="workspace-nav" aria-label="主なナビゲーション">
