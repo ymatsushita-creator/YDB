@@ -164,9 +164,16 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
                     </div>
                   </div>
 
+                  {/* 保留を解いても hold_reason は消していない（C-21）。
+                      制約は「保留なら理由が要る」であって「保留でなければ
+                      持てない」ではないため、解除後も残せる。
+                      ただしラベルを「保留」のままにすると、いま止まって
+                      いるように読める。state で呼び分ける。 */}
                   {e.hold_reason && (
-                    <p className="callout" style={{ marginTop: 'var(--space-sm)' }}>
-                      保留：{e.hold_reason}
+                    <p className={`callout${e.state === 'held' ? '' : ' ok'}`}
+                       style={{ marginTop: 'var(--space-sm)' }}>
+                      {e.state === 'held' ? '保留：' : '保留を解いた（理由）：'}
+                      {e.hold_reason}
                     </p>
                   )}
                   {e.handover_note && (

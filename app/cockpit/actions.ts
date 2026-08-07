@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
 import { assignInterviewer, type AssignCode } from '../../src/commands/assign.ts'
+import { unholdEvaluation, type UnholdCode } from '../../src/commands/unhold.ts'
 
 /**
  * 画面からの書き込み。
@@ -56,4 +57,32 @@ export async function assignAction(formData: FormData): Promise<void> {
   revalidatePath('/cockpit')
   revalidatePath('/forests', 'layout')
   back('ok')
+}
+
+
+/**
+ * 保留を解く。
+ *
+ * `assignAction` と同じ形である。判定は `src/commands/unhold.ts` にあり、
+ * ここは値の受け渡しと、結果コードを付けて戻すことだけをする。
+ *
+ * 選ぶものが無いので `<select>` は無く、ボタン1つのフォームになる。
+ */
+export async function unholdAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const seasonId = String(formData.get('seasonId') ?? '')
+
+  const back = (code: UnholdCode) => {
+    const season = /^[0-9a-f-]{36}$/i.test(seasonId) ? `season=${seasonId}&` : ''
+    redirect(`/cockpit?${season}unhold=${code}`)
+  }
+
+  const db = await getDb()
+  const result = await unholdEvaluation(db, { evaluationId })
+
+  if (!result.ok) back(result.reason)
+
+  revalidatePath('/cockpit')
+  revalidatePath('/forests', 'layout')
+  back('unheld')
 }

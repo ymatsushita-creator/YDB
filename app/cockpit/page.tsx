@@ -9,7 +9,8 @@ import {
   listAssignableStaff, parseAssignCode, ASSIGN_CODE_MESSAGE,
   type AssignableStaff,
 } from '../../src/commands/assign.ts'
-import { assignAction } from './actions.ts'
+import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../src/commands/unhold.ts'
+import { assignAction, unholdAction } from './actions.ts'
 import { Card, Kpi, SeasonTabs, Empty, num } from '../_components/ui.tsx'
 
 export const dynamic = 'force-dynamic'
@@ -169,8 +170,31 @@ function AssignForm({
   )
 }
 
+/**
+ * 保留を解くフォーム。
+ *
+ * 選ぶものが無いのでボタン1つである。`AssignForm` と同じく素の
+ * `<form action={...}>` で、`'use client'` は増やしていない。
+ *
+ * 確認を挟んでいない。**解いても失われるものが無い**（理由は残る）ので、
+ * 取り消しの重さに見合わない。消える操作を足すときに考える。
+ */
+function UnholdForm({
+  evaluationId, seasonId,
+}: { evaluationId: string; seasonId: string }) {
+  return (
+    <form action={unholdAction} className="assign-form">
+      <input type="hidden" name="evaluationId" value={evaluationId} />
+      <input type="hidden" name="seasonId" value={seasonId} />
+      <button type="submit" className="button-secondary">保留を解く</button>
+    </form>
+  )
+}
+
 export default async function CockpitPage(
-  { searchParams }: { searchParams: Promise<{ season?: string; assign?: string }> },
+  { searchParams }: {
+    searchParams: Promise<{ season?: string; assign?: string; unhold?: string }>
+  },
 ) {
   const db = await getDb()
   const params = await searchParams
@@ -193,6 +217,7 @@ export default async function CockpitPage(
 
   // 直前の書き込みの結果。知らないコードは「何も起きていない」として捨てる。
   const assigned = parseAssignCode(params.assign)
+  const unheld = parseUnholdCode(params.unhold)
 
   const overdue = tasks.filter((t) => t.is_overdue)
   const attention = forests.filter((f) => f.flags.length > 0)
@@ -234,6 +259,18 @@ export default async function CockpitPage(
             {assigned === 'ok' && (
               <span className="section-note">
                 やること・待っている人・森の数は、この画面で作り直してある
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+      {unheld && (
+        <div className="section">
+          <p className={`callout${unheld === 'unheld' ? ' ok' : ''}`}>
+            {UNHOLD_CODE_MESSAGE[unheld]}
+            {unheld === 'unheld' && (
+              <span className="section-note">
+                保留の理由は消していない。応募の画面でそのまま読める
               </span>
             )}
           </p>
@@ -313,6 +350,11 @@ export default async function CockpitPage(
                         ) : (
                           <span className="badge-tag-orange">未割当</span>
                         ))}
+                        {/* 保留は担当が付いていても解く操作が要る。
+                            担当欄の下に置き、行の意味（誰の手番か）を保つ。 */}
+                        {t.kind === 'unhold' && (
+                          <UnholdForm evaluationId={t.source_id} seasonId={season.id} />
+                        )}
                       </td>
                       <td className="num">
                         {t.is_overdue ? (
