@@ -356,3 +356,29 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   background: var(--color-surface);
   font-size: 13px;
 }
+
+/* ---- 点と根拠の入力（E2） ---- */
+/* 軸の行の中に収める。1軸1フォームなので、横に細長い形になる。 */
+.score-form {
+  display: flex;
+  gap: var(--space-xxs);
+  align-items: center;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.score-form input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+.score-input { width: 56px; text-align: right; }
+.rationale-input { flex: 1 1 auto; min-width: 0; }
+.score-form button { font-size: 13px; padding: 5px 10px; border: 0; cursor: pointer; }
+
+/* 入力欄が入るので、軸の行は縦に潰さず余白を持たせる。 */
+.criteria-row { flex-wrap: wrap; padding: 6px 8px; }

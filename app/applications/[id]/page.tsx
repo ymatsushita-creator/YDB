@@ -4,6 +4,10 @@ import { getDb } from '../../../src/db/server.ts'
 import {
   getApplication, getApplicationTimeline, getApplicationEvaluations, OUTCOME_LABEL,
 } from '../../../src/queries/drilldown.ts'
+import {
+  parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
+} from '../../../src/commands/score.ts'
+import { saveScoreAction } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 
 export const dynamic = 'force-dynamic'
@@ -21,9 +25,52 @@ const STATE: Record<string, string> = {
   held: '保留',
 }
 
-export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
+/**
+ * 1軸の点と根拠を入れるフォーム（E2）。
+ *
+ * 素の `<form action={...}>` である。`'use client'` は増やしていない。
+ *
+ * ★ 入力の検証をここに書いていない。`max` と `required` は**補助**であって
+ *   判定ではない。判定は記録層（CHECK とトリガ）にあり、失敗は結果コードで
+ *   返ってくる（C-25）。ここで弾く条件を書き足すと、規則が3箇所になる。
+ */
+function ScoreForm({
+  applicationId, evaluationId, criteriaId, scaleMax,
+}: {
+  applicationId: string
+  evaluationId: string
+  criteriaId: string
+  scaleMax: number
+}) {
+  return (
+    <form action={saveScoreAction} className="score-form">
+      <input type="hidden" name="applicationId" value={applicationId} />
+      <input type="hidden" name="evaluationId" value={evaluationId} />
+      <input type="hidden" name="criteriaId" value={criteriaId} />
+      <label className="visually-hidden" htmlFor={`score-${criteriaId}`}>点</label>
+      <input id={`score-${criteriaId}`} name="score" type="number"
+             min={0} max={scaleMax} step={1} required
+             className="score-input" placeholder="点" />
+      <label className="visually-hidden" htmlFor={`rationale-${criteriaId}`}>
+        その点にした根拠
+      </label>
+      <input id={`rationale-${criteriaId}`} name="rationale" type="text" required
+             className="rationale-input"
+             placeholder="何を見てその点にしたか（必須）" />
+      <button type="submit" className="button-secondary">保存</button>
+    </form>
+  )
+}
+
+export default async function ApplicationPage({
+  params, searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ score?: string }>
+}) {
   const db = await getDb()
   const { id } = await params
+  const saved = parseSaveScoreCode((await searchParams).score)
 
   const app = await getApplication(db, id)
   if (!app) notFound()
@@ -37,8 +84,18 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
   // 「数える／数えない」は結末とは別の軸なので、別のバッジで出す。
   const result = OUTCOME_LABEL[app.outcome]
 
+  // 直前の保存の結果。知らないコードは「何も起きていない」として捨てる。
+  const savedNotice = saved && (
+    <div className="section">
+      <p className={`callout${saved === 'saved' ? ' ok' : ''}`}>
+        {SAVE_SCORE_CODE_MESSAGE[saved]}
+      </p>
+    </div>
+  )
+
   return (
     <>
+      {savedNotice}
       <div className="page-head">
         <div>
           <p className="page-sub">
@@ -192,12 +249,25 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
                       </p>
                       <ul className="criteria-list">
                         {e.pending_criteria.map((c) => (
-                          <li key={c.criteria_name} className="criteria-row">
-                            <span>{c.criteria_name}</span>
-                            <span className="section-note">
-                              {c.scale_max} 点満点
-                              {c.applies_to === 'reapplicant_only' && ' ・ 再応募者のみ'}
+                          <li key={c.criteria_id} className="criteria-row">
+                            <span>
+                              {c.criteria_name}
+                              <span className="section-note">
+                                {' '}{c.scale_max} 点満点
+                                {c.applies_to === 'reapplicant_only' && ' ・ 再応募者のみ'}
+                              </span>
                             </span>
+                            {/* 点を入れられるのは「評価する」と出ている評価だけ。
+                                担当未割当・保留・利益相反のときは、先にやることが
+                                別にある（判定は src/commands/score.ts）。 */}
+                            {e.can_score ? (
+                              <ScoreForm applicationId={app.application_id}
+                                         evaluationId={e.evaluation_id}
+                                         criteriaId={c.criteria_id}
+                                         scaleMax={c.scale_max} />
+                            ) : (
+                              <span className="section-note">{e.score_blocked_by}</span>
+                            )}
                           </li>
                         ))}
                       </ul>

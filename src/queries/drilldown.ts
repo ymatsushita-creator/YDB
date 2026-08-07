@@ -465,6 +465,7 @@ export interface EvaluationScore {
  * としか言えず、次の一手が画面から読めない（E1、C-24）。
  */
 export interface PendingCriterion {
+  criteria_id: string
   criteria_name: string
   scale_max: number
   applies_to: string
@@ -486,6 +487,16 @@ export interface EvaluationRow {
   scores: EvaluationScore[]
   /** 適用される軸のうち、まだ点が付いていないもの。 */
   pending_criteria: PendingCriterion[]
+  /**
+   * いまこの評価に点を付けられるか。
+   *
+   * 判定は `v_open_tasks` の種別が `'evaluate'` かどうかだけである。
+   * 画面が独自に条件を書くと、運転席が出している順序（先に担当を決める・
+   * 解く・替える）と食い違う（C-25）。
+   */
+  can_score: boolean
+  /** 付けられない理由。付けられるときは null。 */
+  score_blocked_by: string | null
 }
 
 /**
@@ -503,12 +514,18 @@ export const getApplicationEvaluations = async (
   const id = asId(applicationId)
   if (!id) return []
 
-  const evaluations = await all<Omit<EvaluationRow, 'scores'>>(db, `
+  const evaluations = await all<
+    Omit<EvaluationRow, 'scores' | 'pending_criteria' | 'can_score' | 'score_blocked_by'>
+    & { task_kind: string | null }
+  >(db, `
     SELECT e.id AS evaluation_id, ss.name AS step_name, ss.sort_order AS step_order,
            e.attempt, st.display_name AS interviewer, e.state,
            e.assigned_at, e.submitted_at, e.hold_reason, e.handover_note,
            (SELECT coi.conflict_type FROM v_conflict_of_interest coi
-             WHERE coi.evaluation_id = e.id LIMIT 1) AS conflict_type
+             WHERE coi.evaluation_id = e.id LIMIT 1) AS conflict_type,
+           -- 点を付けられるかは、やることの種別だけで決まる。
+           -- 画面側で条件を組み立てない（C-25）。
+           (SELECT t.kind FROM v_open_tasks t WHERE t.source_id = e.id) AS task_kind
       FROM evaluations e
       JOIN applications a ON a.id = e.application_id AND a.deleted_at IS NULL
       JOIN persons p ON p.id = a.person_id AND p.deleted_at IS NULL
@@ -533,7 +550,7 @@ export const getApplicationEvaluations = async (
   // こちらは何を書くべきかを出す。規則が2箇所にあるので、
   // tests/19 が両者の一致を固定している）。
   const pending = await all<PendingCriterion & { evaluation_id: string }>(db, `
-    SELECT e.id AS evaluation_id, ec.name AS criteria_name,
+    SELECT e.id AS evaluation_id, ec.id AS criteria_id, ec.name AS criteria_name,
            ec.scale_max, ec.applies_to
       FROM evaluations e
       JOIN applications a ON a.id = e.application_id
@@ -558,9 +575,27 @@ export const getApplicationEvaluations = async (
     if (list) list.push(c)
     else pendingBy.set(evaluation_id, [c])
   }
-  return evaluations.map((e) => ({
+  return evaluations.map(({ task_kind, ...e }) => ({
     ...e,
     scores: byEvaluation.get(e.evaluation_id) ?? [],
     pending_criteria: pendingBy.get(e.evaluation_id) ?? [],
+    can_score: task_kind === 'evaluate',
+    score_blocked_by: task_kind === 'evaluate'
+      ? null
+      // 知らない種別が来ても「できるように見える」形にしない。
+      : BLOCKED_BY[task_kind ?? 'none'] ?? 'いまは点を付けられない',
   }))
+}
+
+/**
+ * 点を付けられない理由。**次にやることを名指しする。**
+ *
+ * 「できません」だけでは運用者が止まる。運転席が出している順序と同じ言葉で、
+ * 先にやることを書く。
+ */
+const BLOCKED_BY: Record<string, string> = {
+  assign: '先に担当を決める',
+  unhold: '先に保留を解く',
+  reassign: '先に担当を替える',
+  none: 'この応募はもう動いていない',
 }
