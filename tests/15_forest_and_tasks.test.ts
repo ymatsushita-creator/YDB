@@ -414,3 +414,90 @@ describe('やることを二重に数えない', () => {
       '保留と利益相反で2行になっている。先にやるべきは担当の差し替えのほう')
   })
 })
+
+describe('種別は優先順位で決まる（構造として1行）', () => {
+  /**
+   * 0014 の検証。
+   *
+   * 0012 は4つの枝に WHERE を書き、「1評価=1件」は枝ごとの除外条件を
+   * 人が正しく書き続けることで保たれていた。**保たれなかった**（A-18）。
+   * 0014 で枝を1本にし、種別を優先順位で決めるようにした。
+   *
+   * ここで確かめるのは、優先順位そのものである。組み合わせを個別に
+   * 数え上げるのではなく、**どの組み合わせでも1行**という性質を見る。
+   */
+  const kindsOf = (applicationId: string) =>
+    all<{ kind: string; detail: string | null }>(db,
+      `SELECT kind, detail FROM v_open_tasks WHERE application_id = $1`, [applicationId])
+
+  /** 応募と評価を1件ずつ作る。 */
+  async function evaluation(opts: {
+    state: 'pending' | 'held'
+    owner: string | null
+    referrerStaff?: string
+    referrerPerson?: string
+  }) {
+    const person = await makePerson(db, fx.schoolId,
+      opts.referrerPerson ? { referrerPersonId: opts.referrerPerson } : {})
+    const app = await makeApplication(db, person, season.id, jst('2026-07-01T20:00:00'))
+    await db.query(
+      `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                state, assigned_at, hold_reason)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [app, season.stepIds[0], opts.owner, opts.state, jst('2026-07-05T10:00:00'),
+       opts.state === 'held' ? '日程を再調整中' : null])
+    return app
+  }
+
+  test('相反 > 保留 > 担当なし > 評価 の順で、必ず1件になる', async () => {
+    const mentorPerson = await makePerson(db, fx.schoolId)
+    const mentorStaff = await scalar<string>(db,
+      `INSERT INTO staffs (person_id, display_name, email)
+       VALUES ($1,'優先順位の紹介者','prec@example.test') RETURNING id`, [mentorPerson])
+    const plain = await scalar<string>(db,
+      `INSERT INTO staffs (display_name, email)
+       VALUES ('優先順位の面接官','prec2@example.test') RETURNING id`)
+
+    const cases: Array<[string, string]> = [
+      // 保留かつ相反 → 相反が勝つ（0013 で直した組み合わせ）
+      [await evaluation({ state: 'held', owner: mentorStaff,
+        referrerPerson: mentorPerson }), 'reassign'],
+      // 判断待ちかつ相反 → 相反
+      [await evaluation({ state: 'pending', owner: mentorStaff,
+        referrerPerson: mentorPerson }), 'reassign'],
+      // 保留（相反なし） → 解く
+      [await evaluation({ state: 'held', owner: plain }), 'unhold'],
+      // 判断待ちで担当なし → 決める
+      [await evaluation({ state: 'pending', owner: null }), 'assign'],
+      // 判断待ちで担当あり → 評価する
+      [await evaluation({ state: 'pending', owner: plain }), 'evaluate'],
+    ]
+
+    for (const [app, expected] of cases) {
+      const rows = await kindsOf(app)
+      assert.equal(rows.length, 1, `${expected} の組み合わせで ${rows.length} 行出ている`)
+      assert.equal(rows[0]!.kind, expected)
+    }
+  })
+
+  test('紹介者かつ本人の二重の相反は、記録層が作らせない', async () => {
+    // v_conflict_of_interest は UNION ALL なので、両方が立てば2行返り、
+    // LEFT JOIN でやることも2行になる。**その形は作れない。**
+    // 両方が立つには referrer_person_id = person_id が要るが、
+    // persons_no_self_referral が拒否する。
+    //
+    // 0014 の DISTINCT ON はこの制約に頼らない保険である。増えても
+    // エラーにならず件数が静かに倍になるだけなので（A-18 と同じ壊れ方）、
+    // 定義に残っていることを見張る。
+    const person = await makePerson(db, fx.schoolId)
+    await assert.rejects(
+      () => db.query(`UPDATE persons SET referrer_person_id = id WHERE id = $1`, [person]),
+      /persons_no_self_referral/,
+      '自己紹介が通ると、1つの評価に相反が2件つきうる')
+
+    const def = await scalar<string>(db,
+      `SELECT pg_get_viewdef('v_open_tasks'::regclass, true)`)
+    assert.match(def, /DISTINCT ON \(coi\.evaluation_id\)/,
+      '相反の畳み込みが外れている。1つの評価が2件のやることに出うる')
+  })
+})
