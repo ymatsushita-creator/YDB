@@ -95,7 +95,7 @@ export default async function PeoplePage(
                 <tr>
                   <th>段</th>
                   <th className="num">人</th>
-                  <th className="num">うち窓の内側</th>
+                  <th className="num">うち直近に接点あり</th>
                   <th className="num">休眠</th>
                 </tr>
               </thead>
@@ -124,7 +124,7 @@ export default async function PeoplePage(
           <p className="unit-note">
             {comparable ? (
               <>
-                「うち窓の内側」の合計 {num(inWindow)} 人は、ファネル画面の
+                「うち直近に接点あり」の合計 {num(inWindow)} 人は、ファネル画面の
                 <strong> 林 {num(grove)} 人</strong>と同じ数である。
                 {inWindow !== grove && (
                   <strong style={{ color: 'var(--color-semantic-error)' }}>
@@ -202,7 +202,7 @@ export default async function PeoplePage(
       <p className="footnote">
         個人情報削除の依頼（資料9-2）を受けた Person は、集計だけでなく
         この一覧と個人の画面からも外れる。氏名の見える窓を残さない。
-        段と窓の定義は <code>f_person_season_state()</code> にあり、
+        段と「直近に接点あり」の定義は集計側（<code>f_person_season_state()</code>）にあり、
         画面側では数え直していない。
       </p>
     </>

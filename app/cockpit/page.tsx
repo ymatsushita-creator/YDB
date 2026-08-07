@@ -95,16 +95,16 @@ function ForestCard({ forest, seasonId }: { forest: ForestRow; seasonId: string 
       <div className="forest-focus-head">
         <span className="forest-marker" aria-hidden="true">●</span>
         <span>{forest.name}</span>
-        <span className="section-note">Forest</span>
+        <span className="section-note">森</span>
       </div>
       <FactFlags flags={forest.flags} overdueTasks={forest.overdue_tasks} />
       <div className="forest-fact-grid">
-        <div className="estimate-fact"><span>推定 Reach</span><strong>{forest.estimated_reach === null ? '記録なし' : num(forest.estimated_reach)}</strong><small>接触機会・推定</small></div>
-        <div><span>接点のある実人数</span><strong>{num(forest.persons_touched)} 人</strong><small>当該年度</small></div>
-        <div><span>進行中の応募</span><strong>{num(forest.applications)} 件</strong><small>当該年度</small></div>
-        <div><span>未処理タスク</span><strong>{num(forest.open_tasks)} 件</strong><small>当該年度</small></div>
+        <div className="estimate-fact"><span>推定リーチ</span><strong>{forest.estimated_reach === null ? '記録なし' : num(forest.estimated_reach)}</strong><small>接触機会・推定</small></div>
+        <div><span>接点のある実人数</span><strong>{num(forest.persons_touched)} 人</strong><small>この年度</small></div>
+        <div><span>進行中の応募</span><strong>{num(forest.applications)} 件</strong><small>この年度</small></div>
+        <div><span>やること</span><strong>{num(forest.open_tasks)} 件</strong><small>この年度</small></div>
       </div>
-      <p className="forest-card-note">推定 Reach・実人数・応募件数は単位が異なります</p>
+      <p className="forest-card-note">推定リーチ・実人数・応募件数は単位が異なります</p>
     </Link>
   )
 }
@@ -215,17 +215,17 @@ export default async function CockpitPage({
 
           <section className="forest-section" aria-labelledby="forest-title">
             <div className="section-heading-row">
-              <div><p className="eyebrow">PRIORITY 03</p><h2 id="forest-title" className="workspace-title">Forest と Community</h2></div>
+              <div><p className="eyebrow">PRIORITY 03</p><h2 id="forest-title" className="workspace-title">森と連携先</h2></div>
               <p className="section-note">要注意 {num(attention.length)} 森 ／ 滞留・休眠・接点なしは事実フラグ</p>
             </div>
-            {selectedForest ? <ForestCard forest={selectedForest} seasonId={season.id} /> : <Empty>Forest が登録されていない。</Empty>}
+            {selectedForest ? <ForestCard forest={selectedForest} seasonId={season.id} /> : <Empty>森が登録されていない。</Empty>}
             {selectedForest && (
               <div className="community-map">
                 <div className="map-connection" aria-hidden="true" />
                 {communities.map((community) => <CommunityNode key={community.community_id} community={community} forestId={selectedForest.forest_id} seasonId={season.id} />)}
               </div>
             )}
-            <p className="map-caption">Community を開くと Person へ、Person を選ぶと右側の作業コンテキストへ進みます。</p>
+            <p className="map-caption">連携先を開くと候補者へ、候補者を選ぶと右側の作業欄に出ます。</p>
           </section>
 
           <section className="pipeline-section" aria-labelledby="pipeline-title">
@@ -244,10 +244,10 @@ export default async function CockpitPage({
           </section>
         </main>
 
-        <aside className="person-context" aria-label="選択中の Person と Application">
+        <aside className="person-context" aria-label="選択中の候補者と応募">
           {selectedTask && selectedApplication ? (
             <>
-              <div className="context-topline"><span className="context-live-dot" />選択中の Person / Application</div>
+              <div className="context-topline"><span className="context-live-dot" />選択中の候補者と応募</div>
               <section className="context-person">
                 <div className="person-avatar" aria-hidden="true">{selectedApplication.applicant_name.slice(0, 1)}</div>
                 <div><h2>{selectedApplication.applicant_name}</h2><p>{selectedApplication.school_name}</p></div>
@@ -260,7 +260,7 @@ export default async function CockpitPage({
               <section className="context-block context-details">
                 <div><span>現在の担当者</span><strong>{selectedTask.owner ?? '未設定'}</strong></div>
                 <div><span>期限</span><strong>{selectedTask.sla_days ? `${num(selectedTask.sla_days)} 日` : '設定なし'}</strong></div>
-                <div><span>停止理由</span><strong>{activeEvaluation?.hold_reason ?? 'なし'}</strong></div>
+                <div><span>保留の理由</span><strong>{activeEvaluation?.hold_reason ?? 'なし'}</strong></div>
               </section>
               <section className="context-block context-next-action">
                 <p className="context-label">推奨される次の操作</p>
@@ -295,7 +295,7 @@ export default async function CockpitPage({
       </div>
 
       <p className="unit-note cockpit-unit-note">
-        <strong>単位と母集団。</strong> 「今日やること」「未処理タスク」は件、「接点のある実人数」は人、「現在の選考状況」は年度内の応募件数です。推定 Reach は接触機会の推定値であり、実人数・応募件数とは単位が異なるため、比率や進捗バーにしていません。休眠は最終接点から {DORMANT_DAYS} 日以上、要注意は合成スコアではなく滞留・休眠・接点なしの事実を表示しています。
+        <strong>単位と母集団。</strong> 「今日やること」は件、「接点のある実人数」は人、「現在の選考状況」は年度内の応募件数です。推定リーチ は接触機会の推定値であり、実人数・応募件数とは単位が異なるため、比率や進捗バーにしていません。休眠は最終接点から {DORMANT_DAYS} 日以上、要注意は合成スコアではなく滞留・休眠・接点なしの事実を表示しています。
       </p>
     </>
   )

@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Link href="/cockpit" className="workspace-logo" aria-label="NEO ACADEMIA — 運転席へ">
               <img src="/brand/logo_black.png" alt="NEO ACADEMIA" width={1274} height={404} />
             </Link>
-            <p className="workspace-label">ENTREPRENEUR ACADEMY OS</p>
+            <p className="workspace-label">NEO ACADEMIA OS</p>
             <nav className="workspace-nav" aria-label="主なナビゲーション">
               <Link href="/cockpit" className="workspace-nav-link workspace-nav-link-active">運転席</Link>
               <Link href="/pilot" className="workspace-nav-link">試運転</Link>
