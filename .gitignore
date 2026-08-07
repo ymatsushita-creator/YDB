@@ -8,3 +8,8 @@ dist/
 *.tsbuildinfo
 .pgdata/
 .tmp/
+
+# 実データの受け入れ口。候補者・職員の氏名とメールが入りうる。
+# db/seeds/ は追跡下で GitHub の2リモートへ push されるため、
+# 実データは必ずこちらへ置く（docs/pilot/DATA-INTAKE.md）。
+db/private/
