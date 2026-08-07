@@ -13,7 +13,8 @@ import {
   parseReassignCode, REASSIGN_CODE_MESSAGE, type AssignableStaff,
 } from '../../src/commands/assign.ts'
 import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../src/commands/unhold.ts'
-import { assignAction, unholdAction, reassignAction } from './actions.ts'
+import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../src/commands/hold.ts'
+import { assignAction, unholdAction, reassignAction, holdAction } from './actions.ts'
 import { Card, Empty, SeasonTabs, jstDateTime, jstDay, num } from '../_components/ui.tsx'
 
 export const dynamic = 'force-dynamic'
@@ -86,7 +87,21 @@ function TaskAction({
       </form>
     )
   }
-  return <Link className="button-primary context-action-link" href={`/applications/${task.application_id}`}>評価する</Link>
+  // 「評価する」には**保留にする**を並べる。解けるのに止められないのは
+  // 片道で、運営が最初に踏む段差になる（C-35）。理由は必須。
+  return (
+    <div className="context-action-stack">
+      <Link className="button-primary context-action-link" href={`/applications/${task.application_id}`}>評価する</Link>
+      <form action={holdAction} className="context-action-form context-hold-form">
+        <input type="hidden" name="evaluationId" value={task.source_id} />
+        <input type="hidden" name="seasonId" value={seasonId} />
+        <label className="visually-hidden" htmlFor={`hold-${task.source_id}`}>保留の理由</label>
+        <input id={`hold-${task.source_id}`} name="reason" type="text" required
+               maxLength={200} placeholder="何を待つのか（必須）" />
+        <button type="submit" className="button-secondary">保留にする</button>
+      </form>
+    </div>
+  )
 }
 
 function ForestCard({ forest, seasonId }: { forest: ForestRow; seasonId: string }) {
@@ -132,7 +147,7 @@ function CommunityNode({ community, forestId, seasonId }: {
 export default async function CockpitPage({
   searchParams,
 }: {
-  searchParams: Promise<{ season?: string; assign?: string; unhold?: string; reassign?: string }>
+  searchParams: Promise<{ season?: string; assign?: string; unhold?: string; reassign?: string; hold?: string }>
 }) {
   const db = await getDb()
   const params = await searchParams
@@ -160,6 +175,7 @@ export default async function CockpitPage({
   const attention = forests.filter((forest) => forest.flags.length > 0)
   const assigned = parseAssignCode(params.assign)
   const unheld = parseUnholdCode(params.unhold)
+  const holdResult = parseHoldCode(params.hold)
   const reassigned = parseReassignCode(params.reassign)
   const nextEvaluation = evaluations.find((evaluation) => evaluation.can_score)
   const activeEvaluation = evaluations.find((evaluation) => evaluation.evaluation_id === selectedTask?.source_id)
@@ -177,9 +193,12 @@ export default async function CockpitPage({
         <SeasonTabs seasons={seasons} currentId={season.id} basePath="/cockpit" />
       </div>
 
-      {(assigned || unheld || reassigned) && (
+      {(assigned || unheld || reassigned || holdResult) && (
         <p className="callout ok">
-          {assigned ? ASSIGN_CODE_MESSAGE[assigned] : unheld ? UNHOLD_CODE_MESSAGE[unheld] : REASSIGN_CODE_MESSAGE[reassigned!]}
+          {assigned ? ASSIGN_CODE_MESSAGE[assigned]
+            : unheld ? UNHOLD_CODE_MESSAGE[unheld]
+            : holdResult ? HOLD_CODE_MESSAGE[holdResult]
+            : REASSIGN_CODE_MESSAGE[reassigned!]}
         </p>
       )}
 
@@ -269,10 +288,21 @@ export default async function CockpitPage({
               </section>
               <section className="context-block">
                 <p className="context-label">評価の進捗</p>
-                <div className="evaluation-progress">
-                  <strong>{num(selectedTask.criteria_scored)} / {num(selectedTask.criteria_total)} 軸</strong>
-                  <span>{nextEvaluation ? `次に評価できる: ${nextEvaluation.step_name}` : '評価待ちの軸はありません'}</span>
-                </div>
+                {/* 軸が0本の段は「全部付け終わった」と同じ見た目になる（C-33）。
+                    4段のうち3段が該当し、書類選考は満点16が確定しているのに
+                    軸が無い。**点を付けずに確定できる**ことを画面に出す。
+                    確定そのものは止めない ―― 止めると選考が回らなくなる。 */}
+                {Number(selectedTask.criteria_total) === 0 ? (
+                  <div className="evaluation-progress">
+                    <strong>評価の観点が未登録</strong>
+                    <span>この段は点を付けずに確定できます</span>
+                  </div>
+                ) : (
+                  <div className="evaluation-progress">
+                    <strong>{num(selectedTask.criteria_scored)} / {num(selectedTask.criteria_total)} 軸</strong>
+                    <span>{nextEvaluation ? `次に評価できる: ${nextEvaluation.step_name}` : '評価待ちの軸はありません'}</span>
+                  </div>
+                )}
               </section>
               <section className="context-block">
                 <p className="context-label">接点</p>

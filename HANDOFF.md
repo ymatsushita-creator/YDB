@@ -44,7 +44,7 @@ git clone https://github.com/NEO-AX/YDB.git   # 手元に無い場合だけ
 pnpm install && pnpm db:reset && pnpm test
 ```
 
-**テスト289件**が通れば正常。通らなければ、そこが最初の作業。
+**テスト308件**が通れば正常。通らなければ、そこが最初の作業。
 `pnpm exec tsc --noEmit` と `pnpm build` も通ることを確かめる。
 `pnpm tokens` を流して `app/tokens.css` に差分が出ないことも確かめる。
 
@@ -119,7 +119,7 @@ process.md    開発の回し方（Loop）
 - 画面 **9枚** —— `/cockpit`（運転席）、`/forests/[id]`（森）、`/pilot`（試運転）、
   `/`（ファネル）、`/people`、`/people/[id]`、`/applications/[id]`、
   `/operations`、`/sources`
-- マイグレーション **15**、テスト **289**、`'use client'` **0件**
+- マイグレーション **15**、テスト **308**、`'use client'` **0件**
 - 書き込みの型（C-20 で決まり、4回使って問題なし）
 
 ```
@@ -129,8 +129,8 @@ process.md    開発の回し方（Loop）
 ```
 
 **画面にまだ無いもの** —— 点の訂正（`already_scored` で弾かれる）、
-辞退（`withdraw`。理由が必須）、申し送り、新規応募の登録、手で作るタスク、
-**保留にすること**（`unhold` はあるが `hold` が無い。解くことしかできない。C-32）。
+辞退（`withdraw`。理由が必須）、申し送り、新規応募の登録、手で作るタスク。
+**保留にすることは実行⑦で足した**（C-35。運転席と候補者の画面の両方）。
 
 **踏んではいけない地雷が1つある。** `v_forest_season_activity` と
 `v_open_tasks` は、**絞り込みを高い供給元まで降ろすと計算量が爆発する。**

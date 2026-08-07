@@ -296,3 +296,11 @@ table.data tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--color-sem
 /* デモ環境の表示。警告なので線と文字だけ（面は塗らない）。 */
 .workspace-toolbar-status.is-demo { color: var(--color-semantic-error); font-weight: 600; }
 .workspace-toolbar-status.is-demo i { background: var(--color-semantic-error); }
+/* 「評価する」と「保留にする」を縦に並べる。保留は副操作なので弱く見せる。 */
+.context-action-stack { display: flex; flex-direction: column; gap: var(--space-xs); }
+.context-hold-form { display: flex; gap: var(--space-xxs); align-items: center; }
+.context-hold-form input[type="text"] {
+  flex: 1 1 auto; min-width: 0; font-family: inherit; font-size: 13px; padding: 5px 8px;
+  border: 1px solid var(--color-hairline-strong); border-radius: var(--rounded-sm);
+  background: var(--color-canvas); color: var(--color-ink);
+}
