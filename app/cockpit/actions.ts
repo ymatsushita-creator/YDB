@@ -8,6 +8,7 @@ import {
   type AssignCode, type ReassignCode,
 } from '../../src/commands/assign.ts'
 import { unholdEvaluation, type UnholdCode } from '../../src/commands/unhold.ts'
+import { holdEvaluation, type HoldCode } from '../../src/commands/hold.ts'
 
 /**
  * 画面からの書き込み。
@@ -61,6 +62,34 @@ export async function assignAction(formData: FormData): Promise<void> {
   revalidatePath('/cockpit')
   revalidatePath('/forests', 'layout')
   back('ok')
+}
+
+
+/**
+ * 保留にする。
+ *
+ * `unhold` の対である。**片道しか無かった**（C-35）。
+ * 理由は必須なので、こちらだけ入力欄がある。空白だけの理由は
+ * `holdEvaluation` が弾く ―― 制約は NOT NULL だけで、空白は通ってしまう。
+ */
+export async function holdAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const seasonId = String(formData.get('seasonId') ?? '')
+  const reason = String(formData.get('reason') ?? '')
+
+  const back = (code: HoldCode) => {
+    const season = /^[0-9a-f-]{36}$/i.test(seasonId) ? `season=${seasonId}&` : ''
+    redirect(`/cockpit?${season}hold=${code}`)
+  }
+
+  const db = await getDb()
+  const result = await holdEvaluation(db, { evaluationId, reason })
+
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath('/cockpit')
+  revalidatePath('/forests', 'layout')
+  back('held')
 }
 
 

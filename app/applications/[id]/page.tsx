@@ -11,8 +11,9 @@ import {
   getDecidableStep, getCorrectableDecision, listDecidingStaff,
   parseDecideCode, DECIDE_CODE_MESSAGE,
 } from '../../../src/commands/decide.ts'
+import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../../src/commands/hold.ts'
 import {
-  saveScoreAction, submitEvaluationAction, decideAction, correctDecisionAction,
+  saveScoreAction, submitEvaluationAction, decideAction, correctDecisionAction, holdAction,
 } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 
@@ -72,13 +73,14 @@ export default async function ApplicationPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ score?: string; decide?: string }>
+  searchParams: Promise<{ score?: string; decide?: string; hold?: string }>
 }) {
   const db = await getDb()
   const { id } = await params
   const query = await searchParams
   const saved = parseSaveScoreCode(query.score)
   const decided = parseDecideCode(query.decide)
+  const holdResult = parseHoldCode(query.hold)
 
   const app = await getApplication(db, id)
   if (!app) notFound()
@@ -96,11 +98,16 @@ export default async function ApplicationPage({
   const result = OUTCOME_LABEL[app.outcome]
 
   // 直前の保存の結果。知らないコードは「何も起きていない」として捨てる。
-  const savedNotice = (saved || decided) && (
+  const savedNotice = (saved || decided || holdResult) && (
     <div className="section">
       {saved && (
         <p className={`callout${saved === 'saved' ? ' ok' : ''}`}>
           {SAVE_SCORE_CODE_MESSAGE[saved]}
+        </p>
+      )}
+      {holdResult && (
+        <p className={`callout${holdResult === 'held' ? ' ok' : ''}`}>
+          {HOLD_CODE_MESSAGE[holdResult]}
         </p>
       )}
       {decided && (
@@ -383,6 +390,28 @@ export default async function ApplicationPage({
                       </button>
                       <span className="section-note">
                         確定すると判断待ちから外れ、選考の判定に進める
+                      </span>
+                    </form>
+                  )}
+
+                  {/* 保留にする（C-35）。運転席は先頭のやることにしか出ないので、
+                      候補者を開いてから止められる場所がここに要る。
+                      出す条件は holdEvaluation が通す母集団と揃える ――
+                      判断待ちで、まだ確定していない評価だけ。 */}
+                  {e.can_score && e.state === 'pending' && (
+                    <form action={holdAction} className="score-form"
+                          style={{ justifyContent: 'flex-start', marginTop: 'var(--space-xs)' }}>
+                      <input type="hidden" name="applicationId" value={app.application_id} />
+                      <input type="hidden" name="evaluationId" value={e.evaluation_id} />
+                      <label className="visually-hidden" htmlFor={`hold-${e.evaluation_id}`}>
+                        保留の理由
+                      </label>
+                      <input id={`hold-${e.evaluation_id}`} name="reason" type="text" required
+                             maxLength={200} placeholder="何を待つのか（必須）"
+                             className="rationale-input" />
+                      <button type="submit" className="button-secondary">保留にする</button>
+                      <span className="section-note">
+                        止めた理由は、解くときにそのまま読める
                       </span>
                     </form>
                   )}

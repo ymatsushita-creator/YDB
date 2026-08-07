@@ -7,6 +7,7 @@ import { saveScore, type SaveScoreCode } from '../../../src/commands/score.ts'
 import {
   submitEvaluation, decideStep, correctDecision, type DecideCode,
 } from '../../../src/commands/decide.ts'
+import { holdEvaluation, type HoldCode } from '../../../src/commands/hold.ts'
 
 /**
  * 1軸の点と根拠を保存する（E2）。
@@ -65,6 +66,32 @@ export async function submitEvaluationAction(formData: FormData): Promise<void> 
   revalidatePath(`/applications/${applicationId}`)
   revalidatePath('/cockpit')
   back('submitted')
+}
+
+/**
+ * 保留にする。
+ *
+ * 運転席にも同じ操作があるが、あちらは**先頭のやることにしか出ない**。
+ * 候補者を開いてから止めたい場面のほうが多いので、こちらにも置く（C-35）。
+ * 理由は必須。空白だけの理由は `holdEvaluation` が弾く。
+ */
+export async function holdAction(formData: FormData): Promise<void> {
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const reason = String(formData.get('reason') ?? '')
+
+  const back = (code: HoldCode) => {
+    const id = /^[0-9a-f-]{36}$/i.test(applicationId) ? applicationId : ''
+    redirect(`/applications/${id}?hold=${code}`)
+  }
+
+  const db = await getDb()
+  const result = await holdEvaluation(db, { evaluationId, reason })
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath(`/applications/${applicationId}`)
+  revalidatePath('/cockpit')
+  back('held')
 }
 
 export async function decideAction(formData: FormData): Promise<void> {
