@@ -466,6 +466,7 @@ Confidence）と **Validation Report**（誰が検証したか / 実データで
 | `docs/pilot/OBSERVATION-SHEET.md` | 実施中。**対象者ごとに1枚コピー** |
 | `docs/pilot/REVIEW.md` | 実施後。4分類と**昇格の条件** |
 | `docs/pilot/REPORT-TEMPLATE.md` | 報告書。リポジトリ直下へコピーして連番を付ける |
+| `docs/pilot/EXIT_CRITERIA.md` | **Pilot を終える条件と Go / Hold / No-Go の判定** |
 
 **Pilot はデモデータでしか走らない。** 本番シードには `withdraw_reasons` しか
 無く、年度・選考ステップ・評価軸が1行も無い（D-8）。したがって
@@ -475,6 +476,15 @@ Confidence）と **Validation Report**（誰が検証したか / 実データで
 **昇格の規則（`REVIEW.md` 3）が最も重要。**
 要望・感想・開発者の気づきは Validated にしない。**行動だけが証拠になる。**
 迷ったら昇格させない ―― 急いで Validated にすることの利益は無い。
+
+**Pilot は無期限に続けない**（`EXIT_CRITERIA.md`）。終わりの条件は
+運営担当者2名以上・1周5回以上（合格と不合格の両方を含む）・観測20件以上・
+**飽和**、そして「業務が止まる」「数字が間違う」の Validated が**0件**。
+**機能の数では判定しない。**
+
+**Go の必須条件に「実データで1周」がある。** いま満たせない ―― 本番シードに
+年度が無いため。ブロッカーはコードではなく**情報**（年度の実数値）で、
+`CHECKLIST.md` 1 の質問3で取る。取れるまで、正直な判定は **Hold** である。
 
 ### Operator Validation フェーズの進め方（実行⑥の途中で追加）
 
