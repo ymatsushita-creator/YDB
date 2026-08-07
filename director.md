@@ -12,6 +12,8 @@ domain.md     世界設定（ルールブック）
 design.md     UI（意匠・レイアウト・UX）
      ↓
 CLAUDE.md     実装の規律
+     ↓
+process.md    開発の回し方（MVP モード。実行⑥で受領）
 ```
 
 上の文書が下の文書に優先する。

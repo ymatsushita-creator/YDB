@@ -1,18 +1,4 @@
-# design.md — UI
-
-序列: `vision.md` > `director.md` > `domain.md` > **`design.md`** > `CLAUDE.md`
-（実行⑥で `vision.md` が最上位へ移った。内容は未受領のため、何も上書きしていない）
-
-**この文書はまだトークンを生成しない。**
-
-`scripts/build-tokens.ts` は `basic/DESIGN.md`（Notion のブランド分析）を読み続けている。
-この文書には frontmatter が無く、色・字送り・余白の実数値が1つも入っていないため、
-`pnpm tokens` の入力にはならない（実測: frontmatter 検出なし、`#hex` 0件、`px/rem` 0件）。
-
-したがって現在の `app/tokens.css` は、この文書ではなく Notion の意匠から生成されている。
-生成元をどうするかは未決。決まるまで、**画像から色を起こして推測で埋めない。**
-
----
+# design.md
 
 # Design North Star
 
@@ -193,3 +179,17 @@ Keywords:
 -   Soft green
 -   Natural hierarchy
 -   Spacious layout
+
+------------------------------------------------------------------------
+
+# 付記（リポジトリ側の事実。上の本文とは別）
+
+序列: `vision.md` > `director.md` > `domain.md` > **`design.md`** > `CLAUDE.md` > `process.md`
+
+**この文書はまだトークンを生成しない。** `scripts/build-tokens.ts` は
+`basic/DESIGN.md`（Notion のブランド分析）を読み続けている。本文には
+frontmatter が無く、色・字送り・余白の実数値が1つも無いため、`pnpm tokens` の
+入力にならない（実測: frontmatter 検出なし、`#hex` 0件、`px/rem` 0件）。
+
+したがって `app/tokens.css` は、この文書ではなく Notion の意匠から生成されている。
+生成元をどうするかは未決。決まるまで、**画像から色を起こして推測で埋めない。**

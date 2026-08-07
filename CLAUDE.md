@@ -1,8 +1,10 @@
 # YouthDB — このプロジェクトで何を達成するのか
 
-> **この文書は序列の最下位である。着手前に、上位4文書をこの順で読むこと。**
+> **着手前に、上位4文書をこの順で読むこと。**
 >
 > `vision.md`（理念）→ `director.md`（憲法）→ `domain.md`（世界設定）→ `design.md`（UI）→ 本書
+>
+> 本書の下に `process.md`（MVP モードの回し方。実行⑥で受領）が付く。
 >
 > 実行⑥で `vision.md` が最上位へ移った（それまでは `design.md` の下）。
 > **内容は未受領のままで、空の文書は何も上書きしない。**
@@ -23,15 +25,17 @@ This project is governed by the following document hierarchy.
 **「なぜ作るか」が「どう作るか」より上位に立つ。** それがこの並びの理由である。
 
 ```text
-vision.md      Why      なぜ存在するのか
+vision.md      Why          なぜ存在するのか
     ↓
-director.md    Principles  何を守るのか
+director.md    Principles   何を守るのか
     ↓
-domain.md      Model    何が存在するのか
+domain.md      Model        何が存在するのか
     ↓
-design.md      UX/UI    どう見せるのか
+design.md      UX/UI        どう見せるのか
     ↓
 CLAUDE.md      Engineering  どう開発するのか
+    ↓
+process.md     Loop         どう回すのか（MVP モード）
 ```
 
 ## Responsibilities
@@ -52,6 +56,10 @@ UX ルール。ズーム基調のナビゲーション、一覧を主役に置�
 
 **CLAUDE.md** — Defines the engineering process, implementation strategy, and development workflow.
 開発ルール。記録の構造 > 集計の定義 > 画面という順序を守らせる。
+
+**process.md** — Defines the iteration loop: select one feature, implement, self review,
+human review, commit, learn. MVP モードの回し方。**本書の下に付く。**
+上位文書と食い違ったときは上位が勝つ。衝突は `process.md` 末尾の付記に残してある。
 
 ## Conflict Resolution
 
@@ -166,6 +174,10 @@ TODO(MVP)
 - **報告書は凍結、記録は更新。** 版は `REPORT-<実行番号>.<連番>.md`（規約は `HANDOFF.md`）
 
 ## 6. 進め方
+
+**反復の回し方そのものは `process.md` にある**（1機能ずつ選ぶ / 実装する /
+自己レビュー / 人のレビュー / コミット / 学ぶ）。ここに書くのは、
+どの反復でも変わらない中身のほうである。
 
 ```
 1. 動く状態にする

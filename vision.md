@@ -1,6 +1,6 @@
 # vision.md — 理念
 
-序列: **`vision.md`** > `director.md` > `domain.md` > `design.md` > `CLAUDE.md`
+序列: **`vision.md`** > `director.md` > `domain.md` > `design.md` > `CLAUDE.md` > `process.md`
 
 **2026-08-07（実行⑥）に、この文書が序列の最上位へ移った。**
 実行⑤の時点では `director.md` > `domain.md` > `design.md` > 本書 > `CLAUDE.md` だった。

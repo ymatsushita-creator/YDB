@@ -1,6 +1,6 @@
 # domain.md — 世界のルールブック
 
-序列: `vision.md` > `director.md` > **`domain.md`** > `design.md` > `CLAUDE.md`
+序列: `vision.md` > `director.md` > **`domain.md`** > `design.md` > `CLAUDE.md` > `process.md`
 （実行⑥で `vision.md` が最上位へ移った。内容は未受領のため、何も上書きしていない）
 
 この文書は「何と呼ぶか」ではなく、**何が事実として存在するか**を定める。
