@@ -95,6 +95,8 @@ export default async function PilotPage(
           <strong>「実際にどこで手が止まるか」</strong>。
           押しながら、迷った場所とその理由を教えてほしい。
           <strong>間違った操作をしても直せる</strong>（判定は訂正できる）。
+          <strong>迷ったら、それは画面の側が間違っている。</strong>
+          操作できたかどうかに関係なく、迷った場所をそのまま教えてほしい。
         </p>
       </div>
 
@@ -147,6 +149,12 @@ export default async function PilotPage(
               <strong>手が完全に止まった場所はどこか。</strong>
               画面の外（メモ・チャット・表計算）に書きたくなった内容があれば、
               <strong>それを何と呼んでいるか</strong>も一緒に
+            </li>
+            <li className="pilot-step">
+              <strong>迷ったけれど、結局操作できた場所はどこか。</strong>
+              押せたのなら報告しなくていい、と思わないでほしい。
+              <strong>迷ったこと自体が、こちらの画面の誤りである</strong>
+              （言葉・並び・順序のどれかが間違っている）
             </li>
             <li className="pilot-step">
               <strong>いちばんクリックが多いと感じたのはどこか</strong>
