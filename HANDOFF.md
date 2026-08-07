@@ -456,6 +456,26 @@ Remaining Friction / Technical Debt / Risks / Recommendation（Option A/B）/
 Confidence）と **Validation Report**（誰が検証したか / 実データで確認した内容 /
 未検証のケース / 今後確認すべきケース）。
 
+### Pilot Phase の道具（`docs/pilot/`）
+
+**開発は停止中。** いまのスプリントの目的は運営担当者から学習を得ることである。
+
+| 文書 | 使うとき |
+|---|---|
+| `docs/pilot/CHECKLIST.md` | 実施前。社長15分／運営担当者40分／初めて触る人20分 |
+| `docs/pilot/OBSERVATION-SHEET.md` | 実施中。**対象者ごとに1枚コピー** |
+| `docs/pilot/REVIEW.md` | 実施後。4分類と**昇格の条件** |
+| `docs/pilot/REPORT-TEMPLATE.md` | 報告書。リポジトリ直下へコピーして連番を付ける |
+
+**Pilot はデモデータでしか走らない。** 本番シードには `withdraw_reasons` しか
+無く、年度・選考ステップ・評価軸が1行も無い（D-8）。したがって
+**「数字が実感と合うか」はこの Pilot では学習できない。**
+学習できるのは**操作の流れと言葉**である。
+
+**昇格の規則（`REVIEW.md` 3）が最も重要。**
+要望・感想・開発者の気づきは Validated にしない。**行動だけが証拠になる。**
+迷ったら昇格させない ―― 急いで Validated にすることの利益は無い。
+
 ### Operator Validation フェーズの進め方（実行⑥の途中で追加）
 
 **1機能を終えたら、次をすぐ実装しない。** 次の順で立ち止まる。
