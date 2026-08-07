@@ -252,7 +252,7 @@ export const REASSIGN_FAILURE_MESSAGE: Record<ReassignFailure, string> = {
   evaluation_not_found: 'その評価は見つからなかった。画面を読み直す。',
   not_assigned: 'まだ担当が決まっていない。「担当を決める」のほうを使う。',
   not_active: 'その応募はもう動いていない。担当を替える必要がない。',
-  already_decided: 'その評価は判断が下りている。替えても評価は戻らない。',
+  already_decided: 'その評価はもう判定が済んでいる。担当を替えても評価はやり直せない。',
   same_staff: 'いまと同じ担当が選ばれている。',
   staff_not_available: 'その職員は選べない。非活性化されている可能性がある。',
 }
