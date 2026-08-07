@@ -47,7 +47,7 @@ function ForestFlags({ forest }: { forest: ForestRow }) {
     return <span className="section-note">平常</span>
   }
   return (
-    <span className="badge-row">
+    <>
       {forest.flags.includes('stalled') && (
         <span className="badge-tag-orange">
           滞留 {num(forest.overdue_tasks)} 件
@@ -61,7 +61,69 @@ function ForestFlags({ forest }: { forest: ForestRow }) {
           休眠 {num(forest.days_since_touch)} 日
         </span>
       )}
-    </span>
+    </>
+  )
+}
+
+/**
+ * 森の区画。
+ *
+ * 憲法は「テーブルを作らない」「森が主役」と定めている。実行⑥の第1版は
+ * 表で出していたが、それに対する指示が「マップにする」だったので置き換えた。
+ *
+ * ★ 出している数は3つだけで、**すべて実測値である。**
+ *   Health（健康度）は出していない。原典の実装段階[3]（スコアリング）で、
+ *   原典自身が着手判断を1年後と書いており、`process.md` の Freeze Core
+ *   Concepts も Forest Health を暫定扱いに置いている。いま % を出すと、
+ *   根拠のない数字が一目で読める場所に座ることになる。
+ *   代わりに、要注意の理由を**旗**として名指しする（C-18）。
+ *   TODO(MVP): Health と Owner（担当）は、記録層に事実ができてから。
+ *
+ * ★ 推定リーチをこの3つに混ぜない。あれは接触機会の推定値で、
+ *   接点のある人（実人数）とは単位が違う（domain.md 8節）。
+ *   足元に別行で、単位を書いて出す。
+ */
+function ForestNode({ forest, seasonId }: { forest: ForestRow; seasonId: string }) {
+  // 枠は「旗が立っているか」、地の色は「眠っているか」。2つは別の軸である。
+  // 休眠の森を地の色だけで示すと、並び順では前に居るのに一番弱く見える。
+  const flagged = forest.flags.length > 0
+  const asleep = forest.flags.includes('untouched') || forest.flags.includes('dormant')
+  const stat = (label: string, value: number) => (
+    <div className="forest-stat">
+      <span className="forest-stat-label">{label}</span>
+      <span className={`forest-stat-value${Number(value) === 0 ? ' zero' : ''}`}>
+        {num(value)}
+      </span>
+    </div>
+  )
+
+  return (
+    <div className={`forest-node${flagged ? ' alert' : ''}${asleep ? ' quiet' : ''}`}>
+      <span className="forest-node-name">
+        <span className="leaf" aria-hidden="true">●</span>
+        <Link href={`/forests/${forest.forest_id}?season=${seasonId}`}>
+          {forest.name}
+        </Link>
+      </span>
+
+      <div className="forest-stats">
+        {stat('接点のある人', forest.persons_touched)}
+        {stat('応募', forest.applications)}
+        {stat('合格', forest.accepted)}
+      </div>
+
+      <div className="forest-node-foot">
+        <ForestFlags forest={forest} />
+        {Number(forest.communities) > 0 && <span>林 {num(forest.communities)}</span>}
+        {/* 旗が最終接触の話をしているときは、同じ日数を2度書かない。
+            「休眠 934 日」の隣に「最終接触 934 日前」が並ぶと、
+            2つの事実があるように読める。 */}
+        {!asleep && forest.days_since_touch !== null && (
+          <span>最終接触 {num(forest.days_since_touch)} 日前</span>
+        )}
+        <span>推定リーチ {num(forest.estimated_reach)}（接触機会）</span>
+      </div>
+    </div>
   )
 }
 
@@ -133,6 +195,22 @@ export default async function CockpitPage(
         )}
       </div>
 
+      {/* 2. どの森が要注意か — 表ではなくマップで出す */}
+      <div className="section">
+        <Card
+          title="森のマップ（アプローチできる生態系）"
+          note="要注意の順に並ぶ（期限超過 → 未処理 → 休眠日数）。旗は事実そのままで、点数ではない"
+        >
+          {forests.length === 0 ? <Empty>森が登録されていない</Empty> : (
+            <div className="forest-map">
+              {forests.map((f) => (
+                <ForestNode key={f.forest_id} forest={f} seasonId={season.id} />
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
       {/* 1. いま何をすべきか */}
       <div className="section">
         <Card
@@ -193,44 +271,7 @@ export default async function CockpitPage(
         </Card>
       </div>
 
-      <div className="section grid grid-2">
-        {/* 2. どの森が要注意か */}
-        <Card
-          title="どの森が要注意か"
-          note="期限超過 → 未処理 → 休眠日数の順。旗は事実そのままで、点数ではない"
-        >
-          {forests.length === 0 ? <Empty>森が登録されていない</Empty> : (
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>森</th>
-                    <th>状態</th>
-                    <th className="num">林</th>
-                    <th className="num">接点のある人</th>
-                    <th className="num">応募</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {forests.map((f) => (
-                    <tr key={f.forest_id}>
-                      <td>
-                        <Link href={`/forests/${f.forest_id}?season=${season.id}`}>
-                          {f.name}
-                        </Link>
-                      </td>
-                      <td><ForestFlags forest={f} /></td>
-                      <td className="num">{num(f.communities)}</td>
-                      <td className="num">{num(f.persons_touched)}</td>
-                      <td className="num">{num(f.applications)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
+      <div className="section">
         {/* 3. 誰が待っているか */}
         <Card title="誰が待っているか" note="やることを人でまとめ直したもの。件数ではなく人数">
           {waiting.length === 0 ? <Empty>待っている人はいない</Empty> : (
@@ -283,9 +324,13 @@ export default async function CockpitPage(
         1人が複数のやることを持つため、この2つは一致しない。
         母集団は<code>いま選考が動いている応募</code>で、
         取り下げ・合格・不合格の済んだ応募と、個人情報削除を受けた人は入らない。
-        森の「接点のある人」と「応募」は {season.enrollment_year} 年度の数、
+        森の「接点のある人」「応募」「合格」は {season.enrollment_year} 年度の数で、
         休眠日数は<strong>年度を問わない</strong>最終接触日から数えている。
-        森の行は<strong>足せない</strong>（同じ人が複数の森に接点を持つ）。
+        <strong>推定リーチは接触機会の推定値</strong>で、接点のある人（実人数）とは
+        単位が違う。同じ人へ2回リーチすれば2と数えるので、<strong>割らない</strong>。
+        森の区画は<strong>足せない</strong>（同じ人が複数の森に接点を持つ）。
+        <strong>健康度（Health）は出していない。</strong>記録層にその事実が無く、
+        いま合成すると根拠のない数字になる。要注意は旗で名指ししている。
       </p>
 
       <p className="footnote">

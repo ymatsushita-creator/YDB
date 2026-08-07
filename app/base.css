@@ -225,3 +225,76 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   line-height: 1.5;
   color: var(--color-slate);
 }
+
+/* ---- 森のマップ ---- */
+/* 実行⑥。憲法の「森が主役」と design.md の Forest Map に対する最小の実装。
+ * 表を並べる代わりに、森を1つずつの区画として置く。
+ *
+ * 色は tokens.css の変数だけを使う。緑は --color-brand-green と
+ * --color-card-tint-mint。DESIGN.md の出典が Notion のブランド分析である以上、
+ * 「森らしい緑」を直値で足すのは意匠の推測になる（design.md 付記）。 */
+
+.forest-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-sm);
+}
+
+.forest-node {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-lg);
+  background: linear-gradient(
+    180deg, var(--color-card-tint-mint) 0%, var(--color-canvas) 62%);
+  box-shadow: var(--shadow-1);
+}
+
+/* 枠は「旗が立っているか」、地の色は「眠っているか」。別の軸なので重ねられる。
+ * 背景まで警告色にすると、平常の森が「暗い」に見えて序列が読めなくなる。 */
+.forest-node.alert {
+  border-color: var(--color-semantic-warning);
+}
+/* 接点が無い・休眠している森。緑を引く。旗と並び順はそのまま効く。 */
+.forest-node.quiet {
+  background: linear-gradient(
+    180deg, var(--color-card-tint-gray) 0%, var(--color-canvas) 62%);
+}
+
+.forest-node-name {
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.forest-node-name .leaf { color: var(--color-brand-green); }
+
+/* 数は3つまで。単位の違うもの（推定リーチ）はここに入れない。 */
+.forest-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xxs);
+  padding: var(--space-xs) 0;
+  border-top: 1px solid var(--color-hairline-soft);
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.forest-stat { display: flex; flex-direction: column; }
+.forest-stat-label { font-size: 11px; color: var(--color-steel); }
+.forest-stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.forest-stat-value.zero { color: var(--color-stone); }
+
+.forest-node-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-steel);
+}
