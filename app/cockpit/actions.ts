@@ -3,7 +3,10 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
-import { assignInterviewer, type AssignCode } from '../../src/commands/assign.ts'
+import {
+  assignInterviewer, reassignInterviewer,
+  type AssignCode, type ReassignCode,
+} from '../../src/commands/assign.ts'
 import { unholdEvaluation, type UnholdCode } from '../../src/commands/unhold.ts'
 
 /**
@@ -85,4 +88,34 @@ export async function unholdAction(formData: FormData): Promise<void> {
   revalidatePath('/cockpit')
   revalidatePath('/forests', 'layout')
   back('unheld')
+}
+
+
+/**
+ * 担当を替える。
+ *
+ * `assignAction` と同じ形。違うのは**成り立つ条件が逆**なことである
+ * （あちらは担当がいないことを、こちらはいることを要求する）。
+ * 判定は `src/commands/assign.ts` の `reassignInterviewer` にある。
+ */
+export async function reassignAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const staffId = String(formData.get('staffId') ?? '')
+  const seasonId = String(formData.get('seasonId') ?? '')
+
+  const back = (code: ReassignCode) => {
+    const season = /^[0-9a-f-]{36}$/i.test(seasonId) ? `season=${seasonId}&` : ''
+    redirect(`/cockpit?${season}reassign=${code}`)
+  }
+
+  if (!staffId) back('same_staff')
+
+  const db = await getDb()
+  const result = await reassignInterviewer(db, { evaluationId, staffId })
+
+  if (!result.ok) back(result.reason)
+
+  revalidatePath('/cockpit')
+  revalidatePath('/forests', 'layout')
+  back('reassigned')
 }

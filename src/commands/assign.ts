@@ -137,6 +137,142 @@ export async function assignInterviewer(
   }
 }
 
+// -------------------------------------------------------------
+// 担当を替える
+// -------------------------------------------------------------
+
+export type ReassignResult =
+  | {
+      ok: true
+      applicantName: string
+      stepName: string
+      /** 替える前の担当。**これは記録に残らない**（下の ★ を読む）。 */
+      previousStaffName: string
+      staffName: string
+    }
+  | { ok: false; reason: ReassignFailure }
+
+export type ReassignFailure =
+  | 'evaluation_not_found'
+  /** まだ担当が決まっていない。それは「担当を替える」ではなく「決める」。 */
+  | 'not_assigned'
+  /** その応募はもう動いていない。 */
+  | 'not_active'
+  /** 判断が下りている。替えても戻らない。 */
+  | 'already_decided'
+  /** いまと同じ職員が選ばれた。 */
+  | 'same_staff'
+  | 'staff_not_available'
+
+/**
+ * すでに担当が決まっている評価の、面接官を差し替える。
+ *
+ * `assignInterviewer` と分けた理由は、**成り立つ条件が逆**だからである。
+ * あちらは「担当がいないこと」を要求し、こちらは「いること」を要求する。
+ * 1つの関数に旗を足して分岐させると、呼び間違えたときに
+ * 意図しない上書きが起きる（原則7「事実の有無で判定し、理由で分岐しない」）。
+ *
+ * 使う場面は利益相反の解消である（`v_open_tasks` の 'reassign'）。
+ * ただし**利益相反であることを条件にしていない。** 負荷の偏りを直すために
+ * 替えることもあり、そのとき条件が邪魔をする。危険でもない ――
+ * 動いている応募の、判断が下りていない評価しか触れない。
+ *
+ * ★ **替える前の担当は記録に残らない。**
+ *   `interviewer_staff_id` を上書きするので、誰が最初に割り当たっていたかは
+ *   消える。ここで初めて「上書きで消える値」が出た。
+ *   `assign` と `unhold` では消えるものが無かった（C-20 / C-21）。
+ *
+ *   **TODO(MVP)**: 割り当ての履歴を残すなら、追記専用の表を1つ足す。
+ *   3つの操作（決める・解く・替える）が同じ表を使える。
+ *   `process.md` の Architecture Policy に従い、いまは最も単純な仮定
+ *   （上書きする）で進める。運用して「前は誰だったのか」と訊かれてから足す。
+ *
+ *   なお**利益相反が起きていた事実自体も、替えると消える。**
+ *   `v_conflict_of_interest` は現在の担当から計算するため、
+ *   替えたあとは検出されない。判断が下りる前に替えている（`submitted` は
+ *   弾く）ので、誤った評価が記録に残ることはない。
+ */
+export async function reassignInterviewer(
+  db: Db,
+  args: { evaluationId: string; staffId: string },
+): Promise<ReassignResult> {
+  if (!UUID.test(args.evaluationId)) return { ok: false, reason: 'evaluation_not_found' }
+  if (!UUID.test(args.staffId)) return { ok: false, reason: 'staff_not_available' }
+
+  const staff = await maybeOne<{ display_name: string }>(db, `
+    SELECT display_name FROM staffs WHERE id = $1 AND is_active`, [args.staffId])
+  if (!staff) return { ok: false, reason: 'staff_not_available' }
+
+  const target = await maybeOne<{
+    state: string
+    current_staff_id: string | null
+    current_staff_name: string | null
+    is_active: boolean
+    applicant_name: string
+    step_name: string
+  }>(db, `
+    SELECT e.state,
+           e.interviewer_staff_id AS current_staff_id,
+           st.display_name        AS current_staff_name,
+           EXISTS (SELECT 1 FROM v_active_applications a WHERE a.id = e.application_id)
+             AS is_active,
+           p.family_name || ' ' || p.given_name AS applicant_name,
+           ss.name AS step_name
+      FROM evaluations e
+      JOIN selection_steps ss ON ss.id = e.selection_step_id
+      JOIN applications a ON a.id = e.application_id
+      JOIN persons p ON p.id = a.person_id
+      LEFT JOIN staffs st ON st.id = e.interviewer_staff_id
+     WHERE e.id = $1`, [args.evaluationId])
+
+  if (!target) return { ok: false, reason: 'evaluation_not_found' }
+  if (!target.is_active) return { ok: false, reason: 'not_active' }
+  if (target.state === 'submitted') return { ok: false, reason: 'already_decided' }
+  if (!target.current_staff_id) return { ok: false, reason: 'not_assigned' }
+  if (target.current_staff_id === args.staffId) return { ok: false, reason: 'same_staff' }
+
+  // いまの担当を条件に入れる。確認と更新の間に誰かが替えていたら 0 行で終わり、
+  // 見ていたのとは違う担当を上書きしない。
+  const { rows } = await db.query(`
+    UPDATE evaluations SET interviewer_staff_id = $3
+     WHERE id = $1 AND interviewer_staff_id = $2 AND state <> 'submitted'
+     RETURNING id`, [args.evaluationId, target.current_staff_id, args.staffId])
+  if (rows.length === 0) return { ok: false, reason: 'not_assigned' }
+
+  return {
+    ok: true,
+    applicantName: target.applicant_name,
+    stepName: target.step_name,
+    previousStaffName: target.current_staff_name ?? '（不明）',
+    staffName: staff.display_name,
+  }
+}
+
+export const REASSIGN_FAILURE_MESSAGE: Record<ReassignFailure, string> = {
+  evaluation_not_found: 'その評価は見つからなかった。画面を読み直す。',
+  not_assigned: 'まだ担当が決まっていない。「担当を決める」のほうを使う。',
+  not_active: 'その応募はもう動いていない。担当を替える必要がない。',
+  already_decided: 'その評価は判断が下りている。替えても評価は戻らない。',
+  same_staff: 'いまと同じ担当が選ばれている。',
+  staff_not_available: 'その職員は選べない。非活性化されている可能性がある。',
+}
+
+export type ReassignCode = 'reassigned' | ReassignFailure
+
+export const REASSIGN_CODE_MESSAGE: Record<ReassignCode, string> = {
+  reassigned: '担当を替えた。',
+  ...REASSIGN_FAILURE_MESSAGE,
+}
+
+const REASSIGN_CODES = Object.keys(REASSIGN_CODE_MESSAGE) as ReassignCode[]
+
+export const parseReassignCode = (
+  value: string | string[] | undefined,
+): ReassignCode | null => {
+  const v = Array.isArray(value) ? value[0] : value
+  return v && REASSIGN_CODES.includes(v as ReassignCode) ? (v as ReassignCode) : null
+}
+
 /** 画面に出す言葉。失敗の理由を、運用者が次にやることが分かる形で書く。 */
 export const ASSIGN_FAILURE_MESSAGE: Record<AssignFailure, string> = {
   evaluation_not_found: 'その評価は見つからなかった。画面を読み直す。',

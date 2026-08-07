@@ -228,6 +228,17 @@ describe('デモデータが踏んでいる経路', () => {
     assert.ok(await count(`SELECT count(*) FROM v_open_tasks WHERE NOT is_overdue`) >= 1)
   })
 
+  test('1つの評価が、2件のやることに出ていない', async () => {
+    // 同じ評価が2種類のタスクとして並ぶと、件数が二重に見える。
+    // 0012 で 'evaluate' から利益相反を除いたが、'unhold' に同じ手当てを
+    // 忘れており、保留＋利益相反で2行になっていた（0013 で直した）。
+    // 種別ごとの条件を足すたびに壊れうるので、ビュー全体の性質として固定する。
+    const dup = await db.query<{ source_id: string; kinds: string }>(`
+      SELECT source_id, string_agg(kind, ',' ORDER BY kind) AS kinds
+        FROM v_open_tasks GROUP BY source_id HAVING count(*) > 1`)
+    assert.deepEqual(dup.rows, [], '1つの評価が複数のやることに出ている')
+  })
+
   test('1人で複数のやることを持つ形がある（件と人が一致しない）', async () => {
     // 件数と人数を同じ数として扱っていないかは、両者が違う日にしか
     // 確かめられない。常に一致するデータでは混同していても気づけない。

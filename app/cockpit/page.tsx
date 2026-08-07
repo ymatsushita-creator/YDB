@@ -7,10 +7,11 @@ import {
 } from '../../src/queries/cockpit.ts'
 import {
   listAssignableStaff, parseAssignCode, ASSIGN_CODE_MESSAGE,
+  parseReassignCode, REASSIGN_CODE_MESSAGE,
   type AssignableStaff,
 } from '../../src/commands/assign.ts'
 import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../src/commands/unhold.ts'
-import { assignAction, unholdAction } from './actions.ts'
+import { assignAction, unholdAction, reassignAction } from './actions.ts'
 import { Card, Kpi, SeasonTabs, Empty, num } from '../_components/ui.tsx'
 
 export const dynamic = 'force-dynamic'
@@ -145,27 +146,38 @@ function ForestNode({ forest, seasonId }: { forest: ForestRow; seasonId: string 
  * 選ばせると、いつも同じ人に積む（/operations の面接官別の負荷と同じ狙い）。
  */
 function AssignForm({
-  evaluationId, seasonId, staff,
-}: { evaluationId: string; seasonId: string; staff: AssignableStaff[] }) {
+  evaluationId, seasonId, staff, mode = 'assign',
+}: {
+  evaluationId: string
+  seasonId: string
+  staff: AssignableStaff[]
+  /** 決めるか、替えるか。**成り立つ条件が逆**なので、送る先を分ける。 */
+  mode?: 'assign' | 'reassign'
+}) {
   if (staff.length === 0) {
     return <span className="section-note">選べる職員がいない</span>
   }
   return (
-    <form action={assignAction} className="assign-form">
+    <form action={mode === 'assign' ? assignAction : reassignAction}
+          className="assign-form">
       <input type="hidden" name="evaluationId" value={evaluationId} />
       <input type="hidden" name="seasonId" value={seasonId} />
       <label className="visually-hidden" htmlFor={`staff-${evaluationId}`}>
         担当にする面接官
       </label>
       <select id={`staff-${evaluationId}`} name="staffId" defaultValue="" required>
-        <option value="" disabled>担当を選ぶ…</option>
+        <option value="" disabled>
+          {mode === 'assign' ? '担当を選ぶ…' : '別の担当を選ぶ…'}
+        </option>
         {staff.map((s) => (
           <option key={s.staff_id} value={s.staff_id}>
             {s.display_name}（待ち {s.pending}）
           </option>
         ))}
       </select>
-      <button type="submit" className="button-primary">決める</button>
+      <button type="submit" className="button-primary">
+        {mode === 'assign' ? '決める' : '替える'}
+      </button>
     </form>
   )
 }
@@ -193,7 +205,9 @@ function UnholdForm({
 
 export default async function CockpitPage(
   { searchParams }: {
-    searchParams: Promise<{ season?: string; assign?: string; unhold?: string }>
+    searchParams: Promise<{
+      season?: string; assign?: string; unhold?: string; reassign?: string
+    }>
   },
 ) {
   const db = await getDb()
@@ -218,6 +232,7 @@ export default async function CockpitPage(
   // 直前の書き込みの結果。知らないコードは「何も起きていない」として捨てる。
   const assigned = parseAssignCode(params.assign)
   const unheld = parseUnholdCode(params.unhold)
+  const reassigned = parseReassignCode(params.reassign)
 
   const overdue = tasks.filter((t) => t.is_overdue)
   const attention = forests.filter((f) => f.flags.length > 0)
@@ -271,6 +286,19 @@ export default async function CockpitPage(
             {unheld === 'unheld' && (
               <span className="section-note">
                 保留の理由は消していない。応募の画面でそのまま読める
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {reassigned && (
+        <div className="section">
+          <p className={`callout${reassigned === 'reassigned' ? ' ok' : ''}`}>
+            {REASSIGN_CODE_MESSAGE[reassigned]}
+            {reassigned === 'reassigned' && (
+              <span className="section-note">
+                利益相反はこれで消える。前の担当が誰だったかは残らない
               </span>
             )}
           </p>
@@ -354,6 +382,12 @@ export default async function CockpitPage(
                             担当欄の下に置き、行の意味（誰の手番か）を保つ。 */}
                         {t.kind === 'unhold' && (
                           <UnholdForm evaluationId={t.source_id} seasonId={season.id} />
+                        )}
+                        {/* 利益相反。いまの担当を出したうえで、替える欄を置く。
+                            誰から誰に替えるのかが見えないと選べない。 */}
+                        {t.kind === 'reassign' && (
+                          <AssignForm evaluationId={t.source_id} seasonId={season.id}
+                                      staff={staff} mode="reassign" />
                         )}
                       </td>
                       <td className="num">

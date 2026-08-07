@@ -8,6 +8,7 @@ import {
 } from './support/fixtures.ts'
 import {
   assignInterviewer, listAssignableStaff, ASSIGN_FAILURE_MESSAGE,
+  reassignInterviewer, REASSIGN_CODE_MESSAGE, parseReassignCode,
 } from '../src/commands/assign.ts'
 
 /**
@@ -211,5 +212,145 @@ describe('担当に選べる面接官', () => {
 
     const ichiro = staff.find((s) => s.display_name === '面接官 一郎')!
     assert.ok(Number(ichiro.pending) >= 1, '割り当てた分が件数に乗る')
+  })
+})
+
+describe('担当を替える', () => {
+  /** すでに担当が決まっている、判断待ちの評価を1件作る。 */
+  async function assignedEvaluation(opts: { held?: boolean } = {}) {
+    const person = await makePerson(db, fx.schoolId)
+    const app = await makeApplication(db, person, season.id, jst('2025-11-01T20:00:00'))
+    const evaluationId = await scalar<string>(db, `
+      INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                               state, assigned_at, hold_reason)
+      VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+      [app, season.stepIds[0], interviewer, opts.held ? 'held' : 'pending',
+       jst('2025-11-02T10:00:00'), opts.held ? '日程を再調整中' : null])
+    return { person, app, evaluationId }
+  }
+
+  let other: string
+  before(async () => {
+    other = await scalar<string>(db, `
+      INSERT INTO staffs (display_name, email) VALUES ('交代 四郎', 'i4@example.test')
+      RETURNING id`)
+  })
+
+  test('担当を別の面接官に替えられる', async () => {
+    const { evaluationId } = await assignedEvaluation()
+    const result = await reassignInterviewer(db, { evaluationId, staffId: other })
+
+    assert.equal(result.ok, true)
+    assert.equal(result.ok && result.previousStaffName, '面接官 一郎')
+    assert.equal(result.ok && result.staffName, '交代 四郎')
+    assert.equal(await ownerOf(evaluationId), other)
+  })
+
+  test('保留中でも替えられる（解く前に相反を直せる）', async () => {
+    // 0013 で「保留＋利益相反」は reassign だけに出るようにした。
+    // つまり保留のまま替える経路が要る。
+    const { evaluationId } = await assignedEvaluation({ held: true })
+    const result = await reassignInterviewer(db, { evaluationId, staffId: other })
+    assert.equal(result.ok, true)
+    assert.equal(await ownerOf(evaluationId), other)
+    // 保留のままである。替えることは解くことではない。
+    assert.equal(await scalar<string>(db,
+      `SELECT state FROM evaluations WHERE id = $1`, [evaluationId]), 'held')
+  })
+
+  test('担当が決まっていない評価は「替える」ではなく「決める」', async () => {
+    const { evaluationId } = await pendingUnassigned()
+    const result = await reassignInterviewer(db, { evaluationId, staffId: other })
+    assert.equal(!result.ok && result.reason, 'not_assigned')
+    assert.equal(await ownerOf(evaluationId), null)
+  })
+
+  test('いまと同じ担当を選んだら、何もしない', async () => {
+    const { evaluationId } = await assignedEvaluation()
+    const result = await reassignInterviewer(db, { evaluationId, staffId: interviewer })
+    assert.equal(!result.ok && result.reason, 'same_staff')
+    assert.equal(await ownerOf(evaluationId), interviewer)
+  })
+
+  test('判断が下りた評価は替えられない', async () => {
+    const person = await makePerson(db, fx.schoolId)
+    const app = await makeApplication(db, person, season.id, jst('2025-11-01T20:00:00'))
+    const submitted = await scalar<string>(db, `
+      INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                               state, assigned_at, submitted_at)
+      VALUES ($1,$2,$3,'submitted',$4,$5) RETURNING id`,
+      [app, season.stepIds[0], interviewer,
+       jst('2025-11-02T10:00:00'), jst('2025-11-05T10:00:00')])
+
+    const result = await reassignInterviewer(db, { evaluationId: submitted, staffId: other })
+    assert.equal(!result.ok && result.reason, 'already_decided')
+    assert.equal(await ownerOf(submitted), interviewer)
+  })
+
+  test('動いていない応募・削除された人・非活性化された職員は弾く', async () => {
+    const stale = await pendingUnassigned({ rejected: true })
+    await db.query(`UPDATE evaluations SET interviewer_staff_id = $2 WHERE id = $1`,
+      [stale.evaluationId, interviewer])
+    const r1 = await reassignInterviewer(db, {
+      evaluationId: stale.evaluationId, staffId: other,
+    })
+    assert.equal(!r1.ok && r1.reason, 'not_active')
+
+    const removed = await assignedEvaluation()
+    await db.query(`UPDATE persons SET deleted_at = now() WHERE id = $1`, [removed.person])
+    const r2 = await reassignInterviewer(db, {
+      evaluationId: removed.evaluationId, staffId: other,
+    })
+    assert.equal(!r2.ok && r2.reason, 'not_active')
+
+    const retired = await scalar<string>(db, `
+      INSERT INTO staffs (display_name, email, is_active)
+      VALUES ('退任 五郎', 'i5@example.test', false) RETURNING id`)
+    const live = await assignedEvaluation()
+    const r3 = await reassignInterviewer(db, {
+      evaluationId: live.evaluationId, staffId: retired,
+    })
+    assert.equal(!r3.ok && r3.reason, 'staff_not_available')
+    assert.equal(await ownerOf(live.evaluationId), interviewer)
+  })
+
+  test('替えると利益相反が消え、やることが「評価する」に戻る', async () => {
+    // これがこの機能の目的である。相反の検出は現在の担当から計算されるので、
+    // 替えれば消える。判断が下りる前に替えているので、誤った評価は残らない。
+    const mentorPerson = await makePerson(db, fx.schoolId)
+    const mentorStaff = await scalar<string>(db, `
+      INSERT INTO staffs (person_id, display_name, email)
+      VALUES ($1,'相反の紹介者','ref17@example.test') RETURNING id`, [mentorPerson])
+    const person = await makePerson(db, fx.schoolId, { referrerPersonId: mentorPerson })
+    const app = await makeApplication(db, person, season.id, jst('2025-11-01T20:00:00'))
+    const evaluationId = await scalar<string>(db, `
+      INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                               state, assigned_at)
+      VALUES ($1,$2,$3,'pending',$4) RETURNING id`,
+      [app, season.stepIds[0], mentorStaff, jst('2025-11-02T10:00:00')])
+
+    assert.equal(await scalar<string>(db,
+      `SELECT kind FROM v_open_tasks WHERE source_id = $1`, [evaluationId]), 'reassign')
+
+    await reassignInterviewer(db, { evaluationId, staffId: other })
+
+    assert.equal(Number(await scalar<string>(db,
+      `SELECT count(*) FROM v_conflict_of_interest WHERE evaluation_id = $1`,
+      [evaluationId])), 0, '替えたのに相反が残っている')
+    assert.equal(await scalar<string>(db,
+      `SELECT kind FROM v_open_tasks WHERE source_id = $1`, [evaluationId]), 'evaluate')
+  })
+
+  test('壊れた id と、すべての理由の文言', async () => {
+    for (const bad of ['', 'not-a-uuid']) {
+      const r = await reassignInterviewer(db, { evaluationId: bad, staffId: other })
+      assert.equal(!r.ok && r.reason, 'evaluation_not_found', `id=${bad}`)
+    }
+    const codes = ['reassigned', 'evaluation_not_found', 'not_assigned', 'not_active',
+      'already_decided', 'same_staff', 'staff_not_available'] as const
+    for (const c of codes) assert.ok(REASSIGN_CODE_MESSAGE[c]?.length > 0, c)
+    assert.equal(Object.keys(REASSIGN_CODE_MESSAGE).length, codes.length)
+    assert.equal(parseReassignCode('nope'), null)
+    assert.equal(parseReassignCode('reassigned'), 'reassigned')
   })
 })

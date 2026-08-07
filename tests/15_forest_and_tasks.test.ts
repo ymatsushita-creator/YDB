@@ -382,3 +382,35 @@ describe('いまやること', () => {
     assert.equal(Number(row.applications), 1)
   })
 })
+
+describe('やることを二重に数えない', () => {
+  /**
+   * 同じ評価が2種類のタスクとして出ると、件数が二重に見える。
+   *
+   * 0012 では「評価する」から利益相反を除いた。そこでやるべきは担当の
+   * 差し替えであって評価ではないからである。**「保留を解く」に同じ手当てを
+   * していなかった。** 保留中の評価に利益相反が出ていると、
+   * `unhold` と `reassign` の2行になる。
+   *
+   * 「担当を替える」を画面から実行できるようにする作業中に気づいた。
+   * デモに保留＋利益相反の組み合わせが無かったため表に出ていなかった。
+   */
+  test('保留中の評価に利益相反があっても、やることは1件だけ出る', async () => {
+    const mentorPerson = await makePerson(db, fx.schoolId)
+    const mentorStaff = await scalar<string>(db,
+      `INSERT INTO staffs (person_id, display_name, email)
+       VALUES ($1,'保留の紹介者','ref15c@example.test') RETURNING id`, [mentorPerson])
+    const person = await makePerson(db, fx.schoolId, { referrerPersonId: mentorPerson })
+    const app = await makeApplication(db, person, season.id, jst('2026-07-01T20:00:00'))
+    await db.query(
+      `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                state, assigned_at, hold_reason)
+       VALUES ($1,$2,$3,'held',$4,'本人の都合で日程を再調整中')`,
+      [app, season.stepIds[0], mentorStaff, jst('2026-07-05T10:00:00')])
+
+    const kinds = await all<{ kind: string }>(db,
+      `SELECT kind FROM v_open_tasks WHERE application_id = $1 ORDER BY kind`, [app])
+    assert.deepEqual(kinds.map((k) => k.kind), ['reassign'],
+      '保留と利益相反で2行になっている。先にやるべきは担当の差し替えのほう')
+  })
+})
