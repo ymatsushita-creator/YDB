@@ -47,7 +47,7 @@ export default async function OperationsPage(
 
       <div className="grid grid-kpi">
         <Kpi label="判断待ち" value={num(pending.length)}
-             tone={pending.length ? undefined : 'muted'} meta="pending の評価" />
+             tone={pending.length ? undefined : 'muted'} meta="まだ確定していない評価" />
         <Kpi label="SLA 超過" value={num(overSla.length)}
              tone={overSla.length ? undefined : 'muted'}
              meta="ステップごとの sla_days を超えて滞留" />
@@ -55,7 +55,7 @@ export default async function OperationsPage(
              tone={unassignedCount ? undefined : 'muted'}
              meta={unassigned?.oldest_days ? `最長 ${num(unassigned.oldest_days)} 日` : '面接官が決まっていない'} />
         <Kpi label="保留" value={num(held.length)}
-             tone={held.length ? undefined : 'muted'} meta="held の評価" />
+             tone={held.length ? undefined : 'muted'} meta="保留にしている評価" />
         <Kpi label="利益相反" value={num(conflicts.length)}
              tone={conflicts.length ? undefined : 'muted'} meta="紹介者または本人が面接官" />
       </div>
@@ -203,8 +203,8 @@ export default async function OperationsPage(
       </div>
 
       <p className="footnote">
-        滞留日数は <code>jst_today() - jst_date(assigned_at)</code>。
-        <code>CURRENT_DATE</code> は接続のタイムゾーン依存のため使っていない。
+        滞留日数は、担当が決まった日から今日までの日数（日本時間で数える）。
+        サーバの時計ではなく日本時間の日付で数えているため、深夜をまたいでも数字が動かない。
       </p>
     </>
   )
