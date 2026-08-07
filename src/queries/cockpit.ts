@@ -286,6 +286,58 @@ export interface CommunityRow {
   last_touch_on: Date | null
 }
 
+export interface CommunityMapRow extends CommunityRow {
+  open_tasks: number
+  overdue_tasks: number
+  days_since_touch: number | null
+  flags: string[]
+}
+
+export const getCommunityMap = async (
+  db: Db, forestId: string, seasonId: string, dormantDays = DORMANT_DAYS,
+) => {
+  const rows = await all<Omit<CommunityMapRow, 'flags'>>(db, `
+    WITH community_touchpoints AS (
+      SELECT c.community_id, t.person_id, t.id, t.occurred_at
+        FROM v_communities c
+        LEFT JOIN touchpoints t ON t.partner_id = c.community_id
+       WHERE c.forest_id = $1 AND c.is_active
+    ), community_tasks AS (
+      SELECT ct.community_id, count(DISTINCT ot.source_id) AS open_tasks,
+             count(DISTINCT ot.source_id) FILTER (WHERE ot.is_overdue) AS overdue_tasks
+        FROM community_touchpoints ct
+        JOIN persons p ON p.id = ct.person_id AND p.deleted_at IS NULL
+        JOIN v_open_tasks ot ON ot.person_id = ct.person_id AND ot.season_id = $2
+       GROUP BY ct.community_id
+    )
+    SELECT c.community_id, c.name,
+           count(DISTINCT ct.person_id) FILTER (WHERE p.deleted_at IS NULL) AS persons_touched,
+           count(ct.id) FILTER (WHERE p.deleted_at IS NULL) AS touchpoints,
+           max(jst_date(ct.occurred_at)) FILTER (WHERE p.deleted_at IS NULL) AS last_touch_on,
+           coalesce(tk.open_tasks, 0) AS open_tasks,
+           coalesce(tk.overdue_tasks, 0) AS overdue_tasks,
+           jst_today() - (max(jst_date(ct.occurred_at)) FILTER (WHERE p.deleted_at IS NULL))
+             AS days_since_touch
+      FROM v_communities c
+      LEFT JOIN community_touchpoints ct ON ct.community_id = c.community_id
+      LEFT JOIN persons p ON p.id = ct.person_id
+      LEFT JOIN community_tasks tk ON tk.community_id = c.community_id
+     WHERE c.forest_id = $1 AND c.is_active
+     GROUP BY c.community_id, c.name, tk.open_tasks, tk.overdue_tasks
+     ORDER BY coalesce(tk.overdue_tasks, 0) DESC, coalesce(tk.open_tasks, 0) DESC,
+              max(ct.occurred_at) DESC NULLS LAST, c.name`, [forestId, seasonId])
+
+  return rows.map((row): CommunityMapRow => ({
+    ...row,
+    flags: [
+      ...(Number(row.overdue_tasks) > 0 ? ['stalled'] : []),
+      ...(row.days_since_touch === null ? ['untouched'] : []),
+      ...(row.days_since_touch !== null && Number(row.days_since_touch) >= dormantDays
+        ? ['dormant'] : []),
+    ],
+  }))
+}
+
 /**
  * 森の中の林。
  *

@@ -1,515 +1,301 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
+import { listSeasons, getSeason, getStepFlow } from '../../src/queries/dashboard.ts'
 import {
-  getOpenTasks, getTaskTotals, getWaitingPersons, getForests,
-  DORMANT_DAYS, type TaskKind, type ForestRow,
+  getOpenTasks, getTaskTotals, getForests, getCommunityMap,
+  DORMANT_DAYS, type TaskKind, type ForestRow, type CommunityMapRow,
 } from '../../src/queries/cockpit.ts'
 import {
+  getApplication, getApplicationEvaluations, getApplicationTimeline, getPersonTouchpoints,
+} from '../../src/queries/drilldown.ts'
+import {
   listAssignableStaff, parseAssignCode, ASSIGN_CODE_MESSAGE,
-  parseReassignCode, REASSIGN_CODE_MESSAGE,
-  type AssignableStaff,
+  parseReassignCode, REASSIGN_CODE_MESSAGE, type AssignableStaff,
 } from '../../src/commands/assign.ts'
 import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../src/commands/unhold.ts'
 import { assignAction, unholdAction, reassignAction } from './actions.ts'
-import { Card, Kpi, SeasonTabs, Empty, num } from '../_components/ui.tsx'
+import { Card, Empty, SeasonTabs, jstDateTime, jstDay, num } from '../_components/ui.tsx'
 
 export const dynamic = 'force-dynamic'
 
-/**
- * コックピット。
- *
- * 憲法（director.md）のホーム画面の要求に対する最小の実装である。
- * 答えるのは4つの問いだけで、それ以外は既存の画面へ譲る。
- *
- *   いま何をすべきか / 何が止まっているか / 誰が待っているか / どの森が要注意か
- *
- * 一覧を主役に置かない、という要求との折り合いについて。
- * ここに出ている表は「在庫の一覧」ではなく**やることの列**である。
- * 行が0件になれば表そのものが消える。母集団は v_active_applications
- * （いま誰かが判断すべき応募）なので、動いていないものは並ばない。
- *
- * TODO(MVP): Forest Health / Owner / Relationship は未実装。
- *            手で作るタスク（連絡する・催促する）も表せない。
- *            どちらも記録層に事実が無い（domain.md 9-2）。
- */
-
 const KIND_LABEL: Record<TaskKind, string> = {
   evaluate: '評価する',
-  assign:   '担当を決める',
-  unhold:   '保留を解く',
+  assign: '担当を決める',
+  unhold: '保留を解く',
   reassign: '担当を替える',
 }
 
 const KIND_CLASS: Record<TaskKind, string> = {
   evaluate: 'badge-tag-blue',
-  assign:   'badge-tag-purple',
-  unhold:   'badge-tag-gray',
+  assign: 'badge-tag-purple',
+  unhold: 'badge-tag-gray',
   reassign: 'badge-tag-orange',
 }
 
-/** 要注意の旗。合成したスコアではなく、事実そのままの理由を並べる。 */
-function ForestFlags({ forest }: { forest: ForestRow }) {
-  if (forest.flags.length === 0) {
-    return <span className="section-note">平常</span>
-  }
+function FactFlags({ flags, overdueTasks }: { flags: string[]; overdueTasks?: number }) {
   return (
-    <>
-      {forest.flags.includes('stalled') && (
-        <span className="badge-tag-orange">
-          滞留 {num(forest.overdue_tasks)} 件
-        </span>
-      )}
-      {forest.flags.includes('untouched') && (
-        <span className="badge-tag-gray">接点なし</span>
-      )}
-      {forest.flags.includes('dormant') && (
-        <span className="badge-tag-gray">
-          休眠 {num(forest.days_since_touch)} 日
-        </span>
-      )}
-    </>
-  )
-}
-
-/**
- * 森の区画。
- *
- * 憲法は「テーブルを作らない」「森が主役」と定めている。実行⑥の第1版は
- * 表で出していたが、それに対する指示が「マップにする」だったので置き換えた。
- *
- * ★ 出している数は3つだけで、**すべて実測値である。**
- *   Health（健康度）は出していない。原典の実装段階[3]（スコアリング）で、
- *   原典自身が着手判断を1年後と書いており、`process.md` の Freeze Core
- *   Concepts も Forest Health を暫定扱いに置いている。いま % を出すと、
- *   根拠のない数字が一目で読める場所に座ることになる。
- *   代わりに、要注意の理由を**旗**として名指しする（C-18）。
- *   TODO(MVP): Health と Owner（担当）は、記録層に事実ができてから。
- *
- * ★ 推定リーチをこの3つに混ぜない。あれは接触機会の推定値で、
- *   接点のある人（実人数）とは単位が違う（domain.md 8節）。
- *   足元に別行で、単位を書いて出す。
- */
-function ForestNode({ forest, seasonId }: { forest: ForestRow; seasonId: string }) {
-  // 枠は「旗が立っているか」、地の色は「眠っているか」。2つは別の軸である。
-  // 休眠の森を地の色だけで示すと、並び順では前に居るのに一番弱く見える。
-  const flagged = forest.flags.length > 0
-  const asleep = forest.flags.includes('untouched') || forest.flags.includes('dormant')
-  const stat = (label: string, value: number) => (
-    <div className="forest-stat">
-      <span className="forest-stat-label">{label}</span>
-      <span className={`forest-stat-value${Number(value) === 0 ? ' zero' : ''}`}>
-        {num(value)}
-      </span>
-    </div>
-  )
-
-  return (
-    <div className={`forest-node${flagged ? ' alert' : ''}${asleep ? ' quiet' : ''}`}>
-      <span className="forest-node-name">
-        <span className="leaf" aria-hidden="true">●</span>
-        <Link href={`/forests/${forest.forest_id}?season=${seasonId}`}>
-          {forest.name}
-        </Link>
-      </span>
-
-      <div className="forest-stats">
-        {stat('接点のある人', forest.persons_touched)}
-        {stat('応募', forest.applications)}
-        {stat('合格', forest.accepted)}
-      </div>
-
-      <div className="forest-node-foot">
-        <ForestFlags forest={forest} />
-        {Number(forest.communities) > 0 && <span>林 {num(forest.communities)}</span>}
-        {/* 旗が最終接触の話をしているときは、同じ日数を2度書かない。
-            「休眠 934 日」の隣に「最終接触 934 日前」が並ぶと、
-            2つの事実があるように読める。 */}
-        {!asleep && forest.days_since_touch !== null && (
-          <span>最終接触 {num(forest.days_since_touch)} 日前</span>
-        )}
-        {/* リーチの記録が無い森に「—（接触機会）」と出ていた。単位だけが残って
-            意味をなさないので、記録が無いことをそのまま書く。 */}
-        <span>
-          {forest.estimated_reach === null
-            ? 'リーチの記録なし'
-            : `推定リーチ ${num(forest.estimated_reach)}（接触機会）`}
-        </span>
-      </div>
+    <div className="fact-flags">
+      {flags.includes('stalled') && <span className="badge-tag-orange">滞留 {num(overdueTasks)} 件</span>}
+      {flags.includes('untouched') && <span className="badge-tag-gray">接点なし</span>}
+      {flags.includes('dormant') && <span className="badge-tag-gray">休眠</span>}
+      {flags.length === 0 && <span className="section-note">旗なし</span>}
     </div>
   )
 }
 
-/**
- * 担当を決めるフォーム。
- *
- * 素の `<form action={...}>` である。`'use client'` を1つも増やしていないので、
- * **JavaScript を無効にしても動く。** 状態を持つ対話部品（`useActionState` など）
- * を入れるとクライアント境界の新設になるため、そこには踏み込まない。
- * 結果は同じ画面へコードを付けて戻すこと（PRG）で伝える。
- *
- * 面接官は「抱えている判断待ちが少ない順」に並ぶ。偏りが見えないまま
- * 選ばせると、いつも同じ人に積む（/operations の面接官別の負荷と同じ狙い）。
- */
 function AssignForm({
   evaluationId, seasonId, staff, mode = 'assign',
 }: {
   evaluationId: string
   seasonId: string
   staff: AssignableStaff[]
-  /** 決めるか、替えるか。**成り立つ条件が逆**なので、送る先を分ける。 */
   mode?: 'assign' | 'reassign'
 }) {
-  if (staff.length === 0) {
-    return <span className="section-note">選べる職員がいない</span>
-  }
+  if (staff.length === 0) return <span className="section-note">選べる職員がいない</span>
   return (
-    <form action={mode === 'assign' ? assignAction : reassignAction}
-          className="assign-form">
+    <form action={mode === 'assign' ? assignAction : reassignAction} className="context-action-form">
       <input type="hidden" name="evaluationId" value={evaluationId} />
       <input type="hidden" name="seasonId" value={seasonId} />
-      <label className="visually-hidden" htmlFor={`staff-${evaluationId}`}>
-        担当にする面接官
-      </label>
+      <label className="visually-hidden" htmlFor={`staff-${evaluationId}`}>担当にする面接官</label>
       <select id={`staff-${evaluationId}`} name="staffId" defaultValue="" required>
-        <option value="" disabled>
-          {mode === 'assign' ? '担当を選ぶ…' : '別の担当を選ぶ…'}
-        </option>
-        {staff.map((s) => (
-          <option key={s.staff_id} value={s.staff_id}>
-            {s.display_name}（待ち {s.pending}）
+        <option value="" disabled>{mode === 'assign' ? '担当を選ぶ…' : '別の担当を選ぶ…'}</option>
+        {staff.map((member) => (
+          <option key={member.staff_id} value={member.staff_id}>
+            {member.display_name}（待ち {member.pending}）
           </option>
         ))}
       </select>
-      <button type="submit" className="button-primary">
-        {mode === 'assign' ? '決める' : '替える'}
-      </button>
+      <button type="submit" className="button-primary">{mode === 'assign' ? '担当を決める' : '担当を替える'}</button>
     </form>
   )
 }
 
-/**
- * 保留を解くフォーム。
- *
- * 選ぶものが無いのでボタン1つである。`AssignForm` と同じく素の
- * `<form action={...}>` で、`'use client'` は増やしていない。
- *
- * 確認を挟んでいない。**解いても失われるものが無い**（理由は残る）ので、
- * 取り消しの重さに見合わない。消える操作を足すときに考える。
- */
-function UnholdForm({
-  evaluationId, seasonId,
-}: { evaluationId: string; seasonId: string }) {
+function TaskAction({
+  task, seasonId, staff,
+}: { task: Awaited<ReturnType<typeof getOpenTasks>>[number]; seasonId: string; staff: AssignableStaff[] }) {
+  if (task.kind === 'assign') return <AssignForm evaluationId={task.source_id} seasonId={seasonId} staff={staff} />
+  if (task.kind === 'reassign') {
+    return <AssignForm evaluationId={task.source_id} seasonId={seasonId} staff={staff} mode="reassign" />
+  }
+  if (task.kind === 'unhold') {
+    return (
+      <form action={unholdAction} className="context-action-form">
+        <input type="hidden" name="evaluationId" value={task.source_id} />
+        <input type="hidden" name="seasonId" value={seasonId} />
+        <button type="submit" className="button-primary">保留を解く</button>
+      </form>
+    )
+  }
+  return <Link className="button-primary context-action-link" href={`/applications/${task.application_id}`}>評価する</Link>
+}
+
+function ForestCard({ forest, seasonId }: { forest: ForestRow; seasonId: string }) {
   return (
-    <form action={unholdAction} className="assign-form">
-      <input type="hidden" name="evaluationId" value={evaluationId} />
-      <input type="hidden" name="seasonId" value={seasonId} />
-      <button type="submit" className="button-secondary">保留を解く</button>
-    </form>
+    <Link href={`/forests/${forest.forest_id}?season=${seasonId}`} className="forest-focus-card">
+      <div className="forest-focus-head">
+        <span className="forest-marker" aria-hidden="true">●</span>
+        <span>{forest.name}</span>
+        <span className="section-note">Forest</span>
+      </div>
+      <FactFlags flags={forest.flags} overdueTasks={forest.overdue_tasks} />
+      <div className="forest-fact-grid">
+        <div className="estimate-fact"><span>推定 Reach</span><strong>{forest.estimated_reach === null ? '記録なし' : num(forest.estimated_reach)}</strong><small>接触機会・推定</small></div>
+        <div><span>接点のある実人数</span><strong>{num(forest.persons_touched)} 人</strong><small>当該年度</small></div>
+        <div><span>進行中の応募</span><strong>{num(forest.applications)} 件</strong><small>当該年度</small></div>
+        <div><span>未処理タスク</span><strong>{num(forest.open_tasks)} 件</strong><small>当該年度</small></div>
+      </div>
+      <p className="forest-card-note">推定 Reach・実人数・応募件数は単位が異なります</p>
+    </Link>
   )
 }
 
-export default async function CockpitPage(
-  { searchParams }: {
-    searchParams: Promise<{
-      season?: string; assign?: string; unhold?: string; reassign?: string
-    }>
-  },
-) {
+function CommunityNode({ community, forestId, seasonId }: {
+  community: CommunityMapRow
+  forestId: string
+  seasonId: string
+}) {
+  return (
+    <Link href={`/forests/${forestId}?season=${seasonId}`} className={`community-node${community.flags.length > 0 ? ' needs-attention' : ''}`}>
+      <div className="community-node-top">
+        <span className="community-node-name">{community.name}</span>
+        {community.open_tasks > 0 && <span className="task-count">未処理 {num(community.open_tasks)} 件</span>}
+      </div>
+      <div className="community-node-facts">
+        <span>接点のある実人数 <strong>{num(community.persons_touched)} 人</strong></span>
+        <span>{community.last_touch_on ? `最終接点 ${jstDay(community.last_touch_on)}` : '最終接点の記録なし'}</span>
+      </div>
+      <FactFlags flags={community.flags} overdueTasks={community.overdue_tasks} />
+    </Link>
+  )
+}
+
+export default async function CockpitPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ season?: string; assign?: string; unhold?: string; reassign?: string }>
+}) {
   const db = await getDb()
   const params = await searchParams
   const seasons = await listSeasons(db)
-  if (seasons.length === 0) {
-    return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
-  }
+  if (seasons.length === 0) return <Empty>年度が登録されていない。</Empty>
 
-  const season =
-    (await getSeason(db, params.season)) ??
-    seasons.find((s) => s.is_live) ?? seasons[0]!
-
-  const [tasks, totals, waiting, forests, staff] = await Promise.all([
-    getOpenTasks(db, season.id),
-    getTaskTotals(db, season.id),
-    getWaitingPersons(db, season.id),
-    getForests(db, season.id),
-    listAssignableStaff(db, season.id),
+  const season = (await getSeason(db, params.season)) ?? seasons.find((item) => item.is_live) ?? seasons[0]!
+  const [tasks, totals, forests, staff, steps] = await Promise.all([
+    getOpenTasks(db, season.id), getTaskTotals(db, season.id), getForests(db, season.id),
+    listAssignableStaff(db, season.id), getStepFlow(db, season.id),
   ])
+  const selectedTask = tasks[0] ?? null
+  const selectedForest = forests[0] ?? null
+  const [selectedApplication, evaluations, timeline, touchpoints, communities] = selectedTask && selectedForest
+    ? await Promise.all([
+      getApplication(db, selectedTask.application_id),
+      getApplicationEvaluations(db, selectedTask.application_id),
+      getApplicationTimeline(db, selectedTask.application_id),
+      getPersonTouchpoints(db, selectedTask.person_id),
+      getCommunityMap(db, selectedForest.forest_id, season.id),
+    ])
+    : [null, [], [], [], []]
 
-  // 直前の書き込みの結果。知らないコードは「何も起きていない」として捨てる。
+  const overdue = tasks.filter((task) => task.is_overdue)
+  const attention = forests.filter((forest) => forest.flags.length > 0)
   const assigned = parseAssignCode(params.assign)
   const unheld = parseUnholdCode(params.unhold)
   const reassigned = parseReassignCode(params.reassign)
-
-  const overdue = tasks.filter((t) => t.is_overdue)
-  const attention = forests.filter((f) => f.flags.length > 0)
+  const nextEvaluation = evaluations.find((evaluation) => evaluation.can_score)
+  const activeEvaluation = evaluations.find((evaluation) => evaluation.evaluation_id === selectedTask?.source_id)
+  const firstTouch = touchpoints[touchpoints.length - 1]
+  const lastTouch = touchpoints[0]
 
   return (
     <>
-      <div className="page-head">
+      <div className="cockpit-head">
         <div>
+          <p className="eyebrow">FOREST OPERATIONS</p>
           <h1 className="page-title">{season.enrollment_year} 年度の運転席</h1>
-          <p className="page-sub">
-            {season.is_live
-              ? '進行中。いま動いている応募だけを見ている'
-              : '終了した年度を表示している。動いている応募は残っていないはず'}
-          </p>
+          <p className="page-sub">今日、選考を前へ進めるための作業場所</p>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <SeasonTabs seasons={seasons} currentId={season.id} basePath="/cockpit" />
-        </div>
+        <SeasonTabs seasons={seasons} currentId={season.id} basePath="/cockpit" />
       </div>
 
-      {/* 4つの問いを、そのまま4枚に置く。 */}
-      <div className="grid grid-kpi">
-        <Kpi label="いま何をすべきか" value={num(tasks.length)}
-             tone={tasks.length ? undefined : 'muted'} meta="未処理のやること（件）" />
-        {/* 0 でないこと自体が問題なので、0 のときと見た目を変える。 */}
-        <Kpi label="何が止まっているか" value={num(overdue.length)}
-             tone={overdue.length ? 'alert' : 'muted'} meta="期限を超えたやること（件）" />
-        <Kpi label="誰が待っているか" value={num(totals?.waiting_persons ?? 0)}
-             tone={Number(totals?.waiting_persons ?? 0) ? undefined : 'muted'}
-             meta="判断を待っている人（人）" />
-        <Kpi label="どの森が要注意か" value={num(attention.length)}
-             tone={attention.length ? undefined : 'muted'}
-             meta={`旗が立った森（森）／全 ${num(forests.length)} 森`} />
-      </div>
-
-      {assigned && (
-        <div className="section">
-          <p className={`callout${assigned === 'ok' ? ' ok' : ''}`}>
-            {ASSIGN_CODE_MESSAGE[assigned]}
-            {assigned === 'ok' && (
-              <span className="section-note">
-                やること・待っている人・森の数は、この画面で作り直してある
-              </span>
-            )}
-          </p>
-        </div>
-      )}
-      {unheld && (
-        <div className="section">
-          <p className={`callout${unheld === 'unheld' ? ' ok' : ''}`}>
-            {UNHOLD_CODE_MESSAGE[unheld]}
-            {unheld === 'unheld' && (
-              <span className="section-note">
-                保留の理由は消していない。応募の画面でそのまま読める
-              </span>
-            )}
-          </p>
-        </div>
+      {(assigned || unheld || reassigned) && (
+        <p className="callout ok">
+          {assigned ? ASSIGN_CODE_MESSAGE[assigned] : unheld ? UNHOLD_CODE_MESSAGE[unheld] : REASSIGN_CODE_MESSAGE[reassigned!]}
+        </p>
       )}
 
-      {reassigned && (
-        <div className="section">
-          <p className={`callout${reassigned === 'reassigned' ? ' ok' : ''}`}>
-            {REASSIGN_CODE_MESSAGE[reassigned]}
-            {reassigned === 'reassigned' && (
-              <span className="section-note">
-                利益相反はこれで消える。前の担当が誰だったかは残らない
-              </span>
+      <div className="cockpit-layout">
+        <main className="cockpit-workspace">
+          <section className="today-section" aria-labelledby="today-title">
+            <div className="section-heading-row">
+              <div>
+                <p className="eyebrow">PRIORITY 01</p>
+                <h2 id="today-title" className="workspace-title">今日やること <span>{num(tasks.length)} 件</span></h2>
+              </div>
+              <p className="section-note">期限超過 → 待ち日数 → 選考ステップの順</p>
+            </div>
+            {tasks.length === 0 ? <Empty>いま判断すべき応募はありません。</Empty> : (
+              <div className="task-queue">
+                {tasks.slice(0, 7).map((task, index) => (
+                  <Link href={`/applications/${task.application_id}`} className={`task-row${task.is_overdue ? ' is-overdue' : ''}${index === 0 ? ' is-selected' : ''}`} key={`${task.kind}-${task.source_id}`}>
+                    <span className="task-priority">{index + 1}</span>
+                    <div className="task-main">
+                      <div className="task-label-row"><span className={KIND_CLASS[task.kind]}>{KIND_LABEL[task.kind]}</span>{task.is_overdue && <span className="overdue-label">期限超過</span>}</div>
+                      <strong>{task.person_name}</strong>
+                      <span>{task.step_order}. {task.step_name}{task.detail && ` ・ ${task.detail}`}</span>
+                    </div>
+                    <div className="task-owner"><span>担当</span><strong>{task.owner ?? '未設定'}</strong></div>
+                    <div className="task-wait"><span>待ち</span><strong>{num(task.waiting_days)} 日</strong></div>
+                    <span className="task-arrow" aria-hidden="true">→</span>
+                  </Link>
+                ))}
+              </div>
             )}
-          </p>
-        </div>
-      )}
+            {tasks.length > 7 && <p className="section-note task-more">上位 7 件を表示 ／ 全 {num(tasks.length)} 件</p>}
+          </section>
 
-      <div className="section">
-        {overdue.length > 0 ? (
-          <p className="callout">
-            {overdue.length} 件が期限を超えている。最長は {num(overdue[0]!.waiting_days)} 日
-            （{overdue[0]!.person_name} ・ {overdue[0]!.step_name}）。
-          </p>
-        ) : tasks.length > 0 ? (
-          <p className="callout ok">
-            期限を超えたものは無い。{tasks.length} 件が順番待ちしている。
-          </p>
-        ) : (
-          <p className="callout ok">この年度に、いま誰かが判断すべきものは残っていない。</p>
-        )}
-      </div>
-
-      {/* 2. どの森が要注意か — 表ではなくマップで出す */}
-      <div className="section">
-        <Card
-          title="森のマップ（アプローチできる生態系）"
-          note="旗が立った森が先（滞留 → 接点なし・休眠 → 平常）。旗は事実そのままで、点数ではない"
-        >
-          {forests.length === 0 ? <Empty>森が登録されていない</Empty> : (
-            <div className="forest-map">
-              {forests.map((f) => (
-                <ForestNode key={f.forest_id} forest={f} seasonId={season.id} />
-              ))}
+          <section className="forest-section" aria-labelledby="forest-title">
+            <div className="section-heading-row">
+              <div><p className="eyebrow">PRIORITY 03</p><h2 id="forest-title" className="workspace-title">Forest と Community</h2></div>
+              <p className="section-note">要注意 {num(attention.length)} 森 ／ 滞留・休眠・接点なしは事実フラグ</p>
             </div>
-          )}
-        </Card>
-      </div>
+            {selectedForest ? <ForestCard forest={selectedForest} seasonId={season.id} /> : <Empty>Forest が登録されていない。</Empty>}
+            {selectedForest && (
+              <div className="community-map">
+                <div className="map-connection" aria-hidden="true" />
+                {communities.map((community) => <CommunityNode key={community.community_id} community={community} forestId={selectedForest.forest_id} seasonId={season.id} />)}
+              </div>
+            )}
+            <p className="map-caption">Community を開くと Person へ、Person を選ぶと右側の作業コンテキストへ進みます。</p>
+          </section>
 
-      {/* 1. いま何をすべきか */}
-      <div className="section">
-        <Card
-          title="いま何をすべきか"
-          note="期限を超えたもの → 待ちの長いもの → 選考の早いステップの順"
-        >
-          {tasks.length === 0 ? <Empty>やることは残っていない</Empty> : (
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>やること</th>
-                    <th>誰について</th>
-                    <th>ステップ</th>
-                    <th>担当</th>
-                    <th className="num">待ち</th>
-                    <th className="num">期限</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks.slice(0, 40).map((t) => (
-                    <tr key={`${t.kind}-${t.source_id}`}
-                        className={t.is_overdue ? 'overdue' : undefined}>
-                      <td>
-                        <span className={KIND_CLASS[t.kind]}>{KIND_LABEL[t.kind]}</span>
-                        {t.detail && (
-                          <>
-                            <br />
-                            <span className="section-note">{t.detail}</span>
-                          </>
-                        )}
-                      </td>
-                      <td className="nowrap">
-                        <Link href={`/applications/${t.application_id}`}>{t.person_name}</Link>
-                      </td>
-                      <td className="nowrap">
-                        {t.step_order}. {t.step_name}
-                        {/* 入力の進み具合。着手前か途中かが1行で読める。 */}
-                        {t.kind === 'evaluate' && Number(t.criteria_total) > 0 && (
-                          <>
-                            <br />
-                            <span className="section-note">
-                              {num(t.criteria_scored)}/{num(t.criteria_total)} 軸
-                              {Number(t.criteria_scored) === 0 && ' ・ 未着手'}
-                            </span>
-                          </>
-                        )}
-                      </td>
-                      <td>
-                        <div className="owner-cell">
-                        {t.owner
-                          ? <span className="owner-current">{t.owner}</span>
-                          : t.kind === 'assign'
-                            ? null
-                            : <span className="badge-tag-orange">未割当</span>}
-                        {t.kind === 'assign' && (
-                          <AssignForm evaluationId={t.source_id}
-                                      seasonId={season.id} staff={staff} />
-                        )}
-                        {/* 保留は担当が付いていても解く操作が要る。
-                            担当欄の下に置き、行の意味（誰の手番か）を保つ。 */}
-                        {t.kind === 'unhold' && (
-                          <UnholdForm evaluationId={t.source_id} seasonId={season.id} />
-                        )}
-                        {/* 利益相反。いまの担当を出したうえで、替える欄を置く。
-                            誰から誰に替えるのかが見えないと選べない。 */}
-                        {t.kind === 'reassign' && (
-                          <AssignForm evaluationId={t.source_id} seasonId={season.id}
-                                      staff={staff} mode="reassign" />
-                        )}
-                        </div>
-                      </td>
-                      <td className="num">
-                        {t.is_overdue ? (
-                          <strong style={{ color: 'var(--color-semantic-error)' }}>
-                            {num(t.waiting_days)} 日
-                          </strong>
-                        ) : `${num(t.waiting_days)} 日`}
-                      </td>
-                      <td className="num">{t.sla_days ? `${t.sla_days} 日` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {tasks.length > 40 && (
-                <p className="section-note" style={{ padding: 12 }}>
-                  上位 40 件を表示（全 {num(tasks.length)} 件）
-                </p>
-              )}
+          <section className="pipeline-section" aria-labelledby="pipeline-title">
+            <div className="section-heading-row"><div><p className="eyebrow">PRIORITY 04</p><h2 id="pipeline-title" className="workspace-title">現在の選考状況</h2></div><p className="section-note">応募件数。人ではありません</p></div>
+            <div className="application-flow">
+              {steps.map((step, index) => {
+                const denominator = index === 0 ? null : Number(steps[index - 1]!.reached)
+                const rate = denominator && denominator > 0 ? `${((Number(step.reached) / denominator) * 100).toFixed(1)}%` : null
+                return <div className="application-stage" key={step.sort_order}>
+                  <span>{step.sort_order}. {step.name}</span>
+                  <strong>{num(step.reached)} 件</strong>
+                  <small>{rate ? `前段 ${num(denominator)} 件に対する到達率 ${rate}` : '提出応募を母集団とする'}</small>
+                </div>
+              })}
             </div>
-          )}
-        </Card>
+          </section>
+        </main>
+
+        <aside className="person-context" aria-label="選択中の Person と Application">
+          {selectedTask && selectedApplication ? (
+            <>
+              <div className="context-topline"><span className="context-live-dot" />選択中の Person / Application</div>
+              <section className="context-person">
+                <div className="person-avatar" aria-hidden="true">{selectedApplication.applicant_name.slice(0, 1)}</div>
+                <div><h2>{selectedApplication.applicant_name}</h2><p>{selectedApplication.school_name}</p></div>
+              </section>
+              <section className="context-block">
+                <p className="context-label">対象年度と現在の選考ステップ</p>
+                <strong>{selectedApplication.enrollment_year} 年度 ・ {selectedTask.step_order}. {selectedTask.step_name}</strong>
+                <span className={KIND_CLASS[selectedTask.kind]}>{KIND_LABEL[selectedTask.kind]}</span>
+              </section>
+              <section className="context-block context-details">
+                <div><span>現在の担当者</span><strong>{selectedTask.owner ?? '未設定'}</strong></div>
+                <div><span>期限</span><strong>{selectedTask.sla_days ? `${num(selectedTask.sla_days)} 日` : '設定なし'}</strong></div>
+                <div><span>停止理由</span><strong>{activeEvaluation?.hold_reason ?? 'なし'}</strong></div>
+              </section>
+              <section className="context-block context-next-action">
+                <p className="context-label">推奨される次の操作</p>
+                <h3>{KIND_LABEL[selectedTask.kind]}</h3>
+                <TaskAction task={selectedTask} seasonId={season.id} staff={staff} />
+              </section>
+              <section className="context-block">
+                <p className="context-label">評価の進捗</p>
+                <div className="evaluation-progress">
+                  <strong>{num(selectedTask.criteria_scored)} / {num(selectedTask.criteria_total)} 軸</strong>
+                  <span>{nextEvaluation ? `次に評価できる: ${nextEvaluation.step_name}` : '評価待ちの軸はありません'}</span>
+                </div>
+              </section>
+              <section className="context-block">
+                <p className="context-label">接点</p>
+                <div className="touchpoint-facts">
+                  <div><span>初回接点</span><strong>{firstTouch ? jstDateTime(firstTouch.occurred_at) : '記録なし'}</strong></div>
+                  <div><span>最終接点</span><strong>{lastTouch ? jstDateTime(lastTouch.occurred_at) : '記録なし'}</strong></div>
+                  <div><span>接点回数</span><strong>{num(touchpoints.length)} 件</strong></div>
+                  <div><span>最近の接点種別</span><strong>{lastTouch?.channel ?? '記録なし'}</strong></div>
+                </div>
+                <p className="touchpoint-note"><span>接点メモ</span>{lastTouch?.note ?? '記録なし'}</p>
+              </section>
+              <section className="context-block context-history">
+                <p className="context-label">選考履歴</p>
+                {timeline.length === 0 ? <span className="section-note">選考履歴はまだありません</span> : timeline.slice(-3).reverse().map((entry) => <div className="history-item" key={entry.history_id}><span>{jstDateTime(entry.occurred_at)}</span><strong>{entry.transition_type === 'advance' ? '通過' : entry.transition_type === 'reject' ? '不合格' : entry.transition_type === 'withdraw' ? '辞退' : '差し戻し'}{entry.step_name && ` ・ ${entry.step_name}`}</strong></div>)}
+              </section>
+              <Link href={`/applications/${selectedApplication.application_id}`} className="context-detail-link">応募の詳細を開く →</Link>
+            </>
+          ) : <Empty>選択できる応募がありません。</Empty>}
+        </aside>
       </div>
 
-      <div className="section">
-        {/* 3. 誰が待っているか */}
-        <Card title="誰が待っているか" note="やることを人でまとめ直したもの。件数ではなく人数">
-          {waiting.length === 0 ? <Empty>待っている人はいない</Empty> : (
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>人</th>
-                    <th>何を待っているか</th>
-                    <th className="num">件</th>
-                    <th className="num">最長</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {waiting.slice(0, 20).map((w) => (
-                    <tr key={w.person_id}>
-                      <td className="nowrap">
-                        <Link href={`/people/${w.person_id}`}>{w.person_name}</Link>
-                      </td>
-                      <td className="nowrap">
-                        <span className={KIND_CLASS[w.kind]}>{KIND_LABEL[w.kind]}</span>
-                        <br />
-                        <span className="section-note">{w.step_name}</span>
-                      </td>
-                      <td className="num">{num(w.tasks)}</td>
-                      <td className="num">
-                        {w.overdue ? (
-                          <strong style={{ color: 'var(--color-semantic-error)' }}>
-                            {num(w.waiting_days)} 日
-                          </strong>
-                        ) : `${num(w.waiting_days)} 日`}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {waiting.length > 20 && (
-                <p className="section-note" style={{ padding: 12 }}>
-                  上位 20 人を表示（全 {num(waiting.length)} 人）
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <p className="unit-note">
-        <strong>単位と母集団。</strong>
-        「やること」は<strong>件</strong>、「待っている人」は<strong>人</strong>。
-        1人が複数のやることを持つため、この2つは一致しない。
-        母集団は<code>いま選考が動いている応募</code>で、
-        取り下げ・合格・不合格の済んだ応募と、個人情報削除を受けた人は入らない。
-        森の「接点のある人」「応募」「合格」は {season.enrollment_year} 年度の数で、
-        休眠日数は<strong>年度を問わない</strong>最終接触日から数えている。
-        <strong>推定リーチは接触機会の推定値</strong>で、接点のある人（実人数）とは
-        単位が違う。同じ人へ2回リーチすれば2と数えるので、<strong>割らない</strong>。
-        森の区画は<strong>足せない</strong>（同じ人が複数の森に接点を持つ）。
-        <strong>健康度（Health）は出していない。</strong>記録層にその事実が無く、
-        いま合成すると根拠のない数字になる。要注意は旗で名指ししている。
-      </p>
-
-      <p className="footnote">
-        やることは <code>v_open_tasks</code>（既存の事実からの導出）。
-        Task の記録層はまだ無いため、手で作るタスクは表せない。
-        休眠は最終接触から {DORMANT_DAYS} 日以上。この日数は運用時に決める仮の値。
-        待ち日数は <code>jst_today() - jst_date(assigned_at)</code>。
-        {forests.some((f) => f.estimated_reach !== null) && (
-          <>
-            {' '}森の推定リーチは<strong>接触機会の推定値</strong>で、
-            接点のある実人数とは単位が違う。並べても割らない。
-          </>
-        )}
+      <p className="unit-note cockpit-unit-note">
+        <strong>単位と母集団。</strong> 「今日やること」「未処理タスク」は件、「接点のある実人数」は人、「現在の選考状況」は年度内の応募件数です。推定 Reach は接触機会の推定値であり、実人数・応募件数とは単位が異なるため、比率や進捗バーにしていません。休眠は最終接点から {DORMANT_DAYS} 日以上、要注意は合成スコアではなく滞留・休眠・接点なしの事実を表示しています。
       </p>
     </>
   )
