@@ -1,6 +1,14 @@
 # vision.md — 理念
 
-序列: `director.md` > `domain.md` > `design.md` > **`vision.md`** > `CLAUDE.md`
+序列: **`vision.md`** > `director.md` > `domain.md` > `design.md` > `CLAUDE.md`
+
+**2026-08-07（実行⑥）に、この文書が序列の最上位へ移った。**
+実行⑤の時点では `director.md` > `domain.md` > `design.md` > 本書 > `CLAUDE.md` だった。
+
+ただし**内容が未受領であることは変わっていない。** 空の文書は何も上書きしない。
+理念が届くまで、実際に効く最上位は `director.md`（憲法）である。
+理念が届いた時点で、下位4文書との食い違いを一覧にして指示を仰ぐこと
+（勝手にどちらかへ寄せない）。
 
 ---
 

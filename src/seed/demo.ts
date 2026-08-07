@@ -26,8 +26,45 @@ const GIVEN = ['陽菜','蓮','結衣','悠真','咲良','大翔','葵','湊','�
   '莉子','樹','美咲','悠人','花','律','菜月','奏','翼','琉生']
 const SCHOOLS = ['第一高等学校','明星学園高校','桜丘高等学校','北稜高校','東雲学院',
   '緑ヶ丘高等学校','中央高校','西湖高等学校','南陽高校','啓明学園','清和高等学校','天籟高校']
-const PARTNERS = ['NPO法人みらい教育','県教育委員会','市立図書館連携事業','起業支援センターK',
-  '高校生新聞社','ユースセンターまち','地域創生ファンド','大学連携コンソーシアム']
+/**
+ * 森（Forest）と、その中の林（Community）。
+ *
+ * 0012 で `partners` に親を1本足し、親を持たない団体を森、親を持つ団体を
+ * 林とした。集計は `v_partner_forest` を通して林の接点を森へ畳むので、
+ * **接点が森に直付けされる形と、林に付く形の両方**がデモに要る。
+ * 片方しか無いと、畳んでいるかどうかが一度も確かめられない。
+ *
+ * 要注意の判定に効く形も、確率ではなく明示的に置く（C-13 と同じ理由）。
+ *   noTouch        … リーチはあるのに、誰一人識別できていない森
+ *   noReach        … 接点はあるが、団体リーチの記録が無い森
+ *   touchUntilYear … その年度までしか接点が無い森（休眠）
+ */
+interface ForestPlan {
+  name: string
+  category: string
+  communities: string[]
+  noTouch?: boolean
+  noReach?: boolean
+  touchUntilYear?: number
+}
+
+const FORESTS: ForestPlan[] = [
+  { name: '大学連携コンソーシアム', category: 'network',
+    communities: ['高校生探究部会', '起業サークル連合'] },
+  { name: 'NPO法人みらい教育', category: 'npo',
+    communities: ['ユース起業ゼミ'] },
+  { name: '起業支援センターK', category: 'company',
+    communities: ['アクセラレータ生コミュニティ'] },
+  { name: '県教育委員会', category: 'government', communities: [] },
+  { name: '市立図書館連携事業', category: 'government', communities: [] },
+  { name: '地域創生ファンド', category: 'company', communities: [] },
+  // 接点はあるが、団体リーチの記録が無い。推定リーチが NULL の森。
+  { name: 'ユースセンターまち', category: 'npo', communities: [], noReach: true },
+  // 2024年度までしか接点が無い。休眠した森。
+  { name: '高校生新聞社', category: 'media', communities: [], touchUntilYear: 2024 },
+  // リーチはあるのに識別ゼロ。**この2つを割ってはならない**（domain.md 8節）。
+  { name: '西部工業高等専門学校', category: 'school', communities: [], noTouch: true },
+]
 const STEPS = ['書類選考', '一次面接', '二次面接', '最終面接']
 const CRITERIA: Record<string, Array<[string, number]>> = {
   書類選考:   [['志望動機の具体性', 5], ['行動実績', 5]],
@@ -155,9 +192,45 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   // --- マスタ ---
   const schoolIds = await insertReturning(db,
     `INSERT INTO schools (name) SELECT unnest($1::text[]) RETURNING id`, [SCHOOLS])
-  const partnerIds = await insertReturning(db,
-    `INSERT INTO partners (name, category, first_contact_date)
-     SELECT unnest($1::text[]), 'npo', '2023-04-01'::date RETURNING id`, [PARTNERS])
+  // 森を先に入れ、林はその子として入れる。2段を超えるとトリガが拒否する。
+  const forestIdByName = new Map<string, string>()
+  const communityIdByName = new Map<string, string>()
+  /** 接点を作れる団体（森と林の両方）。年度で外れるものは untilYear を持つ。 */
+  const touchTargets: Array<{ id: string; untilYear?: number }> = []
+  /** 団体リーチを記録する団体。 */
+  const reachTargets: string[] = []
+
+  for (const f of FORESTS) {
+    const { id } = await insertOne<{ id: string }>(db,
+      `INSERT INTO partners (name, category, first_contact_date)
+       VALUES ($1, $2, '2023-04-01'::date) RETURNING id`, [f.name, f.category])
+    forestIdByName.set(f.name, id)
+    if (!f.noTouch) touchTargets.push({ id, untilYear: f.touchUntilYear })
+    if (!f.noReach) reachTargets.push(id)
+
+    for (const c of f.communities) {
+      const { id: cid } = await insertOne<{ id: string }>(db,
+        `INSERT INTO partners (name, category, parent_partner_id, first_contact_date)
+         VALUES ($1, 'community', $2, '2023-06-01'::date) RETURNING id`, [c, id])
+      communityIdByName.set(c, cid)
+      touchTargets.push({ id: cid })
+    }
+  }
+  // 林にもリーチの記録を1つ置く。森に畳めているかを確かめる経路。
+  reachTargets.push(communityIdByName.get('高校生探究部会')!)
+
+  /**
+   * 接点を付ける団体を順番に配る。
+   *
+   * `pick()` の乱数に任せると、シードが同じでも「この森には一度も接点が
+   * 付かなかった」が静かに起こりうる。デモが経路を踏んでいないという失敗を
+   * 4回繰り返しているので、確率ではなく巡回で配って全員に必ず当てる。
+   */
+  let touchCursor = 0
+  const nextTouchPartner = (year: number) => {
+    const pool = touchTargets.filter((t) => t.untilYear === undefined || year <= t.untilYear)
+    return pool[touchCursor++ % pool.length]!.id
+  }
 
   const channels = await db.query<{ id: string; name: string }>(
     `SELECT id, name FROM channels ORDER BY name`)
@@ -230,7 +303,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   // --- 森（団体リーチ） ---
   for (const s of seasons) {
     const rows: Array<[string, string, string, string, number]> = []
-    for (const pid of partnerIds) {
+    for (const pid of reachTargets) {
       for (let k = 0; k < int(1, 3); k++) {
         rows.push([pid, s.id,
           addDays(s.plan.outreachStart, int(0, 55)),
@@ -307,7 +380,8 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
         const ch = pick(channelIds)
         const later = new Date(+new Date(first) + int(1, 70) * 86400000)
         if (+later > horizon) continue
-        tpRows.push([id, ch, ch === partnerChannelId ? pick(partnerIds) : null, iso(later)])
+        tpRows.push([id, ch,
+          ch === partnerChannelId ? nextTouchPartner(plan.year) : null, iso(later)])
       }
     }
     // 前年度の不合格者への再アプローチ（スカウト）
@@ -567,6 +641,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
       voidMergeErrorId: voidNotCounts.id,
       voidWithdrawnId: voidCounts.id,
       activeSeason: seasons.find((s) => s.plan.year === 2027),
+      communityPartnerId: communityIdByName.get('起業サークル連合')!,
       stats,
     })
   }
@@ -610,6 +685,8 @@ interface PersonaContext {
    * 終わった年度では判断待ちがそもそも残らないので、その形が作れない。
    */
   activeSeason?: SeededSeason
+  /** 林（Community）の partner_id。森へ畳む経路を確実に踏ませるために要る。 */
+  communityPartnerId: string
   stats: DemoStats
 }
 
@@ -819,6 +896,149 @@ async function seedPersonas(db: Db, ctx: PersonaContext): Promise<void> {
     `UPDATE applications SET voided_at = $2, void_reason_id = $3 WHERE id = $1`,
     [cancelledApp, ts('2026-07-18', 10), ctx.voidWithdrawnId])
   stats.voided++
+
+  // -----------------------------------------------------------
+  // 4. 林から来た人が、森の要注意として上がってくる
+  // -----------------------------------------------------------
+  // 0012 で足した経路を確実に踏ませる。
+  //
+  //   接点が林（Community）に付いている
+  //     → v_partner_forest が親の森へ畳む
+  //       → v_forest_season_activity にその人の応募と滞留が乗る
+  //         → コックピットの「要注意の森」に出る
+  //
+  // 乱数に任せると、林に接点が付いた人がその年度に応募し、なおかつ
+  // SLA を超えて滞留する、という重なりが起きるとは限らない。
+  // デモが経路を踏んでいないという失敗を4回繰り返しているので明示的に置く。
+  //
+  // SLA 超過を「今日」に依存させない。二次面接の sla_days は 7 日で、
+  // 割り当てを応募開始直後に固定しているため、いつ流しても超過している。
+  const stalled = await person({
+    familyName: '柏木', givenName: '朔', kana: ['かしわぎ', 'さく'],
+    email: 'saku.kashiwagi@example.test', createdAt: ts('2026-06-20', 10),
+    note: 'デモ用の登場人物。林（起業サークル連合）経由で識別され、'
+      + '進行中の年度に応募したが、二次面接の評価が SLA を超えて止まっている。'
+      + '森の要注意がどの事実から立ち上がるかを確かめるために置いた。',
+  })
+  await db.query(
+    `INSERT INTO touchpoints (person_id, channel_id, partner_id, occurred_at)
+     VALUES ($1,$2,$3,$4)`,
+    [stalled, ctx.channelIds.get('提携団体イベント')!, ctx.communityPartnerId,
+     ts('2026-06-20', 10)])
+  stats.touchpoints++
+
+  const { id: stalledApp } = await insertOne<{ id: string }>(db,
+    `INSERT INTO applications (person_id, season_id, submitted_at) VALUES ($1,$2,$3)
+     RETURNING id`, [stalled, active.id, ts('2026-07-03', 21)])
+  stats.applications++
+
+  // 書類選考は通した。評価と根拠を残す（rationale は必須）。
+  const { id: screening } = await insertOne<{ id: string }>(db,
+    `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                              state, assigned_at, submitted_at)
+     VALUES ($1,$2,$3,'submitted',$4,$5) RETURNING id`,
+    [stalledApp, active.stepIds[0], staff(2), ts('2026-07-04', 10), ts('2026-07-06', 18)])
+  stats.evaluations++
+  for (const c of active.criteriaByStep[0]!.filter((c) => !c.reapplicantOnly)) {
+    await db.query(
+      `INSERT INTO evaluation_scores (evaluation_id, criteria_id, score, rationale)
+       VALUES ($1,$2,4,$3)`,
+      [screening, c.id, '所属していた学生団体で、後輩向けの勉強会を自分で立ち上げていた'])
+    stats.scores++
+  }
+  await db.query(
+    `INSERT INTO status_histories (application_id, transition_type, selection_step_id,
+                                   occurred_at, changed_by_staff_id, note)
+     VALUES ($1,'advance',$2,$3,$4,'書類選考 通過')`,
+    [stalledApp, active.stepIds[0], ts('2026-07-07', 19), staff(2)])
+  stats.histories++
+
+  // 一次面接も通した。
+  const { id: first } = await insertOne<{ id: string }>(db,
+    `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                              state, assigned_at, submitted_at)
+     VALUES ($1,$2,$3,'submitted',$4,$5) RETURNING id`,
+    [stalledApp, active.stepIds[1], staff(3), ts('2026-07-09', 10), ts('2026-07-12', 18)])
+  stats.evaluations++
+  for (const c of active.criteriaByStep[1]!.filter((c) => !c.reapplicantOnly)) {
+    await db.query(
+      `INSERT INTO evaluation_scores (evaluation_id, criteria_id, score, rationale)
+       VALUES ($1,$2,4,$3)`,
+      [first, c.id, '勉強会が続かなかった理由を、自分の準備不足として説明していた'])
+    stats.scores++
+  }
+  await db.query(
+    `INSERT INTO status_histories (application_id, transition_type, selection_step_id,
+                                   occurred_at, changed_by_staff_id, note)
+     VALUES ($1,'advance',$2,$3,$4,'一次面接 通過')`,
+    [stalledApp, active.stepIds[1], ts('2026-07-13', 19), staff(3)])
+  stats.histories++
+
+  // 二次面接で止まっている。担当は決まっているのに判断が下りていない。
+  //
+  // 面接官を2人置く。`evaluations_assignment_key` は
+  // (application_id, selection_step_id, interviewer_staff_id, attempt) なので、
+  // 1つのステップを複数の面接官が評価する形は記録層が最初から許している。
+  //
+  // これを置く理由は、**やることの「件」と待っている人の「人」が
+  // 一致しない形をデモに作ること**である。乱数で作る大勢は、選考が
+  // 順番に進むため1人につき開いている評価が1件しかなく、件と人が常に
+  // 一致していた。常に一致するデータでは、画面が2つを混同していても
+  // 気づけない。tests/13 がこの形の存在を検査する。
+  for (const interviewer of [staff(4), staff(5)]) {
+    await db.query(
+      `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                state, assigned_at)
+       VALUES ($1,$2,$3,'pending',$4)`,
+      [stalledApp, active.stepIds[2], interviewer, ts('2026-07-15', 10)])
+    stats.evaluations++
+  }
+
+  // -----------------------------------------------------------
+  // 5. 紹介者が面接官のまま、判断待ちで止まっている
+  // -----------------------------------------------------------
+  // v_open_tasks の 'reassign'（担当を替える）は、判断がまだ下りていない
+  // 利益相反だけを出す。替えても戻らない submitted は出さない。
+  //
+  // 実測すると、乱数で生まれる利益相反は3件すべて submitted だった。
+  // つまりこの分岐は一度も踏まれていなかった。判断待ちの評価から
+  // 利益相反を除いている側（'evaluate' の NOT EXISTS）も、
+  // 同時に一度も効いていなかったことになる。
+  // 「デモデータが検証したい経路を踏んでいない」を5回目にしないため、
+  // 紹介者がそのまま面接官になっている形を明示的に置く。
+  const mentor = await person({
+    familyName: '長瀬', givenName: '巧', kana: ['ながせ', 'たくみ'],
+    email: 'takumi.nagase@example.test', createdAt: ts('2025-09-05', 10),
+    note: 'デモ用の登場人物。卒業生で、いまは運営として面接も担当する。'
+      + '自分が紹介した応募者の面接官に割り当たっており、利益相反が出ている。',
+  })
+  const { id: mentorStaff } = await insertOne<{ id: string }>(db,
+    `INSERT INTO staffs (person_id, display_name, email)
+     VALUES ($1, '長瀬 巧', 'takumi.nagase.staff@example.test') RETURNING id`, [mentor])
+
+  const { id: referred } = await insertOne<{ id: string }>(db,
+    `INSERT INTO persons (family_name, given_name, family_name_kana, given_name_kana,
+                          birth_date, school_id, email, created_at, referrer_person_id, note)
+     VALUES ('都築','ひかり','つづき','ひかり','2008-04-11',$1,$2,$3,$4,$5) RETURNING id`,
+    [ctx.schoolId, 'hikari.tsuzuki@example.test', ts('2026-06-25', 16), mentor,
+     'デモ用の登場人物。紹介者がそのまま面接官に割り当たっている。'
+     + 'コックピットには「評価する」ではなく「担当を替える」として出る。'])
+  stats.persons++
+  await db.query(
+    `INSERT INTO touchpoints (person_id, channel_id, occurred_at) VALUES ($1,$2,$3)`,
+    [referred, ctx.channelIds.get('卒業生からの紹介')!, ts('2026-06-25', 16)])
+  stats.touchpoints++
+
+  const { id: referredApp } = await insertOne<{ id: string }>(db,
+    `INSERT INTO applications (person_id, season_id, submitted_at) VALUES ($1,$2,$3)
+     RETURNING id`, [referred, active.id, ts('2026-07-08', 20)])
+  stats.applications++
+  await db.query(
+    `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                              state, assigned_at)
+     VALUES ($1,$2,$3,'pending',$4)`,
+    [referredApp, active.stepIds[0], mentorStaff, ts('2026-07-09', 10)])
+  stats.evaluations++
 }
 
 // -------------------------------------------------------------

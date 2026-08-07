@@ -1,6 +1,7 @@
 # design.md — UI
 
-序列: `director.md` > `domain.md` > **`design.md`** > `vision.md` > `CLAUDE.md`
+序列: `vision.md` > `director.md` > `domain.md` > **`design.md`** > `CLAUDE.md`
+（実行⑥で `vision.md` が最上位へ移った。内容は未受領のため、何も上書きしていない）
 
 **この文書はまだトークンを生成しない。**
 

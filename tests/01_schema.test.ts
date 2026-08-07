@@ -93,6 +93,16 @@ describe('マイグレーション', () => {
       'v_application_outcome',
       // 0011: いま動いている応募。判断待ち・保留・担当未割当・利益相反の母集団
       'v_active_applications',
+      // 0012: 団体 → その団体が属する森。林に付いた接点を森へ畳む経路
+      'v_partner_forest',
+      // 0012: 森（親を持たない団体）と林（親を持つ団体）
+      'v_forests',
+      'v_communities',
+      // 0012: いまやること。既存の事実からの導出で、Task の記録層ではない
+      'v_open_tasks',
+      // 0012: 森の活動（年度を問わない）と、森×年度（応募・合格・やること）
+      'v_forest_activity',
+      'v_forest_season_activity',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

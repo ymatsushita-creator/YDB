@@ -2,7 +2,10 @@
 
 > **この文書は序列の最下位である。着手前に、上位4文書をこの順で読むこと。**
 >
-> `director.md`（憲法）→ `domain.md`（世界設定）→ `design.md`（UI）→ `vision.md`（理念）→ 本書
+> `vision.md`（理念）→ `director.md`（憲法）→ `domain.md`（世界設定）→ `design.md`（UI）→ 本書
+>
+> 実行⑥で `vision.md` が最上位へ移った（それまでは `design.md` の下）。
+> **内容は未受領のままで、空の文書は何も上書きしない。**
 >
 > 上が下に優先する。ただし**食い違いを勝手にどちらかへ寄せない。**
 > 実行⑤の時点で未解決の食い違いが残っている（`domain.md` 4節）。
@@ -11,6 +14,66 @@
 > `director.md` の「実装前の自己チェック」4項目は、レビューではなく**着手条件**である。
 
 起業家アカデミーの**集客から選考までを一元管理する**データベースと、その上のダッシュボード。
+
+---
+
+# Document Hierarchy
+
+This project is governed by the following document hierarchy.
+**「なぜ作るか」が「どう作るか」より上位に立つ。** それがこの並びの理由である。
+
+```text
+vision.md      Why      なぜ存在するのか
+    ↓
+director.md    Principles  何を守るのか
+    ↓
+domain.md      Model    何が存在するのか
+    ↓
+design.md      UX/UI    どう見せるのか
+    ↓
+CLAUDE.md      Engineering  どう開発するのか
+```
+
+## Responsibilities
+
+**vision.md** — Defines the long-term product mission and future direction.
+**(Currently incomplete. Do not infer missing content.)**
+未受領であることは、下位文書に権限が移ることを意味しない。空欄は空欄のまま扱う。
+理念が届くまで、実際に効く最上位は `director.md` である。
+
+**director.md** — Defines the immutable product philosophy and decision-making principles.
+プロダクトの憲法。森を主役に置くこと、コックピットであって管理画面でないこと。
+
+**domain.md** — Defines the domain model, entities, relationships, and terminology.
+世界の辞書。ここに定義の無い語を、画面や集計が勝手に使ってはならない。
+
+**design.md** — Defines interaction principles, UX, UI behavior, and visual structure.
+UX ルール。ズーム基調のナビゲーション、一覧を主役に置かないこと。
+
+**CLAUDE.md** — Defines the engineering process, implementation strategy, and development workflow.
+開発ルール。記録の構造 > 集計の定義 > 画面という順序を守らせる。
+
+## Conflict Resolution
+
+When documents disagree, always follow the higher-level document.
+
+Higher-level documents override lower-level documents.
+
+**CLAUDE.md must never reinterpret or override director.md.**
+
+If uncertainty exists, preserve the higher-level intent and record the
+implementation uncertainty as:
+
+```
+TODO(MVP)
+```
+
+ただし**食い違いを勝手にどちらかへ寄せない。** 上位の意図を保ったまま、
+食い違いそのものを記録して残す（`domain.md` 10節、`db/DECISIONS.md` D 節）。
+
+**憲法が上書きしないものが1つある。** 思想は画面を支配するが、事実を作り替えることはできない。
+記録の構造 > 集計の定義 > 画面という順序、単位の違うものを割らないこと、
+無い記録から数字を作らないことは、上位文書でも変えられない（`director.md` 末尾）。
 
 ## 1. 達成すべきこと（判断に迷ったらここへ戻る）
 
@@ -135,14 +198,22 @@
 
 ## 8. いまの構造で、4つの問いに答えられているか
 
-2026-08-07（実行③時点）の実測。**主題は構造なので、この表を最新に保つ。**
+2026-08-07（実行⑥時点）の実測。**主題は構造なので、この表を最新に保つ。**
 
 | 問い | 記録層 | 集計 | 画面 |
 |---|---|---|---|
 | ① 誰がどんな状態か | あり | `f_person_season_state`（段と接点の鮮度） | `/people`・`/people/[id]` |
 | ② 誰が何を評価したか | あり（`evaluations` / `evaluation_scores` / `rationale` 必須） | 面接官別の負荷、応募1件の評価と全履歴 | `/applications/[id]` |
-| ③ いま何が起きているか | あり | 判断待ち・SLA 超過・担当未割当・保留・利益相反。母集団は `v_active_applications` に統一（A-14） | `/operations` にある |
-| ④ 次に何をすべきか | 部分的 | 滞留の一覧までは出る | **「次の一手」を提示する仕組みが無い** |
+| ③ いま何が起きているか | あり | 判断待ち・SLA 超過・担当未割当・保留・利益相反。母集団は `v_active_applications` に統一（A-14） | `/operations`・`/cockpit` |
+| ④ 次に何をすべきか | **導出で成立**（0012） | `v_open_tasks` が4種のやることを既存の事実から出す（C-17） | `/cockpit` に「いま何をすべきか」がある |
+
+④は**導出で成立させた。** Task の記録層は無いままで（`domain.md` 10-2 は
+未決）、既存の事実から出せるやることだけを出している。
+**手で作るタスク（連絡する・催促する）は表せない**（D-12 の TODO(MVP) 2）。
+
+森を最上位に置く憲法の要求に対しては、0012 で `partners` に親を1本足し、
+Forest（親なし）と Community（親あり）を実体にした（C-16）。
+Health は作っていない。事実の旗3つ（滞留・休眠・接点なし）で表す（C-18）。
 
 集計には軸が2本ある。混ぜると、催促しない相手を催促する。
 
@@ -155,6 +226,12 @@
 
 構造側で分かっている穴。
 
+- **森と人の結び付きは「接触があった」でしかない。** `touchpoints.partner_id`
+  から引いているので、所属や役割（Relationship / Role）は表せない。
+  `domain.md` 10-1 で `partner_relations` と語が衝突しており未決（D-12）
+- **絞り込むと遅くなる集計を1度作った。** 全件では速いのに年度を1つ
+  指定すると 9000 倍になった（A-16）。**性能は絞り込みの有無の両方で測る。**
+  片側だけでは、A-11（絞ると速い）と A-16（絞ると遅い）のどちらかを必ず取り逃す
 - **`reject` にステップが結び付いていない。** 列（`status_histories.selection_step_id`）は
   あるが、運用でもデモでも埋めていないため「どのステップで落ちたか」を集計できない。
   推測で埋めると根拠のない数字が一人歩きするので、**必要になったら reject に
@@ -179,3 +256,20 @@
 - 実データ・実在の個人情報をデモやスクリーンショットに使うこと
 - 未確定の値を「たぶんこうだろう」で埋めること。分からないものは
   `DECISIONS.md` の D 節に保留として残す（例: `seasons` の実数値は D-8 で未確定）
+
+---
+
+# Final Principle
+
+When in doubt, prefer delivering a working product that expresses the philosophy
+of `director.md` over producing a theoretically perfect architecture.
+
+The purpose of development is to discover the product through operation,
+not through speculation.
+
+迷ったら、理論的に正しい構造よりも、`director.md` の思想を体現して**動くもの**を出す。
+開発の目的は、思弁ではなく**運用によってプロダクトを発見すること**である。
+
+ただしこれは、記録を雑にする許可ではない。動くものを早く出す理由は、
+**運用しなければ分からない欠陥を早く踏むため**である。踏んだら
+テストへ書き、`DECISIONS.md` に理由を残す。それが「発見」の中身である。

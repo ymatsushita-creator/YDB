@@ -167,4 +167,72 @@ describe('デモデータが踏んでいる経路', () => {
     assert.ok(await count(`
       SELECT count(*) FROM v_touchpoint_season WHERE season_id IS NULL`) >= 1)
   })
+
+  // -----------------------------------------------------------
+  // 0012（森と、いまやること）が足した経路
+  // -----------------------------------------------------------
+
+  test('森と林の両方があり、接点がその両方に付いている', async () => {
+    // 林に接点が付く形が無いと、v_partner_forest が森へ畳んでいるかを
+    // 一度も確かめられない。森直付けだけのデータでは畳む処理が空回りする。
+    assert.ok(await count(`SELECT count(*) FROM v_forests`) >= 1)
+    assert.ok(await count(`SELECT count(*) FROM v_communities`) >= 1)
+    assert.ok(await count(`
+      SELECT count(*) FROM touchpoints t
+        JOIN v_communities c ON c.community_id = t.partner_id`) >= 1,
+      '林に付いた接点が1件も無い')
+    assert.ok(await count(`
+      SELECT count(*) FROM touchpoints t
+        JOIN v_forests f ON f.forest_id = t.partner_id`) >= 1,
+      '森に直付けの接点が1件も無い')
+  })
+
+  test('要注意の3つの形が、それぞれ1つ以上ある', async () => {
+    // 接点なし・休眠・滞留。旗の立て方は事実そのままなので、
+    // その事実がデモに無ければ、コックピットの表示は一度も確かめられない。
+    assert.ok(await count(`
+      SELECT count(*) FROM v_forest_activity WHERE days_since_touch IS NULL`) >= 1,
+      '接点が1件も無い森が必要（リーチだけの森）')
+    assert.ok(await count(`
+      SELECT count(*) FROM v_forest_activity WHERE days_since_touch >= 60`) >= 1,
+      '休眠した森が必要')
+    assert.ok(await count(`
+      SELECT count(*) FROM v_forest_season_activity WHERE overdue_tasks >= 1`) >= 1,
+      '期限を超えたやることを抱えた森が必要')
+  })
+
+  test('推定リーチだけの森と、接点だけの森が両方ある', async () => {
+    // この2つの列を割って「識別率」にしてはならない（domain.md 8節）。
+    // 片方が NULL になる形を残しておくと、割った瞬間に破綻して気づける。
+    assert.ok(await count(`
+      SELECT count(*) FROM v_forest_activity
+       WHERE estimated_reach IS NOT NULL AND persons_touched = 0`) >= 1)
+    assert.ok(await count(`
+      SELECT count(*) FROM v_forest_activity
+       WHERE estimated_reach IS NULL AND persons_touched >= 1`) >= 1)
+  })
+
+  test('やることの4種すべてに、実際の行がある', async () => {
+    // 'reassign' は判断がまだ下りていない利益相反だけを出す。実測すると
+    // 乱数で生まれた利益相反は3件すべて submitted で、この分岐は一度も
+    // 踏まれていなかった。同時に、判断待ちから利益相反を除いている側
+    // （'evaluate' の NOT EXISTS）も一度も効いていなかった。
+    const kinds = await db.query<{ kind: string }>(
+      `SELECT DISTINCT kind FROM v_open_tasks ORDER BY kind`)
+    assert.deepEqual(kinds.rows.map((r) => r.kind).sort(),
+      ['assign', 'evaluate', 'reassign', 'unhold'])
+  })
+
+  test('期限を超えたやることがあり、超えていないものもある', async () => {
+    assert.ok(await count(`SELECT count(*) FROM v_open_tasks WHERE is_overdue`) >= 1)
+    assert.ok(await count(`SELECT count(*) FROM v_open_tasks WHERE NOT is_overdue`) >= 1)
+  })
+
+  test('1人で複数のやることを持つ形がある（件と人が一致しない）', async () => {
+    // 件数と人数を同じ数として扱っていないかは、両者が違う日にしか
+    // 確かめられない。常に一致するデータでは混同していても気づけない。
+    const tasks = await count(`SELECT count(*) FROM v_open_tasks`)
+    const persons = await count(`SELECT count(DISTINCT person_id) FROM v_open_tasks`)
+    assert.ok(tasks > persons, `やること ${tasks} 件・人 ${persons} 人。1人が複数持つ形が無い`)
+  })
 })

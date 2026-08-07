@@ -18,6 +18,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               Youth<span>DB</span>
             </Link>
             <nav className="nav">
+              {/* 運転席を先頭に置く。憲法のホームは「今日やること」であって
+                  ファネルではない。既存の画面は残し、入口の順序だけ変える。 */}
+              <Link href="/cockpit" className="button-ghost">運転席</Link>
               <Link href="/" className="button-ghost">ファネル</Link>
               <Link href="/sources" className="button-ghost">流入元</Link>
               <Link href="/operations" className="button-ghost">選考オペレーション</Link>
