@@ -201,7 +201,7 @@ export default async function ForestPage({
       </p>
 
       <p className="footnote">
-        林に付いた接点も、この森の数に含めている（<code>v_partner_forest</code> が畳む）。
+        林に付いた接点も、この森の数に含めている（同じ森に属する林をまとめて数える）。
         団体の階層は2段までで、3段目はトリガが拒否する。
         森の Health・担当（Owner）・関係の役割（Relationship）は未実装。
         記録層にその事実が無いので、画面では作らない。

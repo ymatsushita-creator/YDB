@@ -184,9 +184,9 @@ export default async function SourcesPage(
 
       <p className="footnote">
         森は個人を識別しないリーチの記録で、単位は接触機会。林・木・幹とは数え方が
-        違うため(3)のファネルには並べない。<code>estimated_reach</code> は推定値であり、
-        実人数と同じ縦軸に置かない。日付境界はすべて <code>jst_date()</code> を通している。
-        観測窓 <code>{REACH_WINDOW_DAYS}</code> 日は仮の値。
+        違うため(3)のファネルには並べない。推定リーチは推定値であり、
+        実人数と同じ縦軸に置かない。日付境界はすべて同じ運用タイムゾーンで揃えている。
+        観測窓 {REACH_WINDOW_DAYS} 日は仮の値。
       </p>
     </>
   )

@@ -151,7 +151,7 @@ export default async function ApplicationPage({
           </button>
         </form>
         <p className="section-note" style={{ marginTop: 'var(--space-xs)' }}>
-          元の判定は消えない。打ち消し行として履歴に残る（原則5）。
+          元の判定は消えない。訂正しても打ち消しの記録として残る。
           {correctable.transition_type === 'reject' && correctable.next_step_name
             && `「通過」に訂正すると「${correctable.next_step_name}」の担当を決める段になる。`}
         </p>
@@ -284,11 +284,11 @@ export default async function ApplicationPage({
             </div>
           )}
           <p className="unit-note">
-            訂正は打ち消しの追記で表現し、元の記録は残す（設計原則5）。
-            訂正をさらに訂正すると元が有効に戻るため、
+            訂正しても元の記録は消えず、打ち消しとして積み重なる。
+            訂正をさらに訂正すると元の判定が有効に戻るため、
             「訂正された＝無効」ではない。いま有効かどうかは左の点で示している
-            （塗りが有効）。この解決は <code>v_effective_status_histories</code> が行っており、
-            画面側では判定していない。
+            （塗りが有効）。この判定はシステムが自動で行っており、
+            画面側で数え直してはいない。
             {' '}「幹（合格）」の定義は最終ステップ「{app.final_step_name}」への有効な通過。
           </p>
         </Card>

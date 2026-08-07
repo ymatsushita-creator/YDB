@@ -202,7 +202,7 @@ export default async function PeoplePage(
       <p className="footnote">
         個人情報削除の依頼（資料9-2）を受けた Person は、集計だけでなく
         この一覧と個人の画面からも外れる。氏名の見える窓を残さない。
-        段と「直近に接点あり」の定義は集計側（<code>f_person_season_state()</code>）にあり、
+        段と「直近に接点あり」の定義は集計の仕組みが決めており、
         画面側では数え直していない。
       </p>
     </>

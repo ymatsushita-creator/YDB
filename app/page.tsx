@@ -241,10 +241,10 @@ export default async function FunnelPage(
       </div>
 
       <p className="footnote">
-        すべての日付境界は <code>jst_date()</code> を通している。
-        接続のタイムゾーンが変わっても集計値は動かない。
-        訂正された遷移は <code>v_effective_status_histories</code> で解決済み。
-        林のアクティブ判定窓 <code>{ACTIVE_WINDOW_DAYS}</code> 日は仮の値で、正式な日数は未決定。
+        すべての日付境界は同じ運用タイムゾーンで揃えている。
+        サーバの設定が変わっても集計値は動かない。
+        訂正された遷移はシステムが自動で解決済みにしている。
+        林のアクティブ判定窓 {ACTIVE_WINDOW_DAYS} 日は仮の値で、正式な日数は未決定。
       </p>
     </>
   )
