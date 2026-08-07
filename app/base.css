@@ -1,5 +1,4 @@
-/* トークン以外の土台。ここは手で書く。
- * 色・余白・角丸・書体のスケールは tokens.css（DESIGN.md から生成）にある。
+/* 色・余白・角丸・書体のスケールは tokens.css（DESIGN.md から生成）にある。
  */
 
 :root {
@@ -35,8 +34,6 @@ a:hover { text-decoration: underline; }
 h1, h2, h3, p, ul, ol { margin: 0; }
 ul { padding: 0; list-style: none; }
 
-/* ---- レイアウト ---- */
-
 .shell { max-width: 1280px; margin: 0 auto; padding: 0 var(--space-xxl) var(--space-section); }
 
 .topbar {
@@ -54,402 +51,185 @@ ul { padding: 0; list-style: none; }
   color: var(--color-ink-deep);
 }
 .wordmark span { color: var(--color-primary); }
-
 .nav { display: flex; gap: var(--space-xs); margin-left: auto; }
 
-.page-head {
+.page-head, .cockpit-head {
   padding: var(--space-xxl) 0 var(--space-xl);
   display: flex; align-items: flex-end; gap: var(--space-lg); flex-wrap: wrap;
 }
-.page-title {
-  font-size: 36px; font-weight: 600; line-height: 1.2; letter-spacing: -0.5px;
-}
+.page-title { font-size: 36px; font-weight: 600; line-height: 1.2; letter-spacing: -0.5px; }
 .page-sub { color: var(--color-steel); font-size: 14px; }
 
 .section { margin-top: var(--space-xxl); }
-.section-title {
-  font-size: 18px; font-weight: 600; line-height: 1.4;
-  margin-bottom: var(--space-md);
-  display: flex; align-items: baseline; gap: var(--space-sm);
-}
+.section-title { font-size: 18px; font-weight: 600; line-height: 1.4; margin-bottom: var(--space-md); display: flex; align-items: baseline; gap: var(--space-sm); }
 .section-note { font-size: 13px; font-weight: 400; color: var(--color-steel); }
-
 .grid { display: grid; gap: var(--space-md); }
 .grid-kpi { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
 
-/* ---- KPI ---- */
-
 .kpi { display: flex; flex-direction: column; gap: 6px; }
-.kpi-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 1px;
-  color: var(--color-steel); text-transform: uppercase;
-}
-.kpi-value {
-  font-size: 32px; font-weight: 600; line-height: 1.1; letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
-}
+.kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; color: var(--color-steel); text-transform: uppercase; }
+.kpi-value { font-size: 32px; font-weight: 600; line-height: 1.1; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
 .kpi-value.muted { color: var(--color-stone); }
 .kpi-meta { font-size: 13px; color: var(--color-steel); }
-
-.meter {
-  height: 6px; border-radius: var(--rounded-full);
-  background: var(--color-hairline); overflow: hidden; margin-top: 2px;
-}
+.meter { height: 6px; border-radius: var(--rounded-full); background: var(--color-hairline); overflow: hidden; margin-top: 2px; }
 .meter-fill { height: 100%; border-radius: var(--rounded-full); background: var(--color-primary); }
 .meter-fill.over { background: var(--color-semantic-warning); }
 .meter-fill.good { background: var(--color-semantic-success); }
 
-/* ---- テーブル ---- */
-
 table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
-table.data th {
-  text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 1px;
-  text-transform: uppercase; color: var(--color-steel);
-  padding: var(--space-xs) var(--space-md);
-  border-bottom: 1px solid var(--color-hairline);
-  white-space: nowrap;
-}
-table.data td {
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--color-hairline-soft);
-  vertical-align: top;
-}
+table.data th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--color-steel); padding: var(--space-xs) var(--space-md); border-bottom: 1px solid var(--color-hairline); white-space: nowrap; }
+table.data td { padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-hairline-soft); vertical-align: top; }
 table.data tr:last-child td { border-bottom: 0; }
-/* 合計行。見出しの micro-uppercase ではなく caption-bold（13/600/1.4）に寄せる。
-   列見出しと同じ字面だと、合計が見出しの一部に見える。 */
-table.data tfoot th {
-  border-top: 1px solid var(--color-hairline);
-  border-bottom: 0;
-  color: var(--color-ink);
-  font-size: 13px; line-height: 1.4; letter-spacing: 0; text-transform: none;
-}
+table.data tfoot th { border-top: 1px solid var(--color-hairline); border-bottom: 0; color: var(--color-ink); font-size: 13px; line-height: 1.4; letter-spacing: 0; text-transform: none; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-wrap { overflow-x: auto; }
+.empty { padding: var(--space-xxl); text-align: center; color: var(--color-stone); font-size: 14px; }
 
-.empty {
-  padding: var(--space-xxl); text-align: center;
-  color: var(--color-stone); font-size: 14px;
-}
-
-/* ---- 部品 ---- */
-
-.badge-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.badge-row, .fact-flags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .dot { width: 8px; height: 8px; border-radius: var(--rounded-full); display: inline-block; }
-
 .legend { display: flex; gap: var(--space-lg); flex-wrap: wrap; font-size: 13px; color: var(--color-slate); }
 .legend-item { display: flex; align-items: center; gap: 6px; }
-
 .season-tabs { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
-.live-dot {
-  width: 6px; height: 6px; border-radius: var(--rounded-full);
-  background: var(--color-semantic-success); display: inline-block; margin-right: 6px;
-}
-
+.live-dot { width: 6px; height: 6px; border-radius: var(--rounded-full); background: var(--color-semantic-success); display: inline-block; margin-right: 6px; }
 .stack { display: flex; flex-direction: column; gap: var(--space-xs); }
 .row-between { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); }
-
 .mono { font-family: var(--font-mono); font-size: 13px; }
 .nowrap { white-space: nowrap; }
-
-.callout {
-  border-left: 3px solid var(--color-semantic-warning);
-  background: var(--color-card-tint-peach);
-  padding: var(--space-md) var(--space-lg);
-  border-radius: var(--rounded-sm);
-  font-size: 13px; color: var(--color-brand-orange-deep);
-}
-.callout.ok {
-  border-left-color: var(--color-semantic-success);
-  background: var(--color-card-tint-mint);
-  color: var(--color-brand-green);
-}
-
-.footnote {
-  margin-top: var(--space-section-sm);
-  padding-top: var(--space-lg);
-  border-top: 1px solid var(--color-hairline);
-  font-size: 13px; color: var(--color-steel);
-}
-.footnote code {
-  font-family: var(--font-mono); font-size: 12px;
-  background: var(--color-surface); padding: 1px 5px; border-radius: var(--rounded-xs);
-}
-
-/* tokens.css が持たない色味のタグ。字面は badge-tag-*（caption-bold 13/600/1.4）に揃える。
-   木＝primary、林の休眠＝steel。ファネルの線の色と対応させる。 */
-.badge-tag-blue, .badge-tag-gray {
-  font-family: var(--type-caption-bold-font-family);
-  font-size: var(--type-caption-bold-font-size);
-  font-weight: var(--type-caption-bold-font-weight);
-  line-height: var(--type-caption-bold-line-height);
-  border-radius: var(--rounded-sm);
-  padding: 2px 8px;
-  white-space: nowrap;
-}
+.callout { border-left: 3px solid var(--color-semantic-warning); background: var(--color-card-tint-peach); padding: var(--space-md) var(--space-lg); border-radius: var(--rounded-sm); font-size: 13px; color: var(--color-brand-orange-deep); }
+.callout.ok { border-left-color: var(--color-semantic-success); background: var(--color-card-tint-mint); color: var(--color-brand-green); }
+.footnote { margin-top: var(--space-section-sm); padding-top: var(--space-lg); border-top: 1px solid var(--color-hairline); font-size: 13px; color: var(--color-steel); }
+.footnote code { font-family: var(--font-mono); font-size: 12px; background: var(--color-surface); padding: 1px 5px; border-radius: var(--rounded-xs); }
+.badge-tag-blue, .badge-tag-gray { font-family: var(--type-caption-bold-font-family); font-size: var(--type-caption-bold-font-size); font-weight: var(--type-caption-bold-font-weight); line-height: var(--type-caption-bold-line-height); border-radius: var(--rounded-sm); padding: 2px 8px; white-space: nowrap; }
 .badge-tag-blue { background-color: var(--color-card-tint-sky); color: var(--color-primary-deep); }
 .badge-tag-gray { background-color: var(--color-card-tint-gray); color: var(--color-steel); }
-
-/* 取り消された記録。消さずに残し、消えていることを字面で示す。 */
 .struck { text-decoration: line-through; color: var(--color-stone); }
-
-/* 時系列。左の罫と点で、行が1本の流れであることを示す。 */
 .timeline { display: flex; flex-direction: column; }
-.timeline-row {
-  display: grid; grid-template-columns: 150px 12px 1fr;
-  gap: var(--space-md); align-items: start;
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--color-hairline-soft);
-}
+.timeline-row { display: grid; grid-template-columns: 150px 12px 1fr; gap: var(--space-md); align-items: start; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-hairline-soft); }
 .timeline-row:last-child { border-bottom: 0; }
 .timeline-rail { position: relative; height: 100%; }
-.timeline-rail::before {
-  content: ''; position: absolute; left: 5px; top: 4px; bottom: -12px;
-  width: 1px; background: var(--color-hairline);
-}
+.timeline-rail::before { content: ''; position: absolute; left: 5px; top: 4px; bottom: -12px; width: 1px; background: var(--color-hairline); }
 .timeline-row:last-child .timeline-rail::before { display: none; }
-.timeline-dot {
-  position: absolute; left: 0; top: 4px;
-  width: 11px; height: 11px; border-radius: var(--rounded-full);
-  background: var(--color-canvas); border: 2px solid var(--color-stone);
-}
+.timeline-dot { position: absolute; left: 0; top: 4px; width: 11px; height: 11px; border-radius: var(--rounded-full); background: var(--color-canvas); border: 2px solid var(--color-stone); }
 .timeline-dot.on { border-color: var(--color-primary); }
-
-/* 単位や母集団の定義が違うことの注記。読み飛ばされない程度の強さで置く。 */
-.unit-note {
-  margin-top: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-surface);
-  border-radius: var(--rounded-sm);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-slate);
-}
-
-/* ---- 森のマップ ---- */
-/* 実行⑥。憲法の「森が主役」と design.md の Forest Map に対する最小の実装。
- * 表を並べる代わりに、森を1つずつの区画として置く。
- *
- * 色は tokens.css の変数だけを使う。緑は --color-brand-green と
- * --color-card-tint-mint。DESIGN.md の出典が Notion のブランド分析である以上、
- * 「森らしい緑」を直値で足すのは意匠の推測になる（design.md 付記）。 */
-
-.forest-map {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--space-sm);
-}
-
-.forest-node {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  padding: var(--space-md);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-lg);
-  background: linear-gradient(
-    180deg, var(--color-card-tint-mint) 0%, var(--color-canvas) 62%);
-  box-shadow: var(--shadow-1);
-}
-
-/* 枠は「旗が立っているか」、地の色は「眠っているか」。別の軸なので重ねられる。
- * 背景まで警告色にすると、平常の森が「暗い」に見えて序列が読めなくなる。 */
-.forest-node.alert {
-  border-color: var(--color-semantic-warning);
-}
-/* 接点が無い・休眠している森。緑を引く。旗と並び順はそのまま効く。 */
-.forest-node.quiet {
-  background: linear-gradient(
-    180deg, var(--color-card-tint-gray) 0%, var(--color-canvas) 62%);
-}
-
-.forest-node-name {
-  font-weight: 600;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.forest-node-name .leaf { color: var(--color-brand-green); }
-
-/* 数は3つまで。単位の違うもの（推定リーチ）はここに入れない。 */
-.forest-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-xxs);
-  padding: var(--space-xs) 0;
-  border-top: 1px solid var(--color-hairline-soft);
-  border-bottom: 1px solid var(--color-hairline-soft);
-}
-.forest-stat { display: flex; flex-direction: column; }
-.forest-stat-label { font-size: 11px; color: var(--color-steel); }
-.forest-stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-.forest-stat-value.zero { color: var(--color-stone); }
-
-.forest-node-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  font-size: 12px;
-  color: var(--color-steel);
-}
-
-/* ---- 担当を決めるフォーム ---- */
-/* 素の HTML フォーム。'use client' を増やしていないので JS 無効でも動く。
- * 表の行の中に置くため、縦を詰めて1行に収める。 */
-
-.assign-form {
-  display: flex;
-  gap: var(--space-xxs);
-  align-items: center;
-  flex-wrap: wrap;
-}
-.assign-form select {
-  font-family: inherit;
-  font-size: 13px;
-  padding: 4px 6px;
-  border: 1px solid var(--color-hairline-strong);
-  border-radius: var(--rounded-sm);
-  background: var(--color-canvas);
-  color: var(--color-ink);
-  max-width: 190px;
-}
-.assign-form button {
-  font-size: 13px;
-  padding: 5px 10px;
-  border: 0;
-  cursor: pointer;
-}
-
-/* ラベルは読み上げに残し、画面からは外す。select だけでは
- * 「何を選ぶ欄か」が支援技術に伝わらない。 */
-.visually-hidden {
-  position: absolute;
-  width: 1px; height: 1px;
-  margin: -1px; padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* ---- 評価軸の一覧（E1） ---- */
-/* まだ点が付いていない軸を並べる。入力欄はまだ無い（E2）。 */
-.criteria-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: var(--space-xxs);
-}
-.criteria-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-sm);
-  padding: 4px 8px;
-  border-radius: var(--rounded-sm);
-  background: var(--color-surface);
-  font-size: 13px;
-}
-
-/* ---- 点と根拠の入力（E2） ---- */
-/* 軸の行の中に収める。1軸1フォームなので、横に細長い形になる。 */
-.score-form {
-  display: flex;
-  gap: var(--space-xxs);
-  align-items: center;
-  flex: 1 1 auto;
-  justify-content: flex-end;
-  min-width: 0;
-}
-.score-form input {
-  font-family: inherit;
-  font-size: 13px;
-  padding: 4px 6px;
-  border: 1px solid var(--color-hairline-strong);
-  border-radius: var(--rounded-sm);
-  background: var(--color-canvas);
-  color: var(--color-ink);
-}
+.unit-note { margin-top: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--color-surface); border-radius: var(--rounded-sm); font-size: 13px; line-height: 1.5; color: var(--color-slate); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.criteria-list { display: flex; flex-direction: column; gap: 2px; margin-top: var(--space-xxs); }
+.criteria-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); padding: 6px 8px; border-radius: var(--rounded-sm); background: var(--color-surface); font-size: 13px; flex-wrap: wrap; }
+.score-form { display: flex; gap: var(--space-xxs); align-items: center; flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
+.score-form input { font-family: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--color-hairline-strong); border-radius: var(--rounded-sm); background: var(--color-canvas); color: var(--color-ink); }
 .score-input { width: 56px; text-align: right; }
 .rationale-input { flex: 1 1 auto; min-width: 0; }
 .score-form button { font-size: 13px; padding: 5px 10px; border: 0; cursor: pointer; }
-
-/* 入力欄が入るので、軸の行は縦に潰さず余白を持たせる。 */
-.criteria-row { flex-wrap: wrap; padding: 6px 8px; }
-
-/* ---- 選考の判定（D1） ---- */
-.decide-form {
-  display: flex;
-  gap: var(--space-xs);
-  align-items: center;
-  flex-wrap: wrap;
-}
-.decide-form select, .decide-form input {
-  font-family: inherit;
-  font-size: 13px;
-  padding: 5px 8px;
-  border: 1px solid var(--color-hairline-strong);
-  border-radius: var(--rounded-sm);
-  background: var(--color-canvas);
-  color: var(--color-ink);
-}
+.decide-form { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
+.decide-form select, .decide-form input { font-family: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--color-hairline-strong); border-radius: var(--rounded-sm); background: var(--color-canvas); color: var(--color-ink); }
 .decide-form button { font-size: 13px; padding: 6px 14px; border: 0; cursor: pointer; }
-
-/* ---- 試運転の手順（Pilot） ---- */
 .pilot-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-.pilot-step {
-  padding: var(--space-sm);
-  border-left: 3px solid var(--color-brand-green);
-  background: var(--color-surface);
-  border-radius: var(--rounded-sm);
-}
-
-/* ---- UX の手当て（実行⑥ / UX パス1） ---- */
-/* いずれも画面を見て見つけたもの。トークン（色・角丸・余白）は足していない。 */
-
-/* 1. 生成されたバッジ（tokens.css の badge-tag-purple / orange / green）に
-      nowrap が無く、「担当を決め／る」のように語の途中で折り返していた。
-      tokens.css は生成物なので手で直せない。ここで重ねる。 */
-.badge-tag-purple, .badge-tag-orange, .badge-tag-green {
-  white-space: nowrap;
-}
-
-/* 2. 「29 日」が「29／日」に割れていた。数と単位は分けない。 */
+.pilot-step { padding: var(--space-sm); border-left: 3px solid var(--color-brand-green); background: var(--color-surface); border-radius: var(--rounded-sm); }
+.badge-tag-purple, .badge-tag-orange, .badge-tag-green { white-space: nowrap; }
 table.data td.num, table.data th.num { white-space: nowrap; }
-
-/* 3. 表の中の操作を1つの見た目に揃える。
-      「決める」が塗りボタン、「保留を解く」が枠なしで、同じ列に2種類の
-      強さが混ざっていた。**表の中では操作をすべて同じ弱さにする** ――
-      いちばん強く見えるべきは操作ボタンではなく、期限を超えた日数である。 */
-.assign-form button,
-.assign-form button.button-primary,
-.assign-form button.button-secondary {
-  background: var(--color-canvas);
-  color: var(--color-charcoal);
-  border: 1px solid var(--color-hairline-strong);
-  border-radius: var(--rounded-sm);
-  font-size: 13px;
-  padding: 5px 12px;
-  cursor: pointer;
-}
-.assign-form button:hover {
-  background: var(--color-surface);
-  border-color: var(--color-slate);
-}
-
-/* 4. 担当欄の中で、いまの担当と操作を縦に積む。
-      「長瀬 巧」と選択欄が同じ行に流れて読みにくかった。 */
+.assign-form button, .assign-form button.button-primary, .assign-form button.button-secondary { background: var(--color-canvas); color: var(--color-charcoal); border: 1px solid var(--color-hairline-strong); border-radius: var(--rounded-sm); font-size: 13px; padding: 5px 12px; cursor: pointer; }
+.assign-form button:hover { background: var(--color-surface); border-color: var(--color-slate); }
 .owner-cell { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .owner-current { font-weight: 500; }
-
-/* 5. 期限を超えた行の左に印を付ける。色だけに頼らない。 */
 table.data tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--color-semantic-error); }
-
-/* 6. KPI の警告。0 のときと 1 以上のときで見た目が同じだった。 */
 .kpi-value.alert { color: var(--color-semantic-error); }
+
+.eyebrow { color: var(--color-steel); font-size: var(--type-micro-uppercase-font-size); font-weight: var(--type-micro-uppercase-font-weight); letter-spacing: var(--type-micro-uppercase-letter-spacing); }
+.cockpit-head { justify-content: space-between; }
+.cockpit-layout { display: grid; grid-template-columns: minmax(0, 1fr) 348px; gap: var(--space-xl); align-items: start; }
+.cockpit-workspace { display: flex; flex-direction: column; gap: var(--space-xl); min-width: 0; }
+.today-section, .forest-section, .pipeline-section { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--rounded-lg); padding: var(--space-xl); box-shadow: var(--shadow-1); }
+.today-section { border-top: 3px solid var(--color-primary); }
+.section-heading-row { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-lg); margin-bottom: var(--space-lg); }
+.workspace-title { font-size: var(--type-heading-4-font-size); font-weight: var(--type-heading-4-font-weight); letter-spacing: -0.3px; }
+.workspace-title span { color: var(--color-steel); font-size: var(--type-body-md-font-size); font-weight: 400; }
+.task-queue { display: flex; flex-direction: column; }
+.task-row { display: grid; grid-template-columns: 32px minmax(180px, 1fr) 100px 64px 18px; gap: var(--space-md); align-items: center; color: var(--color-ink); padding: var(--space-md) var(--space-xs); border-top: 1px solid var(--color-hairline-soft); }
+.task-row:hover { background: var(--color-surface-soft); text-decoration: none; }
+.task-row.is-selected { background: var(--color-card-tint-lavender); border-radius: var(--rounded-sm); border-top-color: transparent; }
+.task-row.is-overdue { box-shadow: inset 3px 0 0 var(--color-semantic-error); }
+.task-priority { color: var(--color-stone); font-variant-numeric: tabular-nums; font-size: 12px; }
+.task-main { display: flex; flex-direction: column; min-width: 0; }
+.task-main strong { font-weight: 600; }
+.task-main > span:not(.badge-tag-blue):not(.badge-tag-purple):not(.badge-tag-gray):not(.badge-tag-orange) { color: var(--color-steel); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-label-row { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
+.overdue-label { color: var(--color-semantic-error); font-size: 12px; font-weight: 600; }
+.task-owner, .task-wait { display: flex; flex-direction: column; font-size: 12px; color: var(--color-steel); }
+.task-owner strong, .task-wait strong { color: var(--color-ink); font-size: 13px; }
+.task-arrow { color: var(--color-stone); }
+.task-more { margin-top: var(--space-sm); }
+.forest-focus-card { display: block; color: var(--color-ink); border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); padding: var(--space-lg); background: linear-gradient(135deg, var(--color-card-tint-mint), var(--color-canvas) 72%); }
+.forest-focus-card:hover { text-decoration: none; border-color: var(--color-brand-green); }
+.forest-focus-head { display: flex; align-items: baseline; gap: 8px; font-weight: 600; font-size: 16px; margin-bottom: var(--space-sm); }
+.forest-marker { color: var(--color-brand-green); font-size: 10px; }
+.forest-focus-head .section-note { margin-left: auto; }
+.forest-fact-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: var(--space-md); border-top: 1px solid var(--color-hairline-soft); border-bottom: 1px solid var(--color-hairline-soft); }
+.forest-fact-grid > div { display: flex; flex-direction: column; gap: 2px; padding: var(--space-sm); border-left: 1px solid var(--color-hairline-soft); }
+.forest-fact-grid > div:first-child { border-left: 0; }
+.forest-fact-grid span, .forest-fact-grid small { color: var(--color-steel); font-size: 11px; }
+.forest-fact-grid strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.estimate-fact { border: 1px dashed var(--color-hairline-strong); border-radius: var(--rounded-sm); margin: 4px 0; background: var(--color-surface-soft); }
+.forest-card-note, .map-caption { color: var(--color-steel); font-size: 12px; margin-top: var(--space-sm); }
+.community-map { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); padding-top: var(--space-xl); }
+.map-connection { position: absolute; top: 0; left: 50%; height: var(--space-xl); border-left: 1px dashed var(--color-hairline-strong); }
+.community-node { position: relative; display: flex; flex-direction: column; gap: 8px; color: var(--color-ink); border: 1px solid var(--color-hairline); border-radius: var(--rounded-sm); padding: var(--space-md); background: var(--color-canvas); }
+.community-node::before { content: ''; position: absolute; top: -13px; left: 50%; height: 12px; border-left: 1px dashed var(--color-hairline-strong); }
+.community-node.needs-attention { border-color: var(--color-semantic-warning); background: var(--color-card-tint-yellow); }
+.community-node:hover { text-decoration: none; }
+.community-node-top { display: flex; justify-content: space-between; gap: var(--space-sm); align-items: baseline; }
+.community-node-name { font-weight: 600; }
+.task-count { color: var(--color-brand-orange-deep); font-size: 12px; white-space: nowrap; }
+.community-node-facts { display: flex; justify-content: space-between; gap: var(--space-sm); color: var(--color-steel); font-size: 12px; }
+.application-flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: var(--space-xs); }
+.application-stage { display: flex; flex-direction: column; gap: 3px; padding: var(--space-md); border-left: 2px solid var(--color-primary); background: var(--color-surface-soft); }
+.application-stage span, .application-stage small { color: var(--color-steel); font-size: 12px; }
+.application-stage strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.person-context { position: sticky; top: 80px; border: 1px solid var(--color-hairline); border-radius: var(--rounded-lg); background: var(--color-canvas); box-shadow: var(--shadow-2); overflow: hidden; }
+.context-topline { padding: var(--space-sm) var(--space-lg); border-bottom: 1px solid var(--color-hairline-soft); color: var(--color-steel); font-size: 12px; }
+.context-live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: var(--rounded-full); background: var(--color-primary); }
+.context-person { display: flex; gap: var(--space-sm); align-items: center; padding: var(--space-lg); border-bottom: 1px solid var(--color-hairline-soft); }
+.context-person h2 { font-size: 18px; }
+.context-person p { color: var(--color-steel); font-size: 13px; }
+.person-avatar { display: grid; place-items: center; width: 42px; height: 42px; border-radius: var(--rounded-full); background: var(--color-card-tint-lavender); color: var(--color-primary-deep); font-weight: 600; }
+.context-block { display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--color-hairline-soft); }
+.context-label { color: var(--color-steel); font-size: 12px; font-weight: 600; }
+.context-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-xs); }
+.context-details div, .touchpoint-facts div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.context-details span, .touchpoint-facts span { color: var(--color-steel); font-size: 11px; }
+.context-details strong, .touchpoint-facts strong { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.context-next-action { background: var(--color-card-tint-lavender); }
+.context-next-action h3 { font-size: 16px; }
+.context-action-form { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
+.context-action-form select { width: 100%; padding: 8px; border: 1px solid var(--color-hairline-strong); border-radius: var(--rounded-sm); background: var(--color-canvas); color: var(--color-ink); font-family: inherit; }
+.context-action-form button, .context-action-link { border: 0; cursor: pointer; text-align: center; text-decoration: none; }
+.context-action-link { display: inline-block; }
+.evaluation-progress { display: flex; justify-content: space-between; gap: var(--space-sm); align-items: baseline; }
+.evaluation-progress span { color: var(--color-steel); font-size: 12px; text-align: right; }
+.touchpoint-facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+.touchpoint-note { display: flex; flex-direction: column; gap: 2px; margin-top: var(--space-sm); font-size: 12px; }
+.touchpoint-note span { color: var(--color-steel); }
+.history-item { display: flex; flex-direction: column; gap: 1px; padding: var(--space-xs) 0; border-top: 1px solid var(--color-hairline-soft); }
+.history-item span { color: var(--color-steel); font-size: 11px; }
+.history-item strong { font-size: 12px; }
+.context-detail-link { display: block; padding: var(--space-md) var(--space-lg); font-size: 13px; font-weight: 600; }
+.cockpit-unit-note { margin-right: 372px; }
+
+@media (max-width: 980px) {
+  .cockpit-layout { grid-template-columns: 1fr; }
+  .person-context { position: static; }
+  .cockpit-unit-note { margin-right: 0; }
+}
+
+@media (max-width: 680px) {
+  .shell, .topbar-inner { padding-right: var(--space-md); padding-left: var(--space-md); }
+  .nav { overflow-x: auto; }
+  .page-title { font-size: 28px; }
+  .today-section, .forest-section, .pipeline-section { padding: var(--space-md); }
+  .task-row { grid-template-columns: 24px minmax(0, 1fr) 16px; gap: var(--space-xs); }
+  .task-owner, .task-wait { display: none; }
+  .forest-fact-grid { grid-template-columns: 1fr 1fr; }
+  .forest-fact-grid > div:nth-child(3) { border-left: 0; }
+  .community-map { grid-template-columns: 1fr; }
+  .section-heading-row { align-items: flex-start; flex-direction: column; gap: var(--space-xs); }
+}
