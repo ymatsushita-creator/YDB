@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next'
 
 const config: NextConfig = {
+  // AGENTS.md は CLAUDE.md へのポインタに限定し、生成規則の重複を防ぐ。
+  agentRules: false,
+
   // PGlite は WASM を同梱するため、バンドラに通さずそのまま require させる。
   serverExternalPackages: ['@electric-sql/pglite'],
 

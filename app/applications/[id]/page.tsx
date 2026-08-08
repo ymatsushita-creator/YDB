@@ -217,7 +217,7 @@ export default async function ApplicationPage({
               <span className="badge-tag-purple" style={{ marginLeft: 8 }}>再応募</span>
             )}
             <span className={result.cls} style={{ marginLeft: 8 }}>{result.label}</span>
-            {/* 結末と、木に数えるかは別の軸。1つのバッジに畳むと片方が消える。 */}
+            {/* 結末と、応募に数えるかは別の軸。1つのバッジに畳むと片方が消える。 */}
             {!app.is_countable && (
               <span className="badge-tag-gray" style={{ marginLeft: 6 }}>集計対象外</span>
             )}
@@ -231,8 +231,8 @@ export default async function ApplicationPage({
             この応募は {jstDateTime(app.voided_at)} に無効化されている
             （{app.void_reason_label ?? '理由未記録'}）。
             {app.is_countable
-              ? '無効化理由に代替の応募が生まれないため、応募が起きた事実として木には数える。'
-              : '無効化理由に代替の応募が生まれるため、木には数えない。'
+              ? '無効化理由に代替の応募が生まれないため、応募が起きた事実として集計する。'
+              : '無効化理由に代替の応募が生まれるため、応募には数えない。'
                 + ' 下の評価と遷移は記録層に残っているものをそのまま出している。'}
           </p>
         </div>
@@ -289,7 +289,7 @@ export default async function ApplicationPage({
             「訂正された＝無効」ではない。いま有効かどうかは左の点で示している
             （塗りが有効）。この判定はシステムが自動で行っており、
             画面側で数え直してはいない。
-            {' '}「幹（合格）」の定義は最終ステップ「{app.final_step_name}」への有効な通過。
+            {' '}「合格」の定義は最終ステップ「{app.final_step_name}」への有効な通過。
           </p>
         </Card>
       </div>

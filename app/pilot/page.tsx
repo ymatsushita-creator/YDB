@@ -168,7 +168,7 @@ export default async function PilotPage(
             </li>
             <li className="pilot-step">
               <strong>画面の数字で、実感と合わないものはあったか</strong>
-              （件数・人数・日数・森の並び）
+              （件数・人数・日数・アプローチ可能圏の並び）
             </li>
             <li className="pilot-step">
               <strong>合格者が辞退したとき、いまはどこに記録しているか</strong>

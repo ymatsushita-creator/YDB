@@ -51,14 +51,14 @@ export default async function SourcesPage(
         <div>
           <h1 className="page-title">{season.enrollment_year} 年度の流入元</h1>
           <p className="page-sub">
-            森（団体リーチ）とチャネル別のアトリビューション
+            アプローチ可能圏（団体リーチ）とチャネル別の流入分析
             {season.is_live && ' ・ 進行中'}
           </p>
         </div>
       </div>
 
       <div className="grid grid-kpi">
-        <Kpi label="森（推定リーチ）" value={num(reachTotal)}
+        <Kpi label="アプローチ可能圏（推定リーチ）" value={num(reachTotal)}
              tone={reachTotal ? undefined : 'muted'}
              meta="接触機会の推定値。人数ではない" />
         <Kpi label="接触機会" value={num(totals?.contact_occasions)}
@@ -71,8 +71,8 @@ export default async function SourcesPage(
 
       {/*
         「推定リーチに対する識別率」は出さない。分母は推定した接触機会、
-        分子は実人数で、単位も数え方も違う。日次の 林 → 木 転換率を
-        削除したのと同じ理由（DECISIONS D-3）。森から林への歩留まりを
+        分子は実人数で、単位も数え方も違う。接点継続中から応募への比率を
+        削除したのと同じ理由（DECISIONS D-3）。推定リーチから実人数への歩留まりを
         指標にしたいなら、estimated_reach が実測に置き換わってからにする。
       */}
 
@@ -114,7 +114,7 @@ export default async function SourcesPage(
             両方の行で1と数えられる。年度全体の実人数は上の KPI（{num(identified)} 人）で、
             この列の合計（{num(partners.reduce((n, p) => n + Number(p.identified_count), 0))} 人）とは
             一致しない。観測窓 {REACH_WINDOW_DAYS} 日は<strong>仮の値</strong>で、
-            林のアクティブ判定窓とは別に決める。
+            接点継続中の判定窓とは別に決める。
           </p>
         </Card>
       </div>
@@ -189,8 +189,8 @@ export default async function SourcesPage(
       )}
 
       <p className="footnote">
-        森は個人を識別しないリーチの記録で、単位は接触機会。林・木・幹とは数え方が
-        違うため(3)のファネルには並べない。推定リーチは推定値であり、
+        アプローチ可能圏のリーチは個人を識別しない接触機会の推定値。
+        接点継続中の人数・応募件数・合格件数とは数え方が違うためファネルには並べない。
         実人数と同じ縦軸に置かない。日付境界はすべて同じ運用タイムゾーンで揃えている。
         観測窓 {REACH_WINDOW_DAYS} 日は仮の値。
       </p>

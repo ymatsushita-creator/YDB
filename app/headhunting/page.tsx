@@ -4,12 +4,14 @@ import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
 import {
   listHeadhunting, getApproachTotals, listConfidence, getConfidenceMeta,
   listApplicantScores, getPersonPanel, listCriterionScores, listHeadhuntingTasks,
+  getProfileEditOptions,
 } from '../../src/queries/headhunting.ts'
-import { jstDay, num } from '../_components/ui.tsx'
+import { jstDay, num, ymd } from '../_components/ui.tsx'
 import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 import {
   ApproachChip, RankMark, RankDelta, Stars, Confidence, taskSentence,
 } from '../_components/headhunting.tsx'
+import { updateProfileAction, updateApproachAction } from './actions.ts'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,12 +62,18 @@ export default async function HeadhuntingPage({
     ? requested
     : (list[0]?.person_id ?? null)
 
-  const [panel, criteria] = personId
+  const [panel, criteria, editOptions] = personId
     ? await Promise.all([
       getPersonPanel(db, personId, season.id),
       listCriterionScores(db, personId, season.id),
+      getProfileEditOptions(db, personId),
     ])
-    : [null, []]
+    : [null, [], null]
+
+  const editResult = one(sp.edit)
+  const editMessage = editResult === 'saved' ? 'プロフィールを保存しました。'
+    : editResult === 'approach_saved' ? 'アプローチ状態を記録しました。'
+      : editResult ? '保存できませんでした。入力内容を確認してください。' : null
 
   const href = (q: Record<string, string>) =>
     `/headhunting?${new URLSearchParams({ season: season.id, ...q })}`
@@ -216,14 +224,26 @@ export default async function HeadhuntingPage({
         <div className="hh-col-side">
           {/* --- F 候補者パネル --- */}
           <section className="panel-card">
+            {editMessage && (
+              <p className={editResult === 'saved' || editResult === 'approach_saved' ? 'edit-result ok' : 'edit-result error'}>
+                {editMessage}
+              </p>
+            )}
             {!panel ? (
               <p className="hh-empty">対象者がまだ1人も居ない。</p>
             ) : (
               <>
                 <header className="hh-person-head">
-                  <div>
-                    <h2 className="hh-person-name">{panel.person_name}</h2>
-                    {panel.person_kana && <p className="hh-person-kana">{panel.person_kana}</p>}
+                  <div className="hh-person-identity">
+                    {panel.photo_data_url
+                      ? <img className="hh-photo" src={panel.photo_data_url} alt={`${panel.person_name}さんの顔写真`} />
+                      : <span className="hh-photo-placeholder" aria-label="顔写真未設定">
+                          {panel.family_name.slice(0, 1)}{panel.given_name.slice(0, 1)}
+                        </span>}
+                    <div>
+                      <h2 className="hh-person-name">{panel.person_name}</h2>
+                      {panel.person_kana && <p className="hh-person-kana">{panel.person_kana}</p>}
+                    </div>
                   </div>
                   {panel.approach_code && panel.approach_label && (
                     <ApproachChip code={panel.approach_code} label={panel.approach_label} />
@@ -232,10 +252,12 @@ export default async function HeadhuntingPage({
 
                 <h3 className="hh-sub">基本情報</h3>
                 <dl className="hh-facts">
+                  <dt>生年月日</dt><dd>{ymd(panel.birth_date)}</dd>
                   <dt>学校</dt><dd>{panel.school}</dd>
                   <dt>学部・学科</dt><dd>{panel.faculty ?? '—'}</dd>
                   <dt>メール</dt><dd>{panel.email}</dd>
                   <dt>電話番号</dt><dd>{panel.phone ?? '—'}</dd>
+                  <dt>LINE ID</dt><dd>{panel.line_user_id ?? '—'}</dd>
                   <dt>最後の接点</dt><dd>{panel.last_touchpoint_on ? jstDay(panel.last_touchpoint_on) : 'この年度は接点なし'}</dd>
                 </dl>
 
@@ -273,6 +295,75 @@ export default async function HeadhuntingPage({
                 <Link href={`/people/${panel.person_id}?season=${season.id}`} className="hh-more">
                   この人の全体を見る ›
                 </Link>
+
+                {editOptions && (
+                  <>
+                    <details className="edit-disclosure">
+                      <summary className="btn-physical">基本情報・顔写真を編集</summary>
+                      <form action={updateProfileAction} className="profile-edit-form">
+                        <input type="hidden" name="personId" value={panel.person_id} />
+                        <input type="hidden" name="seasonId" value={season.id} />
+                        <div className="edit-grid two">
+                          <label>姓<input name="familyName" required defaultValue={panel.family_name} /></label>
+                          <label>名<input name="givenName" required defaultValue={panel.given_name} /></label>
+                          <label>姓（かな）<input name="familyNameKana" defaultValue={panel.family_name_kana ?? ''} /></label>
+                          <label>名（かな）<input name="givenNameKana" defaultValue={panel.given_name_kana ?? ''} /></label>
+                          <label>生年月日<input name="birthDate" type="date" required defaultValue={ymd(panel.birth_date)} /></label>
+                          <label>学校
+                            <select name="schoolId" required defaultValue={panel.school_id}>
+                              {editOptions.schools.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                            </select>
+                          </label>
+                          <label>学部・学科<input name="faculty" defaultValue={panel.faculty ?? ''} /></label>
+                          <label>メール<input name="email" type="email" required defaultValue={panel.email} /></label>
+                          <label>電話番号<input name="phone" defaultValue={panel.phone ?? ''} /></label>
+                          <label>LINE ID<input name="lineUserId" defaultValue={panel.line_user_id ?? ''} /></label>
+                          <label>紹介者
+                            <select name="referrerPersonId" defaultValue={panel.referrer_person_id ?? ''}>
+                              <option value="">なし</option>
+                              {editOptions.people.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                            </select>
+                          </label>
+                          <label>顔写真
+                            <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+                            <small>JPEG / PNG / WebP、2MB以下</small>
+                          </label>
+                        </div>
+                        {panel.photo_data_url && (
+                          <label className="inline-check"><input type="checkbox" name="removePhoto" value="1" /> 顔写真を削除</label>
+                        )}
+                        <label>担当者メモ<textarea name="note" rows={4} defaultValue={panel.note ?? ''} /></label>
+                        <button className="button-primary" type="submit">変更を保存</button>
+                      </form>
+                    </details>
+
+                    <details className="edit-disclosure">
+                      <summary className="btn-physical">アプローチ状態を編集</summary>
+                      <form action={updateApproachAction} className="profile-edit-form">
+                        <input type="hidden" name="personId" value={panel.person_id} />
+                        <input type="hidden" name="seasonId" value={season.id} />
+                        <label>状態
+                          <select name="stateId" required>
+                            {editOptions.approachStates.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                          </select>
+                        </label>
+                        <label>記録担当者
+                          <select name="staffId" required>
+                            {editOptions.staffs.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                          </select>
+                        </label>
+                        <label>状態変更メモ<textarea name="approachNote" rows={3} /></label>
+                        <button className="button-primary" type="submit">状態を記録</button>
+                      </form>
+                    </details>
+
+                    <p className="hh-note">
+                      成績・根拠・判定は導出値を直接書き換えず、
+                      <Link href={`/people/${panel.person_id}?season=${season.id}`}>候補者の選考記録</Link>
+                      から編集します。確度と順位は記録から再計算されるため編集対象ではありません。
+                    </p>
+                  </>
+                )}
               </>
             )}
           </section>
@@ -320,8 +411,7 @@ export default async function HeadhuntingPage({
       <section className="panel-card hh-gaps">
         <h2>この画面にまだ無いもの（記録層に事実が無い）</h2>
         <ul>
-          <li><strong>顔写真</strong> — 記録層に無い。加えて、個体を描くときに個人を漏らさない規律がある</li>
-          <li><strong>学年・卒業年度</strong> — 列そのものが無い。生年月日も実データには1件も入っていない</li>
+          <li><strong>学年・卒業年度</strong> — 列そのものが無い。現在は生年月日を編集できる</li>
           <li><strong>職種での絞り込み</strong> — 記録層に無く、定義も受け取っていない</li>
           <li><strong>成績ランキングの順位変動</strong> — 過去の順位を凍結していない。確度だけが凍結されている</li>
           <li><strong>手で作るタスク</strong>（候補者を N 名追加する等）— タスクの記録層が無く、既存の事実から導けるものだけを出している</li>

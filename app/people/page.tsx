@@ -10,9 +10,9 @@ export const dynamic = 'force-dynamic'
 
 const LEVELS = [
   { value: '', label: 'すべての段' },
-  { value: 'accepted', label: '幹（合格）' },
-  { value: 'applicant', label: '木（応募）' },
-  { value: 'identified_person', label: '林（未応募）' },
+  { value: 'accepted', label: '合格' },
+  { value: 'applicant', label: '応募' },
+  { value: 'identified_person', label: '未応募・接点継続中' },
 ]
 
 const LIMIT = 50
@@ -40,7 +40,7 @@ export default async function PeoplePage(
     getSummary(db, season.id),
   ])
 
-  // 段を問わず窓の内側を数えると、年度サマリの林に一致する（0010・tests/12）。
+  // 応募到達状態を問わず窓の内側を数えると、年度サマリの接点継続中に一致する。
   // 画面でも並べておく。ずれたら、それは集計の定義が壊れた合図になる。
   const inWindow = breakdown.reduce((n, r) => n + Number(r.in_active_window), 0)
   const grove = Number(summary?.identified_person ?? 0)
@@ -125,7 +125,7 @@ export default async function PeoplePage(
             {comparable ? (
               <>
                 「うち直近に接点あり」の合計 {num(inWindow)} 人は、ファネル画面の
-                <strong> 林 {num(grove)} 人</strong>と同じ数である。
+                <strong> 接点継続中 {num(grove)} 人</strong>と同じ数である。
                 {inWindow !== grove && (
                   <strong style={{ color: 'var(--color-semantic-error)' }}>
                     {' '}一致していない。集計の定義が壊れている。
@@ -133,10 +133,9 @@ export default async function PeoplePage(
                 )}
               </>
             ) : (
-              <>応募開始前の年度なのでファネルの断面がまだ無く、林とは突き合わせられない。</>
+              <>応募開始前の年度なのでファネルの断面がまだ無く、接点継続中とは突き合わせられない。</>
             )}
-            {' '}段と窓は別の軸で、木や幹になった人も接点を持てば林に数えられている。
-            段ごとの人数を縦に足したものは林ではない。
+            {' '}応募到達状態と接点判定窓は別の軸で、応募・合格した人も接点を持てば接点継続中に数えられる。
             窓は直近 {ACTIVE_WINDOW_DAYS} 日で、これは<strong>仮の値</strong>。
           </p>
         </Card>

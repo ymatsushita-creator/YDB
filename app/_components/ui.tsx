@@ -79,18 +79,18 @@ export const jstDateTime = (d: Date | null | undefined) =>
 export const jstDay = (d: Date | null | undefined) => (d ? DAY.format(new Date(d)) : '—')
 
 /**
- * 段（林・木・幹）のタグ。
+ * 候補者の到達状態タグ。
  *
- * 林だけは「窓の内側にいるか」を併記する。段は年度内の最高到達点、
+ * 未応募だけは「接点判定窓の内側にいるか」を併記する。到達状態は年度内の最高到達点、
  * 窓は基準日時点で接点が生きているかで、そもそも別の軸である。
- * ここを1語で済ませると、年度サマリの林（直近 N 日に接点がある人）と
+ * ここを1語で済ませると、年度サマリの接点継続中（直近 N 日に接点がある人）と
  * 桁が違うのに同じ名前になり、①の答えが画面ごとに変わる。
  */
 export function LevelBadge({
   level, inWindow,
 }: { level: string; inWindow?: boolean | null }) {
-  if (level === 'accepted') return <span className="badge-tag-green">幹 合格</span>
-  if (level === 'applicant') return <span className="badge-tag-blue">木 応募</span>
-  if (inWindow === false) return <span className="badge-tag-gray">林 休眠</span>
-  return <span className="badge-tag-purple">林 接点あり</span>
+  if (level === 'accepted') return <span className="badge-tag-green">合格</span>
+  if (level === 'applicant') return <span className="badge-tag-blue">応募</span>
+  if (inWindow === false) return <span className="badge-tag-gray">未応募・接点休止</span>
+  return <span className="badge-tag-purple">未応募・接点継続中</span>
 }
