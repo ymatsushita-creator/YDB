@@ -3,7 +3,8 @@ import {
   listSeasons, getSeason, getPartnerReach, getReachTotals,
   getChannelAttribution, getUnattributedTouchpoints, REACH_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
-import { Card, Kpi, SeasonTabs, Empty, num, ymd } from '../_components/ui.tsx'
+import { Card, Kpi, Empty, num, ymd } from '../_components/ui.tsx'
+import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,14 @@ export default async function SourcesPage(
 
   return (
     <>
+      <Breadcrumb
+        crumbs={[
+          { label: 'アプローチ', href: '/approach' },
+          { label: `${season.enrollment_year} 年度` },
+        ]}
+        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/approach" />}
+      />
+
       <div className="page-head">
         <div>
           <h1 className="page-title">{season.enrollment_year} 年度の流入元</h1>
@@ -45,9 +54,6 @@ export default async function SourcesPage(
             森（団体リーチ）とチャネル別のアトリビューション
             {season.is_live && ' ・ 進行中'}
           </p>
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <SeasonTabs seasons={seasons} currentId={season.id} basePath="/sources" />
         </div>
       </div>
 

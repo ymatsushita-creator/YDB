@@ -46,7 +46,7 @@ export async function assignAction(formData: FormData): Promise<void> {
 
   const back = (code: AssignCode) => {
     const season = /^[0-9a-f-]{36}$/i.test(seasonId) ? `season=${seasonId}&` : ''
-    redirect(`/cockpit?${season}assign=${code}`)
+    redirect(`/borderline?${season}assign=${code}`)
   }
 
   if (!staffId) return back('no_staff')
@@ -59,7 +59,7 @@ export async function assignAction(formData: FormData): Promise<void> {
 
   // やること・待っている人・森の集計が同時に変わる。画面ごとに別の数字が
   // 残らないよう、コックピットと森の画面をまとめて作り直す。
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   revalidatePath('/forests', 'layout')
   back('ok')
 }
@@ -79,7 +79,7 @@ export async function holdAction(formData: FormData): Promise<void> {
 
   const back = (code: HoldCode) => {
     const season = /^[0-9a-f-]{36}$/i.test(seasonId) ? `season=${seasonId}&` : ''
-    redirect(`/cockpit?${season}hold=${code}`)
+    redirect(`/borderline?${season}hold=${code}`)
   }
 
   const db = await getDb()
@@ -87,7 +87,7 @@ export async function holdAction(formData: FormData): Promise<void> {
 
   if (!result.ok) return back(result.reason)
 
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   revalidatePath('/forests', 'layout')
   back('held')
 }
@@ -107,7 +107,7 @@ export async function unholdAction(formData: FormData): Promise<void> {
 
   const back = (code: UnholdCode) => {
     const season = /^[0-9a-f-]{36}$/i.test(seasonId) ? `season=${seasonId}&` : ''
-    redirect(`/cockpit?${season}unhold=${code}`)
+    redirect(`/borderline?${season}unhold=${code}`)
   }
 
   const db = await getDb()
@@ -116,7 +116,7 @@ export async function unholdAction(formData: FormData): Promise<void> {
   // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
   if (!result.ok) return back(result.reason)
 
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   revalidatePath('/forests', 'layout')
   back('unheld')
 }
@@ -136,7 +136,7 @@ export async function reassignAction(formData: FormData): Promise<void> {
 
   const back = (code: ReassignCode) => {
     const season = /^[0-9a-f-]{36}$/i.test(seasonId) ? `season=${seasonId}&` : ''
-    redirect(`/cockpit?${season}reassign=${code}`)
+    redirect(`/borderline?${season}reassign=${code}`)
   }
 
   if (!staffId) return back('same_staff')
@@ -147,7 +147,7 @@ export async function reassignAction(formData: FormData): Promise<void> {
   // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
   if (!result.ok) return back(result.reason)
 
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   revalidatePath('/forests', 'layout')
   back('reassigned')
 }

@@ -247,3 +247,67 @@ describe('デモデータが踏んでいる経路', () => {
     assert.ok(tasks > persons, `やること ${tasks} 件・人 ${persons} 人。1人が複数持つ形が無い`)
   })
 })
+
+describe('デモデータが踏んでいる経路（ヘッドハンティング。実行⑨）', () => {
+  test('アプローチ状態が4つとも1件以上ある', async () => {
+    // 1つでも欠けると、その状態のチップが画面で一度も描かれない。
+    // 「見た目を確かめた」が、実は3種類しか見ていなかった、が起きる。
+    for (const code of ['not_approached', 'considering', 'approaching', 'scheduling']) {
+      assert.ok(await count(`
+        SELECT count(*) FROM v_headhunting_list h
+          JOIN approach_states s ON s.id = h.approach_state_id
+         WHERE s.code = '${code}'`) >= 1, `${code} が1件も無い`)
+    }
+  })
+
+  test('終端状態（見送り）に達してリストから外れた人が居る', async () => {
+    const terminal = await count(`
+      SELECT count(*) FROM v_person_approach_state WHERE is_terminal`)
+    assert.ok(terminal >= 1, '終端に達した人が1人も居ない')
+    // 外れていることまで確かめる。状態があるだけでは、リストの述語を
+    // 一度も実行していない。
+    assert.equal(await count(`
+      SELECT count(*) FROM v_headhunting_list h
+        JOIN v_person_approach_state a
+          ON a.person_id = h.person_id AND a.season_id = h.season_id
+       WHERE a.is_terminal`), 0)
+  })
+
+  test('打ち消しで訂正されたアプローチがある', async () => {
+    assert.ok(await count(`SELECT count(*) FROM approach_events WHERE is_correction`) >= 1)
+    // 訂正行が有効で、打ち消された行が無効になっている。
+    assert.ok(await count(`
+      SELECT count(*) FROM v_effective_approach_events WHERE is_correction`) >= 1)
+    assert.equal(await count(`
+      SELECT count(*) FROM v_effective_approach_events e
+       WHERE EXISTS (SELECT 1 FROM approach_events c WHERE c.corrects_event_id = e.id)`), 0)
+  })
+
+  test('個人情報削除を受けた人にアプローチの記録があり、リストから外れている', async () => {
+    // 削除の述語を実際に踏ませる。踏まないデータだと、外し忘れていても
+    // 気づけない（実行⑥で同じ見落としを繰り返している）。
+    assert.ok(await count(`
+      SELECT count(*) FROM approach_events e
+        JOIN persons p ON p.id = e.person_id
+       WHERE p.deleted_at IS NOT NULL`) >= 1, '削除済みの人にアプローチの記録が無い')
+    assert.equal(await count(`
+      SELECT count(*) FROM v_headhunting_list h
+        JOIN persons p ON p.id = h.person_id
+       WHERE p.deleted_at IS NOT NULL`), 0)
+  })
+
+  test('確度の算出が2回ぶんあり、順位が動いた人と動かない人の両方が居る', async () => {
+    assert.ok(await count(`
+      SELECT count(DISTINCT calculated_on) FROM score_snapshots`) >= 2,
+    '算出が1回しかない。順位の変動が一度も描かれない')
+    assert.ok(await count(`
+      SELECT count(*) FROM v_candidate_confidence_latest WHERE rank_delta <> 0`) >= 1)
+    assert.ok(await count(`
+      SELECT count(*) FROM v_candidate_confidence_latest WHERE rank_delta = 0`) >= 1)
+  })
+
+  test('確度が満点を超えていない', async () => {
+    assert.equal(await count(`
+      SELECT count(*) FROM v_candidate_confidence_latest WHERE confidence_ratio > 1`), 0)
+  })
+})

@@ -216,7 +216,8 @@ describe('実年度と創作のデモは同居しない（C-28）', () => {
       db,
       `SELECT enrollment_year FROM seasons ORDER BY enrollment_year`,
     )
-    assert.deepEqual(years.map((r) => r.enrollment_year), [2024, 2025, 2026, 2027])
+    // 実行⑨で 4 → 2 に減らした。募集は 2025 と 2026 しか行われていない。
+    assert.deepEqual(years.map((r) => r.enrollment_year), [2025, 2026])
     await db.close()
   })
 

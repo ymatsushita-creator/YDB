@@ -39,9 +39,9 @@ export async function saveScoreAction(formData: FormData): Promise<void> {
   // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
   if (!result.ok) return back(result.reason)
 
-  // 運転席の「n/m 軸」も変わる。画面ごとに別の数字が残らないよう両方作り直す。
+  // ボーダーラインの「n/m 軸」も変わる。画面ごとに別の数字が残らないよう両方作り直す。
   revalidatePath(`/applications/${applicationId}`)
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   back('saved')
 }
 
@@ -64,14 +64,14 @@ export async function submitEvaluationAction(formData: FormData): Promise<void> 
   if (!result.ok) return back(result.reason)
 
   revalidatePath(`/applications/${applicationId}`)
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   back('submitted')
 }
 
 /**
  * 保留にする。
  *
- * 運転席にも同じ操作があるが、あちらは**先頭のやることにしか出ない**。
+ * ボーダーラインにも同じ操作があるが、あちらは**先頭のやることにしか出ない**。
  * 候補者を開いてから止めたい場面のほうが多いので、こちらにも置く（C-35）。
  * 理由は必須。空白だけの理由は `holdEvaluation` が弾く。
  */
@@ -90,7 +90,7 @@ export async function holdAction(formData: FormData): Promise<void> {
   if (!result.ok) return back(result.reason)
 
   revalidatePath(`/applications/${applicationId}`)
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   back('held')
 }
 
@@ -118,7 +118,7 @@ export async function decideAction(formData: FormData): Promise<void> {
   if (!result.ok) return back(result.reason)
 
   revalidatePath(`/applications/${applicationId}`)
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   // 合格・通過・不合格で、運用者に返す言葉を変える。
   back(result.decision === 'reject' ? 'rejected' : result.accepted ? 'accepted' : 'advanced')
 }
@@ -147,6 +147,6 @@ export async function correctDecisionAction(formData: FormData): Promise<void> {
   if (!result.ok) return back(result.reason)
 
   revalidatePath(`/applications/${applicationId}`)
-  revalidatePath('/cockpit')
+  revalidatePath('/borderline')
   back(result.decision === 'advance' ? 'corrected_to_advance' : 'corrected_to_reject')
 }

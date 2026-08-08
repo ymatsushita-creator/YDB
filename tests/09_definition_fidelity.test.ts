@@ -406,23 +406,30 @@ describe('B節の制約', () => {
       `INSERT INTO scoring_rule_sets (version, created_by_staff_id)
        VALUES (1, $1) RETURNING id`, [staffId])
 
+    // target_key は 0017 で語彙を閉じた（綴り違いを黙って0点にしないため）。
+    // 'x' のような架空の語では、原典の制約に届く前に語彙の制約で弾かれる。
+    // ここで確かめたいのは**原典側の制約**なので、実在の語彙を使う。
+
     // 半減期0は減衰の定義がゼロ除算になる
     await rejects(db,
       `INSERT INTO scoring_rules
-         (rule_set_id, condition_type, target_key, points, sort_order, decay_half_life_days)
-       VALUES ($1, 'existence', 'x', 1, 1, 0)`, [set], /half_life_positive/)
+         (rule_set_id, condition_type, target_key, threshold, points, sort_order,
+          decay_half_life_days)
+       VALUES ($1, 'recency_days', 'last_touchpoint_on', 60, 1, 1, 0)`,
+      [set], /half_life_positive/)
 
     // 閾値のない count_threshold は条件として成立しない
     await rejects(db,
       `INSERT INTO scoring_rules
          (rule_set_id, condition_type, target_key, points, sort_order)
-       VALUES ($1, 'count_threshold', 'x', 1, 2)`, [set], /threshold_required/)
+       VALUES ($1, 'count_threshold', 'touchpoint_count', 1, 2)`,
+      [set], /threshold_required/)
 
     // existence は閾値なしでよい
     await db.query(
       `INSERT INTO scoring_rules
          (rule_set_id, condition_type, target_key, points, sort_order)
-       VALUES ($1, 'existence', 'x', 1, 3)`, [set])
+       VALUES ($1, 'existence', 'has_referral', 1, 3)`, [set])
     await db.close()
   })
 

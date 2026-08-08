@@ -13,6 +13,7 @@
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",
     "tokens": "node scripts/build-tokens.ts",
     "dev": "next dev",
+    "dev:demo": "YOUTHDB_DEMO=1 next dev",
     "build": "next build",
     "start": "next start"
   },

@@ -15,7 +15,8 @@ import {
 import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../src/commands/unhold.ts'
 import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../src/commands/hold.ts'
 import { assignAction, unholdAction, reassignAction, holdAction } from './actions.ts'
-import { Card, Empty, SeasonTabs, jstDateTime, jstDay, num } from '../_components/ui.tsx'
+import { Card, Empty, jstDateTime, jstDay, num } from '../_components/ui.tsx'
+import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -184,13 +185,20 @@ export default async function CockpitPage({
 
   return (
     <>
+      <Breadcrumb
+        crumbs={[
+          { label: 'ボーダーライン', href: '/borderline' },
+          { label: `${season.enrollment_year} 年度`, href: `/borderline?season=${season.id}` },
+          ...(selectedTask ? [{ label: selectedTask.person_name }] : []),
+        ]}
+        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/borderline" />}
+      />
+
       <div className="cockpit-head">
         <div>
-          <p className="eyebrow">FOREST OPERATIONS</p>
-          <h1 className="page-title">{season.enrollment_year} 年度の運転席</h1>
+          <h1 className="page-title">{season.enrollment_year} 年度のボーダーライン</h1>
           <p className="page-sub">今日、選考を前へ進めるための作業場所</p>
         </div>
-        <SeasonTabs seasons={seasons} currentId={season.id} basePath="/cockpit" />
       </div>
 
       {(assigned || unheld || reassigned || holdResult) && (
