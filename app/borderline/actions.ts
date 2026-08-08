@@ -57,10 +57,9 @@ export async function assignAction(formData: FormData): Promise<void> {
   // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
   if (!result.ok) return back(result.reason)
 
-  // やること・待っている人・森の集計が同時に変わる。画面ごとに別の数字が
-  // 残らないよう、コックピットと森の画面をまとめて作り直す。
+  // やること・待っている人・アプローチ可能圏の集計が同時に変わる。
   revalidatePath('/borderline')
-  revalidatePath('/forests', 'layout')
+  revalidatePath('/reach-zones', 'layout')
   back('ok')
 }
 
@@ -88,7 +87,7 @@ export async function holdAction(formData: FormData): Promise<void> {
   if (!result.ok) return back(result.reason)
 
   revalidatePath('/borderline')
-  revalidatePath('/forests', 'layout')
+  revalidatePath('/reach-zones', 'layout')
   back('held')
 }
 
@@ -117,7 +116,7 @@ export async function unholdAction(formData: FormData): Promise<void> {
   if (!result.ok) return back(result.reason)
 
   revalidatePath('/borderline')
-  revalidatePath('/forests', 'layout')
+  revalidatePath('/reach-zones', 'layout')
   back('unheld')
 }
 
@@ -148,6 +147,6 @@ export async function reassignAction(formData: FormData): Promise<void> {
   if (!result.ok) return back(result.reason)
 
   revalidatePath('/borderline')
-  revalidatePath('/forests', 'layout')
+  revalidatePath('/reach-zones', 'layout')
   back('reassigned')
 }

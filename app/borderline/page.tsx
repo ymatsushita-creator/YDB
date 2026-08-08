@@ -107,11 +107,11 @@ function TaskAction({
 
 function ForestCard({ forest, seasonId }: { forest: ForestRow; seasonId: string }) {
   return (
-    <Link href={`/forests/${forest.forest_id}?season=${seasonId}`} className="forest-focus-card">
+    <Link href={`/reach-zones/${forest.forest_id}?season=${seasonId}`} className="forest-focus-card">
       <div className="forest-focus-head">
         <span className="forest-marker" aria-hidden="true">●</span>
         <span>{forest.name}</span>
-        <span className="section-note">森</span>
+        <span className="section-note">アプローチ可能圏</span>
       </div>
       <FactFlags flags={forest.flags} overdueTasks={forest.overdue_tasks} />
       <div className="forest-fact-grid">
@@ -131,7 +131,7 @@ function CommunityNode({ community, forestId, seasonId }: {
   seasonId: string
 }) {
   return (
-    <Link href={`/forests/${forestId}?season=${seasonId}`} className={`community-node${community.flags.length > 0 ? ' needs-attention' : ''}`}>
+    <Link href={`/reach-zones/${forestId}?season=${seasonId}`} className={`community-node${community.flags.length > 0 ? ' needs-attention' : ''}`}>
       <div className="community-node-top">
         <span className="community-node-name">{community.name}</span>
         {community.open_tasks > 0 && <span className="task-count">未処理 {num(community.open_tasks)} 件</span>}
@@ -242,10 +242,10 @@ export default async function CockpitPage({
 
           <section className="forest-section" aria-labelledby="forest-title">
             <div className="section-heading-row">
-              <div><p className="eyebrow">PRIORITY 03</p><h2 id="forest-title" className="workspace-title">森と連携先</h2></div>
-              <p className="section-note">要注意 {num(attention.length)} 森 ／ 滞留・休眠・接点なしは事実フラグ</p>
+              <div><p className="eyebrow">PRIORITY 03</p><h2 id="forest-title" className="workspace-title">アプローチ可能圏</h2></div>
+              <p className="section-note">要注意 {num(attention.length)} 圏 ／ 滞留・休眠・接点なしは事実フラグ</p>
             </div>
-            {selectedForest ? <ForestCard forest={selectedForest} seasonId={season.id} /> : <Empty>森が登録されていない。</Empty>}
+            {selectedForest ? <ForestCard forest={selectedForest} seasonId={season.id} /> : <Empty>アプローチ可能圏が登録されていない。</Empty>}
             {selectedForest && (
               <div className="community-map">
                 <div className="map-connection" aria-hidden="true" />

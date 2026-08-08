@@ -51,6 +51,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             )}
           </p>
         </div>
+        <Link className="button button-secondary" href={`/headhunting?person=${person.person_id}`}>
+          基本情報を編集
+        </Link>
       </div>
 
       <div className="grid grid-kpi">
@@ -60,7 +63,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
         <Kpi label="接点" value={num(person.touchpoint_count)}
              meta={`最終接触 ${jstDay(person.last_touch_at)}`} />
         <Kpi label="識別された日" value={jstDay(person.identified_at)}
-             meta="林に入った日。persons.created_at" />
+             meta="候補者として登録した日。persons.created_at" />
         <Kpi label="この人が紹介した人" value={num(person.referred_count)}
              tone={person.referred_count ? undefined : 'muted'}
              meta="紹介チャネルの検証に使う" />
@@ -124,10 +127,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             </div>
           )}
           <p className="unit-note">
-            「林 休眠」は、その年度に応募しておらず、基準日から遡って
-            {' '}{ACTIVE_WINDOW_DAYS} 日以内に接点も無い状態。年度サマリの林には
-            数えられていない。段（林・木・幹）と窓は別の軸なので、
-            木や幹でも接点が続いていれば林に数えられている。
+            「未応募・接点休止」は、その年度に応募しておらず、基準日から遡って
+            {' '}{ACTIVE_WINDOW_DAYS} 日以内に接点も無い状態。年度サマリの
+            接点継続中には数えられない。応募到達状態と接点判定窓は別の軸である。
           </p>
         </Card>
       </div>
@@ -191,7 +193,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           )}
           <p className="unit-note">
             無効化された応募は、理由の <code>counts_as_application</code> によって
-            木に数えるかどうかが決まる（名寄せ誤りは数えない、取り下げは数える）。
+            応募に数えるかどうかが決まる（名寄せ誤りは数えない、取り下げは数える）。
             数えない応募も、そこにぶら下がった評価と遷移は記録層に残っているので、
             個別の画面からは消さない。集計の都合で事実を隠さないため。
           </p>

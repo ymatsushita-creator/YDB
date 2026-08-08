@@ -203,12 +203,21 @@ export const listApplicantScores = (db: Db, seasonId: string, limit = 5) =>
 
 export interface PersonPanel {
   person_id: string
+  family_name: string
+  given_name: string
+  family_name_kana: string | null
+  given_name_kana: string | null
   person_name: string
   person_kana: string | null
   school: string
+  school_id: string
+  birth_date: Date
   faculty: string | null
   email: string
   phone: string | null
+  line_user_id: string | null
+  referrer_person_id: string | null
+  photo_data_url: string | null
   note: string | null
   /** 最終更新。記録層に更新時刻が無いので「最後に接点があった日」で代える。 */
   last_touchpoint_on: Date | null
@@ -222,10 +231,13 @@ export interface PersonPanel {
 export const getPersonPanel = (db: Db, personId: string, seasonId: string) =>
   maybeOne<PersonPanel>(db, `
     SELECT p.id AS person_id,
+           p.family_name, p.given_name, p.family_name_kana, p.given_name_kana,
            p.family_name || ' ' || p.given_name AS person_name,
            nullif(btrim(coalesce(p.family_name_kana, '') || ' '
                         || coalesce(p.given_name_kana, '')), '') AS person_kana,
-           sc.name AS school, p.faculty, p.email, p.phone, p.note,
+           sc.name AS school, sc.id AS school_id, p.birth_date, p.faculty,
+           p.email, p.phone, p.line_user_id, p.referrer_person_id,
+           p.photo_data_url, p.note,
            (SELECT max(jst_date(t.occurred_at)) FROM v_touchpoint_season t
              WHERE t.person_id = p.id AND t.season_id = $2) AS last_touchpoint_on,
            a.approach_label, a.approach_code,
@@ -244,6 +256,34 @@ export const getPersonPanel = (db: Db, personId: string, seasonId: string) =>
              ON c.person_id = p.id AND c.season_id = $2
      WHERE p.id = $1
        AND p.deleted_at IS NULL`, [personId, seasonId])
+
+export interface ProfileOption {
+  id: string
+  label: string
+}
+
+export interface ProfileEditOptions {
+  schools: ProfileOption[]
+  people: ProfileOption[]
+  staffs: ProfileOption[]
+  approachStates: ProfileOption[]
+}
+
+/** 編集フォームの選択肢。画面側にマスタの条件を書かせない。 */
+export async function getProfileEditOptions(db: Db, personId: string): Promise<ProfileEditOptions> {
+  const [schools, people, staffs, approachStates] = await Promise.all([
+    all<ProfileOption>(db, `SELECT id, name AS label FROM schools WHERE is_active ORDER BY name`),
+    all<ProfileOption>(db, `
+      SELECT id, family_name || ' ' || given_name AS label
+        FROM persons WHERE deleted_at IS NULL AND id <> $1
+       ORDER BY family_name, given_name LIMIT 500`, [personId]),
+    all<ProfileOption>(db, `
+      SELECT id, display_name AS label FROM staffs WHERE is_active ORDER BY display_name`),
+    all<ProfileOption>(db, `
+      SELECT id, label FROM approach_states WHERE is_active ORDER BY sort_order`),
+  ])
+  return { schools, people, staffs, approachStates }
+}
 
 export interface CriterionScore {
   criteria_name: string

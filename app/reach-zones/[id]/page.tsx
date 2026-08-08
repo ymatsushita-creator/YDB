@@ -11,16 +11,12 @@ import { Breadcrumb, YearSwitch } from '../../_components/shell.tsx'
 export const dynamic = 'force-dynamic'
 
 /**
- * 森を1つ開く。森 → 林 → 人 のズームの、真ん中の段。
- *
- * 一覧から詳細へ、ではない。コックピットの森の行から入って、
- * ここから人の画面へ降りる。入口は常に森の側にある（憲法の IA）。
- *
- * ★ ここに出る「接点のある人」は、その森に**所属している**人ではない。
+ * アプローチ可能圏を1つ開き、構成コミュニティと接点のある人を確認する。
+ * ★ ここに出る「接点のある人」は、その圏に**所属している**人ではない。
  *   接触があったという事実だけである。所属や役割（Relationship / Role）は
  *   記録層に無い。TODO(MVP): domain.md 10-1 で語が衝突しており未決。
  */
-export default async function ForestPage({
+export default async function ReachZonePage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
@@ -57,7 +53,7 @@ export default async function ForestPage({
           { label: forest.name },
         ]}
         aside={<YearSwitch seasons={seasons} currentId={season.id}
-                           basePath={`/forests/${forest.forest_id}`} />}
+                           basePath={`/reach-zones/${forest.forest_id}`} />}
       />
 
       <div className="page-head">
@@ -72,9 +68,9 @@ export default async function ForestPage({
       </div>
 
       <div className="grid grid-kpi">
-        <Kpi label="林" value={num(forest.communities)}
+        <Kpi label="構成コミュニティ" value={num(forest.communities)}
              tone={Number(forest.communities) ? undefined : 'muted'}
-             meta="この森の中のコミュニティ（組織）" />
+             meta="このアプローチ可能圏を構成する組織" />
         <Kpi label="接点のある人" value={num(forest.persons_touched)}
              tone={Number(forest.persons_touched) ? undefined : 'muted'}
              meta={`実人数・年度を問わない（接点 ${num(forest.touchpoints)} 件）`} />
@@ -91,12 +87,12 @@ export default async function ForestPage({
       <div className="section">
         {overduePersons.length > 0 ? (
           <p className="callout">
-            この森に接点のある人のうち {overduePersons.length} 人が、
+            このアプローチ可能圏に接点のある人のうち {overduePersons.length} 人が、
             {season.enrollment_year} 年度で期限を超えて待っている。
           </p>
         ) : forest.days_since_touch === null ? (
           <p className="callout">
-            リーチの記録はあるが、この森からは誰一人識別できていない。
+            リーチの記録はあるが、このアプローチ可能圏では接点のある人をまだ識別できていない。
             推定リーチと識別済みの人数は<strong>単位が違う</strong>ので、割って率にはしない。
           </p>
         ) : dormant ? (
@@ -104,23 +100,23 @@ export default async function ForestPage({
             最終接触から {num(forest.days_since_touch)} 日たっている（休眠の目安は {DORMANT_DAYS} 日）。
           </p>
         ) : (
-          <p className="callout ok">この森で止まっているものは無い。</p>
+          <p className="callout ok">このアプローチ可能圏で止まっているものは無い。</p>
         )}
       </div>
 
       <div className="section">
         <Card
-          title="林（この森の中のコミュニティ）"
-          note="森に直付けされた接点は含まない。林の合計は森の数に一致しない"
+          title="構成コミュニティ"
+          note="圏に直接記録された接点は含まない。コミュニティの合計は圏全体に一致しない"
         >
           {communities.length === 0 ? (
-            <Empty>林はまだ登録されていない。接点は森に直付けされている</Empty>
+            <Empty>構成コミュニティはまだ登録されていない。接点は圏に直接記録されている</Empty>
           ) : (
             <div className="table-wrap">
               <table className="data">
                 <thead>
                   <tr>
-                    <th>林</th>
+                    <th>コミュニティ</th>
                     <th className="num">接点のある人</th>
                     <th className="num">接点</th>
                     <th>最終接触</th>
@@ -146,7 +142,7 @@ export default async function ForestPage({
 
       <div className="section">
         <Card
-          title="この森に接点がある人"
+          title="このアプローチ可能圏に接点がある人"
           note="所属ではなく、接触があったという事実。待っている人を先に出す"
         >
           {persons.length === 0 ? (
@@ -205,9 +201,9 @@ export default async function ForestPage({
       </p>
 
       <p className="footnote">
-        林に付いた接点も、この森の数に含めている（同じ森に属する林をまとめて数える）。
+        構成コミュニティに付いた接点も、このアプローチ可能圏の数に含めている。
         団体の階層は2段までで、3段目はトリガが拒否する。
-        森の Health・担当（Owner）・関係の役割（Relationship）は未実装。
+        アプローチ可能圏の健全性・担当・関係上の役割は未実装。
         記録層にその事実が無いので、画面では作らない。
       </p>
     </>
