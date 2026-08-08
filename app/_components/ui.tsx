@@ -1,6 +1,4 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
-import type { Season } from '../../src/queries/dashboard.ts'
 
 export function Card({
   children, title, note, tint,
@@ -42,25 +40,6 @@ export function Kpi({
         />
       )}
       {meta && <span className="kpi-meta">{meta}</span>}
-    </div>
-  )
-}
-
-export function SeasonTabs({
-  seasons, currentId, basePath,
-}: { seasons: Season[]; currentId: string; basePath: string }) {
-  return (
-    <div className="season-tabs">
-      {seasons.map((s) => (
-        <Link
-          key={s.id}
-          href={`${basePath}?season=${s.id}`}
-          className={s.id === currentId ? 'season-tab pill-tab-active' : 'season-tab pill-tab'}
-        >
-          {s.is_live && <span className="live-dot" />}
-          {s.enrollment_year} 年度
-        </Link>
-      ))}
     </div>
   )
 }

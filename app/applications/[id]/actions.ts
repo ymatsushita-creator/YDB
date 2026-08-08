@@ -110,7 +110,7 @@ export async function decideAction(formData: FormData): Promise<void> {
   const db = await getDb()
   const result = await decideStep(db, {
     applicationId,
-    decision: decision as 'advance' | 'reject',
+    decision,
     staffId,
     note,
   })

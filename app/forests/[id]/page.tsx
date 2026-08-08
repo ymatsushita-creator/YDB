@@ -5,7 +5,8 @@ import { listSeasons, getSeason } from '../../../src/queries/dashboard.ts'
 import {
   getForest, getCommunities, getForestPersons, DORMANT_DAYS,
 } from '../../../src/queries/cockpit.ts'
-import { Card, Kpi, SeasonTabs, Empty, num, ymd } from '../../_components/ui.tsx'
+import { Card, Kpi, Empty, num, ymd } from '../../_components/ui.tsx'
+import { Breadcrumb, YearSwitch } from '../../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,21 +50,24 @@ export default async function ForestPage({
 
   return (
     <>
+      <Breadcrumb
+        crumbs={[
+          { label: 'アプローチ', href: '/approach' },
+          { label: `${season.enrollment_year} 年度`, href: `/approach?season=${season.id}` },
+          { label: forest.name },
+        ]}
+        aside={<YearSwitch seasons={seasons} currentId={season.id}
+                           basePath={`/forests/${forest.forest_id}`} />}
+      />
+
       <div className="page-head">
         <div>
-          <p className="page-sub">
-            <Link href={`/borderline?season=${season.id}`}>ボーダーライン</Link> ／ 森
-          </p>
           <h1 className="page-title">{forest.name}</h1>
           <p className="page-sub">
             {forest.category ?? '分類なし'}
             {forest.first_contact_date && ` ・ 初回接触 ${ymd(forest.first_contact_date)}`}
             {forest.contact_name && ` ・ 窓口 ${forest.contact_name}`}
           </p>
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <SeasonTabs seasons={seasons} currentId={season.id}
-                      basePath={`/forests/${forest.forest_id}`} />
         </div>
       </div>
 

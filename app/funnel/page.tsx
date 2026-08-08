@@ -3,7 +3,8 @@ import {
   listSeasons, getSeason, getFunnel, getSummary, getStepFlow,
   getChannelPerformance, getWithdrawReasons, getReachConversion, ACTIVE_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
-import { Card, Kpi, SeasonTabs, Empty, num, pct, ymd } from '../_components/ui.tsx'
+import { Card, Kpi, Empty, num, pct, ymd } from '../_components/ui.tsx'
+import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 import { TimeSeries, Legend, FunnelStages } from '../_components/charts.tsx'
 
 export const dynamic = 'force-dynamic'
@@ -52,6 +53,15 @@ export default async function FunnelPage(
 
   return (
     <>
+      <Breadcrumb
+        crumbs={[
+          { label: 'アプローチ', href: '/approach' },
+          { label: `${season.enrollment_year} 年度`, href: `/funnel?season=${season.id}` },
+          { label: 'ファネル' },
+        ]}
+        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/funnel" />}
+      />
+
       <div className="page-head">
         <div>
           <h1 className="page-title">{season.enrollment_year} 年度のファネル</h1>
@@ -59,9 +69,6 @@ export default async function FunnelPage(
             {ymd(season.application_open_date)} 〜 {ymd(season.selection_end_date)}
             {season.is_live && ' ・ 進行中'}
           </p>
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <SeasonTabs seasons={seasons} currentId={season.id} basePath="/" />
         </div>
       </div>
 
