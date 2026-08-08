@@ -1,6 +1,7 @@
 import 'server-only'
 import { join } from 'node:path'
 import { openPglite } from './pglite.ts'
+import { openPostgres } from './postgres.ts'
 import { migrate, seed } from './migrate.ts'
 import { seedDemo } from '../seed/demo.ts'
 import type { Db } from './client.ts'
@@ -68,10 +69,11 @@ export function getDb(): Promise<Db> {
     return cache.__youthdb
   }
   if (process.env.DATABASE_URL) {
-    throw new Error(
-      'DATABASE_URL が設定されているが、PostgreSQL アダプタは未実装。' +
-      'src/db/server.ts に node-postgres の実装を足すこと。',
-    )
+    cache.__youthdb ??= openPostgres(process.env.DATABASE_URL).catch((e: unknown) => {
+      delete cache.__youthdb
+      throw e
+    })
+    return cache.__youthdb
   }
   // ??= は rejected な Promise を置き換えない。一度でも開けなかったら、
   // 原因が消えてもプロセスを再起動するまで全リクエストが同じエラーを返す。

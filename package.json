@@ -9,6 +9,7 @@
   },
   "scripts": {
     "db:reset": "node scripts/db-reset.ts",
+    "db:migrate:production": "node scripts/db-migrate-production.ts",
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",
     "tokens": "node scripts/build-tokens.ts",
     "dev": "next dev",
@@ -18,11 +19,13 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
     "next": "^16.3.0",
+    "pg": "^8.22.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
+    "@types/pg": "^8.21.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "server-only": "^0.0.1",

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { openPglite } from '../src/db/pglite.ts'
 import { migrate, seed } from '../src/db/migrate.ts'
 import { seedDemo } from '../src/seed/demo.ts'
+import { isPortOpen } from './guard.ts'
 
 /**
  * 開発用データベースを作り直す。
@@ -11,7 +12,29 @@ import { seedDemo } from '../src/seed/demo.ts'
  * 実行するたびに同じ状態になる。デモデータの乱数も固定シード。
  *
  * --no-demo でデモデータを省略できる（参照データのみ）。
+ *
+ * **開発専用。** DATABASE_URL が設定された環境（本番相当）では実行できない
+ * ―― db:reset 自体は .pgdata しか触らないが、本番ホスト上での取り違えを
+ * 構造的に防ぐ（DEPLOY-READINESS.md B-3）。
+ * また、開発サーバ（next dev, port 3111）を起動したまま実行すると
+ * PGlite の dataDir にプロセス間ロックが無いため警告もエラーも無く壊れる
+ * （HANDOFF.md で実際に2回発生）。ポートが使われていれば拒否する。
  */
+
+if (process.env.DATABASE_URL) {
+  console.error(
+    'db:reset は開発専用。DATABASE_URL が設定されている（本番相当の接続先）ため実行できない。',
+  )
+  process.exit(1)
+}
+
+if (await isPortOpen(3111)) {
+  console.error(
+    'ポート3111で何かが動いている（開発サーバ？）。.pgdata はプロセス間ロックが無く、' +
+      '起動したまま db:reset すると警告なく壊れる。開発サーバを止めてから実行すること。',
+  )
+  process.exit(1)
+}
 
 const DATA_DIR = fileURLToPath(new URL('../.pgdata/', import.meta.url))
 const withDemo = !process.argv.includes('--no-demo')
