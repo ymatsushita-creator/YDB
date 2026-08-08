@@ -1,5 +1,28 @@
 # design.md
 
+## ★ 実行⑨（2026-08-09）の改定 —— 依頼者の指示による
+
+**本書は改定された。** 依頼者から画面仕様（画像）と設計思想の変更が届き、
+「これらと md が矛盾するなら md を書き換えろ」という指示があった。
+
+改定の要点は3つ。
+
+1. **最上位は Forest ではなく、年度と3つのタブ**
+   （ヘッドハンティング / ボーダーライン / アプローチ）。
+   年度はタブより上にあり、どのタブでも同じ場所で切り替わる
+2. **一覧を主役にしてよい。`Never: List → Detail` は撤回した。**
+   ただし一覧と詳細は**同じ画面に置く**（画面を移らずに深く見る）
+3. **意匠の生成元は `basic/DESIGN.md`** で、その中身は依頼者の画像から
+   起こしてある。本書はトークンを生成しない（末尾の付記のとおり）
+
+**改定していないもの** —— 情報密度は高く視覚的な雑音は低く、
+カードは装飾ではなく機能の器であること。
+そして `director.md` 末尾の「憲法が上書きしないもの」。
+
+改定した節には ★改定 と記した。改定前の条文は引用として残してある。
+
+---
+
 # Design North Star
 
 This product is not designed around people.
@@ -78,14 +101,22 @@ Every Forest has:
 
 # Navigation
 
-Dashboard
+## ★改定（実行⑨）
 
--   Forest
--   Community
--   Person
--   Tasks
--   Analytics
--   Settings
+```
+年度（最上位。全タブ共通）
+   ├── ヘッドハンティング   誰に声を掛けるか
+   ├── ボーダーライン       誰を通すか
+   └── アプローチ           どこから来ているか
+```
+
+**タブは3つで固定。** ファネル・流入元・選考オペレーション・人の一覧は、
+独立した行き先にせず、3つのどれかの中に畳む。
+サイドバーには3つのタブと**名前で検索**を置く。
+
+改定前の条文（記録）。
+
+> Dashboard — Forest / Community / Person / Tasks / Analytics / Settings
 
 ------------------------------------------------------------------------
 
@@ -129,11 +160,20 @@ Each node displays:
 -   Owner
 -   Last activity
 
-Navigation always zooms:
+## ★改定（実行⑨）
 
-Forest → Community → Person → Action
+```
+年度 → タブ → 一覧 → 1人 / 1件 → アクション
+```
 
-Never: List → Detail.
+**`Never: List → Detail` は撤回した。** 順位は一覧でしか表せない。
+ただし**一覧から1人を選んでも画面は移らない** ―― 同じ画面の中の
+パネルが切り替わる。「画面遷移を減らす」という要求のほうは残っている。
+
+改定前の条文（記録）。
+
+> Navigation always zooms: Forest → Community → Person → Action.
+> Never: List → Detail.
 
 ------------------------------------------------------------------------
 
@@ -148,16 +188,30 @@ Never: List → Detail.
 
 # Core Components
 
--   Forest Map
--   Forest Card
--   Community Card
--   Person Panel
--   Task Queue
--   Activity Timeline
--   Health Ring
--   Relationship Map
+## ★改定（実行⑨）
 
-Avoid an "Applicant List" as the primary experience.
+実装のある部品を挙げる。**名前だけの部品を一覧に残さない** ――
+残すと「実装漏れが8件ある」と読まれる。
+
+-   Shell（暗い操作柱。3つのタブ＋名前で検索）
+-   Year Bar（年度。最上位の軸。全タブ共通）
+-   Panel Card（白いカード。浅い影で地から浮く）
+-   Task Card（やること1件）
+-   Rank Row（順位・王冠・前回比）
+-   Person Panel（候補者1人）
+-   Approach Chip（アプローチ状態）
+-   Stars（評価。比で塗り、素点を必ず併記する）
+-   Physical Button（厚みがあり、押すと沈む）
+
+まだ無い部品（**記録層に事実が無いか、未着手**）――
+Forest Map / Community Card / Activity Timeline / Health Ring /
+Relationship Map。**Health は記録層に事実が無い**（`db/DECISIONS.md` C-18）。
+
+改定前の条文（記録）。
+
+> Core Components: Forest Map / Forest Card / Community Card / Person Panel /
+> Task Queue / Activity Timeline / Health Ring / Relationship Map.
+> Avoid an "Applicant List" as the primary experience.
 
 ------------------------------------------------------------------------
 
@@ -170,15 +224,19 @@ Inspired by:
 -   Arc
 -   Notion
 
-Keywords:
+Keywords（★改定。実行⑨）:
 
--   Calm
--   Organic
+-   High density, low noise
+-   Physical buttons（厚みがあり、押すと沈む）
+-   Dark rail / orange year bar / white cards on a blue-grey field
 -   Professional
--   Forest metaphor
--   Soft green
--   Natural hierarchy
--   Spacious layout
+
+改定前の条文（記録）。
+
+> Calm / Organic / Forest metaphor / Soft green / Natural hierarchy / Spacious layout
+
+**「Soft green」と「Spacious」は撤回した。** 実際の意匠は
+`basic/DESIGN.md`（依頼者の画像から起こした）にあり、密度は高い。
 
 ------------------------------------------------------------------------
 
@@ -191,5 +249,8 @@ Keywords:
 frontmatter が無く、色・字送り・余白の実数値が1つも無いため、`pnpm tokens` の
 入力にならない（実測: frontmatter 検出なし、`#hex` 0件、`px/rem` 0件）。
 
-したがって `app/tokens.css` は、この文書ではなく Notion の意匠から生成されている。
-生成元をどうするかは未決。決まるまで、**画像から色を起こして推測で埋めない。**
+**★実行⑨で決着した。** 依頼者の判断は「画像を正典にする」。
+`basic/DESIGN.md` の frontmatter を依頼者の画面画像から起こし直し、
+`app/tokens.css` はそこから生成されている（`db/DECISIONS.md` C-39）。
+**本書は引き続きトークンを生成しない。** 本書が定めるのは構造と原則で、
+実数値は `basic/DESIGN.md` にある。

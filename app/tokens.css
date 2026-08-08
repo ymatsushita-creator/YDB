@@ -5,51 +5,60 @@
 
 :root {
   --color-canvas: #ffffff;
-  --color-surface: #f7f7f7;
-  --color-surface-soft: #fbfbfb;
-  --color-primary: #0a0a0a;
-  --color-primary-pressed: #000000;
-  --color-primary-deep: #000000;
+  --color-surface: #f4f6f8;
+  --color-surface-soft: #fafbfc;
+  --color-shell: #e6e9ed;
+  --color-primary: #dd7a2e;
+  --color-primary-pressed: #c26320;
+  --color-primary-deep: #a85118;
   --color-on-primary: #ffffff;
-  --color-brand-navy: #0a0a0a;
-  --color-brand-navy-deep: #000000;
-  --color-brand-navy-mid: #1a1a1a;
-  --color-brand-purple: #0a0a0a;
-  --color-brand-purple-800: #0a0a0a;
-  --color-brand-purple-300: #e5e5e5;
-  --color-ink-deep: #000000;
-  --color-ink: #0a0a0a;
-  --color-charcoal: #1a1a1a;
-  --color-slate: #4a4a4a;
-  --color-steel: #707070;
-  --color-stone: #909090;
-  --color-muted: #b0b0b0;
+  --color-brand-navy: #1c2531;
+  --color-brand-navy-deep: #141b24;
+  --color-brand-navy-mid: #27313f;
+  --color-sidebar-hairline: #33404f;
+  --color-sidebar-active: #2b4463;
+  --color-sidebar-active-border: #5b9bd5;
+  --color-brand-purple: #5b5bd6;
+  --color-brand-purple-800: #3d3da8;
+  --color-brand-purple-300: #dcdcf7;
+  --color-ink-deep: #0f151c;
+  --color-ink: #1a222c;
+  --color-charcoal: #2c3742;
+  --color-slate: #4d5a68;
+  --color-steel: #6b7885;
+  --color-stone: #8b96a2;
+  --color-muted: #aab3bd;
   --color-on-dark: #ffffff;
-  --color-on-dark-muted: #b0b0b0;
-  --color-hairline: #e5e5e5;
-  --color-hairline-soft: #efefef;
-  --color-hairline-strong: #c9c9c9;
-  --color-brand-yellow: #f0f000;
-  --color-brand-pink: #f03090;
-  --color-brand-teal: #00c0f0;
-  --color-brand-green: #50f000;
-  --color-brand-orange: #f01010;
-  --color-link-blue: #0090b4;
-  --color-link-blue-pressed: #00708c;
-  --color-brand-orange-deep: #a80b0b;
-  --color-brand-brown: #707070;
-  --color-semantic-success: #2f7a00;
-  --color-semantic-warning: #8a6a00;
-  --color-semantic-error: #c40c0c;
-  --color-card-tint-peach: #ffffff;
-  --color-card-tint-rose: #ffffff;
-  --color-card-tint-mint: #ffffff;
-  --color-card-tint-lavender: #ffffff;
-  --color-card-tint-sky: #ffffff;
-  --color-card-tint-yellow: #ffffff;
-  --color-card-tint-yellow-bold: #f7f7f7;
-  --color-card-tint-cream: #fbfbfb;
-  --color-card-tint-gray: #f7f7f7;
+  --color-on-dark-muted: #9aa7b5;
+  --color-hairline: #e2e6ea;
+  --color-hairline-soft: #eef1f4;
+  --color-hairline-strong: #c8cfd6;
+  --color-brand-yellow: #d9a520;
+  --color-brand-pink: #d6336c;
+  --color-brand-teal: #2b8aa8;
+  --color-brand-green: #2f9e44;
+  --color-brand-orange: #dd7a2e;
+  --color-brand-orange-deep: #a85118;
+  --color-brand-brown: #8a6d4f;
+  --color-link-blue: #2b6cb0;
+  --color-link-blue-pressed: #1f5488;
+  --color-crest-gold: #d9a520;
+  --color-rank-up: #2f9e44;
+  --color-rank-down: #e03131;
+  --color-star-on: #f0a91e;
+  --color-star-off: #d8dde2;
+  --color-semantic-success: #2f7a3a;
+  --color-semantic-warning: #a06800;
+  --color-semantic-error: #c92a2a;
+  --color-card-tint-peach: #fdf0e4;
+  --color-card-tint-rose: #fdecec;
+  --color-card-tint-mint: #e8f6ec;
+  --color-card-tint-lavender: #eef0fd;
+  --color-card-tint-sky: #e7f1fb;
+  --color-card-tint-yellow: #fdf6e0;
+  --color-card-tint-yellow-bold: #f7e9c0;
+  --color-card-tint-cream: #fbf8f4;
+  --color-card-tint-gray: #f1f3f5;
 
   --rounded-xs: 4px;
   --rounded-sm: 6px;
@@ -590,4 +599,135 @@
   font-weight: 400;
   line-height: 1.5;
   padding: var(--space-xxs) 0;
+}
+
+.sidebar-region {
+  background-color: var(--color-brand-navy);
+  color: var(--color-on-dark);
+  border-radius: var(--rounded-xl);
+  padding: var(--space-md);
+}
+
+.sidebar-item {
+  background-color: var(--color-brand-navy-mid);
+  color: var(--color-on-dark);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.55;
+  border-radius: var(--rounded-lg);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-sidebar-hairline);
+}
+
+.sidebar-item-active {
+  background-color: var(--color-sidebar-active);
+  color: var(--color-on-dark);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.55;
+  border-radius: var(--rounded-lg);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-sidebar-active-border);
+}
+
+.sidebar-section-label {
+  background-color: transparent;
+  color: var(--color-on-dark-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  padding: var(--space-xs) var(--space-xxs);
+}
+
+.zoom-bar {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border-radius: var(--rounded-lg);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-primary-deep);
+}
+
+.zoom-crumb {
+  background-color: var(--color-primary-pressed);
+  color: var(--color-on-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  border-radius: var(--rounded-md);
+  padding: var(--space-xs) var(--space-md);
+}
+
+.zoom-crumb-current {
+  background-color: var(--color-primary-deep);
+  color: var(--color-on-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  border-radius: var(--rounded-md);
+  padding: var(--space-xs) var(--space-md);
+}
+
+.panel-card {
+  background-color: var(--color-canvas);
+  border-radius: var(--rounded-xl);
+  padding: var(--space-lg);
+  border: 1px solid var(--color-hairline);
+  box-shadow: rgba(20, 27, 36, 0.06) 0px 2px 8px 0px;
+}
+
+.task-card {
+  background-color: var(--color-surface-soft);
+  border-radius: var(--rounded-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline);
+}
+
+.chip-green {
+  background-color: var(--color-card-tint-mint);
+  color: var(--color-semantic-success);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: var(--rounded-sm);
+  padding: 3px 10px;
+}
+
+.chip-blue {
+  background-color: var(--color-card-tint-sky);
+  color: var(--color-link-blue);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: var(--rounded-sm);
+  padding: 3px 10px;
+}
+
+.chip-amber {
+  background-color: var(--color-card-tint-peach);
+  color: var(--color-brand-orange-deep);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: var(--rounded-sm);
+  padding: 3px 10px;
+}
+
+.chip-gray {
+  background-color: var(--color-card-tint-gray);
+  color: var(--color-steel);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: var(--rounded-sm);
+  padding: 3px 10px;
 }

@@ -60,8 +60,8 @@ const FORESTS: ForestPlan[] = [
   { name: '地域創生ファンド', category: 'company', communities: [] },
   // 接点はあるが、団体リーチの記録が無い。推定リーチが NULL の森。
   { name: 'ユースセンターまち', category: 'npo', communities: [], noReach: true },
-  // 2024年度までしか接点が無い。休眠した森。
-  { name: '高校生新聞社', category: 'media', communities: [], touchUntilYear: 2024 },
+  // 2025年度までしか接点が無い。休眠した森。
+  { name: '高校生新聞社', category: 'media', communities: [], touchUntilYear: 2025 },
   // リーチはあるのに識別ゼロ。**この2つを割ってはならない**（domain.md 8節）。
   { name: '西部工業高等専門学校', category: 'school', communities: [], noTouch: true },
 ]
@@ -128,21 +128,21 @@ interface SeasonPlan {
 // 通過率は各年度の定員におおよそ着地するよう選んである。
 // 定員を大きく超える合格者が出るデータでは、充足率の表示が意味を持たない。
 //
-// 2027年度は進行中の年度として置いてある。過去の年度だけだと、
-// 滞留や担当未割当といった(2)で見たいものがデータに一切現れない。
+// ★ 年度は2つだけである（実行⑨で依頼者の指摘により 4 → 2 に減らした）。
+//   **募集は 2025 と 2026 しかまだ行われていない。**
+//   それ以前の年度を架空に足すと、画面の年度切替に「実際には無い募集」が
+//   並ぶ。デモが架空データであることと、**存在しない年度を見せることは別**で、
+//   後者は運営に「その年度の記録がどこかにある」と思わせる。
+//
+//   2026 を進行中の年度として置く。終わった年度だけだと、滞留や担当未割当が
+//   データに一切現れない。2025 は終わった年度で、再応募の母集団にもなる。
 const PLANS: SeasonPlan[] = [
-  { year: 2024, outreachStart: '2023-09-01', applicationOpen: '2023-11-01',
-    applicationClose: '2023-12-15', selectionEnd: '2024-02-20',
-    capacity: 24, target: 150, applyRate: 0.30, passRates: [0.62, 0.58, 0.60, 0.74] },
   { year: 2025, outreachStart: '2024-09-01', applicationOpen: '2024-11-01',
     applicationClose: '2024-12-15', selectionEnd: '2025-02-20',
     capacity: 30, target: 220, applyRate: 0.34, passRates: [0.58, 0.52, 0.52, 0.76] },
   { year: 2026, outreachStart: '2025-09-01', applicationOpen: '2025-11-01',
-    applicationClose: '2025-12-15', selectionEnd: '2026-02-20',
-    capacity: 36, target: 300, applyRate: 0.36, passRates: [0.55, 0.50, 0.50, 0.70] },
-  { year: 2027, outreachStart: '2026-04-01', applicationOpen: '2026-07-01',
     applicationClose: '2026-08-31', selectionEnd: '2026-11-30',
-    capacity: 40, target: 340, applyRate: 0.38, passRates: [0.55, 0.50, 0.50, 0.70] },
+    capacity: 36, target: 300, applyRate: 0.36, passRates: [0.55, 0.50, 0.50, 0.70] },
 ]
 
 export interface DemoStats {
@@ -154,6 +154,8 @@ export interface DemoStats {
   histories: number
   evaluations: number
   scores: number
+  approach_events: number
+  score_snapshots: number
 }
 
 interface Criterion { id: string; reapplicantOnly: boolean }
@@ -321,6 +323,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   const stats: DemoStats = {
     persons: 0, touchpoints: 0, applications: 0, voided: 0, deleted_persons: 0,
     histories: 0, evaluations: 0, scores: 0,
+    approach_events: 0, score_snapshots: 0,
   }
   /** 過去に応募して不合格・辞退になった人。翌年度の再応募母集団になる。 */
   let returning: string[] = []
@@ -629,26 +632,44 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
   // 「デモデータが検証したい経路を踏んでいない」を3回繰り返しているので、
   // 確率ではなく明示的に置く。踏んでいることは tests/13 が検査する。
   //
-  // 終わった年度（2026）に置く。進行中の年度だと、選考が途中で切れて
+  // 終わった年度（2025）に置く。進行中の年度だと、選考が途中で切れて
   // 経緯が最後まで見えない。
-  const season2026 = seasons.find((s) => s.plan.year === 2026)
-  if (season2026) {
+  const finishedSeason = seasons.find((s) => s.plan.year === 2025)
+  if (finishedSeason) {
     await seedPersonas(db, {
-      season: season2026,
+      season: finishedSeason,
       schoolId: schoolIds[0]!,
       channelIds: new Map(channels.rows.map((c) => [c.name, c.id])),
       staffIds,
       voidMergeErrorId: voidNotCounts.id,
       voidWithdrawnId: voidCounts.id,
-      activeSeason: seasons.find((s) => s.plan.year === 2027),
+      activeSeason: seasons.find((s) => s.plan.year === 2026),
       communityPartnerId: communityIdByName.get('起業サークル連合')!,
       stats,
     })
   }
 
+  // どの年度にも属さない接点を1つ、明示的に置く。
+  //
+  // 年度の窓の外に落ちる接点は、これまで乱数の裾で偶然できていた。
+  // 実行⑨で年度を4つから2つに減らしたら**1件も無くなり**、
+  // 「年度未割当」の表示を一度も実行しないデータになった。
+  // 偶然に頼っていた経路は、条件が変わると黙って消える。
+  // 2025年度の選考終了（2025-02-20）と 2026年度の募集開始（2025-09-01）の
+  // 谷に置く。ここはどの年度の窓にも入らない。
+  const gapPerson = await db.query<{ id: string }>(
+    `SELECT id FROM persons WHERE deleted_at IS NULL ORDER BY created_at LIMIT 1`)
+  if (gapPerson.rows[0]) {
+    await db.query(
+      `INSERT INTO touchpoints (person_id, channel_id, occurred_at)
+       VALUES ($1, $2, '2025-05-15T14:00:00+09:00')`,
+      [gapPerson.rows[0].id, channelIds[0]!])
+    stats.touchpoints++
+  }
+
   // 個人情報削除の依頼（資料9-2）。応募していない Person から選ぶ。
   // 削除済みが1件も無いと、集計から外れているかを画面で確かめられない。
-  const deleted = await db.query(`
+  const deleted = await db.query<{ id: string }>(`
     UPDATE persons SET deleted_at = now()
      WHERE id IN (
        SELECT p.id FROM persons p
@@ -659,7 +680,156 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
      RETURNING id`)
   stats.deleted_persons = deleted.rows.length
 
+  // --- ヘッドハンティング（アプローチと確度） ---
+  //
+  // 個人情報削除の**後**に置く。削除された人にもアプローチの記録を残し、
+  // v_headhunting_list がそれを外していることを確かめる経路にする。
+  // 「デモデータが検証したい経路を踏んでいない」を5回繰り返しているので、
+  // 確率ではなく明示的に踏ませる。tests/25 が検査する。
+  const activeSeason = seasons.find((s) => s.plan.year === 2026)
+  if (activeSeason) {
+    await seedHeadhunting(db, {
+      season: activeSeason,
+      staffIds,
+      deletedPersonIds: deleted.rows.map((r) => r.id),
+      asOf,
+      int,
+      pick,
+      stats,
+    })
+  }
+
   return stats
+}
+
+// -------------------------------------------------------------
+// ヘッドハンティング（実行⑨）
+//
+// アプローチの状態と、確度スコアの凍結を2回ぶん置く。
+// 2回ぶん要るのは、**順位の変動が1回の算出からは作れない**ため。
+// 1回しか無い状態も画面に出るが（has_previous_run = false）、
+// それだけだと「変動あり」の見え方が一度も検証されない。
+//
+// ★ ここに置く規則の点数は**デモ専用の仮の値**である。
+//   本番シードには規則を1件も入れていない（db/seeds に無い）。
+//   点数と閾値は原典が「運用時に決定」と書いた値で、依頼者から
+//   受け取っていない。作り物の数字を本番の初期値にしない。
+// -------------------------------------------------------------
+
+interface HeadhuntingContext {
+  season: SeededSeason
+  staffIds: string[]
+  deletedPersonIds: string[]
+  asOf: number
+  int: (lo: number, hi: number) => number
+  pick: <T>(xs: readonly T[]) => T
+  stats: DemoStats
+}
+
+async function seedHeadhunting(db: Db, ctx: HeadhuntingContext): Promise<void> {
+  const { season, staffIds, stats } = ctx
+  const day = (offset: number) =>
+    new Date(ctx.asOf + offset * 86_400_000).toISOString().slice(0, 10)
+
+  const states = (await db.query<{ id: string; code: string }>(
+    `SELECT id, code FROM approach_states`)).rows
+  const stateId = (code: string) => states.find((s) => s.code === code)!.id
+
+  // 対象者は「その年度に接点があり、まだ応募していない人」。
+  // 応募済みの人はもう選考に乗っているので、声を掛ける相手ではない。
+  const candidates = (await db.query<{ person_id: string }>(
+    `SELECT DISTINCT ts.person_id
+       FROM v_touchpoint_season ts
+       JOIN persons p ON p.id = ts.person_id AND p.deleted_at IS NULL
+      WHERE ts.season_id = $1
+        AND NOT EXISTS (SELECT 1 FROM applications a
+                         WHERE a.person_id = ts.person_id AND a.season_id = $1)
+      ORDER BY ts.person_id
+      LIMIT 60`, [season.id])).rows.map((r) => r.person_id)
+
+  // 4つの非終端状態と、終端の見送りを一巡させる。
+  // 状態が1つでも欠けると、その色のバッジが画面で一度も出ない。
+  const ladder = ['not_approached', 'considering', 'approaching', 'scheduling']
+
+  const add = async (personId: string, code: string, offset: number) => {
+    const { id } = await insertOne<{ id: string }>(db,
+      `INSERT INTO approach_events
+         (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id, note)
+       VALUES ($1,$2,$3,$4::date + time '10:00' AT TIME ZONE 'Asia/Tokyo',$5,$6)
+       RETURNING id`,
+      [personId, season.id, stateId(code), day(offset), ctx.pick(staffIds), null])
+    stats.approach_events++
+    return id
+  }
+
+  for (const [i, personId] of candidates.entries()) {
+    // 段を1つずつ上げていく。上げた回数で人ごとに到達点が変わる。
+    const reach = i % 5
+    if (reach === 4) {
+      // 見送り。終端なのでリストから外れる。
+      await add(personId, 'not_approached', -30)
+      await add(personId, 'declined', -5)
+      continue
+    }
+    for (let k = 0; k <= reach; k++) {
+      await add(personId, ladder[k]!, -30 + k * 7)
+    }
+  }
+
+  // 押し間違いの訂正を1件置く。打ち消し行の追記でしか直せないので、
+  // その形が実データに1つも無いと、訂正チェーンの解決が一度も踏まれない。
+  if (candidates.length > 0) {
+    const target = candidates[0]!
+    // 「見送り」を押し間違え、打ち消して「検討中」に直す。
+    // 訂正行は打ち消すだけでなく、**本来あるべき状態を自分で名乗る**
+    // （status_histories の訂正行が正しい transition_type を持つのと同じ）。
+    // 同じ状態を書き写すと、打ち消した結果また同じ状態になり、
+    // 訂正が効いているのか元のままなのか区別が付かない。
+    const wrong = await add(target, 'declined', -2)
+    await db.query(
+      `INSERT INTO approach_events
+         (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id,
+          is_correction, corrects_event_id, note)
+       SELECT person_id, season_id, $2, occurred_at, recorded_by_staff_id,
+              true, id, '「見送り」を押し間違えたため打ち消す'
+         FROM approach_events WHERE id = $1`, [wrong, stateId('considering')])
+    stats.approach_events++
+  }
+
+  // 削除済みの人にもアプローチの記録を残す。リストから外れることを確かめる。
+  for (const personId of ctx.deletedPersonIds) {
+    await add(personId, 'approaching', -20)
+  }
+
+  // --- 確度スコア（デモ専用の規則） ---
+  const staff = staffIds[0]!
+  const { id: ruleSetId } = await insertOne<{ id: string }>(db,
+    `INSERT INTO scoring_rule_sets (version, created_by_staff_id, memo)
+     VALUES (1, $1, 'デモ専用の仮の規則。本番の点数は未受領。') RETURNING id`, [staff])
+
+  const rules: Array<[string, string, string | null, number | null, number, number | null]> = [
+    // 条件種別, target_key, comparator, threshold, points, 半減期
+    ['existence',       'has_referral',      null, null, 20, null],
+    ['count_threshold', 'touchpoint_count',  '>=', 3,    25, null],
+    ['count_threshold', 'touchpoint_count',  '>=', 6,    15, null],
+    ['recency_days',    'last_touchpoint_on', null, 60,  40, 45],
+  ]
+  for (const [i, r] of rules.entries()) {
+    await db.query(
+      `INSERT INTO scoring_rules
+         (rule_set_id, condition_type, target_key, comparator, threshold, points,
+          decay_half_life_days, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [ruleSetId, r[0], r[1], r[2], r[3], r[4], r[5], i + 1])
+  }
+
+  // 2回ぶん凍結する。基準日が違えば減衰が効き、順位が動く。
+  for (const offset of [-14, 0]) {
+    const n = await insertOne<{ compute_score_snapshots: number }>(db,
+      `SELECT compute_score_snapshots($1, $2, $3::date, $3::date)`,
+      [ruleSetId, season.id, day(offset)])
+    stats.score_snapshots = n.compute_score_snapshots
+  }
 }
 
 // -------------------------------------------------------------

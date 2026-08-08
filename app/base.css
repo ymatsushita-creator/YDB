@@ -304,3 +304,257 @@ table.data tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--color-sem
   border: 1px solid var(--color-hairline-strong); border-radius: var(--rounded-sm);
   background: var(--color-canvas); color: var(--color-ink);
 }
+
+/* =============================================================
+   ヘッドハンティング（実行⑨）
+
+   依頼者の画面画像そのままの3本柱 ―― 暗い操作柱・オレンジの階層バー・
+   薄いブルーグレーの地に浮く白いカード。
+   色・角丸・余白はすべてトークン（DESIGN.md 生成）。直値で書かない。
+   ============================================================= */
+
+.hh-frame {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: var(--space-md);
+  min-height: 100vh;
+  padding: var(--space-md);
+  background: var(--color-shell);
+}
+.hh-sidebar {
+  position: sticky; top: var(--space-md);
+  display: flex; flex-direction: column; gap: var(--space-lg);
+  height: calc(100vh - var(--space-xl));
+}
+.hh-brand { display: flex; flex-direction: column; padding: var(--space-sm) var(--space-xs) 0; }
+.hh-brand strong { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; }
+.hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
+.hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
+.hh-nav a:hover { text-decoration: none; }
+.hh-nav em { font-style: normal; font-size: 10px; font-weight: 500; color: var(--color-on-dark-muted); }
+.sidebar-item-active em { color: var(--color-on-dark); opacity: .75; }
+
+/* 名前で検索。素の form なので JS 無しで動く。 */
+.hh-search { display: flex; flex-direction: column; gap: 6px; }
+.hh-search-row { display: flex; gap: 6px; }
+.hh-search-input {
+  flex: 1 1 auto; min-width: 0; height: 34px; padding: 0 var(--space-xs);
+  font-family: inherit; font-size: 13px;
+  background: var(--color-brand-navy-deep); color: var(--color-on-dark);
+  border: 1px solid var(--color-sidebar-hairline); border-radius: var(--rounded-md);
+}
+.hh-search-input::placeholder { color: var(--color-on-dark-muted); }
+.hh-search-input:focus { outline: 2px solid var(--color-sidebar-active-border); outline-offset: -1px; }
+.hh-search-go { padding: 0 var(--space-sm); height: 34px; font-size: 12px; white-space: nowrap; flex: 0 0 auto; }
+
+.hh-sidebar-foot { display: flex; flex-direction: column; gap: var(--space-xs); margin-top: auto; }
+.hh-demo { color: var(--color-star-on); font-size: 11px; font-weight: 600; padding: 0 var(--space-xxs); }
+.hh-live { color: var(--color-on-dark-muted); font-size: 11px; padding: 0 var(--space-xxs); }
+
+/* =============================================================
+   物理ボタン（実行⑨で依頼者の指示）
+
+   面の明暗・内側のハイライト・下の影で厚みを作り、押すと沈む。
+   色だけで押せることを伝えず、**形で伝える。**
+   :active の沈み込みは transform ではなく影と位置で作る
+   （transform だと文字が滲む端末がある）。
+   ============================================================= */
+.btn-physical {
+  position: relative;
+  white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  border-radius: var(--rounded-lg);
+  border: 1px solid var(--color-sidebar-hairline);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 14%), rgb(0 0 0 / 12%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 18%),
+    inset 0 -1px 0 rgb(0 0 0 / 22%),
+    0 2px 0 rgb(0 0 0 / 18%),
+    0 3px 6px rgb(20 27 36 / 22%);
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn-physical:hover { text-decoration: none; filter: brightness(1.06); }
+.btn-physical:active {
+  top: 2px;
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 32%),
+    0 0 0 rgb(0 0 0 / 0%);
+}
+.btn-physical:focus-visible { outline: 2px solid var(--color-sidebar-active-border); outline-offset: 2px; }
+/* 明るい面（年度の帯）の上では、内側のハイライトを強くしないと平たく見える。 */
+.zoom-bar .btn-physical { border-color: var(--color-primary-deep); }
+.zoom-crumb-current.is-on {
+  box-shadow:
+    inset 0 2px 5px rgb(0 0 0 / 34%),
+    inset 0 -1px 0 rgb(255 255 255 / 10%);
+  top: 1px;
+}
+
+/* 帯 —— **いま開いている階層**（エクスプローラのパス）。
+   ここは切り替える場所ではなく、いまどこを開いているかを示す場所である。
+   年度の切り替えは右端に小さく置く（頻度の低い操作を主役にしない）。 */
+.zoom-bar {
+  display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary-deep);
+  border-radius: var(--rounded-lg);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 22%), 0 2px 6px rgb(20 27 36 / 14%);
+}
+.zoom-seg { display: inline-flex; align-items: center; gap: 2px; }
+.zoom-sep { color: var(--color-on-primary); opacity: .6; padding: 0 2px; }
+.zoom-crumb, .zoom-crumb-current {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--rounded-md);
+  color: var(--color-on-primary);
+  font-size: 14px; font-weight: 500; text-decoration: none;
+}
+a.zoom-crumb { color: var(--color-on-primary); }
+a.zoom-crumb:hover { text-decoration: none; }
+.zoom-bar .btn-physical { border-color: var(--color-primary-deep); }
+/* 現在地は押せない。押しても何も起きないボタンは壊れて見える。
+   だから**沈んだ面**にして「ここに居る」ことを形で示す。 */
+.zoom-crumb-current {
+  background: var(--color-primary-deep);
+  box-shadow: inset 0 2px 5px rgb(0 0 0 / 34%), inset 0 -1px 0 rgb(255 255 255 / 10%);
+  font-weight: 600;
+}
+.zoom-bar-aside { margin-left: auto; display: inline-flex; align-items: center; }
+
+/* 年度の切り替え。**目立たせない。** 罫線と文字だけで、面は塗らない。 */
+.hh-years { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.hh-years .sidebar-section-label {
+  color: var(--color-on-primary); opacity: .8; padding: 0;
+}
+.hh-years-row { display: inline-flex; gap: 2px; }
+.hh-year {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: var(--rounded-sm);
+  color: var(--color-on-primary); opacity: .72;
+  font-size: 12px; font-variant-numeric: tabular-nums; text-decoration: none;
+  border: 1px solid transparent;
+}
+.hh-year:hover { text-decoration: none; opacity: 1; }
+.hh-year.is-on {
+  opacity: 1; font-weight: 600;
+  border-color: rgb(255 255 255 / 55%);
+}
+.zoom-live {
+  width: 5px; height: 5px; border-radius: var(--rounded-full);
+  background: var(--color-brand-green); box-shadow: 0 0 0 2px rgb(255 255 255 / 35%);
+}
+
+.hh-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-md); align-items: start; }
+.hh-col-main, .hh-col-side { display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
+.hh-rankings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-md); }
+
+.hh-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.hh-head h2 { font-size: 15px; font-weight: 600; }
+.hh-more { font-size: 12px; font-weight: 500; }
+.hh-sub { margin: var(--space-md) 0 var(--space-xs); font-size: 12px; font-weight: 600; color: var(--color-steel); }
+.hh-empty { color: var(--color-steel); font-size: 13px; }
+.hh-empty-shell { padding: var(--space-xxl); color: var(--color-slate); }
+
+/* 数字の単位と母集団。注記は必ず数字と同じカードの中に置く。 */
+.hh-note { margin-top: var(--space-md); color: var(--color-steel); font-size: 11px; line-height: 1.5; }
+.hh-note strong { color: var(--color-slate); font-weight: 600; }
+.muted-note { color: var(--color-stone); font-size: 12px; }
+
+.hh-tasks { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-sm); }
+.hh-tasks li { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.task-title { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.task-meta { color: var(--color-steel); font-size: 11px; }
+
+.hh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hh-table th {
+  padding: 0 var(--space-xs) var(--space-xs); text-align: left;
+  font-size: 11px; font-weight: 600; color: var(--color-steel);
+  border-bottom: 1px solid var(--color-hairline);
+}
+.hh-table td { padding: var(--space-xs); border-bottom: 1px solid var(--color-hairline-soft); }
+.hh-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.hh-table .strong { font-weight: 600; }
+.hh-table .dim { color: var(--color-steel); font-size: 12px; }
+
+.rank-mark { display: inline-flex; align-items: center; gap: 4px; }
+.rank-crest { color: var(--color-crest-gold); font-size: 14px; }
+.rank-crest-2 { opacity: .72; }
+.rank-crest-3 { opacity: .5; }
+.rank-number { font-variant-numeric: tabular-nums; font-weight: 600; }
+.rank-delta { font-size: 12px; font-variant-numeric: tabular-nums; }
+.rank-delta-up { color: var(--color-rank-up); font-weight: 600; }
+.rank-delta-down { color: var(--color-rank-down); font-weight: 600; }
+.rank-delta-flat, .rank-delta-none { color: var(--color-stone); font-size: 11px; }
+
+/* 星は比で塗る。素点は必ず隣に出す（絵だけを事実にしない）。 */
+.stars { position: relative; display: inline-block; white-space: nowrap; letter-spacing: 1px; }
+.stars-off { color: var(--color-star-off); }
+.stars-on {
+  position: absolute; inset: 0; overflow: hidden;
+  color: var(--color-star-on); white-space: nowrap; letter-spacing: 1px;
+}
+.confidence { font-variant-numeric: tabular-nums; }
+
+.hh-person-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
+.hh-person-name { font-size: 19px; font-weight: 600; letter-spacing: -0.3px; }
+.hh-person-kana { color: var(--color-steel); font-size: 12px; }
+.hh-facts { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 6px var(--space-sm); font-size: 12px; }
+.hh-facts dt { color: var(--color-steel); }
+.hh-facts dd { margin: 0; word-break: break-word; }
+.hh-facts-tight { margin-top: var(--space-md); }
+.hh-criteria { display: flex; flex-direction: column; gap: 6px; }
+.hh-criteria li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-xs); align-items: center; font-size: 12px; }
+.hh-criteria-name { color: var(--color-slate); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hh-criteria-raw { color: var(--color-steel); font-size: 11px; font-variant-numeric: tabular-nums; }
+.hh-memo { color: var(--color-slate); font-size: 12px; line-height: 1.6; }
+
+.hh-list { display: flex; flex-direction: column; }
+.hh-list li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-xs); align-items: center;
+  padding: var(--space-xs) var(--space-xxs);
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.hh-list li.is-current { background: var(--color-card-tint-cream); }
+.hh-list-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hh-list-conf { font-size: 12px; color: var(--color-slate); }
+
+.hh-gaps h2 { margin-bottom: var(--space-xs); font-size: 13px; font-weight: 600; }
+.hh-gaps ul { display: flex; flex-direction: column; gap: 4px; color: var(--color-steel); font-size: 12px; }
+.hh-gaps strong { color: var(--color-slate); }
+
+@media (max-width: 1100px) {
+  .hh-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .hh-frame { grid-template-columns: minmax(0, 1fr); }
+  .hh-sidebar { position: static; height: auto; }
+}
+
+/* 既存画面のボタンも物理ボタンにする（実行⑨で依頼者の指示）。
+   クラス名は tokens.css の生成物なので、面と色はそちらに任せ、
+   ここでは**厚みと沈み込みだけ**を足す。色を上書きするとトークンが効かなくなる。 */
+.button-primary, .button-secondary, .button-dark, .button-on-dark {
+  position: relative;
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 16%), rgb(0 0 0 / 10%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 26%),
+    inset 0 -1px 0 rgb(0 0 0 / 16%),
+    0 2px 0 rgb(0 0 0 / 14%),
+    0 3px 6px rgb(20 27 36 / 18%);
+  cursor: pointer;
+}
+.button-primary:hover, .button-secondary:hover, .button-dark:hover, .button-on-dark:hover {
+  filter: brightness(1.05); text-decoration: none;
+}
+.button-primary:active, .button-secondary:active, .button-dark:active, .button-on-dark:active {
+  top: 2px;
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 28%);
+}
+.button-primary:focus-visible, .button-secondary:focus-visible,
+.button-dark:focus-visible, .button-on-dark:focus-visible {
+  outline: 2px solid var(--color-primary-deep); outline-offset: 2px;
+}

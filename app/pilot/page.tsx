@@ -115,7 +115,7 @@ export default async function PilotPage(
                           {' — '}
                           <Link href={
                             step.kind === 'assign' || step.kind === 'unhold'
-                              ? `/cockpit?season=${season.id}`
+                              ? `/borderline?season=${season.id}`
                               : `/applications/${task.application_id}`
                           }>
                             {task.person_name} の {task.step_name} を開く

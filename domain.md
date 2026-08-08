@@ -265,7 +265,7 @@ Rejected / Member）のうち、**Unknown だけは Person の状態として持
 | **Task** | 全て |
 | Health / Relationship Strength / Activity / Owner | 定義と算出。`partners` に該当列が無い |
 | Interested（芽） | 判定の事実（10-3） |
-| Next Action / Ball | 無い。CLAUDE.md 8節が④の穴として明記 |
+| Next Action / Ball | 無い。CLAUDE.md 9節が④の穴として明記 |
 | カレンダー / メッセージ / 通知 | 丸ごと新規サブシステム |
 
 ---
@@ -313,7 +313,7 @@ Alumni は Membership の終了で表すのか、別の Role か。
 
 Forest（Partner 系）は[2]、Health（スコア）は[3]（原典は「着手判断は1年後」）、
 Relationship / Connector は名寄せ[4] に接する。
-CLAUDE.md 4節は「先の段階を勝手に始めない」と定めている。
+CLAUDE.md 5節は「先の段階を勝手に始めない」と定めている。
 
 ### 10-7. `director.md` の IA に重複がある
 

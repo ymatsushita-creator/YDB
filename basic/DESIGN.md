@@ -1,79 +1,111 @@
 ---
 version: alpha
-name: NEO-ACADEMIA-brand
-description: Notion presents itself as the all-in-one workspace through a confident, illustration-rich brand voice — anchored by a deep navy hero band ({colors.brand-navy}) decorated with brand-colored sticky-note dots and mesh wire illustrations, a signature purple pill primary CTA ({colors.primary}), and a rich palette of pastel-tinted feature cards that echo the colorful database properties of the live product. The system uses a Notion-Sans (Inter-based) typeface across every UI surface, anchors a 4-tier pricing comparison (Free / Plus / Business / Enterprise), and presents the live workspace UI mockup directly inside the hero band. Coverage spans homepage, Enterprise, Product AI, Product Agents, Startups, and Pricing surfaces.
-
+name: YouthDB-cockpit
+description: YouthDB の運転席。左に暗いネイビーの操作柱（Talent Intelligence の帆）、上にオレンジの階層バー（いまどの階層を見ているか）、右に候補者1人を映す縦長のパネル。地は薄いブルーグレーで、面は白いカードが浮く。色は面に塗ってよい。順位・確度・やることが1画面に同居する高密度のコックピットであり、資料や広報面ではない。
 colors:
   # -----------------------------------------------------------
-  # NEO ACADEMIA ブランド（2026-08-07 に依頼者の指示で差し替え）
+  # YouthDB コックピット（2026-08-09 実行⑨。依頼者の判断で差し替え）
   #
-  # 出所はブランド規定（ロゴ・パレット・「色は線、面は黒」）。
-  # 画像から色を起こしたのではなく、規定に書かれた値をそのまま置いている。
+  # ★ 何が変わったか
   #
-  # 最重要原則: **色は線と文字にだけ使い、面は黒でしか塗らない。**
-  # だから面に使われる token（primary / brand-navy / card-tint-*）は
-  # すべて白か黒か極薄のグレーにしてある。ネオン4色は線と文字に回す。
+  # これまでの正典は NEO ACADEMIA ブランド規定で、最重要原則は
+  # **「色は線、面は黒」**だった。だから面に使う token（primary /
+  # brand-navy / card-tint-*）は全部白か黒に倒してあった。
   #
-  # ★印は規定に無く、コントラストのために派生させた値である。
-  #   ネオン色は白背景の文字として読めない（#F0F000 は特に）。
-  #   規定の色相を保ったまま暗くしてある。推測ではなく派生。
+  # 実行⑨で依頼者からヘッドハンティング画面の意匠が届き、
+  # **オレンジの面塗り・白いカード・柔らかい影**を要求していた。
+  # これは「色は線、面は黒」と正面から食い違う。
+  # HANDOFF.md 2節の「衝突1」がまさにこれで、生成元は未決だった。
+  #
+  # **依頼者の判断は「画像を正典にする」。** ここで差し替える。
+  # つまり **面に色を塗ってよい。** ネオン4色の規定からは外れる。
+  #
+  # ★ 値の出所
+  #
+  # 依頼者が送った画面画像から起こしている。**推測ではない**が、
+  # 画像は JPEG なので、同系色は隣接する値に丸めてある
+  # （例: 階層バーのグラデーションは2点で表す）。
+  # 元の規定に戻す必要が出たら、この節ごと差し戻せば戻る。
+  #
+  # ★ token 名は変えていない
+  #
+  # 既存の9画面が primary / card-tint-* / brand-navy を参照している。
+  # 名前ごと入れ替えると意匠の変更が全画面の改修になり、どこが
+  # 意匠の変更でどこが事故なのか分からなくなる。**名前は器として残し、
+  # 値と役割だけ入れ替える。**
   # -----------------------------------------------------------
 
-  # 面 —— 白と黒だけ
+  # 面 —— 白いカードが薄いブルーグレーの地に浮く
   canvas: "#ffffff"
-  surface: "#f7f7f7"
-  surface-soft: "#fbfbfb"
-  primary: "#0a0a0a"
-  primary-pressed: "#000000"
-  primary-deep: "#000000"
+  surface: "#f4f6f8"
+  surface-soft: "#fafbfc"
+  shell: "#e6e9ed"              # アプリ全体の地。カードの白を浮かせる
+
+  # 主色 —— 階層バーとオレンジのアクセント（面に塗る）
+  primary: "#dd7a2e"
+  primary-pressed: "#c26320"
+  primary-deep: "#a85118"
   on-primary: "#ffffff"
-  brand-navy: "#0a0a0a"
-  brand-navy-deep: "#000000"
-  brand-navy-mid: "#1a1a1a"
-  brand-purple: "#0a0a0a"
-  brand-purple-800: "#0a0a0a"
-  brand-purple-300: "#e5e5e5"
+
+  # 暗い面 —— 左の操作柱
+  brand-navy: "#1c2531"
+  brand-navy-deep: "#141b24"
+  brand-navy-mid: "#27313f"
+  sidebar-hairline: "#33404f"
+  sidebar-active: "#2b4463"
+  sidebar-active-border: "#5b9bd5"
+
+  brand-purple: "#5b5bd6"
+  brand-purple-800: "#3d3da8"
+  brand-purple-300: "#dcdcf7"
 
   # 文字と罫線
-  ink-deep: "#000000"
-  ink: "#0a0a0a"
-  charcoal: "#1a1a1a"
-  slate: "#4a4a4a"
-  steel: "#707070"
-  stone: "#909090"
-  muted: "#b0b0b0"
+  ink-deep: "#0f151c"
+  ink: "#1a222c"
+  charcoal: "#2c3742"
+  slate: "#4d5a68"
+  steel: "#6b7885"
+  stone: "#8b96a2"
+  muted: "#aab3bd"
   on-dark: "#ffffff"
-  on-dark-muted: "#b0b0b0"
-  hairline: "#e5e5e5"
-  hairline-soft: "#efefef"
-  hairline-strong: "#c9c9c9"
+  on-dark-muted: "#9aa7b5"
+  hairline: "#e2e6ea"
+  hairline-soft: "#eef1f4"
+  hairline-strong: "#c8cfd6"
 
-  # アクセント4色 —— 線と短いラベルにだけ使う
-  brand-yellow: "#f0f000"
-  brand-pink: "#f03090"
-  brand-teal: "#00c0f0"
-  brand-green: "#50f000"
-  brand-orange: "#f01010"
-  link-blue: "#0090b4"        # ★シアン #00C0F0 は白背景の文字として薄い
-  link-blue-pressed: "#00708c" # ★同上
-  brand-orange-deep: "#a80b0b" # ★ネオンレッドの文字用
-  brand-brown: "#707070"
+  # アクセント
+  brand-yellow: "#d9a520"
+  brand-pink: "#d6336c"
+  brand-teal: "#2b8aa8"
+  brand-green: "#2f9e44"
+  brand-orange: "#dd7a2e"
+  brand-orange-deep: "#a85118"
+  brand-brown: "#8a6d4f"
+  link-blue: "#2b6cb0"
+  link-blue-pressed: "#1f5488"
 
-  # 意味を持つ色 —— すべて文字とアイコンに使うので暗い派生を当てる
-  semantic-success: "#2f7a00"  # ★ネオングリーンの文字用
-  semantic-warning: "#8a6a00"  # ★ネオンイエローの文字用
-  semantic-error: "#c40c0c"    # ★ネオンレッドの文字用
+  # 順位と評価 —— 画像の王冠・上下矢印・星
+  crest-gold: "#d9a520"
+  rank-up: "#2f9e44"
+  rank-down: "#e03131"
+  star-on: "#f0a91e"
+  star-off: "#d8dde2"
 
-  # かつての淡色カード —— 面に色を塗らないので白と極薄グレーへ倒す
-  card-tint-peach: "#ffffff"
-  card-tint-rose: "#ffffff"
-  card-tint-mint: "#ffffff"
-  card-tint-lavender: "#ffffff"
-  card-tint-sky: "#ffffff"
-  card-tint-yellow: "#ffffff"
-  card-tint-yellow-bold: "#f7f7f7"
-  card-tint-cream: "#fbfbfb"
-  card-tint-gray: "#f7f7f7"
+  # 意味を持つ色
+  semantic-success: "#2f7a3a"
+  semantic-warning: "#a06800"
+  semantic-error: "#c92a2a"
+
+  # 淡色 —— 状態のチップの面に戻す（「面は黒」をやめたので使える）
+  card-tint-peach: "#fdf0e4"
+  card-tint-rose: "#fdecec"
+  card-tint-mint: "#e8f6ec"
+  card-tint-lavender: "#eef0fd"
+  card-tint-sky: "#e7f1fb"
+  card-tint-yellow: "#fdf6e0"
+  card-tint-yellow-bold: "#f7e9c0"
+  card-tint-cream: "#fbf8f4"
+  card-tint-gray: "#f1f3f5"
 
 typography:
   hero-display:
@@ -464,40 +496,156 @@ components:
     textColor: "{colors.steel}"
     typography: "{typography.body-sm}"
     padding: "{spacing.xxs} 0"
+
+  # -----------------------------------------------------------
+  # コックピットの部品（実行⑨で追加）
+  #
+  # 画像に描かれていて、既存の部品では表せなかったものだけを足す。
+  # 既存の card-base / pill-tab / badge-tag-* はそのまま使う。
+  # -----------------------------------------------------------
+
+  # 左の操作柱
+  sidebar-region:
+    backgroundColor: "{colors.brand-navy}"
+    textColor: "{colors.on-dark}"
+    rounded: "{rounded.xl}"
+    padding: "{spacing.md}"
+  sidebar-item:
+    backgroundColor: "{colors.brand-navy-mid}"
+    textColor: "{colors.on-dark}"
+    typography: "{typography.body-md-medium}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.sm} {spacing.md}"
+    border: "1px solid {colors.sidebar-hairline}"
+  sidebar-item-active:
+    backgroundColor: "{colors.sidebar-active}"
+    textColor: "{colors.on-dark}"
+    typography: "{typography.body-md-medium}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.sm} {spacing.md}"
+    border: "1px solid {colors.sidebar-active-border}"
+  sidebar-section-label:
+    backgroundColor: "transparent"
+    textColor: "{colors.on-dark-muted}"
+    typography: "{typography.micro-uppercase}"
+    padding: "{spacing.xs} {spacing.xxs}"
+
+  # 上の階層バー（いまどの階層を見ているか）
+  zoom-bar:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.xs} {spacing.sm}"
+    border: "1px solid {colors.primary-deep}"
+  zoom-crumb:
+    backgroundColor: "{colors.primary-pressed}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.body-sm-medium}"
+    rounded: "{rounded.md}"
+    padding: "{spacing.xs} {spacing.md}"
+  zoom-crumb-current:
+    backgroundColor: "{colors.primary-deep}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.body-sm-medium}"
+    rounded: "{rounded.md}"
+    padding: "{spacing.xs} {spacing.md}"
+
+  # 中身のカード（画像は白いカードが薄く浮いている）
+  panel-card:
+    backgroundColor: "{colors.canvas}"
+    rounded: "{rounded.xl}"
+    padding: "{spacing.lg}"
+    border: "1px solid {colors.hairline}"
+    shadow: "rgba(20, 27, 36, 0.06) 0px 2px 8px 0px"
+  task-card:
+    backgroundColor: "{colors.surface-soft}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.md}"
+    border: "1px solid {colors.hairline}"
+
+  # 状態のチップ（アプローチ状態・やることの区分）
+  chip-green:
+    backgroundColor: "{colors.card-tint-mint}"
+    textColor: "{colors.semantic-success}"
+    typography: "{typography.caption-bold}"
+    rounded: "{rounded.sm}"
+    padding: "3px 10px"
+  chip-blue:
+    backgroundColor: "{colors.card-tint-sky}"
+    textColor: "{colors.link-blue}"
+    typography: "{typography.caption-bold}"
+    rounded: "{rounded.sm}"
+    padding: "3px 10px"
+  chip-amber:
+    backgroundColor: "{colors.card-tint-peach}"
+    textColor: "{colors.brand-orange-deep}"
+    typography: "{typography.caption-bold}"
+    rounded: "{rounded.sm}"
+    padding: "3px 10px"
+  chip-gray:
+    backgroundColor: "{colors.card-tint-gray}"
+    textColor: "{colors.steel}"
+    typography: "{typography.caption-bold}"
+    rounded: "{rounded.sm}"
+    padding: "3px 10px"
 ---
 
 ## Overview
 
-Notion presents itself as the all-in-one workspace through a confident, illustration-rich brand voice. The homepage opens with **"Meet the night shift."** rendered centered over a deep navy hero band ({colors.brand-navy}), decorated with brand-colored sticky-note dots and mesh wire illustrations scattered around the headline. The signature **purple pill primary CTA** ({colors.primary}) "Get Notion free" sits at the visual center, paired with an outlined "Request a demo" secondary. Below the buttons, a real Notion workspace UI mockup card (the "Ramp HQ" kanban board) breaks out of the hero band with a deep diffuse drop shadow.
+> **この節は実行⑨（2026-08-09）で書き替えた。** それまでの本文は Notion の
+> ブランド分析で、「紫の CTA」「ネイビーの hero band」を説明していた。
+> 正典が依頼者の画面画像へ移ったので、**古い説明を残すと文書のほうが嘘になる。**
+> 以下は届いた画像そのものの説明である。
 
-Below the hero, the page cycles through a distinctive sequence of feature sections: a dense sticky-note "Keep work moving 24/7" panel with red/blue/green/purple/teal status icons; a **bold yellow** ({colors.card-tint-yellow-bold}) "Ask your on-demand assistants" banner card flanked by orange/rose/mint pastel feature tiles showing assistant UI mockups; and a "Bring all your work together" 3-column grid with brand-colored mockups (sky-blue tutorial card, light Notion calendar, brown/rust testimonial slate). The pricing page renders 4 tiers (Free / Plus / Business / Enterprise) horizontally with one tier featured (purple-bordered) and a dense feature comparison table running below.
+YouthDB は資料でも広報面でもなく、**運転席**である。画面は3本の柱で構成される。
 
-The system uses a Notion-Sans typeface (Inter-based) across every UI surface — humanist-geometric character that pairs naturally with the colorful illustrations. Buttons are `{rounded.md}` (8px) rectangles, NOT pills — distinguishing Notion's sober rectangular geometry from competitors that use pills universally. Cards use `{rounded.lg}` (12px) consistently.
+**左の操作柱**（`sidebar-region`）。暗いネイビー（{colors.brand-navy}）の縦長の板。
+最上部にプロダクト名と "TALENT INTELLIGENCE"。その下に行き先が縦に並び、
+いま居る行き先だけが明るい面（{colors.sidebar-active}）と青い縁
+（{colors.sidebar-active-border}）で浮く。柱の下端に検索と設定を置く。
+
+**上の階層バー**（`zoom-bar`）。オレンジ（{colors.primary}）の帯に、
+いま見ている階層が左から右へ並ぶ。**これは装飾ではなく、ズームの現在地である。**
+右へ行くほど深く、左をたたくと1つ浅い階層へ戻る。
+現在地だけが最も濃い面（{colors.primary-deep}）を持つ。
+
+**中身**。薄いブルーグレーの地（{colors.shell}）の上に、白いカード
+（`panel-card`）が浅い影で浮く。上段に「やること」の横並び、中段に
+2本のランキング、右列に候補者1人を映す縦長のパネルと対象者の一覧。
+
+書体は和文が主なので `--font-sans`（`app/base.css` に実体がある）。
+角丸はカードが `{rounded.xl}`（16px）、ボタンと入力が `{rounded.md}`（8px）。
 
 **Key Characteristics:**
-- Deep navy hero band ({colors.brand-navy}) with scattered sticky-note dots + mesh wire decorative illustrations
-- **Signature purple pill** ({colors.primary}) primary CTA — Notion's recognizable "Get Notion free" button color
-- Real Notion workspace UI mockup card embedded in the hero with deep drop shadow
-- Bold yellow feature banner ({colors.card-tint-yellow-bold}) for high-emphasis content sections
-- Pastel feature card palette (peach, rose, mint, lavender, sky, yellow) echoing the live product database properties
-- Notion-Sans (Inter-based) across every UI surface
-- 8px-rounded buttons (NOT pills), 12px-rounded cards — sober editorial geometry
-- 4-tier pricing comparison with dense feature table
-- Centered hero layout (different from the left-aligned norm of most B2B SaaS)
+- 暗いネイビーの操作柱（{colors.brand-navy}）。現在地だけが明るい面＋青い縁で立つ
+- オレンジの階層バー（{colors.primary}）。**ズームの現在地であって飾りではない**
+- 薄いブルーグレーの地（{colors.shell}）に白いカードが浅い影で浮く
+- 面に色を塗ってよい。**「色は線、面は黒」は実行⑨で廃した**
+- 状態はチップ（`chip-green` / `chip-blue` / `chip-amber` / `chip-gray`）で表す
+- 順位は王冠（{colors.crest-gold}）と上下の矢印（{colors.rank-up} / {colors.rank-down}）
+- 高密度。1画面に「やること・順位・確度・候補者1人」が同居する
 
 ## Colors
 
-> Source pages: notion.com/ (homepage), /enterprise, /product/ai, /product/agents, /startups, /pricing. Token coverage was identical across all six pages.
+> 出所は依頼者が実行⑨で送った画面画像。それ以前の出所（Notion のサイト6面）は
+> もう使っていない。値の丸め方は frontmatter の注記にある。
 
 ### Brand & Primary
-- **Notion Purple** ({colors.primary}): Signature primary CTA color — the unmistakable "Get Notion free" pill button. Reserved for the dominant CTA only.
-- **Purple Pressed** ({colors.primary-pressed}): Pressed-state variant
-- **Purple Deep** ({colors.primary-deep}): Deeper variant for emphasis
-- **Brand Navy** ({colors.brand-navy}): Hero band background — deep navy
-- **Brand Navy Deep** ({colors.brand-navy-deep}): Deeper navy for promo banner
-- **Brand Navy Mid** ({colors.brand-navy-mid}): Mid-spectrum navy
-- **Link Blue** ({colors.link-blue}): Inline text link blue (NOT primary CTA)
-- **Link Blue Pressed** ({colors.link-blue-pressed}): Pressed-state link blue
+- **Primary Orange** ({colors.primary}): 階層バーの面。**ズームの現在地を示す唯一の色**
+- **Primary Pressed** ({colors.primary-pressed}): 階層バーの中の各階層
+- **Primary Deep** ({colors.primary-deep}): 現在地の階層。最も濃い
+- **Brand Navy** ({colors.brand-navy}): 左の操作柱の面
+- **Brand Navy Deep** ({colors.brand-navy-deep}): 操作柱より深い面
+- **Brand Navy Mid** ({colors.brand-navy-mid}): 操作柱の中の行き先の面
+- **Sidebar Active** ({colors.sidebar-active}): いま居る行き先の面
+- **Sidebar Active Border** ({colors.sidebar-active-border}): 同上の縁
+- **Shell** ({colors.shell}): アプリ全体の地。白いカードを浮かせるために要る
+- **Link Blue** ({colors.link-blue}): 文中のリンク
+
+### 順位と評価
+- **Crest Gold** ({colors.crest-gold}): 上位の王冠
+- **Rank Up / Rank Down** ({colors.rank-up} / {colors.rank-down}): 前回からの順位の変動
+- **Star On / Star Off** ({colors.star-on} / {colors.star-off}): 評価の星
 
 ### Brand Color Spectrum (echoes live product database properties)
 - **Brand Pink** ({colors.brand-pink}): Pink accent
@@ -780,21 +928,18 @@ Notion's geometry is sober-editorial — `{rounded.md}` (8px) buttons distinguis
 ## Do's and Don'ts
 
 ### Do
-- Use `{colors.primary}` (purple) as the dominant CTA across all surfaces — it's the brand's recognizable signal
-- Pair deep navy hero bands ({colors.brand-navy}) with the purple button + decorative sticky-note dots
-- Use pastel feature card tints (peach, rose, mint, lavender, sky, yellow) generously
-- Use `{colors.card-tint-yellow-bold}` for high-emphasis "Ask the assistant"-style banner cards
-- Apply `{rounded.md}` (8px) to buttons consistently — Notion uses rectangles, not pills
-- Apply `{rounded.lg}` (12px) to all card families
-- Maintain Notion-Sans across every UI surface
-- Use the workspace mockup card on hero bands to show actual product UI
+- オレンジ（{colors.primary}）は**階層バーだけ**に使う。現在地の色だからである
+- 状態はチップで表す。`chip-green` / `chip-blue` / `chip-amber` / `chip-gray`
+- カードは `panel-card`（浅い影）。地（{colors.shell}）との差で浮かせる
+- 角丸はカード `{rounded.xl}`、ボタンと入力 `{rounded.md}`
+- 密度は高くてよい。1画面に複数の問いの答えを同居させる
 
 ### Don't
-- Don't use the purple for body text or large background surfaces
-- Don't use pill-shaped buttons; Notion's geometry is rectangular-sober
-- Don't mix link-blue ({colors.link-blue}) with primary-purple ({colors.primary}) — they have distinct roles
-- Don't apply heavy shadows on flat documentation cards
-- Don't replace Notion-Sans with a generic Inter
+- **オレンジをボタンや強調に流用しない。** 階層バー以外に出ると現在地が読めなくなる
+- **順位の矢印を、値の増減に流用しない。** {colors.rank-up} は順位専用である
+- 深い影を多用しない。浮かせるのはカード1段だけ
+- 色だけで意味を伝えない。チップは必ず文字を持つ（画像のチップも文字がある）
+- **数字の隣に単位と母集団を書かずに置かない**（`CLAUDE.md` 3節）
 
 ## Responsive Behavior
 

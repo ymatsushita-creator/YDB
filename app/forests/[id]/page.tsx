@@ -52,7 +52,7 @@ export default async function ForestPage({
       <div className="page-head">
         <div>
           <p className="page-sub">
-            <Link href={`/cockpit?season=${season.id}`}>運転席</Link> ／ 森
+            <Link href={`/borderline?season=${season.id}`}>ボーダーライン</Link> ／ 森
           </p>
           <h1 className="page-title">{forest.name}</h1>
           <p className="page-sub">

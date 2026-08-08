@@ -103,6 +103,20 @@ describe('マイグレーション', () => {
       // 0012: 森の活動（年度を問わない）と、森×年度（応募・合格・やること）
       'v_forest_activity',
       'v_forest_season_activity',
+      // 0016: アプローチの訂正チェーンを解決した有効な出来事
+      'v_effective_approach_events',
+      // 0016: 人×年度の現在のアプローチ状態（上書きせず最新の出来事から導く）
+      'v_person_approach_state',
+      // 0016: 声を掛ける相手。終端状態と個人情報削除を外した母集団
+      'v_headhunting_list',
+      // 0017: 確度の規則が参照できる事実。ここに無い事実は規則から指せない
+      'v_scoring_facts',
+      // 0017: ルールセットの満点。確度の分母の定義はここ1箇所
+      'v_scoring_rule_set_max',
+      // 0017: 凍結された確度と、その算出日時点の順位
+      'v_candidate_confidence',
+      // 0017: 最新の算出と、前回からの順位の変動
+      'v_candidate_confidence_latest',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(
