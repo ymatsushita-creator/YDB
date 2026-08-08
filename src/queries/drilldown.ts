@@ -491,7 +491,7 @@ export interface EvaluationRow {
    * いまこの評価に点を付けられるか。
    *
    * 判定は `v_open_tasks` の種別が `'evaluate'` かどうかだけである。
-   * 画面が独自に条件を書くと、運転席が出している順序（先に担当を決める・
+   * 画面が独自に条件を書くと、ボーダーラインが出している順序（先に担当を決める・
    * 解く・替える）と食い違う（C-25）。
    */
   can_score: boolean
@@ -590,7 +590,7 @@ export const getApplicationEvaluations = async (
 /**
  * 点を付けられない理由。**次にやることを名指しする。**
  *
- * 「できません」だけでは運用者が止まる。運転席が出している順序と同じ言葉で、
+ * 「できません」だけでは運用者が止まる。ボーダーラインが出している順序と同じ言葉で、
  * 先にやることを書く。
  */
 const BLOCKED_BY: Record<string, string> = {

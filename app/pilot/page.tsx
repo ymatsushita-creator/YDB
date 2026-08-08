@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
 import { getOpenTasks, type OpenTask } from '../../src/queries/cockpit.ts'
-import { Card, SeasonTabs, Empty, num } from '../_components/ui.tsx'
+import { Card, Empty, num } from '../_components/ui.tsx'
+import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,15 +77,21 @@ export default async function PilotPage(
 
   return (
     <>
+      <Breadcrumb
+        crumbs={[
+          { label: 'ボーダーライン', href: '/borderline' },
+          { label: `${season.enrollment_year} 年度`, href: `/pilot?season=${season.id}` },
+          { label: '試運転' },
+        ]}
+        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/pilot" />}
+      />
+
       <div className="page-head">
         <div>
           <h1 className="page-title">試運転の手順（30 分）</h1>
           <p className="page-sub">
             {season.enrollment_year} 年度の実際のデータで、採用の1周を通してもらう
           </p>
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <SeasonTabs seasons={seasons} currentId={season.id} basePath="/pilot" />
         </div>
       </div>
 

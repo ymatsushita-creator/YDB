@@ -3,7 +3,8 @@ import {
   listSeasons, getSeason, getPendingEvaluations, getHeldEvaluations,
   getInterviewerLoad, getConflicts, getUnassignedSummary,
 } from '../../src/queries/dashboard.ts'
-import { Card, Kpi, SeasonTabs, Empty, num } from '../_components/ui.tsx'
+import { Card, Kpi, Empty, num } from '../_components/ui.tsx'
+import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,15 +34,21 @@ export default async function OperationsPage(
 
   return (
     <>
+      <Breadcrumb
+        crumbs={[
+          { label: 'ボーダーライン', href: '/borderline' },
+          { label: `${season.enrollment_year} 年度`, href: `/operations?season=${season.id}` },
+          { label: '選考オペレーション' },
+        ]}
+        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/operations" />}
+      />
+
       <div className="page-head">
         <div>
           <h1 className="page-title">{season.enrollment_year} 年度の選考オペレーション</h1>
           <p className="page-sub">
             {season.is_live ? '進行中' : '終了した年度を表示している'}
           </p>
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <SeasonTabs seasons={seasons} currentId={season.id} basePath="/operations" />
         </div>
       </div>
 

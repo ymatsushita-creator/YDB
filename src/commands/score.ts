@@ -54,7 +54,7 @@ export async function saveScore(
   if (!Number.isInteger(args.score)) return { ok: false, reason: 'score_out_of_range' }
 
   // 操作できる母集団を、画面が「評価する」と言っているものに揃える（C-20）。
-  // 担当未割当・保留・利益相反の評価に点を付けられると、運転席が出している
+  // 担当未割当・保留・利益相反の評価に点を付けられると、ボーダーラインが出している
   // 順序（先に担当を決める・解く・替える）を素通りできてしまう。
   const evaluatable = await maybeOne<{ criteria_name: string | null }>(db, `
     SELECT (SELECT ec.name FROM evaluation_criteria ec WHERE ec.id = $2) AS criteria_name
