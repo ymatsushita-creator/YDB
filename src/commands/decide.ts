@@ -242,9 +242,9 @@ export const DECIDE_CODE_MESSAGE: Record<DecideCode, string> = {
   not_decidable: 'いま判定できるステップが無い。評価が残っているか、済んでいる。',
   staff_not_available: '判定した人が選ばれていない。',
   bad_decision: '判定の種類が正しくない。もう一度選ぶ。',
-  corrected_to_advance: '判定を「通過」に訂正した。元の判定は打ち消し行で残っている。',
-  corrected_to_reject: '判定を「不合格」に訂正した。元の判定は打ち消し行で残っている。',
-  not_correctable: '訂正できる判定が無い。画面を読み直す。',
+  corrected_to_advance: '判定を「通過」に編集した。元の判定は打ち消し行で残っている。',
+  corrected_to_reject: '判定を「不合格」に編集した。元の判定は打ち消し行で残っている。',
+  not_correctable: '編集できる判定が無い。画面を読み直す。',
 }
 
 const CODES = Object.keys(DECIDE_CODE_MESSAGE) as DecideCode[]

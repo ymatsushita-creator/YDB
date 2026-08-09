@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getDb } from '../../../src/db/server.ts'
 import { saveScore, type SaveScoreCode } from '../../../src/commands/score.ts'
 import {
-  submitEvaluation, decideStep, type DecideCode,
+  submitEvaluation, decideStep, correctDecision, type DecideCode,
 } from '../../../src/commands/decide.ts'
 import { holdEvaluation, type HoldCode } from '../../../src/commands/hold.ts'
 
@@ -123,4 +123,34 @@ export async function decideAction(formData: FormData): Promise<void> {
   back(result.decision === 'reject' ? 'rejected' : result.accepted ? 'accepted' : 'advanced')
 }
 
+/**
+ * 結果の並びから判定を編集する。
+ *
+ * **上書きではない。** 記録層は打ち消し行の追記でしか直せないので、
+ * 元の判定は残り、編集した事実が1行積まれる（`corrects_history_id` /
+ * `is_correction` / `v_effective_status_histories`）。
+ * 画面には「編集」と出すが、記録の側では新しい概念を1つも足していない。
+ *
+ * 画面が見ていた判定と、いま編集できる判定がずれていたら通さない
+ * （判定は `src/commands/decide.ts` が確かめる）。別の誰かが先に編集して
+ * いた場合に、見ていたのとは違う行を打ち消さないため。
+ */
+export async function editDecisionAction(formData: FormData): Promise<void> {
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const historyId = String(formData.get('historyId') ?? '')
+  const staffId = String(formData.get('staffId') ?? '')
+  const note = String(formData.get('note') ?? '')
 
+  const back = (code: DecideCode) => {
+    const id = /^[0-9a-f-]{36}$/i.test(applicationId) ? applicationId : ''
+    redirect(`/applications/${id}?decide=${code}`)
+  }
+
+  const db = await getDb()
+  const result = await correctDecision(db, { applicationId, historyId, staffId, note })
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath(`/applications/${applicationId}`)
+  revalidatePath('/borderline')
+  back(result.decision === 'advance' ? 'corrected_to_advance' : 'corrected_to_reject')
+}

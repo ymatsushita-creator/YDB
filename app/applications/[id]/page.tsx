@@ -8,12 +8,12 @@ import {
   parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
 } from '../../../src/commands/score.ts'
 import {
-  getDecidableStep, listDecidingStaff,
+  getDecidableStep, getCorrectableDecision, listDecidingStaff,
   parseDecideCode, DECIDE_CODE_MESSAGE,
 } from '../../../src/commands/decide.ts'
 import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../../src/commands/hold.ts'
 import {
-  saveScoreAction, submitEvaluationAction, decideAction, holdAction,
+  saveScoreAction, submitEvaluationAction, decideAction, editDecisionAction, holdAction,
 } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 import { Shell } from '../../_components/shell.tsx'
@@ -86,10 +86,13 @@ export default async function ApplicationPage({
   const app = await getApplication(db, id)
   if (!app) notFound()
 
-  const [timeline, evaluations, decidable, decidingStaff] = await Promise.all([
+  const [timeline, evaluations, decidable, editable, decidingStaff] = await Promise.all([
     getApplicationTimeline(db, app.application_id),
     getApplicationEvaluations(db, app.application_id),
     getDecidableStep(db, app.application_id),
+    // いま編集できる判定は1つだけ（いちばん新しい有効な通過／不合格）。
+    // それより前の判定を直せてしまうと、あとの判定と辻褄が合わなくなる。
+    getCorrectableDecision(db, app.application_id),
     listDecidingStaff(db),
   ])
 
@@ -151,9 +154,8 @@ export default async function ApplicationPage({
           </button>
         </form>
         <p className="section-note" style={{ marginTop: 'var(--space-xs)' }}>
-          <strong>押したあと、この画面から取り消す手段は無い。</strong>
-          記録は打ち消しの追記でしか直せず、その入口は画面に置いていない。
-          押す前に確かめる
+          押し間違えても、下の「経緯」から編集できる。
+          <strong>元の判定は消えず、編集した事実が1行積まれる</strong>
         </p>
       </Card>
     </div>
@@ -202,8 +204,8 @@ export default async function ApplicationPage({
 
       <div className="section">
         <Card
-          title="状態遷移の履歴"
-          note="訂正で打ち消された記録も残す。結論ではなく経緯が答えになる"
+          title="経緯"
+          note="編集で打ち消された記録も残す。結論ではなく経緯が答えになる"
         >
           {timeline.length === 0 ? <Empty>まだ遷移が記録されていない</Empty> : (
             <div className="timeline">
@@ -223,15 +225,15 @@ export default async function ApplicationPage({
                     {h.note && <div className="section-note">{h.note}</div>}
                     {h.is_correction && (
                       <div className="section-note">
-                        <span className="badge-tag-purple">訂正</span>{' '}
+                        <span className="badge-tag-purple">編集</span>{' '}
                         前の記録を打ち消して記録し直したもの
                       </div>
                     )}
                     {h.corrected_by_history_id && (
                       <div className="section-note">
                         {h.is_effective
-                          ? 'この記録は一度打ち消されたが、その訂正がさらに訂正されたため有効に戻っている'
-                          : 'この記録は後の訂正で打ち消されている'}
+                          ? 'この記録は一度打ち消されたが、その編集がさらに編集されたため有効に戻っている'
+                          : 'この記録は後の編集で打ち消されている'}
                       </div>
                     )}
                     {!h.step_name && h.transition_type !== 'advance' && (
@@ -240,15 +242,53 @@ export default async function ApplicationPage({
                         選考ステップを持たない）
                       </div>
                     )}
+
+                    {/*
+                      編集の入口は、いま編集できる判定の行にだけ出す。
+                      **別画面へ移さない。** 直したい記録を見ている場所で
+                      直せないと、どれを直しているのかが分からなくなる。
+
+                      上書きではない。押すと打ち消し行が1行積まれ、この並びに
+                      「編集」として現れる。元の判定は消えない。
+                    */}
+                    {editable && h.history_id === editable.history_id && (
+                      <details className="edit-disclosure">
+                        <summary className="btn-physical">この判定を編集</summary>
+                        <form action={editDecisionAction} className="decide-form editable-region">
+                          <input type="hidden" name="applicationId" value={app.application_id} />
+                          <input type="hidden" name="historyId" value={h.history_id} />
+                          <label className="visually-hidden" htmlFor="edit-staff">編集した人</label>
+                          <select id="edit-staff" name="staffId" defaultValue="" required>
+                            <option value="" disabled>編集した人を選ぶ…</option>
+                            {decidingStaff.map((st) => (
+                              <option key={st.staff_id} value={st.staff_id}>{st.display_name}</option>
+                            ))}
+                          </select>
+                          <label className="visually-hidden" htmlFor="edit-note">編集の理由</label>
+                          <input id="edit-note" name="note" type="text" className="rationale-input"
+                                 placeholder="編集の理由（任意）" />
+                          <button type="submit" className="button-secondary">
+                            {editable.transition_type === 'advance'
+                              ? '「不合格」に変更する'
+                              : '「通過」に変更する'}
+                          </button>
+                        </form>
+                        <p className="section-note">
+                          元の判定は消えない。編集した事実が1行積まれる。
+                          {editable.transition_type === 'reject' && editable.next_step_name
+                            && `「通過」に変更すると「${editable.next_step_name}」の担当を決める段になる。`}
+                        </p>
+                      </details>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
           <p className="unit-note">
-            訂正しても元の記録は消えず、打ち消しとして積み重なる。
-            訂正をさらに訂正すると元の判定が有効に戻るため、
-            「訂正された＝無効」ではない。いま有効かどうかは左の点で示している
+            編集しても元の記録は消えず、打ち消しとして積み重なる。
+            編集をさらに編集すると元の判定が有効に戻るため、
+            「編集された＝無効」ではない。いま有効かどうかは左の点で示している
             （塗りが有効）。この判定はシステムが自動で行っており、
             画面側で数え直してはいない。
             {' '}「合格」の定義は最終ステップ「{app.final_step_name}」への有効な通過。
