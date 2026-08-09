@@ -5,7 +5,7 @@ import {
 } from '../../src/queries/dashboard.ts'
 import { searchPersons, getSeasonLevelBreakdown } from '../../src/queries/drilldown.ts'
 import { Card, Empty, LevelBadge, num, jstDay } from '../_components/ui.tsx'
-import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,7 +54,7 @@ export default async function PeoplePage(
     <Shell active="headhunting" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/people" />}>
       <Breadcrumb
         readOnly
-        year={season.enrollment_year}
+        root={seasonLabel(season)}
         crumbs={[
           { label: 'ヘッドハンティング', href: `/headhunting?season=${season.id}` },
           { label: '人を探す' },

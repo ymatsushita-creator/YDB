@@ -11,7 +11,7 @@ import {
   ApproachChip, RankMark, RankDelta, Stars, Confidence, taskSentence,
 } from '../_components/headhunting.tsx'
 import { updateProfileAction, updateApproachAction } from './actions.ts'
-import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,7 +88,7 @@ export default async function HeadhuntingPage({
         列そのものが無い。**推測で軸を作らず、実在する年度を置く。**
       */}
       <Breadcrumb
-        year={season.enrollment_year}
+        root={seasonLabel(season)}
         crumbs={[
           { label: 'ヘッドハンティング', href: '/headhunting' },
           ...(panel ? [{ label: panel.person_name }] : []),
@@ -409,17 +409,16 @@ export default async function HeadhuntingPage({
         画像にあって、まだ出せていないもの。
         黙って省くと、次に触る人が実装漏れと読んで作り直しにかかる。
       */}
-      <section className="panel-card hh-gaps">
-        <h2>この画面にまだ無いもの（記録層に事実が無い）</h2>
+      <details className="panel-card hh-gaps">
+        <summary>この画面にまだ無いもの（記録層に事実が無い）</summary>
         <ul>
-          <li><strong>学年・卒業年度</strong> — 列そのものが無い。現在は生年月日を編集できる</li>
           <li><strong>職種での絞り込み</strong> — 記録層に無く、定義も受け取っていない</li>
           <li><strong>成績ランキングの順位変動</strong> — 過去の順位を凍結していない。確度だけが凍結されている</li>
           <li><strong>手で作るタスク</strong>（候補者を N 名追加する等）— タスクの記録層が無く、既存の事実から導けるものだけを出している</li>
           <li><strong>期限の時刻</strong> — 目安は日単位で記録されている。時刻を作ると、記録より画面が精密に見える</li>
           <li><strong>ログアウト</strong> — 認証がまだ無い</li>
         </ul>
-      </section>
+      </details>
     </Shell>
   )
 }

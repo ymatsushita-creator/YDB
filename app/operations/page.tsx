@@ -4,7 +4,7 @@ import {
   getInterviewerLoad, getConflicts, getUnassignedSummary,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num } from '../_components/ui.tsx'
-import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +36,7 @@ export default async function OperationsPage(
     <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/operations" />}>
       <Breadcrumb
         readOnly
-        year={season.enrollment_year}
+        root={seasonLabel(season)}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },
           { label: '選考オペレーション' },

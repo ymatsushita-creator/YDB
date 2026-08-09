@@ -96,6 +96,16 @@ export function Shell({
   )
 }
 
+/**
+ * 年度の呼び名。**期があれば期、無ければ年度。**
+ *
+ * 期は運営が数える番号で、年度からは導けない（募集を休んだ年があると
+ * 番号がずれる）。分からない年度を 0 期や 1 期で埋めない。
+ * 呼び方をここ1箇所に置くのは、画面ごとに違う呼び方をしないため。
+ */
+export const seasonLabel = (s: { cohort_number: number | null; enrollment_year: number }) =>
+  s.cohort_number !== null ? `${s.cohort_number}期` : `${s.enrollment_year}年度`
+
 export interface Crumb {
   label: string
   /** 押すとその階層へ戻る。現在地（末尾）は href を持たない。 */
@@ -122,9 +132,10 @@ export interface Crumb {
  * （画面ごとに「最後だけ href を外す」条件を書かせると必ずどこかで漏れる）。
  */
 export function Breadcrumb({
-  year, crumbs, readOnly,
+  root, crumbs, readOnly,
 }: {
-  year?: number
+  /** 先頭に置く根（期の呼び名）。押せない。 */
+  root?: string
   crumbs: Crumb[]
   /**
    * この画面には書き込む場所が1つも無い、という宣言。
@@ -136,14 +147,14 @@ export function Breadcrumb({
    */
   readOnly?: boolean
 }) {
-  const segments: Crumb[] = year === undefined
+  const segments: Crumb[] = root === undefined
     ? crumbs
-    : [{ label: `${year} 年度` }, ...crumbs]
+    : [{ label: root }, ...crumbs]
   return (
     <nav className="zoom-bar" aria-label="いま開いている階層">
       {segments.map((c, i) => {
         const isLast = i === segments.length - 1
-        const isRoot = year !== undefined && i === 0
+        const isRoot = root !== undefined && i === 0
         return (
           <span key={`${c.label}-${i}`} className="zoom-seg">
             {i > 0 && <span className="zoom-sep" aria-hidden>›</span>}
@@ -179,7 +190,7 @@ export function YearSwitch({
   if (seasons.length <= 1) return null
   return (
     <div className="hh-years">
-      <span className="sidebar-section-label">年度</span>
+      <span className="sidebar-section-label">期</span>
       <div className="hh-years-row">
         {seasons.map((s) => (
           <Link
@@ -188,7 +199,7 @@ export function YearSwitch({
             className={s.id === currentId ? 'hh-year is-on' : 'hh-year'}
             aria-current={s.id === currentId ? 'page' : undefined}
           >
-            {s.enrollment_year}
+            {seasonLabel(s)}
             {s.is_live && <i className="zoom-live" aria-label="募集中" />}
           </Link>
         ))}

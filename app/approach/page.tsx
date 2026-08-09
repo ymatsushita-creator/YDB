@@ -1,16 +1,18 @@
+import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import {
   listSeasons, getSeason, getPartnerReach, getReachTotals,
   getChannelAttribution, getUnattributedTouchpoints, REACH_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, ymd } from '../_components/ui.tsx'
-import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
-export default async function SourcesPage(
-  { searchParams }: { searchParams: Promise<{ season?: string }> },
+export default async function ApproachPage(
+  { searchParams }: { searchParams: Promise<{ season?: string; view?: string }> },
 ) {
+  const sp = await searchParams
   const db = await getDb()
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
@@ -18,7 +20,7 @@ export default async function SourcesPage(
   }
 
   const season =
-    (await getSeason(db, (await searchParams).season)) ??
+    (await getSeason(db, sp.season)) ??
     seasons.find((s) => s.is_live) ?? seasons[0]!
 
   const [partners, totals, attribution, unattributed] = await Promise.all([
@@ -37,11 +39,17 @@ export default async function SourcesPage(
   const total = (key: 'first_touch' | 'last_touch' | 'linear') =>
     attribution.reduce((n, c) => n + Number(c[key]), 0)
 
+  // 2つの表をタブで切り替える。**縦に積むと画面がスクロールになる。**
+  // どちらも「どこから来ているか」への答えなので、同じ場所で切り替える。
+  const view = sp.view === 'channel' ? 'channel' : 'partner'
+  const tabHref = (v: string) =>
+    `/approach?${new URLSearchParams({ season: season.id, view: v })}`
+
   return (
     <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/approach" />}>
       <Breadcrumb
         readOnly
-        year={season.enrollment_year}
+        root={seasonLabel(season)}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
         ]}
@@ -49,7 +57,7 @@ export default async function SourcesPage(
 
       <div className="page-head">
         <div>
-          <h1 className="page-title">{season.enrollment_year} 年度の流入元</h1>
+          <h1 className="page-title">{seasonLabel(season)}の流入元</h1>
           <p className="page-sub">
             アプローチ可能圏（団体リーチ）とチャネル別の流入分析
             {season.is_live && ' ・ 進行中'}
@@ -77,6 +85,21 @@ export default async function SourcesPage(
       */}
 
       <div className="section">
+        <div className="bl-tabs">
+          <Link href={tabHref('partner')}
+                className={view === 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
+                aria-current={view === 'partner' ? 'page' : undefined}>
+            団体別のリーチ
+          </Link>
+          <Link href={tabHref('channel')}
+                className={view === 'channel' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
+                aria-current={view === 'channel' ? 'page' : undefined}>
+            チャネル別のアトリビューション
+          </Link>
+        </div>
+      </div>
+
+      <div className="section" hidden={view !== 'partner'}>
         <Card title="団体別のリーチ" note={`識別は最後のリーチから ${REACH_WINDOW_DAYS} 日以内`}>
           {partners.length === 0 ? (
             <Empty>この年度の団体リーチは記録されていない</Empty>
@@ -128,7 +151,7 @@ export default async function SourcesPage(
         </div>
       )}
 
-      <div className="section">
+      <div className="section" hidden={view !== 'channel'}>
         <Card title="チャネル別のアトリビューション"
               note="同じ実人数を3通りの配り方で見る。合計は3列とも一致する">
           {attribution.length === 0 ? (

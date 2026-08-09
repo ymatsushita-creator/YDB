@@ -26,6 +26,11 @@ export interface Season {
   selection_end_date: Date
   capacity: number | null
   target_application_count: number | null
+  /**
+   * 期（1期・2期…）。運営が数える番号で、年度からは導けない。
+   * 分からない年度は null ―― **年度で代替表示し、0期や1期で埋めない。**
+   */
+  cohort_number: number | null
   /** 今日が選考期間の中にあるか。 */
   is_live: boolean
 }

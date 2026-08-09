@@ -6,7 +6,7 @@ import {
   listCandidatesByStep, listAppointments, getBorderlinePanel,
 } from '../../src/queries/borderline.ts'
 import { jstDay, num } from '../_components/ui.tsx'
-import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 import { ApproachChip, Confidence, RankDelta, taskSentence } from '../_components/headhunting.tsx'
 import { WeekCalendar, mondayOf, addDays, Rank, Avatar } from '../_components/borderline.tsx'
 
@@ -151,7 +151,7 @@ export default async function BorderlinePage({
       years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/borderline" />}
     >
       <Breadcrumb
-        year={season.enrollment_year}
+        root={seasonLabel(season)}
         crumbs={[
           { label: 'ボーダーライン', href: `/borderline?season=${season.id}` },
           ...(panel ? [{ label: panel.person_name }] : []),
@@ -430,10 +430,9 @@ export default async function BorderlinePage({
         </div>
       </div>
 
-      <section className="panel-card hh-gaps">
-        <h2>この画面にまだ無いもの（記録層に事実が無い）</h2>
+      <details className="panel-card hh-gaps">
+        <summary>この画面にまだ無いもの（記録層に事実が無い）</summary>
         <ul>
-          <li><strong>学年（4年生・2026年卒）</strong> — 入学年の記録が無い。生年月日から年齢は出せるが、<strong>年齢で学年を代用していない</strong></li>
           <li><strong>評価サマリーの4軸</strong>（スキル・ポテンシャル・カルチャーフィット・リーダーシップ）— 実際の軸は年度ごとの登録で、名前も数も違う</li>
           <li><strong>通知</strong> — 記録層が無い</li>
           <li><strong>アカウント・設定・ログアウト</strong> — 認証がまだ無い</li>
@@ -443,7 +442,7 @@ export default async function BorderlinePage({
           <li><strong>手で作ったやることの全件一覧</strong> — 「すべて見る」は選考オペレーション（導出のぶん）へ行く</li>
           <li><strong>予定を画面から作る・動かす操作</strong> — 記録層と変更履歴はあるが、入口がまだ無い</li>
         </ul>
-      </section>
+      </details>
     </Shell>
   )
 }

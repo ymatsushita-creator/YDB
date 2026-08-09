@@ -73,7 +73,13 @@ export function WeekCalendar({
 
   return (
     <>
-      <div className="cal" style={{ gridTemplateRows: `auto repeat(${hours.length}, 40px)` }}>
+      {/*
+        行の高さは可変にする（最低 30px）。固定にすると、残り高さより
+        格子のほうが高い画面で**下の時間帯が切れて到達できなくなる。**
+        入りきらないときだけ格子の中で送る（ページは伸ばさない）。
+      */}
+      <div className="cal"
+           style={{ gridTemplateRows: `auto repeat(${hours.length}, minmax(30px, 1fr))` }}>
         <div className="cal-corner" />
         {days.map((d) => (
           <div key={d} className={`cal-head${d === today ? ' is-today' : ''}`}>
