@@ -627,3 +627,100 @@ a.zoom-crumb:hover { text-decoration: none; }
   border: 1px solid rgb(255 255 255 / 55%);
   font-weight: 600; letter-spacing: .5px;
 }
+
+/* =============================================================
+   ボーダーライン（実行⑨。依頼者の画像）
+   ============================================================= */
+
+.bl-tabs { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-md); }
+.bl-tab {
+  padding: 6px 14px; border-radius: var(--rounded-full);
+  background: var(--color-surface); color: var(--color-slate);
+  border: 1px solid var(--color-hairline-strong);
+  font-size: 12px; font-weight: 500; text-decoration: none;
+}
+.bl-tab:hover { text-decoration: none; }
+.bl-tab.is-on {
+  background: var(--color-brand-purple); color: var(--color-on-primary);
+  border-color: var(--color-brand-purple-800); font-weight: 600;
+}
+
+.bl-table td { vertical-align: middle; }
+.bl-table tr.is-current { background: var(--color-card-tint-lavender); }
+.bl-person { display: inline-flex; align-items: center; gap: var(--space-xs); font-weight: 500; }
+.bl-person:hover { text-decoration: none; }
+
+/* 顔写真。無いときは頭文字を置く（空欄を架空の画像で埋めない）。 */
+.avatar {
+  width: 32px; height: 32px; border-radius: var(--rounded-full);
+  object-fit: cover; flex: 0 0 auto;
+  border: 1px solid var(--color-hairline);
+}
+.avatar-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-card-tint-gray); color: var(--color-steel);
+  font-size: 11px; font-weight: 600;
+}
+
+.bl-pager { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-top: var(--space-sm); flex-wrap: wrap; }
+.bl-pages { display: inline-flex; align-items: center; gap: 6px; }
+.bl-page {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 30px; height: 28px; padding: 0 8px;
+  border-radius: var(--rounded-md);
+  background: var(--color-surface); color: var(--color-slate);
+  border: 1px solid var(--color-hairline-strong);
+  font-size: 12px; text-decoration: none;
+}
+.bl-page:hover { text-decoration: none; }
+.bl-page.is-on {
+  background: var(--color-brand-purple); color: var(--color-on-primary);
+  border-color: var(--color-brand-purple-800); font-weight: 600;
+}
+.bl-week-nav { display: inline-flex; gap: 4px; }
+
+.bl-person-head { display: flex; align-items: center; gap: var(--space-sm); }
+.bl-person-head .avatar { width: 44px; height: 44px; font-size: 13px; }
+.bl-person-chips { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+
+/* 週の日程。格子の位置が時刻を表すので、はみ出させない。 */
+.cal {
+  display: grid;
+  grid-template-columns: 46px repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--color-hairline-soft);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  overflow: hidden;
+  font-size: 11px;
+}
+.cal-corner, .cal-head, .cal-hour, .cal-cell { background: var(--color-canvas); }
+.cal-head {
+  padding: 5px 4px; text-align: center; font-weight: 600; color: var(--color-slate);
+}
+.cal-head.is-today { background: var(--color-card-tint-peach); color: var(--color-brand-orange-deep); }
+.cal-hour { padding: 2px 4px; color: var(--color-stone); text-align: right; }
+.cal-cell.is-today { background: var(--color-card-tint-cream); }
+.cal-event {
+  display: flex; flex-direction: column; gap: 1px;
+  margin: 1px; padding: 3px 5px;
+  border-radius: var(--rounded-xs);
+  overflow: hidden; line-height: 1.25;
+  border-left: 3px solid currentColor;
+}
+.cal-event strong { font-size: 11px; font-weight: 600; }
+.cal-event span { font-size: 10px; opacity: .8; }
+.appt-first     { background: var(--color-card-tint-lavender); color: var(--color-brand-purple-800); }
+.appt-doc       { background: var(--color-card-tint-yellow);   color: var(--color-semantic-warning); }
+.appt-sched     { background: var(--color-card-tint-mint);     color: var(--color-semantic-success); }
+.appt-casual    { background: var(--color-card-tint-sky);      color: var(--color-link-blue); }
+.appt-interview { background: var(--color-card-tint-rose);     color: var(--color-semantic-error); }
+.appt-internal  { background: var(--color-card-tint-gray);     color: var(--color-steel); }
+
+@media (max-width: 1100px) {
+  .cal { font-size: 10px; }
+}
+
+/* 担当と保留の操作。評価カードの中に並べる（対象が見えている場所に置く）。 */
+.ops-row { display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-sm); }
+.ops-row > form { flex: 1 1 260px; }

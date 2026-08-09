@@ -117,6 +117,10 @@ describe('マイグレーション', () => {
       'v_candidate_confidence',
       // 0017: 最新の算出と、前回からの順位の変動
       'v_candidate_confidence_latest',
+      // 0019: カレンダーに出す予定（取り消し済みと個人情報削除済みを外す）
+      'v_appointments',
+      // 0020: まだ終わっていない、人が作ったやること
+      'v_manual_tasks',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

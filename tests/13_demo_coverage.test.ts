@@ -311,3 +311,50 @@ describe('デモデータが踏んでいる経路（ヘッドハンティング�
       SELECT count(*) FROM v_candidate_confidence_latest WHERE confidence_ratio > 1`), 0)
   })
 })
+
+describe('デモデータが踏んでいる経路（予定とやること。実行⑨）', () => {
+  test('今週の予定があり、カレンダーが空にならない', async () => {
+    // asOf を含む週に置いていないと、開いた瞬間は空になり、
+    // 描けているのか壊れているのか区別が付かない。
+    assert.ok(await count(`
+      SELECT count(*) FROM v_appointments
+       WHERE starts_on BETWEEN jst_today() - 7 AND jst_today() + 7`) >= 5,
+    '今週の予定が5件も無い。カレンダーの見え方を確かめられない')
+  })
+
+  test('相手のいる予定と、いない予定が両方ある', async () => {
+    assert.ok(await count(`SELECT count(*) FROM v_appointments WHERE person_id IS NOT NULL`) >= 1)
+    assert.ok(await count(`SELECT count(*) FROM v_appointments WHERE person_id IS NULL`) >= 1,
+      '社内の予定が無いと、相手なしの経路を一度も踏まない')
+  })
+
+  test('取り消した予定があり、カレンダーからは外れている', async () => {
+    assert.ok(await count(`SELECT count(*) FROM appointments WHERE cancelled_at IS NOT NULL`) >= 1)
+    assert.equal(await count(`
+      SELECT count(*) FROM v_appointments v
+        JOIN appointments a ON a.id = v.appointment_id
+       WHERE a.cancelled_at IS NOT NULL`), 0)
+  })
+
+  test('やることの見え方が4通りそろっている', async () => {
+    // 1つでも欠けると、そのチップが画面で一度も描かれない。
+    assert.ok(await count(`SELECT count(*) FROM v_manual_tasks WHERE is_overdue`) >= 1, '期限超過')
+    assert.ok(await count(`
+      SELECT count(*) FROM v_manual_tasks WHERE urgency = 'due' AND NOT is_overdue`) >= 1, '要対応')
+    assert.ok(await count(`SELECT count(*) FROM v_manual_tasks WHERE urgency = 'in_progress'`) >= 1, '進行中')
+    assert.ok(await count(`SELECT count(*) FROM v_manual_tasks WHERE urgency = 'later'`) >= 1, 'タスク')
+  })
+
+  test('期限に時刻があるやることと、無いものが両方ある', async () => {
+    assert.ok(await count(`SELECT count(*) FROM v_manual_tasks WHERE due_time IS NOT NULL`) >= 1)
+    assert.ok(await count(`SELECT count(*) FROM v_manual_tasks WHERE due_time IS NULL`) >= 1)
+  })
+
+  test('完了したやることがあり、開いている一覧からは外れている', async () => {
+    assert.ok(await count(`SELECT count(*) FROM manual_tasks WHERE completed_at IS NOT NULL`) >= 1)
+    assert.equal(await count(`
+      SELECT count(*) FROM v_manual_tasks v
+        JOIN manual_tasks t ON t.id = v.manual_task_id
+       WHERE t.completed_at IS NOT NULL`), 0)
+  })
+})

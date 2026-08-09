@@ -8,6 +8,10 @@ import {
   submitEvaluation, decideStep, correctDecision, type DecideCode,
 } from '../../../src/commands/decide.ts'
 import { holdEvaluation, type HoldCode } from '../../../src/commands/hold.ts'
+import {
+  assignInterviewer, reassignInterviewer, type AssignCode, type ReassignCode,
+} from '../../../src/commands/assign.ts'
+import { unholdEvaluation, type UnholdCode } from '../../../src/commands/unhold.ts'
 
 /**
  * 1軸の点と根拠を保存する（E2）。
@@ -153,4 +157,127 @@ export async function editDecisionAction(formData: FormData): Promise<void> {
   revalidatePath(`/applications/${applicationId}`)
   revalidatePath('/borderline')
   back(result.decision === 'advance' ? 'corrected_to_advance' : 'corrected_to_reject')
+}
+
+// -------------------------------------------------------------
+// 担当と保留（実行⑨で app/borderline から移した）
+//
+// 新しいボーダーラインは一覧と日程の画面になり、1件ずつの操作を置く場所が
+// 無くなった。**操作を消すのではなく、操作の対象が見えている場所へ移した。**
+// 派生のやることはこの応募の画面へ飛ぶので、飛んだ先で手が止まらない。
+//
+// 「保留にする」はこのファイルに元からある（holdAction）。**2つ作らない。**
+// -------------------------------------------------------------
+
+/** 戻り先はこの応募の画面。氏名も判定の結果も URL に載せない（コードだけ）。 */
+const appId = (formData: FormData) => {
+  const id = String(formData.get('applicationId') ?? '')
+  return /^[0-9a-f-]{36}$/i.test(id) ? id : ''
+}
+
+/**
+ * 結果の伝え方について。
+ *
+ * `useActionState` で戻り値を受けるにはクライアント部品が要る。
+ * 代わりに、済んだあと結果コードを付けて同じ画面へ戻す（PRG）。
+ * JavaScript が無くても成立する、いちばん単純な形である。
+ *
+ * **コードだけを渡し、氏名や応募の id は渡さない。** URL は履歴にも
+ * ログにも残るので、個人が分かる値を置く場所ではない。
+ * 「誰を誰に割り当てたか」は、戻った画面のやることの一覧を見れば分かる。
+ */
+export async function assignAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const staffId = String(formData.get('staffId') ?? '')
+
+  const back = (code: AssignCode) => {
+    redirect(`/applications/${appId(formData)}?assign=${code}`)
+  }
+
+  if (!staffId) return back('no_staff')
+
+  const db = await getDb()
+  const result = await assignInterviewer(db, { evaluationId, staffId })
+
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
+
+  // やること・待っている人・アプローチ可能圏の集計が同時に変わる。
+  revalidatePath('/borderline')
+  revalidatePath('/reach-zones', 'layout')
+  back('ok')
+}
+
+
+/**
+ * 保留にする。
+ *
+ * `unhold` の対である。**片道しか無かった**（C-35）。
+ * 理由は必須なので、こちらだけ入力欄がある。空白だけの理由は
+ * `holdEvaluation` が弾く ―― 制約は NOT NULL だけで、空白は通ってしまう。
+ */
+
+
+/**
+ * 保留を解く。
+ *
+ * `assignAction` と同じ形である。判定は `src/commands/unhold.ts` にあり、
+ * ここは値の受け渡しと、結果コードを付けて戻すことだけをする。
+ *
+ * 選ぶものが無いので `<select>` は無く、ボタン1つのフォームになる。
+ */
+export async function unholdAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+
+  const back = (code: UnholdCode) => {
+    redirect(`/applications/${appId(formData)}?unhold=${code}`)
+  }
+
+  const db = await getDb()
+  const result = await unholdEvaluation(db, { evaluationId })
+
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath('/borderline')
+  revalidatePath('/reach-zones', 'layout')
+  back('unheld')
+}
+
+
+/**
+ * 担当を替える。
+ *
+ * `assignAction` と同じ形。違うのは**成り立つ条件が逆**なことである
+ * （あちらは担当がいないことを、こちらはいることを要求する）。
+ * 判定は `src/commands/assign.ts` の `reassignInterviewer` にある。
+ */
+
+
+/**
+ * 担当を替える。
+ *
+ * `assignAction` と同じ形。違うのは**成り立つ条件が逆**なことである
+ * （あちらは担当がいないことを、こちらはいることを要求する）。
+ * 判定は `src/commands/assign.ts` の `reassignInterviewer` にある。
+ */
+export async function reassignAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const staffId = String(formData.get('staffId') ?? '')
+
+  const back = (code: ReassignCode) => {
+    redirect(`/applications/${appId(formData)}?reassign=${code}`)
+  }
+
+  if (!staffId) return back('same_staff')
+
+  const db = await getDb()
+  const result = await reassignInterviewer(db, { evaluationId, staffId })
+
+  // `redirect` は例外を投げるが型には出ないので、明示的に返して絞り込む。
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath('/borderline')
+  revalidatePath('/reach-zones', 'layout')
+  back('reassigned')
 }
