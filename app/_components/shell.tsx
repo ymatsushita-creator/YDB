@@ -45,8 +45,11 @@ export function Shell({
     <div className="hh-frame">
       <aside className="sidebar-region hh-sidebar">
         <div className="hh-brand">
-          <strong>YouthDB</strong>
-          <span className="sidebar-section-label">TALENT INTELLIGENCE</span>
+          <img
+            className="hh-brand-logo"
+            src="/brand/logo_black.png"
+            alt="NEO ACADEMIA"
+          />
         </div>
 
         <nav className="hh-nav" aria-label="主なナビゲーション">
