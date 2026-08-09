@@ -102,7 +102,10 @@ export async function setPersonApproachState(
   db: Db,
   input: { personId: string; seasonId: string; stateId: string; staffId: string; note: string },
 ): Promise<ProfileResult> {
-  if (![input.personId, input.seasonId, input.stateId, input.staffId].every(UUID.test)) {
+  // UUID.test をそのまま渡さない。メソッドが非束縛になり this を失って
+  // 「incompatible receiver undefined」で必ず例外になる。
+  // 検証のつもりの行が、検証ではなく事故そのものになっていた。
+  if (![input.personId, input.seasonId, input.stateId, input.staffId].every((v) => UUID.test(v))) {
     return { ok: false, reason: 'person_not_found' }
   }
   const target = await maybeOne<{ ok: boolean }>(db, `
