@@ -4,8 +4,8 @@ import {
   getChannelPerformance, getWithdrawReasons, getReachConversion, ACTIVE_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, pct, ymd } from '../_components/ui.tsx'
-import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 import { TimeSeries, Legend, FunnelStages } from '../_components/charts.tsx'
+import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +28,7 @@ export default async function FunnelPage(
   const db = await getDb()
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
-    return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
+    return <Shell active="approach"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
 
   const season =
@@ -52,14 +52,13 @@ export default async function FunnelPage(
   const target = season.target_application_count ?? 0
 
   return (
-    <>
+    <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/funnel" />}>
       <Breadcrumb
+        year={season.enrollment_year}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
-          { label: `${season.enrollment_year} 年度`, href: `/funnel?season=${season.id}` },
           { label: 'ファネル' },
         ]}
-        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/funnel" />}
       />
 
       <div className="page-head">
@@ -253,6 +252,6 @@ export default async function FunnelPage(
         訂正された遷移はシステムが自動で解決済みにしている。
         接点継続中の判定窓 {ACTIVE_WINDOW_DAYS} 日は仮の値で、正式な日数は未決定。
       </p>
-    </>
+    </Shell>
   )
 }

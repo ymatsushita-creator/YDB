@@ -382,25 +382,37 @@ a.zoom-crumb:hover { text-decoration: none; }
   box-shadow: inset 0 2px 5px rgb(0 0 0 / 34%), inset 0 -1px 0 rgb(255 255 255 / 10%);
   font-weight: 600;
 }
-.zoom-bar-aside { margin-left: auto; display: inline-flex; align-items: center; }
-
-/* 年度の切り替え。**目立たせない。** 罫線と文字だけで、面は塗らない。 */
-.hh-years { display: inline-flex; align-items: center; gap: var(--space-xs); }
-.hh-years .sidebar-section-label {
-  color: var(--color-on-primary); opacity: .8; padding: 0;
+/* 帯の先頭は年度。**押せない。** ファイルパスのドライブ名と同じで、
+   「どこを見ているか」の根であって行き先ではない。
+   押せる段（btn-physical）とも、現在地（沈んだ面）とも見分けが付く形にする。 */
+.zoom-root {
+  display: inline-flex; align-items: center;
+  padding: var(--space-xs) var(--space-md);
+  color: var(--color-on-primary);
+  font-size: 14px; font-weight: 700; letter-spacing: .2px;
+  border-radius: var(--rounded-md);
+  border: 1px dashed rgb(255 255 255 / 45%);
 }
-.hh-years-row { display: inline-flex; gap: 2px; }
+
+/* 年度の切り替え —— 操作柱の一番下。**目立たせない。**
+   罫線と文字だけで、面は塗らない（タブの物理ボタンと競合させない）。 */
+.hh-years {
+  display: flex; flex-direction: column; gap: 4px;
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-sidebar-hairline);
+}
+.hh-years-row { display: flex; gap: 4px; }
 .hh-year {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px; border-radius: var(--rounded-sm);
-  color: var(--color-on-primary); opacity: .72;
+  padding: 4px 10px; border-radius: var(--rounded-sm);
+  color: var(--color-on-dark-muted);
   font-size: 12px; font-variant-numeric: tabular-nums; text-decoration: none;
-  border: 1px solid transparent;
+  border: 1px solid var(--color-sidebar-hairline);
 }
-.hh-year:hover { text-decoration: none; opacity: 1; }
+.hh-year:hover { text-decoration: none; color: var(--color-on-dark); }
 .hh-year.is-on {
-  opacity: 1; font-weight: 600;
-  border-color: rgb(255 255 255 / 55%);
+  color: var(--color-on-dark); font-weight: 600;
+  border-color: var(--color-sidebar-active-border);
 }
 .zoom-live {
   width: 5px; height: 5px; border-radius: var(--rounded-full);

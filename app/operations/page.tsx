@@ -4,7 +4,7 @@ import {
   getInterviewerLoad, getConflicts, getUnassignedSummary,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num } from '../_components/ui.tsx'
-import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +14,7 @@ export default async function OperationsPage(
   const db = await getDb()
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
-    return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
+    return <Shell active="borderline"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
 
   const season =
@@ -33,14 +33,13 @@ export default async function OperationsPage(
   const unassignedCount = Number(unassigned?.count ?? 0)
 
   return (
-    <>
+    <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/operations" />}>
       <Breadcrumb
+        year={season.enrollment_year}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },
-          { label: `${season.enrollment_year} 年度`, href: `/operations?season=${season.id}` },
           { label: '選考オペレーション' },
         ]}
-        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/operations" />}
       />
 
       <div className="page-head">
@@ -213,6 +212,6 @@ export default async function OperationsPage(
         滞留日数は、担当が決まった日から今日までの日数（日本時間で数える）。
         サーバの時計ではなく日本時間の日付で数えているため、深夜をまたいでも数字が動かない。
       </p>
-    </>
+    </Shell>
   )
 }

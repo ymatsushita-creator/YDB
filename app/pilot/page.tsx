@@ -3,7 +3,7 @@ import { getDb } from '../../src/db/server.ts'
 import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
 import { getOpenTasks, type OpenTask } from '../../src/queries/cockpit.ts'
 import { Card, Empty, num } from '../_components/ui.tsx'
-import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +61,7 @@ export default async function PilotPage(
   const db = await getDb()
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
-    return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
+    return <Shell active="borderline"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
   const season =
     (await getSeason(db, (await searchParams).season)) ??
@@ -76,14 +76,13 @@ export default async function PilotPage(
   const forDecide = pick('evaluate')
 
   return (
-    <>
+    <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/pilot" />}>
       <Breadcrumb
+        year={season.enrollment_year}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },
-          { label: `${season.enrollment_year} 年度`, href: `/pilot?season=${season.id}` },
           { label: '試運転' },
         ]}
-        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/pilot" />}
       />
 
       <div className="page-head">
@@ -183,6 +182,6 @@ export default async function PilotPage(
         この手順で触るのはそのうち最大4件で、どれも訂正できる。
         書き込みが起きるのは 1〜4 の操作だけで、この画面自体は何も書かない。
       </p>
-    </>
+    </Shell>
   )
 }

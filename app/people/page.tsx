@@ -5,6 +5,7 @@ import {
 } from '../../src/queries/dashboard.ts'
 import { searchPersons, getSeasonLevelBreakdown } from '../../src/queries/drilldown.ts'
 import { Card, Empty, LevelBadge, num, jstDay } from '../_components/ui.tsx'
+import { Shell, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export default async function PeoplePage(
   const db = await getDb()
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
-    return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
+    return <Shell active="headhunting"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
 
   const params = await searchParams
@@ -50,7 +51,7 @@ export default async function PeoplePage(
   const comparable = new Date() >= new Date(season.application_open_date)
 
   return (
-    <>
+    <Shell active="headhunting" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/people" />}>
       <div className="page-head">
         <div>
           <h1 className="page-title">人を探す</h1>
@@ -204,6 +205,6 @@ export default async function PeoplePage(
         段と「直近に接点あり」の定義は集計の仕組みが決めており、
         画面側では数え直していない。
       </p>
-    </>
+    </Shell>
   )
 }

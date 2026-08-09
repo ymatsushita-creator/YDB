@@ -4,7 +4,7 @@ import {
   getChannelAttribution, getUnattributedTouchpoints, REACH_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, ymd } from '../_components/ui.tsx'
-import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +14,7 @@ export default async function SourcesPage(
   const db = await getDb()
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
-    return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
+    return <Shell active="approach"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
 
   const season =
@@ -38,13 +38,12 @@ export default async function SourcesPage(
     attribution.reduce((n, c) => n + Number(c[key]), 0)
 
   return (
-    <>
+    <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/approach" />}>
       <Breadcrumb
+        year={season.enrollment_year}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
-          { label: `${season.enrollment_year} 年度` },
         ]}
-        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/approach" />}
       />
 
       <div className="page-head">
@@ -194,6 +193,6 @@ export default async function SourcesPage(
         実人数と同じ縦軸に置かない。日付境界はすべて同じ運用タイムゾーンで揃えている。
         観測窓 {REACH_WINDOW_DAYS} 日は仮の値。
       </p>
-    </>
+    </Shell>
   )
 }

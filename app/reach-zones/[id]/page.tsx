@@ -6,7 +6,7 @@ import {
   getForest, getCommunities, getForestPersons, DORMANT_DAYS,
 } from '../../../src/queries/cockpit.ts'
 import { Card, Kpi, Empty, num, ymd } from '../../_components/ui.tsx'
-import { Breadcrumb, YearSwitch } from '../../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch } from '../../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +29,7 @@ export default async function ReachZonePage({
 
   const seasons = await listSeasons(db)
   if (seasons.length === 0) {
-    return <Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty>
+    return <Shell active="approach"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
   const season =
     (await getSeason(db, (await searchParams).season)) ??
@@ -45,15 +45,13 @@ export default async function ReachZonePage({
   const overduePersons = persons.filter((p) => p.overdue)
 
   return (
-    <>
+    <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath={`/reach-zones/${forest.forest_id}`} />}>
       <Breadcrumb
+        year={season.enrollment_year}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
-          { label: `${season.enrollment_year} 年度`, href: `/approach?season=${season.id}` },
           { label: forest.name },
         ]}
-        aside={<YearSwitch seasons={seasons} currentId={season.id}
-                           basePath={`/reach-zones/${forest.forest_id}`} />}
       />
 
       <div className="page-head">
@@ -206,6 +204,6 @@ export default async function ReachZonePage({
         アプローチ可能圏の健全性・担当・関係上の役割は未実装。
         記録層にその事実が無いので、画面では作らない。
       </p>
-    </>
+    </Shell>
   )
 }
