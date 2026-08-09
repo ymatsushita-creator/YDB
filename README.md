@@ -48,7 +48,6 @@ pnpm tokens
 
 - `director.md` — プロダクト原則
 - `domain.md` — 用語と記録モデル
-- `design.md` — UI仕様
 - `CLAUDE.md` — 実装規律
 - `process.md` — 開発手順
 - `db/DECISIONS.md` — 設計判断の履歴

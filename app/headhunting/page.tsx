@@ -82,11 +82,6 @@ export default async function HeadhuntingPage({
 
   return (
     <Shell active="headhunting" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/headhunting" />}>
-      {/*
-        いま開いている階層。エクスプローラのパスと同じ読み方をする。
-        画像は「職種 > 卒業年度」だったが、職種も卒業年度も記録層に
-        列そのものが無い。**推測で軸を作らず、実在する年度を置く。**
-      */}
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
@@ -124,10 +119,7 @@ export default async function HeadhuntingPage({
                 ))}
               </ul>
             )}
-            <p className="hh-note">
-              単位は件（1人が複数持ちうる）。母集団はこの年度で動いている応募。
-              手で作るタスク（連絡する・催促する）は記録層に無いため出せない。
-            </p>
+            <p className="hh-note">単位は件。母集団はこの期で動いている応募。</p>
           </section>
 
           <div className="hh-rankings">
@@ -140,41 +132,38 @@ export default async function HeadhuntingPage({
               {scores.length === 0 ? (
                 <p className="hh-empty">提出済みの評価がまだ無い。</p>
               ) : (
-                <table className="hh-table">
-                  <thead>
-                    <tr>
-                      <th>順位</th><th>名前</th>
-                      <th className="num">100点換算</th>
-                      <th className="num">素点</th>
-                      <th className="num">軸</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {scores.map((r) => (
-                      <tr key={r.application_id}>
-                        <td><RankMark rank={Number(r.rank_in_season)} /></td>
-                        <td>
-                          <Link href={`/people/${r.person_id}?season=${season.id}`}>
-                            {r.person_name}
-                          </Link>
-                        </td>
-                        <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
-                        <td className="num dim">{r.earned} / {r.possible}</td>
-                        <td className="num dim">{r.scored_criteria}</td>
+                <div className="scroll-pane">
+                  <table className="hh-table">
+                    <thead>
+                      <tr>
+                        <th>順位</th><th>名前</th>
+                        <th className="num">100点換算</th>
+                        <th className="num">素点</th>
+                        <th className="num">軸</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {scores.map((r) => (
+                        <tr key={r.application_id}>
+                          <td><RankMark rank={Number(r.rank_in_season)} /></td>
+                          <td>
+                            <Link href={`/people/${r.person_id}?season=${season.id}`}>
+                              {r.person_name}
+                            </Link>
+                          </td>
+                          <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
+                          <td className="num dim">{r.earned} / {r.possible}</td>
+                          <td className="num dim">{r.scored_criteria}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
               <p className="hh-note">
-                単位は点。母集団はこの年度で数える応募のうち、提出済みの評価が
-                1件以上あるもの。分母は<strong>実際に受けた軸の満点</strong>で、
-                まだ受けていない選考のぶんは含めない。
-                <strong>「軸」は点が付いた軸の数</strong>で、これが少ないほど
-                根拠は薄い（1軸だけ満点の人も 100.0 になる）。
-                <br />
-                前回からの順位の変動は出していない。過去の順位が記録されていない
-                （凍結しているのは確度だけ）。
+                単位は点。母集団は評価が1件以上ある応募。
+                分母は<strong>実際に受けた軸の満点</strong>。
+                「軸」は点が付いた軸の数で、少ないほど根拠は薄い。
               </p>
             </section>
 
@@ -189,33 +178,34 @@ export default async function HeadhuntingPage({
                   登録されていないため、順位を出す根拠が無い。
                 </p>
               ) : (
-                <table className="hh-table">
-                  <thead>
-                    <tr><th>順位</th><th>名前</th><th className="num">確度</th><th>前回比</th></tr>
-                  </thead>
-                  <tbody>
-                    {confidence.map((r) => (
-                      <tr key={r.person_id}>
-                        <td><RankMark rank={Number(r.rank_in_season)} /></td>
-                        <td>
-                          <Link href={href({ person: r.person_id })}>{r.person_name}</Link>
-                        </td>
-                        <td className="num strong"><Confidence ratio={r.confidence_ratio} /></td>
-                        <td>
-                          <RankDelta delta={r.rank_delta} hasPrevious={r.has_previous_run} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="scroll-pane">
+                  <table className="hh-table">
+                    <thead>
+                      <tr><th>順位</th><th>名前</th><th className="num">確度</th><th>前回比</th></tr>
+                    </thead>
+                    <tbody>
+                      {confidence.map((r) => (
+                        <tr key={r.person_id}>
+                          <td><RankMark rank={Number(r.rank_in_season)} /></td>
+                          <td>
+                            <Link href={href({ person: r.person_id })}>{r.person_name}</Link>
+                          </td>
+                          <td className="num strong"><Confidence ratio={r.confidence_ratio} /></td>
+                          <td>
+                            <RankDelta delta={r.rank_delta} hasPrevious={r.has_previous_run} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
               {confidenceMeta && (
                 <p className="hh-note">
-                  {jstDay(confidenceMeta.calculated_on)} 時点で凍結した値。
-                  母集団は算出日時点のヘッドハンティング対象者 {num(confidenceMeta.population)} 人。
-                  規則 {num(confidenceMeta.rule_count)} 件・満点 {num(confidenceMeta.max_points)} 点に対する割合で、
+                  {jstDay(confidenceMeta.calculated_on)} 時点の値。
+                  母集団は対象者 {num(confidenceMeta.population)} 人。
+                  満点 {num(confidenceMeta.max_points)} 点に対する割合で、
                   <strong>合格率でも内定確率でもない</strong>。
-                  算出日より後の接点は反映されていない。
                 </p>
               )}
             </section>
@@ -251,6 +241,7 @@ export default async function HeadhuntingPage({
                   )}
                 </header>
 
+                <div className="scroll-pane">
                 <h3 className="hh-sub">基本情報</h3>
                 <dl className="hh-facts">
                   <dt>生年月日</dt><dd>{ymd(panel.birth_date)}</dd>
@@ -297,6 +288,7 @@ export default async function HeadhuntingPage({
                 <Link href={`/people/${panel.person_id}?season=${season.id}`} className="hh-more">
                   この人の全体を見る ›
                 </Link>
+                </div>
 
                 {editOptions && (
                   <>
@@ -386,6 +378,8 @@ export default async function HeadhuntingPage({
                     <Link href={href({ person: r.person_id })} className="hh-list-name">
                       {r.person_name}
                     </Link>
+                    <Link href={`/people/${r.person_id}?season=${season.id}`}
+                          className="row-detail" aria-label={`${r.person_name} の詳細`}>›</Link>
                     <span className="hh-list-conf"><Confidence ratio={r.confidence_ratio} /></span>
                     <ApproachChip code={r.approach_code} label={r.approach_label} />
                   </li>
@@ -405,21 +399,6 @@ export default async function HeadhuntingPage({
           </section>
         </div>
       </div>
-
-      {/*
-        画像にあって、まだ出せていないもの。
-        黙って省くと、次に触る人が実装漏れと読んで作り直しにかかる。
-      */}
-      <details className="panel-card hh-gaps">
-        <summary>この画面にまだ無いもの（記録層に事実が無い）</summary>
-        <ul>
-          <li><strong>職種での絞り込み</strong> — 記録層に無く、定義も受け取っていない</li>
-          <li><strong>成績ランキングの順位変動</strong> — 過去の順位を凍結していない。確度だけが凍結されている</li>
-          <li><strong>手で作るタスク</strong>（候補者を N 名追加する等）— タスクの記録層が無く、既存の事実から導けるものだけを出している</li>
-          <li><strong>期限の時刻</strong> — 目安は日単位で記録されている。時刻を作ると、記録より画面が精密に見える</li>
-          <li><strong>ログアウト</strong> — 認証がまだ無い</li>
-        </ul>
-      </details>
     </Shell>
   )
 }

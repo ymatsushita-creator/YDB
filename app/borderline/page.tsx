@@ -197,13 +197,9 @@ export default async function BorderlinePage({
               </ul>
             )}
             <p className="hh-note">
-              単位は件（1人が複数持ちうる）。開いているやること {num(tasks.length)} 件のうち、
-              <strong>期限の近い順に先頭4件</strong>だけを出している。
-              内訳は 期限超過 {num(byUrgency.overdue)} ・ 要対応 {num(byUrgency.due)} ・
+              単位は件。開いているやること {num(tasks.length)} 件 ――
+              期限超過 {num(byUrgency.overdue)} ・ 要対応 {num(byUrgency.due)} ・
               進行中 {num(byUrgency.in_progress)} ・ タスク {num(byUrgency.later)}。
-              <strong>出どころは2つ</strong> ―― 人が作ったもの {num(manual.length)} 件と、
-              選考の記録から導いたもの {num(derived.length)} 件。
-              期限の時刻は、決まっているものにだけ出る（無いことを 0:00 と読み替えない）。
             </p>
           </section>
 
@@ -236,40 +232,43 @@ export default async function BorderlinePage({
               candidates.rows.length === 0 ? (
                 <p className="hh-empty">この年度の対象者がまだ1人も登録されていない。</p>
               ) : (
-                <table className="hh-table bl-table">
-                  <thead>
-                    <tr>
-                      <th className="num">確度</th><th>順位</th><th>名前</th>
-                      <th>学校・学部</th><th>最終接触日</th><th>次のアクション</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candidates.rows.map((r) => (
-                      <tr key={r.person_id} className={r.person_id === personId ? 'is-current' : ''}>
-                        <td className="num strong">
-                          <Confidence ratio={r.confidence_ratio} />
-                          <RankDelta delta={r.rank_delta} hasPrevious={r.has_previous_run} />
-                        </td>
-                        <td><Rank rank={r.rank_in_season} /></td>
-                        <td>
-                          <Link href={href({ person: r.person_id })} className="bl-person">
-                            <Avatar src={r.photo_data_url} name={r.person_name} />
-                            {r.person_name}
-                          </Link>
-                        </td>
-                        <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
-                        <td className="dim">
-                          {r.last_touchpoint_on ? jstDay(r.last_touchpoint_on) : 'この年度は接点なし'}
-                        </td>
-                        <td>
-                          {r.approach_code && r.approach_label
-                            ? <ApproachChip code={r.approach_code} label={r.approach_label} />
-                            : <span className="muted-note">未登録</span>}
-                        </td>
+                <div className="scroll-pane">
+                  <table className="hh-table bl-table">
+                    <thead>
+                      <tr>
+                        <th className="num">確度</th><th>順位</th><th>名前</th>
+                        <th>学校・学部</th><th>最終接触日</th><th>次のアクション</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {candidates.rows.map((r) => (
+                        <tr key={r.person_id}
+                          className={`row-link${r.person_id === personId ? ' is-current' : ''}`}>
+                          <td className="num strong">
+                            <Confidence ratio={r.confidence_ratio} />
+                            <RankDelta delta={r.rank_delta} hasPrevious={r.has_previous_run} />
+                          </td>
+                          <td><Rank rank={r.rank_in_season} /></td>
+                          <td>
+                            <Link href={href({ person: r.person_id })} className="bl-person">
+                              <Avatar src={r.photo_data_url} name={r.person_name} />
+                              {r.person_name}
+                            </Link>
+                          </td>
+                          <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
+                          <td className="dim">
+                            {r.last_touchpoint_on ? jstDay(r.last_touchpoint_on) : 'この年度は接点なし'}
+                          </td>
+                          <td>
+                            {r.approach_code && r.approach_label
+                              ? <ApproachChip code={r.approach_code} label={r.approach_label} />
+                              : <span className="muted-note">未登録</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )
             )}
 
@@ -277,31 +276,34 @@ export default async function BorderlinePage({
               stepRows.length === 0 ? (
                 <p className="hh-empty">このステップで動いている応募は無い。</p>
               ) : (
-                <table className="hh-table bl-table">
-                  <thead>
-                    <tr>
-                      <th className="num">100点換算</th><th className="num">軸</th><th>名前</th>
-                      <th>学校・学部</th><th className="num">待ち</th><th>担当</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stepRows.map((r) => (
-                      <tr key={r.application_id} className={r.person_id === personId ? 'is-current' : ''}>
-                        <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
-                        <td className="num dim">{r.scored_criteria}</td>
-                        <td>
-                          <Link href={href({ person: r.person_id })} className="bl-person">
-                            <Avatar src={r.photo_data_url} name={r.person_name} />
-                            {r.person_name}
-                          </Link>
-                        </td>
-                        <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
-                        <td className="num dim">{r.waiting_days} 日</td>
-                        <td className="dim">{r.owner ?? '未割当'}</td>
+                <div className="scroll-pane">
+                  <table className="hh-table bl-table">
+                    <thead>
+                      <tr>
+                        <th className="num">100点換算</th><th className="num">軸</th><th>名前</th>
+                        <th>学校・学部</th><th className="num">待ち</th><th>担当</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {stepRows.map((r) => (
+                        <tr key={r.application_id}
+                          className={`row-link${r.person_id === personId ? ' is-current' : ''}`}>
+                          <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
+                          <td className="num dim">{r.scored_criteria}</td>
+                          <td>
+                            <Link href={href({ person: r.person_id })} className="bl-person">
+                              <Avatar src={r.photo_data_url} name={r.person_name} />
+                              {r.person_name}
+                            </Link>
+                          </td>
+                          <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
+                          <td className="num dim">{r.waiting_days} 日</td>
+                          <td className="dim">{r.owner ?? '未割当'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )
             )}
 
@@ -327,25 +329,19 @@ export default async function BorderlinePage({
             <p className="hh-note">
               {tab.stepOrder === null ? (
                 <>
-                  単位は人。母集団は見送りに至っておらず、個人情報の削除依頼も
-                  受けていないこの年度の対象者 {num(candidates?.total ?? 0)} 人。
-                  <strong>順位と確度は凍結された値</strong>で、算出日より後の接点は
-                  反映されていない。確度が無い人は後ろに回している。
+                  単位は人。母集団はこの期の対象者 {num(candidates?.total ?? 0)} 人。
                 </>
               ) : (
                 <>
-                  単位は応募（人ではない）。母集団はこのステップに
-                  <strong>まだ提出されていない評価がある応募</strong>。
-                  100点換算は<strong>実際に受けた軸の満点</strong>で割った達成率で、
-                  「軸」が少ないほど根拠は薄い。
+                  単位は応募。母集団はこの選考で<strong>判断待ちの応募</strong>。
+                  100点換算は実際に受けた軸の満点で割った達成率。
                 </>
               )}
               {hiddenSteps.length > 0 && (
                 <>
                   <br />
-                  <strong>タブに載っていない選考ステップがある</strong>:{' '}
-                  {hiddenSteps.map((s) => `${s.step_name}（${s.open_applications} 件）`).join(' ・ ')}。
-                  タブは4つ固定のため、ここからは開けない。
+                  <strong>このタブに出ていない選考</strong>:{' '}
+                  {hiddenSteps.map((s) => `${s.step_name} ${s.open_applications} 件`).join(' ・ ')}
                 </>
               )}
             </p>
@@ -375,6 +371,7 @@ export default async function BorderlinePage({
                   </div>
                 </header>
 
+                <div className="scroll-pane">
                 <h3 className="hh-sub">基本情報</h3>
                 <dl className="hh-facts">
                   <dt>学校</dt><dd>{panel.school}</dd>
@@ -401,6 +398,7 @@ export default async function BorderlinePage({
                 <Link href={`/people/${panel.person_id}?season=${season.id}`} className="hh-more">
                   詳細を見る ›
                 </Link>
+                </div>
               </>
             )}
           </section>
@@ -423,28 +421,10 @@ export default async function BorderlinePage({
             ) : (
               <WeekCalendar monday={monday} appointments={appointments} today={today} />
             )}
-            <p className="hh-note">
-              単位は件。母集団はこの年度の、取り消されていない予定 {num(appointments.length)} 件。
-              <strong>予定は接点とは別の記録</strong>で、起きたかどうかは分からない
-              （実際に会った事実は接点として別に記録する）。
-            </p>
+            <p className="hh-note">単位は件。この週の予定 {num(appointments.length)} 件。</p>
           </section>
         </div>
       </div>
-
-      <details className="panel-card hh-gaps">
-        <summary>この画面にまだ無いもの（記録層に事実が無い）</summary>
-        <ul>
-          <li><strong>評価サマリーの4軸</strong>（スキル・ポテンシャル・カルチャーフィット・リーダーシップ）— 実際の軸は年度ごとの登録で、名前も数も違う</li>
-          <li><strong>通知</strong> — 記録層が無い</li>
-          <li><strong>アカウント・設定・ログアウト</strong> — 認証がまだ無い</li>
-          <li><strong>並べ替えと絞り込みの操作</strong> — 並びは確度順で固定。切り替える記録も要件もまだ無い</li>
-          <li><strong>予定が実際に起きたかの記録</strong> — 予定と接点をつなぐ手当てが未実装</li>
-          <li><strong>やることを画面から作る・終える操作</strong> — 記録層はあるが、書き込む入口がまだ無い</li>
-          <li><strong>手で作ったやることの全件一覧</strong> — 「すべて見る」は選考オペレーション（導出のぶん）へ行く</li>
-          <li><strong>予定を画面から作る・動かす操作</strong> — 記録層と変更履歴はあるが、入口がまだ無い</li>
-        </ul>
-      </details>
     </Shell>
   )
 }
