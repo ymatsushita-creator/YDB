@@ -130,14 +130,20 @@ interface SeasonPlan {
 // 通過率は各年度の定員におおよそ着地するよう選んである。
 // 定員を大きく超える合格者が出るデータでは、充足率の表示が意味を持たない。
 //
-// ★ 年度は2つだけである（実行⑨で依頼者の指摘により 4 → 2 に減らした）。
-//   **募集は 2025 と 2026 しかまだ行われていない。**
-//   それ以前の年度を架空に足すと、画面の年度切替に「実際には無い募集」が
-//   並ぶ。デモが架空データであることと、**存在しない年度を見せることは別**で、
-//   後者は運営に「その年度の記録がどこかにある」と思わせる。
+// ★ 期は3つ。**1期と2期は行われた募集、3期はこれからの募集**である。
+//   実行⑨で 4 → 2 に減らし、依頼者の「次は三期」を受けて 3 にした。
 //
-//   2026 を進行中の年度として置く。終わった年度だけだと、滞留や担当未割当が
-//   データに一切現れない。2025 は終わった年度で、再応募の母集団にもなる。
+//   過去に無い期を架空に足さない。デモが架空データであることと、
+//   **行われていない募集を「行われた」ように見せることは別**で、
+//   後者は運営に「その期の記録がどこかにある」と思わせる。
+//   だから3期には**応募も評価も作らない**（募集開始が「今日」より後なので、
+//   生成器が地平線で切って自然に0件になる）。
+//
+//   2期を進行中として置く。終わった期だけだと、滞留や担当未割当が
+//   データに一切現れない。1期は終わった期で、再応募の母集団にもなる。
+//
+//   ★ 3期の日付は**デモ専用の仮の値**である。実際の日程は未受領で、
+//     本番シード（db/seeds/）には3期を入れていない。
 const PLANS: SeasonPlan[] = [
   { year: 2025, outreachStart: '2024-09-01', applicationOpen: '2024-11-01',
     applicationClose: '2024-12-15', selectionEnd: '2025-02-20',
@@ -147,6 +153,12 @@ const PLANS: SeasonPlan[] = [
     applicationClose: '2026-08-31', selectionEnd: '2026-11-30',
     capacity: 36, target: 300, applyRate: 0.36, passRates: [0.55, 0.50, 0.50, 0.70],
     cohort: 2 },
+  // 3期。**これからの募集。** 集客開始が「今日」より後なので、
+  // 接点も応募も生成されない ―― 空の期がどう見えるかを確かめる経路でもある。
+  { year: 2027, outreachStart: '2026-09-01', applicationOpen: '2026-11-01',
+    applicationClose: '2026-12-15', selectionEnd: '2027-02-20',
+    capacity: 40, target: 340, applyRate: 0.38, passRates: [0.55, 0.50, 0.50, 0.70],
+    cohort: 3 },
 ]
 
 export interface DemoStats {
@@ -1313,6 +1325,69 @@ async function seedPersonas(db: Db, ctx: PersonaContext): Promise<void> {
      VALUES ($1,$2,$3,'pending',$4)`,
     [referredApp, active.stepIds[0], mentorStaff, ts('2026-07-09', 10)])
   stats.evaluations++
+
+  // -----------------------------------------------------------
+  // 7. 1期で不合格 → 2期に再応募して合格
+  // -----------------------------------------------------------
+  // **再応募者限定の評価軸に点が付く唯一の経路。**
+  //
+  // これは元々、乱数で「たまたま」できていた。実行⑨で3期を足したら
+  // 乱数の並びがずれ、**1件も無くなってテストが落ちた。**
+  // 「偶然に頼っていた経路は、条件が変わると黙って消える」を、
+  // 予定と接点に続いてここでも踏んだ。だから明示的に置く。
+  const returner = await person({
+    familyName: '早坂', givenName: '結', kana: ['はやさか', 'ゆい'],
+    email: 'yui.hayasaka@example.test', createdAt: ts('2024-10-05', 11),
+    note: 'デモ用の登場人物。1期で最終面接まで進んで不合格になり、'
+      + '2期に再応募して合格した。再応募者限定の評価軸に点が付く唯一の経路。',
+  })
+  await touch(returner, '単独説明会', '2024-10-05', 11)
+
+  // 1期（終わった期）。最終面接まで進んで不合格。
+  const firstTry = await application(returner, '2024-11-20')
+  for (const [i, day] of ['2024-11-27', '2024-12-06', '2024-12-18'].entries()) {
+    await evaluate(firstTry, i, i, day, day, [4, 4, 3], '1期の評価。あと一歩だった。')
+    await advance(firstTry, i, day, i)
+  }
+  await evaluate(firstTry, 3, 3, '2025-01-10', '2025-01-10', [3, 3, 3],
+    '1期の最終面接。方向性が定まっていなかった。')
+  await reject(firstTry, '2025-01-15', 3, '1期は最終面接で不合格。')
+
+  // 2期（進行中の期）へ再応募。**is_reapplication = true** にしないと、
+  // 再応募者限定の軸をトリガが弾く。
+  const { id: secondTry } = await insertOne<{ id: string }>(db,
+    `INSERT INTO applications (person_id, season_id, submitted_at, is_reapplication)
+     VALUES ($1,$2,$3,true) RETURNING id`,
+    [returner, active.id, ts('2025-11-20', 20)])
+  stats.applications++
+
+  const reappraise = async (stepIndex: number, day: string, note: string) => {
+    const { id } = await insertOne<{ id: string }>(db,
+      `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                state, assigned_at, submitted_at)
+       VALUES ($1,$2,$3,'submitted',$4,$5) RETURNING id`,
+      [secondTry, active.stepIds[stepIndex], staff(stepIndex),
+        ts(day, 10), ts(day, 18)])
+    stats.evaluations++
+    // ここでは再応募者限定の軸も**外さない**（この応募は再応募だから付く）。
+    for (const c of active.criteriaByStep[stepIndex]!) {
+      await db.query(
+        `INSERT INTO evaluation_scores (evaluation_id, criteria_id, score, rationale)
+         VALUES ($1,$2,$3,$4)`, [id, c.id, 4, note])
+      stats.scores++
+    }
+    await db.query(
+      `INSERT INTO status_histories (application_id, transition_type, selection_step_id,
+                                     occurred_at, changed_by_staff_id, note)
+       VALUES ($1,'advance',$2,$3,$4,$5)`,
+      [secondTry, active.stepIds[stepIndex], ts(day, 19), staff(stepIndex),
+        `${STEPS[stepIndex]} 通過（再応募）`])
+    stats.histories++
+  }
+
+  for (const [i, day] of ['2025-11-27', '2025-12-08', '2025-12-19', '2026-01-14'].entries()) {
+    await reappraise(i, day, '2期の評価。1期からの変化がはっきり出ている。')
+  }
 }
 
 // -------------------------------------------------------------
