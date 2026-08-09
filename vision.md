@@ -1,9 +1,10 @@
 # vision.md — 理念
 
-序列: **`vision.md`** > `director.md` > `domain.md` > `design.md` > `CLAUDE.md` > `process.md`
+序列: **`vision.md`** > `director.md` > `domain.md` > `CLAUDE.md` > `process.md`
 
 **2026-08-07（実行⑥）に、この文書が序列の最上位へ移った。**
-実行⑤の時点では `director.md` > `domain.md` > `design.md` > 本書 > `CLAUDE.md` だった。
+実行⑤の時点では `director.md` > `domain.md` > `design.md` > 本書 > `CLAUDE.md` だった
+（`design.md` は実行⑨で削除した）。
 
 ただし**内容が未受領であることは変わっていない。** 空の文書は何も上書きしない。
 理念が届くまで、実際に効く最上位は `director.md`（憲法）である。

@@ -84,7 +84,7 @@ export default async function ApproachPage(
         指標にしたいなら、estimated_reach が実測に置き換わってからにする。
       */}
 
-      <div className="section">
+      <div className="section section-fixed">
         <div className="bl-tabs">
           <Link href={tabHref('partner')}
                 className={view === 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
@@ -203,19 +203,16 @@ export default async function ApproachPage(
       </div>
 
       {unattributedTp > 0 && (
-        <div className="section">
+        <div className="section section-fixed">
           <p className="callout">
-            どの年度にも属さない接点が {num(unattributedTp)} 件（{num(unattributed?.persons)} 人）ある。
-            年度の期間外に起きたため、上のどの表にも数えられていない。
+            どの期にも属さない接点が {num(unattributedTp)} 件（{num(unattributed?.persons)} 人）。
+            期の期間外に起きたため、上の表には数えていない。
           </p>
         </div>
       )}
 
       <p className="footnote">
-        アプローチ可能圏のリーチは個人を識別しない接触機会の推定値。
-        接点継続中の人数・応募件数・合格件数とは数え方が違うためファネルには並べない。
-        実人数と同じ縦軸に置かない。日付境界はすべて同じ運用タイムゾーンで揃えている。
-        観測窓 {REACH_WINDOW_DAYS} 日は仮の値。
+        リーチは接触機会の推定値で、人数ではない。観測窓 {REACH_WINDOW_DAYS} 日。
       </p>
     </Shell>
   )

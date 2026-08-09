@@ -14,7 +14,6 @@ director.md    Principles   何を守るのか（憲法）
     ↓
 domain.md      Model        何が存在するのか
     ↓
-design.md      UX/UI        どう見せるのか
     ↓
 CLAUDE.md      Engineering  どう開発するのか  ← 開発規律の正典
     ↓
