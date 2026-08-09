@@ -7,11 +7,11 @@ import {
   getProfileEditOptions,
 } from '../../src/queries/headhunting.ts'
 import { jstDay, num, ymd } from '../_components/ui.tsx'
-import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 import {
   ApproachChip, RankMark, RankDelta, Stars, Confidence, taskSentence,
 } from '../_components/headhunting.tsx'
 import { updateProfileAction, updateApproachAction } from './actions.ts'
+import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,10 +39,12 @@ export default async function HeadhuntingPage({
 
   if (!season) {
     return (
-      <div className="hh-empty-shell">
+      <Shell active="headhunting">
+        <div className="hh-empty-shell">
         <p>年度が1件も登録されていない。ヘッドハンティングは年度ごとに動くため、
-          年度が無いと対象者を置く場所が決まらない。</p>
-      </div>
+            年度が無いと対象者を置く場所が決まらない。</p>
+        </div>
+      </Shell>
     )
   }
 
@@ -79,19 +81,18 @@ export default async function HeadhuntingPage({
     `/headhunting?${new URLSearchParams({ season: season.id, ...q })}`
 
   return (
-    <>
+    <Shell active="headhunting" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/headhunting" />}>
       {/*
         いま開いている階層。エクスプローラのパスと同じ読み方をする。
         画像は「職種 > 卒業年度」だったが、職種も卒業年度も記録層に
         列そのものが無い。**推測で軸を作らず、実在する年度を置く。**
       */}
       <Breadcrumb
+        year={season.enrollment_year}
         crumbs={[
           { label: 'ヘッドハンティング', href: '/headhunting' },
-          { label: `${season.enrollment_year} 年度`, href: `/headhunting?season=${season.id}` },
           ...(panel ? [{ label: panel.person_name }] : []),
         ]}
-        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/headhunting" />}
       />
 
       <div className="hh-grid">
@@ -419,6 +420,6 @@ export default async function HeadhuntingPage({
           <li><strong>ログアウト</strong> — 認証がまだ無い</li>
         </ul>
       </section>
-    </>
+    </Shell>
   )
 }

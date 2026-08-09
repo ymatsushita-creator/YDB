@@ -9,6 +9,7 @@ import {
 import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime,
 } from '../../_components/ui.tsx'
+import { Shell } from '../../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +31,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const kana = [person.family_name_kana, person.given_name_kana].filter(Boolean).join(' ')
 
   return (
-    <>
+    <Shell active="headhunting">
       <div className="page-head">
         <div>
           <p className="page-sub">
@@ -262,6 +263,6 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
         年度の段と接点の鮮度は、直近 {ACTIVE_WINDOW_DAYS} 日以内に接点があるかで集計側が決めており、
         画面側では数え直していない。
       </p>
-    </>
+    </Shell>
   )
 }

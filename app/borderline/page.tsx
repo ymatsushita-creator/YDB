@@ -16,7 +16,7 @@ import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../src/commands/unhold.
 import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../src/commands/hold.ts'
 import { assignAction, unholdAction, reassignAction, holdAction } from './actions.ts'
 import { Card, Empty, jstDateTime, jstDay, num } from '../_components/ui.tsx'
-import { Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -184,14 +184,13 @@ export default async function CockpitPage({
   const lastTouch = touchpoints[0]
 
   return (
-    <>
+    <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/borderline" />}>
       <Breadcrumb
+        year={season.enrollment_year}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },
-          { label: `${season.enrollment_year} 年度`, href: `/borderline?season=${season.id}` },
           ...(selectedTask ? [{ label: selectedTask.person_name }] : []),
         ]}
-        aside={<YearSwitch seasons={seasons} currentId={season.id} basePath="/borderline" />}
       />
 
       <div className="cockpit-head">
@@ -335,6 +334,6 @@ export default async function CockpitPage({
       <p className="unit-note cockpit-unit-note">
         <strong>単位と母集団。</strong> 「今日やること」は件、「接点のある実人数」は人、「現在の選考状況」は年度内の応募件数です。推定リーチ は接触機会の推定値であり、実人数・応募件数とは単位が異なるため、比率や進捗バーにしていません。休眠は最終接点から {DORMANT_DAYS} 日以上、要注意は合成スコアではなく滞留・休眠・接点なしの事実を表示しています。
       </p>
-    </>
+    </Shell>
   )
 }

@@ -16,6 +16,7 @@ import {
   saveScoreAction, submitEvaluationAction, decideAction, correctDecisionAction, holdAction,
 } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
+import { Shell } from '../../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -197,7 +198,7 @@ export default async function ApplicationPage({
   )
 
   return (
-    <>
+    <Shell active="borderline">
       {savedNotice}
       {decisionPanel}
       {correctionPanel}
@@ -474,6 +475,6 @@ export default async function ApplicationPage({
         <code>form_response_id</code>{': '}
         <code>{app.form_response_id ?? '（取り込み経由ではない）'}</code>
       </p>
-    </>
+    </Shell>
   )
 }

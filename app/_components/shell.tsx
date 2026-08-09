@@ -6,25 +6,23 @@ import type { Season } from '../../src/queries/dashboard.ts'
 /**
  * アプリ全体の外枠（実行⑨で全画面共通にした）。
  *
- * ★ 階層は2段で、どちらも最上位にある。
+ * ★ 階層は「年度 → タブ → 対象」である。**年度が一番上。**
  *
- *   左の操作柱 … ヘッドハンティング / ボーダーライン / アプローチ の3つ
- *   上の帯     … 年度。**どのタブに居ても同じ場所で切り替わる**
+ *   上の帯   … いま開いている階層（`2026 年度 › ヘッドハンティング › 渡辺 蓮`）
+ *   左の操作柱 … タブ3つ。**その一番下で年度を切り替える**
  *
- * 実行⑨の最初の版は、年度をヘッドハンティングの下の階層に置いていた。
- * 依頼者の指摘で直した ―― 年度はタブより下ではない。同じ年度のまま
- * タブを移れないと、タブごとに「いまどの年度を見ているか」が変わり、
- * 3つのタブが別のアプリになる。
+ * 年度を切り替える場所と、年度を表示する場所は別である。
+ * 切り替えは稀な操作なので操作柱の隅に置き、いまどの年度を見ているかは
+ * 常時の関心なので帯の先頭に出す。**頻度の低い操作を主役の場所に置かない。**
  *
  * ★ 行き先は3つだけ。ファネル・アプローチ可能圏・選考オペレーションなどは
  *   **タブから外した**（消したのではなく、3つのタブの中に畳んだ）。
- *   各画面がどのタブに属するかは、その画面の layout.tsx が宣言する。
  *
  * ★ `'use client'` は使っていない。
- *   いま居るタブを知るために `usePathname()` を使うとクライアント境界が
- *   要る。代わりに**各ルートの layout.tsx が自分のタブを名乗る**形にした。
- *   境界を1つも増やさずに済み、しかも「この画面はどのタブの一部か」が
- *   ファイルに書かれるので、畳んだ先が読んで分かる。
+ *   いま居るタブと年度を知るために `usePathname()` / `useSearchParams()` を
+ *   使うとクライアント境界が要る。代わりに**各画面が自分でこの外枠を被る**。
+ *   layout.tsx に置くと、レイアウトは searchParams を受け取れないので
+ *   「いまどの年度か」を知る手段が無くなり、年度の切替を操作柱に置けない。
  */
 
 export type Tab = 'headhunting' | 'borderline' | 'approach'
@@ -35,7 +33,14 @@ const TABS: Array<{ id: Tab; href: string; label: string; note: string }> = [
   { id: 'approach', href: '/approach', label: 'アプローチ', note: 'どこから来ているか' },
 ]
 
-export function Shell({ active, children }: { active: Tab; children: ReactNode }) {
+export function Shell({
+  active, years, children,
+}: {
+  active: Tab
+  /** 操作柱の一番下に置く年度の切替。年度を持たない画面では省略する。 */
+  years?: ReactNode
+  children: ReactNode
+}) {
   return (
     <div className="hh-frame">
       <aside className="sidebar-region hh-sidebar">
@@ -75,6 +80,7 @@ export function Shell({ active, children }: { active: Tab; children: ReactNode }
         </form>
 
         <div className="hh-sidebar-foot">
+          {years}
           {/*
             デモかどうかは、URL を渡された人には確かめる手段が無い。
             出さなければ「実在の候補者が並んでいる」と読める。
@@ -106,29 +112,41 @@ export interface Crumb {
  * 稀な操作で、いま何を開いているかを知るのは常時の関心である。
  * 頻度の低い操作を一番目立つ場所に置くと、常時の関心がその分だけ隠れる。
  *
- * 年度の切り替えは操作柱の下（`YearSwitch`）に置いてある。
+ * 年度の切り替えは操作柱の一番下（`YearSwitch`）に置いてある。
  *
- * 押せる段は1つ上へ戻る。**現在地（末尾）は押せない** ―― 押しても
- * 何も起きないボタンは、壊れていると読まれる。
+ * ★ 先頭は年度である。押せない ―― ファイルパスのドライブ名と同じで、
+ *   「どこを見ているか」の根であって行き先ではない。
+ *
+ * 押せる段は1つ上へ戻る。**末尾は押せない** ―― 押しても何も起きない
+ * ボタンは壊れていると読まれる。末尾の `href` は渡されても無視する
+ * （画面ごとに「最後だけ href を外す」条件を書かせると必ずどこかで漏れる）。
  */
-export function Breadcrumb({ crumbs, aside }: { crumbs: Crumb[]; aside?: ReactNode }) {
+export function Breadcrumb({ year, crumbs }: { year?: number; crumbs: Crumb[] }) {
+  const segments: Crumb[] = year === undefined
+    ? crumbs
+    : [{ label: `${year} 年度` }, ...crumbs]
   return (
     <nav className="zoom-bar" aria-label="いま開いている階層">
-      {crumbs.map((c, i) => (
-        <span key={`${c.label}-${i}`} className="zoom-seg">
-          {i > 0 && <span className="zoom-sep" aria-hidden>›</span>}
-          {c.href
-            ? <Link href={c.href} className="zoom-crumb btn-physical">{c.label}</Link>
-            : <span className="zoom-crumb-current" aria-current="page">{c.label}</span>}
-        </span>
-      ))}
-      {aside && <span className="zoom-bar-aside">{aside}</span>}
+      {segments.map((c, i) => {
+        const isLast = i === segments.length - 1
+        const isRoot = year !== undefined && i === 0
+        return (
+          <span key={`${c.label}-${i}`} className="zoom-seg">
+            {i > 0 && <span className="zoom-sep" aria-hidden>›</span>}
+            {isRoot
+              ? <span className="zoom-root">{c.label}</span>
+              : c.href && !isLast
+                ? <Link href={c.href} className="zoom-crumb btn-physical">{c.label}</Link>
+                : <span className="zoom-crumb-current" aria-current="page">{c.label}</span>}
+          </span>
+        )
+      })}
     </nav>
   )
 }
 
 /**
- * 年度の切り替え —— 操作柱の下に置く、目立たない場所。
+ * 年度の切り替え —— **操作柱の一番下。** 目立たない場所に置く。
  *
  * ★ 年度は記録層にある行だけを並べる。**募集が行われていない年度は出さない。**
  *   架空の年度を並べると、運営に「その年度の記録がどこかにある」と思わせる。
