@@ -78,19 +78,53 @@ describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
     await db.close()
   })
 
-  test('定員・目標応募数・選考ステップは入れていない（前期の数字を写さない）', async () => {
+  test('定員は受領した実数値。目標応募数は未受領のまま', async () => {
     const db = await productionDb()
     const s = await one<{ capacity: number | null; target_application_count: number | null }>(
       db, `SELECT capacity, target_application_count FROM seasons WHERE cohort_number = 3`)
-    assert.equal(s.capacity, null, '定員は未受領。前期の 36 を写さない')
-    assert.equal(s.target_application_count, null, '目標も未受領。前期の 100 を写さない')
+    assert.equal(s.capacity, 36, '定員は受領した実数値（2026-08-10）')
+    assert.equal(s.target_application_count, null, '目標は未受領。前期の 100 を写さない')
+    await db.close()
+  })
 
-    // 選考フローも未受領。2期のステップを写すと、変わっていた場合に
-    // 運営が使っていない軸がマスタとして固定化する（原則3）。
+  test('選考は3本。受け取った語をそのまま置いてある', async () => {
+    // ★ 2期との違いを**黙って揃えていない。**
+    //   2期は4本で先頭に「応募受付」があり、1本目の呼び名も「書類選考」。
+    //   3期の指定は3本で「書類審査」から始まる。
+    //   同じものを指しているかは確認していないので、受け取った語で置く
+    //   （運営の言葉をこちらの語に翻訳しない。Pilot Rule）。
+    const db = await productionDb()
+    const steps = await all<{ sort_order: number; name: string }>(db, `
+      SELECT st.sort_order, st.name FROM selection_steps st
+        JOIN seasons se ON se.id = st.season_id
+       WHERE se.cohort_number = 3 ORDER BY st.sort_order`)
+    assert.deepEqual(steps.map((x) => [x.sort_order, x.name]), [
+      [1, '書類審査'],
+      [2, 'グループ面接'],
+      [3, '最終面接'],
+    ])
+    await db.close()
+  })
+
+  test('3期の評価軸は入れていない（前期の6軸を写さない）', async () => {
+    const db = await productionDb()
     assert.equal(await scalar<number>(db, `
-      SELECT count(*)::int FROM selection_steps st
+      SELECT count(*)::int FROM evaluation_criteria ec
+        JOIN selection_steps st ON st.id = ec.selection_step_id
         JOIN seasons se ON se.id = st.season_id
        WHERE se.cohort_number = 3`), 0)
+    await db.close()
+  })
+
+  test('3期の最終ステップは「最終面接」である（合格の定義）', async () => {
+    // 合格は「最終ステップへの有効な通過」。ステップ構成が変われば
+    // 合格の意味も変わるので、期ごとに固定する。
+    const db = await productionDb()
+    const f = await one<{ selection_step_name: string }>(db, `
+      SELECT fs.selection_step_name FROM v_final_selection_step fs
+        JOIN seasons se ON se.id = fs.season_id
+       WHERE se.cohort_number = 3`)
+    assert.equal(f.selection_step_name, '最終面接')
     await db.close()
   })
 })
@@ -100,7 +134,9 @@ describe('本番シードの選考ステップ', () => {
     const db = await productionDb()
     const rows = await all<{ sort_order: number; name: string }>(
       db,
-      `SELECT sort_order, name FROM selection_steps ORDER BY sort_order`,
+      `SELECT st.sort_order, st.name FROM selection_steps st
+         JOIN seasons se ON se.id = st.season_id
+        WHERE se.cohort_number = 2 ORDER BY st.sort_order`,
     )
 
     assert.deepEqual(rows, [
@@ -133,7 +169,9 @@ describe('本番シードの選考ステップ', () => {
     const db = await productionDb()
     const last = await scalar<string>(
       db,
-      `SELECT name FROM selection_steps ORDER BY sort_order DESC LIMIT 1`,
+      `SELECT st.name FROM selection_steps st
+         JOIN seasons se ON se.id = st.season_id
+        WHERE se.cohort_number = 2 ORDER BY st.sort_order DESC LIMIT 1`,
     )
 
     assert.equal(last, '最終面接')
@@ -230,9 +268,9 @@ describe('シードは何度流しても増えない', () => {
     const db = await productionDb()
     await seed(db)
 
-    // 期は2つ（2期と3期）。ステップと軸を持つのは2期だけ。
+    // 期は2つ。ステップは 2期の4本＋3期の3本＝7本。軸を持つのは2期だけ。
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 2)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 4)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 7)
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 6)
     await db.close()
   })

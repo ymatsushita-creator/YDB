@@ -40,7 +40,8 @@ async function world(db: Db): Promise<World> {
   const season = await one<{ id: string }>(db,
     `SELECT id FROM seasons WHERE enrollment_year = 2026`)
   const steps = await all<{ id: string; name: string; sort_order: number }>(
-    db, `SELECT id, name, sort_order FROM selection_steps ORDER BY sort_order`)
+    db, `SELECT id, name, sort_order FROM selection_steps
+          WHERE season_id = $1 ORDER BY sort_order`, [season.id])
   const schoolId = await scalar<string>(
     db, `INSERT INTO schools (name) VALUES ('架空高校') RETURNING id`)
   const staff = (await all<{ id: string }>(db, `
@@ -138,7 +139,8 @@ async function invariants(db: Db, round: number) {
               FROM v_effective_status_histories h
               JOIN selection_steps ss ON ss.id = h.selection_step_id
              WHERE h.transition_type = 'advance'
-               AND ss.sort_order = (SELECT max(sort_order) FROM selection_steps)) AS via_step`)
+               AND ss.sort_order = (SELECT max(sort_order) FROM selection_steps
+                                     WHERE season_id = ss.season_id)) AS via_step`)
   assert.equal(acc.flagged, acc.via_step, at('合格の数が最終ステップの通過数と合わない'))
 
   // 動いている応募は、数える応募の部分集合である
@@ -241,13 +243,19 @@ describe('評価の観点が0本の段（C-33）', () => {
     // ―― 「記録が実装より厳密に見える」を作らないため。
     const db = await freshDb({ seeds: 'production' })
     const w = await world(db)
-    const noCriteria = await all<{ name: string }>(db, `
-      SELECT ss.name FROM selection_steps ss
+    // ★ 実行⑨で3期が入り、顔ぶれが増えた（3期は軸を1本も受け取っていない）。
+    //   期をまたぐので、どの期の段かまで書く。
+    const noCriteria = await all<{ cohort: number; name: string }>(db, `
+      SELECT se.cohort_number AS cohort, ss.name
+        FROM selection_steps ss
+        JOIN seasons se ON se.id = ss.season_id
        WHERE NOT EXISTS (SELECT 1 FROM evaluation_criteria ec
                           WHERE ec.selection_step_id = ss.id)
-       ORDER BY ss.sort_order`)
-    assert.deepEqual(noCriteria.map((r) => r.name), ['応募受付', '書類選考', 'グループ面接'],
-      '軸が0本の段の顔ぶれが変わった。画面の分岐（C-33）も見直すこと')
+       ORDER BY se.cohort_number, ss.sort_order`)
+    assert.deepEqual(noCriteria.map((r) => [r.cohort, r.name]), [
+      [2, '応募受付'], [2, '書類選考'], [2, 'グループ面接'],
+      [3, '書類審査'], [3, 'グループ面接'], [3, '最終面接'],
+    ], '軸が0本の段の顔ぶれが変わった。画面の分岐（C-33）も見直すこと')
 
     const appId = await newApplication(w, '軸なし')
     const step = w.steps[1]!                          // 書類選考

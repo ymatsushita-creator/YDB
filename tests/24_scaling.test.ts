@@ -43,7 +43,8 @@ async function fill(db: Db, n: number) {
   const season = await one<{ id: string }>(db,
     `SELECT id FROM seasons WHERE enrollment_year = 2026`)
   const steps = await all<{ id: string; sort_order: number }>(
-    db, `SELECT id, sort_order FROM selection_steps ORDER BY sort_order`)
+    db, `SELECT id, sort_order FROM selection_steps
+          WHERE season_id = $1 ORDER BY sort_order`, [season.id])
   const schoolId = await scalar<string>(
     db, `INSERT INTO schools (name) VALUES ('架空高校') RETURNING id`)
   const staffId = await scalar<string>(db, `

@@ -286,8 +286,15 @@ table.data td.num, table.data th.num { white-space: nowrap; }
   display: flex; flex-direction: column; gap: var(--space-lg);
   height: calc(100vh - var(--space-xl));
 }
-.hh-brand { display: flex; flex-direction: column; padding: var(--space-sm) var(--space-xs) 0; }
-.hh-brand strong { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; }
+.hh-brand {
+  display: flex;
+  align-items: center;
+  min-height: 74px;
+  padding: var(--space-sm);
+  border-radius: var(--rounded-md);
+  background: #fff;
+}
+.hh-brand-logo { display: block; width: 100%; height: auto; }
 .hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
 .hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
 .hh-nav a:hover { text-decoration: none; }
@@ -358,8 +365,8 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .zoom-bar {
   display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
   padding: var(--space-xs) var(--space-sm);
-  background: var(--color-primary);
-  border: 1px solid var(--color-primary-deep);
+  background: #111;
+  border: 1px solid #000;
   border-radius: var(--rounded-lg);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 22%), 0 2px 6px rgb(20 27 36 / 14%);
 }
@@ -372,16 +379,18 @@ table.data td.num, table.data th.num { white-space: nowrap; }
   color: var(--color-on-primary);
   font-size: 14px; font-weight: 500; text-decoration: none;
 }
-a.zoom-crumb { color: var(--color-on-primary); }
+a.zoom-crumb { background-color: #2b2b2b; color: #fff; }
 a.zoom-crumb:hover { text-decoration: none; }
-.zoom-bar .btn-physical { border-color: var(--color-primary-deep); }
+.zoom-bar .btn-physical { border-color: #444; }
 /* 現在地は押せない。押しても何も起きないボタンは壊れて見える。
    だから**沈んだ面**にして「ここに居る」ことを形で示す。 */
 .zoom-crumb-current {
-  background: var(--color-primary-deep);
+  background: #fff;
+  color: #111;
   box-shadow: inset 0 2px 5px rgb(0 0 0 / 34%), inset 0 -1px 0 rgb(255 255 255 / 10%);
   font-weight: 600;
 }
+.zoom-bar .zoom-crumb-current { color: #111; }
 /* 帯の先頭は年度。**押せない。** ファイルパスのドライブ名と同じで、
    「どこを見ているか」の根であって行き先ではない。
    押せる段（btn-physical）とも、現在地（沈んだ面）とも見分けが付く形にする。 */
