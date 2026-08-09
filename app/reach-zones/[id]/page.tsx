@@ -47,6 +47,7 @@ export default async function ReachZonePage({
   return (
     <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath={`/reach-zones/${forest.forest_id}`} />}>
       <Breadcrumb
+        readOnly
         year={season.enrollment_year}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },

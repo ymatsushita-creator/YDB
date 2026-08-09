@@ -556,3 +556,74 @@ a.zoom-crumb:hover { text-decoration: none; }
 .button-dark:focus-visible, .button-on-dark:focus-visible {
   outline: 2px solid var(--color-primary-deep); outline-offset: 2px;
 }
+
+/* =============================================================
+   記入できる場所と、固定の場所（実行⑨で依頼者の指示）
+
+   画面には2種類ある ―― **書き込める場所**と、**記録を映しているだけの場所**。
+   見分けが付かないと、書けない値をいじろうとするか、書ける値に気づかない。
+
+   記入できる側だけに面（editable）と縁を与え、固定の側は白いカードのまま。
+   ★ **色だけで意味を伝えない。** 記入できる領域には必ず文字の目印を出す
+     （`.editable-region::before` の「記入できます」）。
+   ============================================================= */
+
+/* 行の中に収まる小さなフォーム。**面も見出しも与えない。**
+   表の行に淡い面を敷くと、行そのものが状態を持っているように読める。
+   縁の色だけで「ここは書ける」を示す。 */
+.editable-inline input,
+.editable-inline select,
+.editable-inline textarea {
+  border-color: var(--color-editable-border);
+}
+.editable-inline input:focus,
+.editable-inline select:focus,
+.editable-inline textarea:focus {
+  outline: 2px solid var(--color-editable-ink);
+  outline-offset: -1px;
+}
+
+.editable-region {
+  position: relative;
+  background: var(--color-editable);
+  border: 1px solid var(--color-editable-border);
+  border-radius: var(--rounded-lg);
+  padding: var(--space-md);
+}
+.editable-region::before {
+  content: "記入できます";
+  display: block;
+  margin-bottom: var(--space-xs);
+  color: var(--color-editable-ink);
+  font-size: 11px; font-weight: 600; letter-spacing: 1px;
+}
+/* 入力そのものは白い面のままにする。淡い面の上で「書く場所」が沈んで見える。 */
+.editable-region input,
+.editable-region select,
+.editable-region textarea {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-editable-border);
+  color: var(--color-ink);
+}
+.editable-region input:focus,
+.editable-region select:focus,
+.editable-region textarea:focus {
+  outline: 2px solid var(--color-editable-ink);
+  outline-offset: -1px;
+}
+/* チェックボックスは面を持たないので縁だけ効かせる。 */
+.editable-region input[type="checkbox"] { accent-color: var(--color-editable-ink); }
+
+/* 固定の場所。**押せない・書けないことを形で示す。**
+   面は白のまま、値だけを少し沈めて「読むもの」と分かるようにする。 */
+.readonly-note {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--color-on-primary); opacity: .9; font-size: 11px;
+}
+.readonly-note::before {
+  content: "固定";
+  padding: 1px 6px; border-radius: var(--rounded-sm);
+  border: 1px solid rgb(255 255 255 / 55%);
+  font-weight: 600; letter-spacing: .5px;
+}

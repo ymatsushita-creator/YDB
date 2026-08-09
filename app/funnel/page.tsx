@@ -54,6 +54,7 @@ export default async function FunnelPage(
   return (
     <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/funnel" />}>
       <Breadcrumb
+        readOnly
         year={season.enrollment_year}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },

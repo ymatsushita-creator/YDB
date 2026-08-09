@@ -51,7 +51,7 @@ function ScoreForm({
   scaleMax: number
 }) {
   return (
-    <form action={saveScoreAction} className="score-form">
+    <form action={saveScoreAction} className="score-form editable-inline">
       <input type="hidden" name="applicationId" value={applicationId} />
       <input type="hidden" name="evaluationId" value={evaluationId} />
       <input type="hidden" name="criteriaId" value={criteriaId} />
@@ -132,7 +132,7 @@ export default async function ApplicationPage({
           correctable.transition_type === 'advance' ? '通過' : '不合格'
         }」（${correctable.step_name ?? 'ステップ不明'}・${correctable.decided_by}）`}
       >
-        <form action={correctDecisionAction} className="decide-form">
+        <form action={correctDecisionAction} className="decide-form editable-region">
           <input type="hidden" name="applicationId" value={app.application_id} />
           <input type="hidden" name="historyId" value={correctable.history_id} />
           <label className="visually-hidden" htmlFor="correct-staff">訂正した人</label>
@@ -171,7 +171,7 @@ export default async function ApplicationPage({
             ? `通過にすると「${decidable.next_step_name}」の担当を決める段になる`
             : '最終ステップなので、通過にすると合格になる')}
       >
-        <form action={decideAction} className="decide-form">
+        <form action={decideAction} className="decide-form editable-region">
           <input type="hidden" name="applicationId" value={app.application_id} />
           <label className="visually-hidden" htmlFor="decide-staff">判定した人</label>
           <select id="decide-staff" name="staffId" defaultValue="" required>
@@ -382,7 +382,7 @@ export default async function ApplicationPage({
 
                   {/* 全軸そろったら確定できる（E3）。そろう前は出さない。 */}
                   {e.can_score && e.pending_criteria.length === 0 && (
-                    <form action={submitEvaluationAction} className="score-form"
+                    <form action={submitEvaluationAction} className="score-form editable-inline"
                           style={{ justifyContent: 'flex-start', marginTop: 'var(--space-sm)' }}>
                       <input type="hidden" name="applicationId" value={app.application_id} />
                       <input type="hidden" name="evaluationId" value={e.evaluation_id} />
@@ -400,7 +400,7 @@ export default async function ApplicationPage({
                       出す条件は holdEvaluation が通す母集団と揃える ――
                       判断待ちで、まだ確定していない評価だけ。 */}
                   {e.can_score && e.state === 'pending' && (
-                    <form action={holdAction} className="score-form"
+                    <form action={holdAction} className="score-form editable-inline"
                           style={{ justifyContent: 'flex-start', marginTop: 'var(--space-xs)' }}>
                       <input type="hidden" name="applicationId" value={app.application_id} />
                       <input type="hidden" name="evaluationId" value={e.evaluation_id} />
