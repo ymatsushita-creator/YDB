@@ -121,7 +121,21 @@ export interface Crumb {
  * ボタンは壊れていると読まれる。末尾の `href` は渡されても無視する
  * （画面ごとに「最後だけ href を外す」条件を書かせると必ずどこかで漏れる）。
  */
-export function Breadcrumb({ year, crumbs }: { year?: number; crumbs: Crumb[] }) {
+export function Breadcrumb({
+  year, crumbs, readOnly,
+}: {
+  year?: number
+  crumbs: Crumb[]
+  /**
+   * この画面には書き込む場所が1つも無い、という宣言。
+   *
+   * 記入できる領域は面の色で分かるが、**「この画面には書ける場所が
+   * 無い」ことは、無いものを見て気づけない。** 探させないために書く。
+   * 各画面が自分で名乗る（数えて自動判定すると、フォームを足した日に
+   * 表示だけ古くなる）。
+   */
+  readOnly?: boolean
+}) {
   const segments: Crumb[] = year === undefined
     ? crumbs
     : [{ label: `${year} 年度` }, ...crumbs]
@@ -141,6 +155,7 @@ export function Breadcrumb({ year, crumbs }: { year?: number; crumbs: Crumb[] })
           </span>
         )
       })}
+      {readOnly && <span className="readonly-note">この画面は記録を映すだけ</span>}
     </nav>
   )
 }

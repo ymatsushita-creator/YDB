@@ -78,6 +78,7 @@ export default async function PilotPage(
   return (
     <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/pilot" />}>
       <Breadcrumb
+        readOnly
         year={season.enrollment_year}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },

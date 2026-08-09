@@ -55,7 +55,7 @@ function AssignForm({
 }) {
   if (staff.length === 0) return <span className="section-note">選べる職員がいない</span>
   return (
-    <form action={mode === 'assign' ? assignAction : reassignAction} className="context-action-form">
+    <form action={mode === 'assign' ? assignAction : reassignAction} className="context-action-form editable-region">
       <input type="hidden" name="evaluationId" value={evaluationId} />
       <input type="hidden" name="seasonId" value={seasonId} />
       <label className="visually-hidden" htmlFor={`staff-${evaluationId}`}>担当にする面接官</label>
@@ -81,7 +81,7 @@ function TaskAction({
   }
   if (task.kind === 'unhold') {
     return (
-      <form action={unholdAction} className="context-action-form">
+      <form action={unholdAction} className="context-action-form editable-region">
         <input type="hidden" name="evaluationId" value={task.source_id} />
         <input type="hidden" name="seasonId" value={seasonId} />
         <button type="submit" className="button-primary">保留を解く</button>
@@ -93,7 +93,7 @@ function TaskAction({
   return (
     <div className="context-action-stack">
       <Link className="button-primary context-action-link" href={`/applications/${task.application_id}`}>評価する</Link>
-      <form action={holdAction} className="context-action-form context-hold-form">
+      <form action={holdAction} className="context-action-form context-hold-form editable-inline">
         <input type="hidden" name="evaluationId" value={task.source_id} />
         <input type="hidden" name="seasonId" value={seasonId} />
         <label className="visually-hidden" htmlFor={`hold-${task.source_id}`}>保留の理由</label>

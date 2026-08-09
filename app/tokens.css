@@ -42,6 +42,10 @@
   --color-brand-brown: #8a6d4f;
   --color-link-blue: #2b6cb0;
   --color-link-blue-pressed: #1f5488;
+  --color-editable: #f2f7fd;
+  --color-editable-soft: #fbfdff;
+  --color-editable-border: #a9c8ea;
+  --color-editable-ink: #1f5488;
   --color-crest-gold: #d9a520;
   --color-rank-up: #2f9e44;
   --color-rank-down: #e03131;
@@ -686,6 +690,37 @@
   border-radius: var(--rounded-lg);
   padding: var(--space-md);
   border: 1px solid var(--color-hairline);
+}
+
+.editable-region {
+  background-color: var(--color-editable);
+  color: var(--color-ink);
+  border-radius: var(--rounded-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--color-editable-border);
+}
+
+.editable-field {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  border-radius: var(--rounded-sm);
+  padding: 6px 8px;
+  border: 1px solid var(--color-editable-border);
+}
+
+.editable-label {
+  background-color: transparent;
+  color: var(--color-editable-ink);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  padding: 0;
 }
 
 .chip-green {

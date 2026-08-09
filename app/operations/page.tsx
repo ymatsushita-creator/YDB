@@ -35,6 +35,7 @@ export default async function OperationsPage(
   return (
     <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/operations" />}>
       <Breadcrumb
+        readOnly
         year={season.enrollment_year}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },

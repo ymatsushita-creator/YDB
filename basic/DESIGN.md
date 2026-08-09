@@ -84,6 +84,17 @@ colors:
   link-blue: "#2b6cb0"
   link-blue-pressed: "#1f5488"
 
+  # 記入できる面と、固定の面（実行⑨で追加）
+  #
+  # 画面には2種類ある ―― **書き込める場所**と、**記録を映しているだけの場所**。
+  # 見分けが付かないと、書けない値をいじろうとする／書ける値に気づかない。
+  # 記入できる側だけに面と縁を与え、固定の側は白いカードのまま置く。
+  # ★ 色だけで意味を伝えない。記入できる領域には必ず文字の目印も付ける。
+  editable: "#f2f7fd"
+  editable-soft: "#fbfdff"
+  editable-border: "#a9c8ea"
+  editable-ink: "#1f5488"
+
   # 順位と評価 —— 画像の王冠・上下矢印・星
   crest-gold: "#d9a520"
   rank-up: "#2f9e44"
@@ -562,6 +573,26 @@ components:
     rounded: "{rounded.lg}"
     padding: "{spacing.md}"
     border: "1px solid {colors.hairline}"
+
+  # 記入できる領域（フォーム）。固定の表示と面の色で分ける
+  editable-region:
+    backgroundColor: "{colors.editable}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.md}"
+    border: "1px solid {colors.editable-border}"
+  editable-field:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.sm}"
+    padding: "6px 8px"
+    border: "1px solid {colors.editable-border}"
+  editable-label:
+    backgroundColor: "transparent"
+    textColor: "{colors.editable-ink}"
+    typography: "{typography.micro-uppercase}"
+    padding: "0"
 
   # 状態のチップ（アプローチ状態・やることの区分）
   chip-green:

@@ -301,7 +301,7 @@ export default async function HeadhuntingPage({
                   <>
                     <details className="edit-disclosure">
                       <summary className="btn-physical">基本情報・顔写真を編集</summary>
-                      <form action={updateProfileAction} className="profile-edit-form">
+                      <form action={updateProfileAction} className="profile-edit-form editable-region">
                         <input type="hidden" name="personId" value={panel.person_id} />
                         <input type="hidden" name="seasonId" value={season.id} />
                         <div className="edit-grid two">
@@ -340,7 +340,7 @@ export default async function HeadhuntingPage({
 
                     <details className="edit-disclosure">
                       <summary className="btn-physical">アプローチ状態を編集</summary>
-                      <form action={updateApproachAction} className="profile-edit-form">
+                      <form action={updateApproachAction} className="profile-edit-form editable-region">
                         <input type="hidden" name="personId" value={panel.person_id} />
                         <input type="hidden" name="seasonId" value={season.id} />
                         <label>状態

@@ -9,7 +9,7 @@ import {
 import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime,
 } from '../../_components/ui.tsx'
-import { Shell } from '../../_components/shell.tsx'
+import { Shell, Breadcrumb } from '../../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,11 +32,18 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
   return (
     <Shell active="headhunting">
+      {/* 年度を持たない画面。この人の記録は年度をまたぐので、根に年度を置けない。 */}
+      <Breadcrumb
+        readOnly
+        crumbs={[
+          { label: 'ヘッドハンティング', href: '/headhunting' },
+          { label: '人を探す', href: '/people' },
+          { label: `${person.family_name} ${person.given_name}` },
+        ]}
+      />
+
       <div className="page-head">
         <div>
-          <p className="page-sub">
-            <Link href="/people">人を探す</Link> ／ 個人
-          </p>
           <h1 className="page-title">
             {person.family_name} {person.given_name}
           </h1>
