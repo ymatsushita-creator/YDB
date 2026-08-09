@@ -100,9 +100,12 @@ describe('候補者プロフィール編集（0018）', () => {
 
   test('アプローチ状態の編集は担当者付きイベントとして追記する', async () => {
     const season = await makeSeason(db, { year: 2031 })
+    // sort_order は 0016 が初期値5件で 10〜90 を使っている。
+    // マスタは「追加と非活性化で運用する」ので追加自体は正しいが、
+    // 既存の並び順とぶつからない値を選ぶ（UNIQUE 制約がある）。
     const stateId = await scalar<string>(db, `
       INSERT INTO approach_states (code, label, sort_order)
-      VALUES ('contactable', '連絡可能', 10) RETURNING id`)
+      VALUES ('contactable', '連絡可能', 15) RETURNING id`)
 
     assert.deepEqual(await setPersonApproachState(db, {
       personId, seasonId: season.id, stateId, staffId, note: '面談後に更新',
