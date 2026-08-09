@@ -686,12 +686,29 @@ html, body { height: 100%; overflow: hidden; }
    ただし縮めるだけでは中身が下のカードに重なる（C-52）。
    縮む先には必ず `overflow-y: auto` を置く ―― **切らない。送る。**
    ============================================================= */
-.hh-col-main, .hh-col-side { overflow: hidden; }
-/* カードは残り高さを分け合い、**自分の中で送る。**
-   縮ませるからには、必ず送る器を内側に持たせる ―― さもないと
-   はみ出したぶんが下のカードに重なる（C-52 で踏んだ形）。 */
-.hh-col-main > *, .hh-col-side > * { min-height: 0; }
-.hh-col-side > .panel-card { flex: 1 1 0; }
+/* ★ セクションの位置を、中身に関わらず固定する。
+
+   高さを「中身なり」にすると、やることが1件増えただけで
+   **下のカードの位置が動く。** 読む場所が毎回変わるので、
+   **列を比率で割り付けて境目を固定し、各カードは自分の中で送る。**
+
+   grid にするのは、flex だと子の伸縮が中身の高さに引きずられるため。
+   `minmax(0, Nfr)` は「中身がどれだけ高くても、この比率に収める」。 */
+/* 左右で必要な高さが違う。**比率は列ごとに決める**が、
+   どちらも「中身に関わらず固定」であることは変えない。 */
+.hh-col-main, .hh-col-side {
+  display: grid;
+  gap: var(--space-md);
+  overflow: hidden;
+}
+.hh-col-main { grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.2fr); }
+.hh-col-side { grid-template-rows: minmax(0, 1.25fr) minmax(0, 0.75fr); }
+.hh-col-main > *, .hh-col-side > * { min-height: 0; overflow: hidden; }
+/* 3つ以上並ぶ列（アプローチなど）は、等分ではなく中身なりに戻す。 */
+.hh-col-main:has(> :nth-child(3)), .hh-col-side:has(> :nth-child(3)) {
+  grid-auto-rows: minmax(0, auto);
+  grid-template-rows: none;
+}
 
 .panel-card { display: flex; flex-direction: column; min-height: 0; }
 /* 見出しと注記は動かさない。位置が動くと、読む場所が毎回変わる。 */

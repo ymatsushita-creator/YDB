@@ -288,7 +288,6 @@ export default async function HeadhuntingPage({
                 <Link href={`/people/${panel.person_id}?season=${season.id}`} className="hh-more">
                   この人の全体を見る ›
                 </Link>
-                </div>
 
                 {editOptions && (
                   <>
@@ -358,6 +357,7 @@ export default async function HeadhuntingPage({
                     </p>
                   </>
                 )}
+                </div>
               </>
             )}
           </section>
