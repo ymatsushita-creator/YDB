@@ -5,7 +5,7 @@ import {
   listManualTasks, listDerivedTasks, listCandidatesByConfidence, listStepTabs,
   listCandidatesByStep, listAppointments, getBorderlinePanel,
 } from '../../src/queries/borderline.ts'
-import { jstDay, num } from '../_components/ui.tsx'
+import { jstDay, num, filled, NotDerived } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 import { ApproachChip, Confidence, RankDelta, taskSentence } from '../_components/headhunting.tsx'
 import { WeekCalendar, mondayOf, addDays, Rank, Avatar } from '../_components/borderline.tsx'
@@ -287,7 +287,7 @@ export default async function BorderlinePage({
                   <tbody>
                     {stepRows.map((r) => (
                       <tr key={r.application_id} className={r.person_id === personId ? 'is-current' : ''}>
-                        <td className="num strong">{r.score_100 ?? '—'}</td>
+                        <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
                         <td className="num dim">{r.scored_criteria}</td>
                         <td>
                           <Link href={href({ person: r.person_id })} className="bl-person">
@@ -378,15 +378,17 @@ export default async function BorderlinePage({
                 <h3 className="hh-sub">基本情報</h3>
                 <dl className="hh-facts">
                   <dt>学校</dt><dd>{panel.school}</dd>
-                  <dt>学部・学科</dt><dd>{panel.faculty ?? '—'}</dd>
+                  <dt>学部・学科</dt><dd>{filled(panel.faculty)}</dd>
                   <dt>メール</dt><dd>{panel.email}</dd>
-                  <dt>電話番号</dt><dd>{panel.phone ?? '—'}</dd>
+                  <dt>電話番号</dt><dd>{filled(panel.phone)}</dd>
                   <dt>生年月日</dt><dd>{jstDay(panel.birth_date)}（{panel.age} 歳）</dd>
                   <dt>最終接触日</dt>
                   <dd>{panel.last_touchpoint_on ? jstDay(panel.last_touchpoint_on) : 'この年度は接点なし'}</dd>
                   <dt>順位</dt>
-                  <dd>{panel.rank_in_season !== null ? `${panel.rank_in_season} 位` : '—'}</dd>
-                  <dt>成績（100点換算）</dt><dd>{panel.score_100 ?? '—'}</dd>
+                  <dd>{panel.rank_in_season !== null
+                    ? `${panel.rank_in_season} 位` : <NotDerived>確度がまだ無い</NotDerived>}</dd>
+                  <dt>成績（100点換算）</dt>
+                  <dd>{panel.score_100 ?? <NotDerived>評価がまだ無い</NotDerived>}</dd>
                 </dl>
 
                 {panel.note && (

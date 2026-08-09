@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import type { Appointment } from '../../src/queries/borderline.ts'
 
 /**
@@ -152,12 +151,4 @@ export function Avatar({ src, name }: { src: string | null; name: string }) {
   return src
     ? <img className="avatar" src={src} alt="" width={36} height={36} />
     : <span className="avatar avatar-fallback" aria-hidden>{initial}</span>
-}
-
-export function PersonLink({
-  personId, seasonId, children,
-}: { personId: string; seasonId: string; children: React.ReactNode }) {
-  return (
-    <Link href={`/borderline?season=${seasonId}&person=${personId}`}>{children}</Link>
-  )
 }

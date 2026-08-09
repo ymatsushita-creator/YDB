@@ -14,6 +14,11 @@ import {
 } from '../../../src/commands/decide.ts'
 import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../../src/commands/hold.ts'
 import {
+  parseAssignCode, ASSIGN_CODE_MESSAGE,
+  parseReassignCode, REASSIGN_CODE_MESSAGE,
+} from '../../../src/commands/assign.ts'
+import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../../src/commands/unhold.ts'
+import {
   saveScoreAction, submitEvaluationAction, decideAction, editDecisionAction, holdAction,
   assignAction, unholdAction, reassignAction,
 } from './actions.ts'
@@ -76,7 +81,10 @@ export default async function ApplicationPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ score?: string; decide?: string; hold?: string }>
+  searchParams: Promise<{
+    score?: string; decide?: string; hold?: string
+    assign?: string; reassign?: string; unhold?: string
+  }>
 }) {
   const db = await getDb()
   const { id } = await params
@@ -104,8 +112,32 @@ export default async function ApplicationPage({
   const result = OUTCOME_LABEL[app.outcome]
 
   // 直前の保存の結果。知らないコードは「何も起きていない」として捨てる。
-  const savedNotice = (saved || decided || holdResult) && (
+  //
+  // ★ 担当と保留の解除は、実行⑨でボーダーラインからこの画面へ移した。
+  //   **そのとき結果を出す側を持ってこなかった。** アクションは
+  //   `?assign=` を返しているのに画面が読んでおらず、押しても成功も失敗も
+  //   出ない状態になっていた。**移すときは、返り値を受ける側も一緒に移す。**
+  const assigned = parseAssignCode(query.assign)
+  const reassigned = parseReassignCode(query.reassign)
+  const unheld = parseUnholdCode(query.unhold)
+
+  const savedNotice = (saved || decided || holdResult || assigned || reassigned || unheld) && (
     <div className="section">
+      {assigned && (
+        <p className={`callout${assigned === 'ok' ? ' ok' : ''}`}>
+          {ASSIGN_CODE_MESSAGE[assigned]}
+        </p>
+      )}
+      {reassigned && (
+        <p className={`callout${reassigned === 'reassigned' ? ' ok' : ''}`}>
+          {REASSIGN_CODE_MESSAGE[reassigned]}
+        </p>
+      )}
+      {unheld && (
+        <p className={`callout${unheld === 'unheld' ? ' ok' : ''}`}>
+          {UNHOLD_CODE_MESSAGE[unheld]}
+        </p>
+      )}
       {saved && (
         <p className={`callout${saved === 'saved' ? ' ok' : ''}`}>
           {SAVE_SCORE_CODE_MESSAGE[saved]}

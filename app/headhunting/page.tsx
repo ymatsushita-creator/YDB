@@ -6,7 +6,7 @@ import {
   listApplicantScores, getPersonPanel, listCriterionScores, listHeadhuntingTasks,
   getProfileEditOptions,
 } from '../../src/queries/headhunting.ts'
-import { jstDay, num, ymd } from '../_components/ui.tsx'
+import { jstDay, num, ymd, filled, NotDerived } from '../_components/ui.tsx'
 import {
   ApproachChip, RankMark, RankDelta, Stars, Confidence, taskSentence,
 } from '../_components/headhunting.tsx'
@@ -158,7 +158,7 @@ export default async function HeadhuntingPage({
                             {r.person_name}
                           </Link>
                         </td>
-                        <td className="num strong">{r.score_100 ?? '—'}</td>
+                        <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
                         <td className="num dim">{r.earned} / {r.possible}</td>
                         <td className="num dim">{r.scored_criteria}</td>
                       </tr>
@@ -255,10 +255,10 @@ export default async function HeadhuntingPage({
                 <dl className="hh-facts">
                   <dt>生年月日</dt><dd>{ymd(panel.birth_date)}</dd>
                   <dt>学校</dt><dd>{panel.school}</dd>
-                  <dt>学部・学科</dt><dd>{panel.faculty ?? '—'}</dd>
+                  <dt>学部・学科</dt><dd>{filled(panel.faculty)}</dd>
                   <dt>メール</dt><dd>{panel.email}</dd>
-                  <dt>電話番号</dt><dd>{panel.phone ?? '—'}</dd>
-                  <dt>LINE ID</dt><dd>{panel.line_user_id ?? '—'}</dd>
+                  <dt>電話番号</dt><dd>{filled(panel.phone)}</dd>
+                  <dt>LINE ID</dt><dd>{filled(panel.line_user_id)}</dd>
                   <dt>最後の接点</dt><dd>{panel.last_touchpoint_on ? jstDay(panel.last_touchpoint_on) : 'この年度は接点なし'}</dd>
                 </dl>
 
@@ -278,7 +278,8 @@ export default async function HeadhuntingPage({
                 )}
 
                 <dl className="hh-facts hh-facts-tight">
-                  <dt>成績（100点換算）</dt><dd>{panel.score_100 ?? '—'}</dd>
+                  <dt>成績（100点換算）</dt>
+                  <dd>{panel.score_100 ?? <NotDerived>評価がまだ無い</NotDerived>}</dd>
                   <dt>確度</dt>
                   <dd>
                     <Confidence ratio={panel.confidence_ratio} />

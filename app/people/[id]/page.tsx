@@ -7,7 +7,7 @@ import {
   OUTCOME_LABEL,
 } from '../../../src/queries/drilldown.ts'
 import {
-  Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime,
+  Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime, filled,
 } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb } from '../../_components/shell.tsx'
 
@@ -82,8 +82,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           <table className="data">
             <tbody>
               <tr><td>メール</td><td className="mono">{person.email}</td></tr>
-              <tr><td>電話</td><td className="mono">{person.phone ?? '—'}</td></tr>
-              <tr><td>LINE</td><td className="mono">{person.line_user_id ?? '—'}</td></tr>
+              <tr><td>電話</td><td className="mono">{filled(person.phone)}</td></tr>
+              <tr><td>LINE</td><td className="mono">{filled(person.line_user_id)}</td></tr>
               <tr>
                 <td>紹介者</td>
                 <td>

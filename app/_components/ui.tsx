@@ -94,3 +94,30 @@ export function LevelBadge({
   if (inWindow === false) return <span className="badge-tag-gray">未応募・接点休止</span>
   return <span className="badge-tag-purple">未応募・接点継続中</span>
 }
+
+/**
+ * 未記入の欄。
+ *
+ * ★ **「記入できるのに空」と「導出できないから空」は別物である。**
+ *
+ *   未記入   … 電話番号や学部のように、人が入れる欄が空のまま
+ *   算出なし … 評価がまだ無いので成績が出ない、規則が無いので確度が出ない
+ *
+ * 前者だけを赤くする。後者まで赤くすると、**誰も直せないものが
+ * 「直すべきもの」として並ぶ。** 画面が催促しているのに手の打ちようがない、
+ * という状態を作らない。
+ *
+ * 色だけで伝えない ―― 赤い欄には必ず「未記入」の文字を置く。
+ */
+export function Unset() {
+  return <span className="unset">未記入</span>
+}
+
+/** 記入できる欄の値。空なら未記入として赤く出す。 */
+export const filled = (v: string | null | undefined) =>
+  v === null || v === undefined || v.trim() === '' ? <Unset /> : v
+
+/** 導出できないだけの空欄。**未記入ではない**ので赤くしない。 */
+export function NotDerived({ children }: { children?: ReactNode }) {
+  return <span className="not-derived">{children ?? '算出なし'}</span>
+}
