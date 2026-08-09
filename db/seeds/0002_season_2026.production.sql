@@ -41,12 +41,16 @@
 -- 記録できなかったものが2つある。
 --   1. 「NEO ACADEMIA 2期生」という名称。seasons に名前の列が無く、
 --      enrollment_year（整数）しか持たない。期の呼び方は今は入らない
+--      → ★実行⑨で解消。0021 で cohort_number を足し、ここで 2 を入れている。
+--        マイグレーションの UPDATE は既存の本番行のためのもので、
+--        **新しく作る DB ではこのシードが入れる**（両方要る）。
 --   2. 「選考開始 2026-03-23」。seasons は4つの日付しか持たない。
 --      応募締切と選考終了の間に選考開始は無い
 --
 -- 定員36・目標応募数100は 2026-08-07 に実数値として受領済み（D-8）。
 INSERT INTO seasons (
     enrollment_year,
+    cohort_number,
     outreach_start_date,
     application_open_date,
     application_close_date,
@@ -56,6 +60,7 @@ INSERT INTO seasons (
 )
 VALUES (
     2026,
+    2,                   -- NEO ACADEMIA 2期生（0021 で列を足すまで入らなかった）
     DATE '2026-02-01',
     DATE '2026-03-10',
     DATE '2026-03-22',   -- ★推測

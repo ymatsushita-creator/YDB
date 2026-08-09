@@ -34,7 +34,11 @@ interface World {
 }
 
 async function world(db: Db): Promise<World> {
-  const season = await one<{ id: string }>(db, `SELECT id FROM seasons`)
+  // ★ 本番シードには期が2つ入っている（2期=2026、3期=2027）。
+  // 3期はまだ選考ステップも軸も持たない「これからの募集」なので、
+  // 選考の検証は 2期に名指しで絞る。**「1件しかない」を前提にしない。**
+  const season = await one<{ id: string }>(db,
+    `SELECT id FROM seasons WHERE enrollment_year = 2026`)
   const steps = await all<{ id: string; name: string; sort_order: number }>(
     db, `SELECT id, name, sort_order FROM selection_steps ORDER BY sort_order`)
   const schoolId = await scalar<string>(

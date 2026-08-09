@@ -21,14 +21,15 @@ import { seedDemo } from '../src/seed/demo.ts'
 
 const productionDb = () => freshDb({ seeds: 'production' })
 
-describe('本番シードの 2026年度（D-8）', () => {
-  test('年度が1件あり、定員と目標応募数は受領した実数値である', async () => {
+describe('本番シードの 2期＝2026年度（D-8）', () => {
+  test('定員と目標応募数は受領した実数値である', async () => {
     const db = await productionDb()
     const s = await one<{
       enrollment_year: number
       capacity: number
       target_application_count: number
-    }>(db, `SELECT enrollment_year, capacity, target_application_count FROM seasons`)
+    }>(db, `SELECT enrollment_year, capacity, target_application_count
+              FROM seasons WHERE cohort_number = 2`)
 
     assert.equal(s.enrollment_year, 2026)
     assert.equal(s.capacity, 36)
@@ -46,13 +47,50 @@ describe('本番シードの 2026年度（D-8）', () => {
               to_char(application_open_date,  'YYYY-MM-DD') AS open,
               to_char(application_close_date, 'YYYY-MM-DD') AS close,
               to_char(selection_end_date,     'YYYY-MM-DD') AS selection_end
-         FROM seasons`,
+         FROM seasons WHERE cohort_number = 2`,
     )
 
     assert.equal(s.outreach, '2026-02-01', '1次面談の開始日を集客起点に充てた')
     assert.equal(s.open, '2026-03-10', '応募フォームの受付開始。確定')
     assert.equal(s.close, '2026-03-22', '★推測値。実績の最終応募日を締切と見なしている')
     assert.equal(s.selection_end, '2026-04-15', '合否通知・入金案内の日')
+    await db.close()
+  })
+})
+
+describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
+  test('4つの日付はすべて推測値で、2期の周期を1年ずらしてある', async () => {
+    // ★ 受領していない値である。**由来を消さないことを条件に置いている。**
+    //   実際の日程が分かったら season_revisions に履歴を残して直す（原則4）。
+    const db = await productionDb()
+    const s = await one<Record<string, string>>(
+      db,
+      `SELECT to_char(outreach_start_date,    'YYYY-MM-DD') AS outreach,
+              to_char(application_open_date,  'YYYY-MM-DD') AS open,
+              to_char(application_close_date, 'YYYY-MM-DD') AS close,
+              to_char(selection_end_date,     'YYYY-MM-DD') AS selection_end
+         FROM seasons WHERE cohort_number = 3`,
+    )
+    assert.equal(s.outreach, '2027-02-01', '★推測。2期の集客起点を1年ずらした')
+    assert.equal(s.open, '2027-03-10', '★推測。同上')
+    assert.equal(s.close, '2027-03-22', '★推測。同上')
+    assert.equal(s.selection_end, '2027-04-15', '★推測。同上')
+    await db.close()
+  })
+
+  test('定員・目標応募数・選考ステップは入れていない（前期の数字を写さない）', async () => {
+    const db = await productionDb()
+    const s = await one<{ capacity: number | null; target_application_count: number | null }>(
+      db, `SELECT capacity, target_application_count FROM seasons WHERE cohort_number = 3`)
+    assert.equal(s.capacity, null, '定員は未受領。前期の 36 を写さない')
+    assert.equal(s.target_application_count, null, '目標も未受領。前期の 100 を写さない')
+
+    // 選考フローも未受領。2期のステップを写すと、変わっていた場合に
+    // 運営が使っていない軸がマスタとして固定化する（原則3）。
+    assert.equal(await scalar<number>(db, `
+      SELECT count(*)::int FROM selection_steps st
+        JOIN seasons se ON se.id = st.season_id
+       WHERE se.cohort_number = 3`), 0)
     await db.close()
   })
 })
@@ -192,7 +230,8 @@ describe('シードは何度流しても増えない', () => {
     const db = await productionDb()
     await seed(db)
 
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 1)
+    // 期は2つ（2期と3期）。ステップと軸を持つのは2期だけ。
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 2)
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 4)
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 6)
     await db.close()
