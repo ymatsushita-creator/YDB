@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getDb } from '../../../src/db/server.ts'
 import { saveScore, type SaveScoreCode } from '../../../src/commands/score.ts'
 import {
-  submitEvaluation, decideStep, correctDecision, type DecideCode,
+  submitEvaluation, decideStep, type DecideCode,
 } from '../../../src/commands/decide.ts'
 import { holdEvaluation, type HoldCode } from '../../../src/commands/hold.ts'
 
@@ -124,29 +124,3 @@ export async function decideAction(formData: FormData): Promise<void> {
 }
 
 
-/**
- * 判定を訂正する（D2）。打ち消し行を1行追記する。
- *
- * 記録層が最初から持っている仕組み（`corrects_history_id` /
- * `is_correction` / `v_effective_status_histories`）に入口を付けただけで、
- * 新しい概念は足していない。
- */
-export async function correctDecisionAction(formData: FormData): Promise<void> {
-  const applicationId = String(formData.get('applicationId') ?? '')
-  const historyId = String(formData.get('historyId') ?? '')
-  const staffId = String(formData.get('staffId') ?? '')
-  const note = String(formData.get('note') ?? '')
-
-  const back = (code: DecideCode) => {
-    const id = /^[0-9a-f-]{36}$/i.test(applicationId) ? applicationId : ''
-    redirect(`/applications/${id}?decide=${code}`)
-  }
-
-  const db = await getDb()
-  const result = await correctDecision(db, { applicationId, historyId, staffId, note })
-  if (!result.ok) return back(result.reason)
-
-  revalidatePath(`/applications/${applicationId}`)
-  revalidatePath('/borderline')
-  back(result.decision === 'advance' ? 'corrected_to_advance' : 'corrected_to_reject')
-}
