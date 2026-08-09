@@ -702,14 +702,17 @@ a.zoom-crumb:hover { text-decoration: none; }
 .cal-hour { padding: 2px 4px; color: var(--color-stone); text-align: right; }
 .cal-cell.is-today { background: var(--color-card-tint-cream); }
 .cal-event {
-  display: flex; flex-direction: column; gap: 1px;
-  margin: 1px; padding: 3px 5px;
+  display: flex; align-items: center;
+  margin: 1px; padding: 2px 4px;
   border-radius: var(--rounded-xs);
-  overflow: hidden; line-height: 1.25;
+  overflow: hidden; line-height: 1.2;
   border-left: 3px solid currentColor;
 }
-.cal-event strong { font-size: 11px; font-weight: 600; }
-.cal-event span { font-size: 10px; opacity: .8; }
+/* 1行に収め、入りきらなければ「…」で切る。**折り返して縦に潰さない。** */
+.cal-event strong {
+  font-size: 10px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
 .appt-first     { background: var(--color-card-tint-lavender); color: var(--color-brand-purple-800); }
 .appt-doc       { background: var(--color-card-tint-yellow);   color: var(--color-semantic-warning); }
 .appt-sched     { background: var(--color-card-tint-mint);     color: var(--color-semantic-success); }
@@ -755,23 +758,26 @@ html, body { height: 100%; overflow: hidden; }
 .hh-grid { flex: 1 1 0%; min-height: 0; align-items: stretch; overflow: hidden; }
 .hh-col-main, .hh-col-side { min-height: 0; }
 
-/* カードは自分の中で送る。見出しと注記は動かさない。 */
+/* ★ カードを中身より小さく縮ませない。
+
+   flex の子は既定で縮む（flex-shrink:1）。カードが中身より低くなっても
+   `overflow` は visible なので、**はみ出したぶんが下のカードに重なる。**
+   実際これで候補者パネルの 306px が、下の一覧の上に乗って文字が被った。
+
+   縮ませない代わりに、**列のほうで送る。** ページは伸びない。 */
+.hh-col-main > *, .hh-col-side > * { flex: 0 0 auto; }
 .panel-card { display: flex; flex-direction: column; min-height: 0; }
-.panel-card > .hh-head, .panel-card > .hh-note, .panel-card > h2 { flex: 0 0 auto; }
-.panel-card > table, .panel-card > .hh-list, .panel-card > .hh-tasks,
-.panel-card > .cal, .panel-card > .bl-tabs { flex: 0 1 auto; min-height: 0; }
-.panel-card > .hh-table, .panel-card > .hh-list { overflow-y: auto; }
+.panel-card > * { flex: 0 0 auto; }
+
+/* 送ってよいのは、明示した中身だけ。 */
+.panel-card > .hh-list, .panel-card > .hh-tasks {
+  flex: 0 1 auto; min-height: 0; overflow-y: auto;
+}
 
 /* 3タブに畳んだ既存画面は、外枠の中で送る。 */
 .hh-main > .page-head, .hh-main > .cockpit-head { flex: 0 0 auto; }
-.hh-main > .grid, .hh-main > .section, .hh-main > .footnote,
-.hh-main > .callout { flex: 0 0 auto; }
-.hh-main > .section { min-height: 0; overflow-y: auto; }
-
-/* 右の列は上から順に、余った高さをカレンダーへ渡す。 */
-.hh-col-side { display: flex; flex-direction: column; }
-.hh-col-side > .panel-card:last-child { flex: 1 1 auto; }
-.hh-col-side .cal { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.hh-main > .grid, .hh-main > .footnote, .hh-main > .callout { flex: 0 0 auto; }
+.hh-main > .section { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 
 /* 画面の下に置いた「まだ無いもの」は、たたんでおく。
    常に開いていると、それだけで1画面ぶんの高さを食う。 */

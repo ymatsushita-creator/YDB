@@ -74,12 +74,12 @@ export function WeekCalendar({
   return (
     <>
       {/*
-        行の高さは可変にする（最低 30px）。固定にすると、残り高さより
-        格子のほうが高い画面で**下の時間帯が切れて到達できなくなる。**
-        入りきらないときだけ格子の中で送る（ページは伸ばさない）。
+        行の高さは固定（36px）。可変にすると、狭い画面で行が潰れて
+        升の文字が読めなくなる ―― **読めない格子は、無いのと同じ。**
+        入りきらないときは格子の中で送る（ページは伸ばさない）。
       */}
       <div className="cal"
-           style={{ gridTemplateRows: `auto repeat(${hours.length}, minmax(30px, 1fr))` }}>
+           style={{ gridTemplateRows: `auto repeat(${hours.length}, 36px)` }}>
         <div className="cal-corner" />
         {days.map((d) => (
           <div key={d} className={`cal-head${d === today ? ' is-today' : ''}`}>
@@ -111,9 +111,14 @@ export function WeekCalendar({
               key={a.appointment_id}
               className={`cal-event ${KIND_CLASS[a.kind_code] ?? 'appt-internal'}`}
               style={{ gridColumn: di + 2, gridRow: `${hour - HOUR_FROM + 2} / span ${span}` }}
+              title={`${jstTime(a.starts_at)} ${a.kind_label}${a.person_name ? ` ・ ${a.person_name}` : ''}`}
             >
+              {/*
+                升は狭い（7列で右の縦長パネルを割る）。2行入れると
+                1文字ずつ折り返して**縦に潰れた文字列**になる。
+                升には1行だけ置き、種別と時刻は title で補う。
+              */}
               <strong>{a.person_name ?? a.title}</strong>
-              <span>{a.person_name ? a.kind_label : jstTime(a.starts_at)}</span>
             </div>
           )
         })}
