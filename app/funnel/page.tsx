@@ -5,7 +5,7 @@ import {
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, pct, ymd } from '../_components/ui.tsx'
 import { TimeSeries, Legend, FunnelStages } from '../_components/charts.tsx'
-import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +55,7 @@ export default async function FunnelPage(
     <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/funnel" />}>
       <Breadcrumb
         readOnly
-        year={season.enrollment_year}
+        root={seasonLabel(season)}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
           { label: 'ファネル' },

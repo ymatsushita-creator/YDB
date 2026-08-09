@@ -9,8 +9,6 @@ import { all, maybeOne, type Db } from '../db/client.ts'
  *
  * ★ 画像にあって、ここに無いもの
  *
- *   学年（4年生・2026年卒） … persons に列が無い。生年月日から年齢は出せるが、
- *                             学年は入学年が要る。**年齢で代用しない**
  *   評価サマリーの4軸       … 実際の軸は年度ごとの登録で、名前も数も違う
  *   通知（🔔）              … 記録層が無い
  *   アカウント・ログアウト  … 認証が無い
@@ -296,7 +294,7 @@ export interface BorderlinePanel {
   email: string
   phone: string | null
   birth_date: Date
-  /** 生年月日から出した満年齢。**学年ではない**（入学年の記録が無い）。 */
+  /** 生年月日から出した満年齢。学年という概念は存在しない（期で数える）。 */
   age: number
   note: string | null
   last_touchpoint_on: Date | null

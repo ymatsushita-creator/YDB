@@ -123,6 +123,8 @@ interface SeasonPlan {
   /** 応募まで至る割合と、各ステップの通過率。 */
   applyRate: number
   passRates: number[]
+  /** 期（1期・2期…）。年度からは導けないので、計画に書く。 */
+  cohort: number
 }
 
 // 通過率は各年度の定員におおよそ着地するよう選んである。
@@ -139,10 +141,12 @@ interface SeasonPlan {
 const PLANS: SeasonPlan[] = [
   { year: 2025, outreachStart: '2024-09-01', applicationOpen: '2024-11-01',
     applicationClose: '2024-12-15', selectionEnd: '2025-02-20',
-    capacity: 30, target: 220, applyRate: 0.34, passRates: [0.58, 0.52, 0.52, 0.76] },
+    capacity: 30, target: 220, applyRate: 0.34, passRates: [0.58, 0.52, 0.52, 0.76],
+    cohort: 1 },
   { year: 2026, outreachStart: '2025-09-01', applicationOpen: '2025-11-01',
     applicationClose: '2026-08-31', selectionEnd: '2026-11-30',
-    capacity: 36, target: 300, applyRate: 0.36, passRates: [0.55, 0.50, 0.50, 0.70] },
+    capacity: 36, target: 300, applyRate: 0.36, passRates: [0.55, 0.50, 0.50, 0.70],
+    cohort: 2 },
 ]
 
 export interface DemoStats {
@@ -269,10 +273,10 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     const { id } = await insertOne<{ id: string }>(db,
       `INSERT INTO seasons (enrollment_year, outreach_start_date, application_open_date,
                             application_close_date, selection_end_date, capacity,
-                            target_application_count)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+                            target_application_count, cohort_number)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
       [plan.year, plan.outreachStart, plan.applicationOpen, plan.applicationClose,
-       plan.selectionEnd, plan.capacity, plan.target])
+       plan.selectionEnd, plan.capacity, plan.target, plan.cohort])
 
     const stepIds: string[] = []
     const criteriaByStep: Criterion[][] = []

@@ -6,7 +6,7 @@ import {
   getForest, getCommunities, getForestPersons, DORMANT_DAYS,
 } from '../../../src/queries/cockpit.ts'
 import { Card, Kpi, Empty, num, ymd } from '../../_components/ui.tsx'
-import { Shell, Breadcrumb, YearSwitch } from '../../_components/shell.tsx'
+import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,7 +48,7 @@ export default async function ReachZonePage({
     <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath={`/reach-zones/${forest.forest_id}`} />}>
       <Breadcrumb
         readOnly
-        year={season.enrollment_year}
+        root={seasonLabel(season)}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
           { label: forest.name },

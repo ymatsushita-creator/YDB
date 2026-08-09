@@ -724,3 +724,66 @@ a.zoom-crumb:hover { text-decoration: none; }
 /* 担当と保留の操作。評価カードの中に並べる（対象が見えている場所に置く）。 */
 .ops-row { display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-sm); }
 .ops-row > form { flex: 1 1 260px; }
+
+/* =============================================================
+   スクロール無しで成り立たせる（実行⑨で依頼者の指示）
+
+   ★ ページそのものは縦に伸ばさない。外枠を画面の高さに固定し、
+     **長い表はカードの内側で送る。**
+
+   全部を1画面に詰めて字を小さくする方向は取らない。読めない画面は
+   スクロールが無くても使えない。**送る場所を、ページからカードへ移す。**
+   ============================================================= */
+
+html, body { height: 100%; overflow: hidden; }
+
+/* 高さの連鎖を、どこか1箇所でも切らさない。
+   flex/grid の子は既定で min-height:auto なので、明示的に 0 へ落とさないと
+   「縮まないのに親は固定」になり、**はみ出したぶんが切れて到達できなくなる。**
+   実際これで 214px ぶんの中身が消えていた。 */
+.hh-frame {
+  height: 100vh; overflow: hidden;
+  grid-template-rows: minmax(0, 1fr);
+}
+.hh-frame > * { min-height: 0; }
+.hh-main {
+  display: flex; flex-direction: column; gap: var(--space-md);
+  min-width: 0; height: 100%; min-height: 0; overflow: hidden;
+}
+
+/* 帯の下に残った高さを、そのまま中身の高さにする。 */
+.hh-grid { flex: 1 1 0%; min-height: 0; align-items: stretch; overflow: hidden; }
+.hh-col-main, .hh-col-side { min-height: 0; }
+
+/* カードは自分の中で送る。見出しと注記は動かさない。 */
+.panel-card { display: flex; flex-direction: column; min-height: 0; }
+.panel-card > .hh-head, .panel-card > .hh-note, .panel-card > h2 { flex: 0 0 auto; }
+.panel-card > table, .panel-card > .hh-list, .panel-card > .hh-tasks,
+.panel-card > .cal, .panel-card > .bl-tabs { flex: 0 1 auto; min-height: 0; }
+.panel-card > .hh-table, .panel-card > .hh-list { overflow-y: auto; }
+
+/* 3タブに畳んだ既存画面は、外枠の中で送る。 */
+.hh-main > .page-head, .hh-main > .cockpit-head { flex: 0 0 auto; }
+.hh-main > .grid, .hh-main > .section, .hh-main > .footnote,
+.hh-main > .callout { flex: 0 0 auto; }
+.hh-main > .section { min-height: 0; overflow-y: auto; }
+
+/* 右の列は上から順に、余った高さをカレンダーへ渡す。 */
+.hh-col-side { display: flex; flex-direction: column; }
+.hh-col-side > .panel-card:last-child { flex: 1 1 auto; }
+.hh-col-side .cal { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+/* 画面の下に置いた「まだ無いもの」は、たたんでおく。
+   常に開いていると、それだけで1画面ぶんの高さを食う。 */
+.hh-gaps { flex: 0 0 auto; padding: var(--space-sm) var(--space-lg); }
+.hh-gaps > summary {
+  cursor: pointer; font-size: 12px; font-weight: 600; color: var(--color-slate);
+}
+.hh-gaps > ul { max-height: 140px; overflow-y: auto; margin-top: var(--space-xs); }
+
+/* ★ 切らない。**はみ出したら、そこで送れるようにする。**
+   ページは伸ばさないが、届かない中身を作るのは、スクロールより悪い。 */
+.hh-col-main, .hh-col-side { overflow-y: auto; }
+.panel-card > .hh-table, .panel-card > .hh-list, .panel-card > .hh-tasks {
+  overflow-y: auto;
+}
