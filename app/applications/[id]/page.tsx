@@ -7,6 +7,7 @@ import {
 import {
   parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
 } from '../../../src/commands/score.ts'
+import { listAssignableStaff } from '../../../src/commands/assign.ts'
 import {
   getDecidableStep, getCorrectableDecision, listDecidingStaff,
   parseDecideCode, DECIDE_CODE_MESSAGE,
@@ -14,6 +15,7 @@ import {
 import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../../src/commands/hold.ts'
 import {
   saveScoreAction, submitEvaluationAction, decideAction, editDecisionAction, holdAction,
+  assignAction, unholdAction, reassignAction,
 } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 import { Shell } from '../../_components/shell.tsx'
@@ -86,7 +88,7 @@ export default async function ApplicationPage({
   const app = await getApplication(db, id)
   if (!app) notFound()
 
-  const [timeline, evaluations, decidable, editable, decidingStaff] = await Promise.all([
+  const [timeline, evaluations, decidable, editable, decidingStaff, assignableStaff] = await Promise.all([
     getApplicationTimeline(db, app.application_id),
     getApplicationEvaluations(db, app.application_id),
     getDecidableStep(db, app.application_id),
@@ -94,6 +96,7 @@ export default async function ApplicationPage({
     // それより前の判定を直せてしまうと、あとの判定と辻褄が合わなくなる。
     getCorrectableDecision(db, app.application_id),
     listDecidingStaff(db),
+    listAssignableStaff(db, app.season_id),
   ])
 
   // 結末は v_application_outcome（0011）が決める。画面では組み立てない。
@@ -342,6 +345,46 @@ export default async function ApplicationPage({
                   )}
                   {e.handover_note && (
                     <p className="unit-note">申し送り：{e.handover_note}</p>
+                  )}
+
+                  {/*
+                    担当と保留（実行⑨でボーダーラインから移した）。
+                    **操作は、対象が見えている場所に置く。**
+                    出す条件は commands 側が通す母集団と揃える ――
+                    確定済みの評価には担当も保留も動かせない。
+                  */}
+                  {e.state !== 'submitted' && (
+                    <div className="ops-row">
+                      <form action={e.interviewer ? reassignAction : assignAction}
+                            className="decide-form editable-region">
+                        <input type="hidden" name="applicationId" value={app.application_id} />
+                        <input type="hidden" name="evaluationId" value={e.evaluation_id} />
+                        <label className="visually-hidden" htmlFor={`assign-${e.evaluation_id}`}>
+                          担当
+                        </label>
+                        <select id={`assign-${e.evaluation_id}`} name="staffId" defaultValue="" required>
+                          <option value="" disabled>
+                            {e.interviewer ? '別の担当を選ぶ…' : '担当を選ぶ…'}
+                          </option>
+                          {assignableStaff.map((st) => (
+                            <option key={st.staff_id} value={st.staff_id}>
+                              {st.display_name}（判断待ち {st.pending} 件）
+                            </option>
+                          ))}
+                        </select>
+                        <button type="submit" className="button-secondary">
+                          {e.interviewer ? '担当を替える' : '担当を決める'}
+                        </button>
+                      </form>
+
+                      {e.state === 'held' && (
+                        <form action={unholdAction} className="decide-form editable-region">
+                          <input type="hidden" name="applicationId" value={app.application_id} />
+                          <input type="hidden" name="evaluationId" value={e.evaluation_id} />
+                          <button type="submit" className="button-secondary">保留を解く</button>
+                        </form>
+                      )}
+                    </div>
                   )}
 
                   {/* E1: 何を評価するのかを出す。

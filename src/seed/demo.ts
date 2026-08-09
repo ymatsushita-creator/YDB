@@ -156,6 +156,8 @@ export interface DemoStats {
   scores: number
   approach_events: number
   score_snapshots: number
+  appointments: number
+  manual_tasks: number
 }
 
 interface Criterion { id: string; reapplicantOnly: boolean }
@@ -324,6 +326,7 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     persons: 0, touchpoints: 0, applications: 0, voided: 0, deleted_persons: 0,
     histories: 0, evaluations: 0, scores: 0,
     approach_events: 0, score_snapshots: 0,
+    appointments: 0, manual_tasks: 0,
   }
   /** 過去に応募して不合格・辞退になった人。翌年度の再応募母集団になる。 */
   let returning: string[] = []
@@ -830,6 +833,103 @@ async function seedHeadhunting(db: Db, ctx: HeadhuntingContext): Promise<void> {
       [ruleSetId, season.id, day(offset)])
     stats.score_snapshots = n.compute_score_snapshots
   }
+
+  await seedSchedule(db, ctx, candidates)
+}
+
+// -------------------------------------------------------------
+// 予定（0019）と、手で作るやること（0020）
+//
+// ★ 「今日」を含む週に置く。カレンダーは週表示なので、asOf から離れた
+//   日付に置くと**開いた瞬間は空**になり、描けているのか壊れているのか
+//   区別が付かない。実行⑨で年度を減らしたとき、偶然できていた経路が
+//   黙って消えたのと同じ形を、ここでは最初から避ける。
+// -------------------------------------------------------------
+async function seedSchedule(
+  db: Db, ctx: HeadhuntingContext, candidates: string[],
+): Promise<void> {
+  const { season, staffIds, stats } = ctx
+  if (candidates.length === 0) return
+
+  const kinds = (await db.query<{ id: string; code: string }>(
+    `SELECT id, code FROM appointment_kinds`)).rows
+  const kind = (code: string) => kinds.find((k) => k.code === code)!.id
+
+  // asOf の週の月曜を求める（JST の暦日で数える）。
+  const asOfDay = new Date(ctx.asOf + 9 * 3600_000)
+  const monday = new Date(ctx.asOf - ((asOfDay.getUTCDay() + 6) % 7) * 86_400_000)
+  const at = (dayOffset: number, hour: number, minutes = 0) =>
+    new Date(monday.getTime() + dayOffset * 86_400_000)
+      .toISOString().slice(0, 10) + `T${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+09:00`
+
+  const plan: Array<[string, number, number, number, string]> = [
+    // 種別, 曜日(0=月), 開始時, 所要(時), 表題
+    ['first_contact',  0, 9,  1, '初回連絡'],
+    ['document_check', 1, 10, 1, '書類確認'],
+    ['scheduling',     2, 13, 1, '面談調整'],
+    ['casual',         3, 14, 1, 'カジュアル面談'],
+    ['interview',      4, 10, 1, '面談'],
+    ['internal',       4, 13, 1, '社内MTG'],
+  ]
+
+  for (const [i, [code, day, hour, span, title]] of plan.entries()) {
+    const needsPerson = code !== 'internal'
+    await db.query(`
+      INSERT INTO appointments
+        (season_id, person_id, kind_id, title, starts_at, ends_at, owner_staff_id, note)
+      VALUES ($1,$2,$3,$4,$5::timestamptz,$6::timestamptz,$7,$8)`,
+    [season.id, needsPerson ? candidates[i % candidates.length]! : null, kind(code),
+      title, at(day, hour), at(day, hour + span), ctx.pick(staffIds), null])
+    stats.appointments++
+  }
+
+  // 取り消した予定を1件。**消さずに残す形**を実データで踏ませる。
+  await db.query(`
+    INSERT INTO appointments
+      (season_id, person_id, kind_id, title, starts_at, ends_at, owner_staff_id,
+       cancelled_at, cancel_reason)
+    VALUES ($1,$2,$3,'面談（先方都合で流れた）',$4::timestamptz,$5::timestamptz,$6,
+            now(),'先方都合')`,
+  [season.id, candidates[0]!, kind('interview'), at(2, 16), at(2, 17), ctx.pick(staffIds)])
+  stats.appointments++
+
+  // --- 手で作るやること ---
+  // 期限を「過ぎている / 今日 / 先」と、着手済みの4通りそろえる。
+  // 1つでも欠けると、その見え方が画面で一度も描かれない。
+  //
+  // ★ 期限は **jst_today() を基準に置く**（asOf ではない）。
+  //   v_manual_tasks の urgency は jst_today() と比べるので、asOf を
+  //   基準にすると、asOf と実際の今日がずれた日に4通りが崩れる。
+  //   実際 tests/13（asOf を固定して流す）で「要対応」が消えて落ちた。
+  //   **基準日は、それを読む側と揃える。**
+
+  const tasks: Array<[string, number, string | null, string | null, boolean]> = [
+    // 表題, 期限のずれ, 時刻, 相手, 着手済みか
+    ['高確度候補者にアプローチする', 0,  '14:00', candidates[0] ?? null, false],
+    ['面談日程を調整する',           0,  '18:00', candidates[1] ?? null, false],
+    ['書類を確認する',               1,  '12:00', candidates[2] ?? null, true],
+    ['候補者リストを20名追加する',   6,  null,    null,                  false],
+    ['先週の連絡漏れを追いかける',  -3,  null,    candidates[3] ?? null, false],
+  ]
+  for (const [title, offset, time, personId, started] of tasks) {
+    await db.query(`
+      INSERT INTO manual_tasks
+        (season_id, person_id, title, due_on, due_time, owner_staff_id,
+         created_by_staff_id, started_at)
+      VALUES ($1,$2,$3, jst_today() + $4::int, $5::time,$6,$7,$8)`,
+    [season.id, personId, title, offset, time,
+      ctx.pick(staffIds), staffIds[0]!, started ? new Date(ctx.asOf).toISOString() : null])
+    stats.manual_tasks++
+  }
+
+  // 終わったやること。開いている一覧から外れることを確かめる経路。
+  await db.query(`
+    INSERT INTO manual_tasks
+      (season_id, title, due_on, owner_staff_id, created_by_staff_id,
+       started_at, completed_at)
+    VALUES ($1,'説明会の会場を押さえる', jst_today() - 7,$2,$3,now(),now())`,
+  [season.id, ctx.pick(staffIds), staffIds[0]!])
+  stats.manual_tasks++
 }
 
 // -------------------------------------------------------------

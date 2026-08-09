@@ -1,339 +1,449 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
-import { listSeasons, getSeason, getStepFlow } from '../../src/queries/dashboard.ts'
+import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
 import {
-  getOpenTasks, getTaskTotals, getForests, getCommunityMap,
-  DORMANT_DAYS, type TaskKind, type ForestRow, type CommunityMapRow,
-} from '../../src/queries/cockpit.ts'
-import {
-  getApplication, getApplicationEvaluations, getApplicationTimeline, getPersonTouchpoints,
-} from '../../src/queries/drilldown.ts'
-import {
-  listAssignableStaff, parseAssignCode, ASSIGN_CODE_MESSAGE,
-  parseReassignCode, REASSIGN_CODE_MESSAGE, type AssignableStaff,
-} from '../../src/commands/assign.ts'
-import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../src/commands/unhold.ts'
-import { parseHoldCode, HOLD_CODE_MESSAGE } from '../../src/commands/hold.ts'
-import { assignAction, unholdAction, reassignAction, holdAction } from './actions.ts'
-import { Card, Empty, jstDateTime, jstDay, num } from '../_components/ui.tsx'
+  listManualTasks, listDerivedTasks, listCandidatesByConfidence, listStepTabs,
+  listCandidatesByStep, listAppointments, getBorderlinePanel,
+} from '../../src/queries/borderline.ts'
+import { jstDay, num } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch } from '../_components/shell.tsx'
+import { ApproachChip, Confidence, RankDelta, taskSentence } from '../_components/headhunting.tsx'
+import { WeekCalendar, mondayOf, addDays, Rank, Avatar } from '../_components/borderline.tsx'
 
 export const dynamic = 'force-dynamic'
 
-const KIND_LABEL: Record<TaskKind, string> = {
-  evaluate: '評価する',
-  assign: '担当を決める',
-  unhold: '保留を解く',
-  reassign: '担当を替える',
-}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
+const DAY = /^\d{4}-\d{2}-\d{2}$/
 
-const KIND_CLASS: Record<TaskKind, string> = {
-  evaluate: 'badge-tag-blue',
-  assign: 'badge-tag-purple',
-  unhold: 'badge-tag-gray',
-  reassign: 'badge-tag-orange',
-}
+/** 1ページの行数。画像は 1-5 / 120名 だった。 */
+const PAGE_SIZE = 5
 
-function FactFlags({ flags, overdueTasks }: { flags: string[]; overdueTasks?: number }) {
-  return (
-    <div className="fact-flags">
-      {flags.includes('stalled') && <span className="badge-tag-orange">滞留 {num(overdueTasks)} 件</span>}
-      {flags.includes('untouched') && <span className="badge-tag-gray">接点なし</span>}
-      {flags.includes('dormant') && <span className="badge-tag-gray">休眠</span>}
-      {flags.length === 0 && <span className="section-note">旗なし</span>}
-    </div>
-  )
-}
+/**
+ * ★ タブは画像の4つで固定する（依頼者の判断）。
+ *
+ * 実際の選考ステップは年度ごとの登録で、名前も数も違う。
+ * 固定すると**タブに載らないステップが出る**ので、その分は
+ * 一覧の下に件数付きで明示する。**黙って隠さない。**
+ */
+const FIXED_TABS: Array<{ id: string; label: string; stepOrder: number | null }> = [
+  { id: 'confidence', label: '1. 確度順候補者リスト', stepOrder: null },
+  { id: 'step1', label: '2. 書類選考', stepOrder: 1 },
+  { id: 'step3', label: '3. 2次選考', stepOrder: 3 },
+  { id: 'step4', label: '4. 最終選考', stepOrder: 4 },
+]
 
-function AssignForm({
-  evaluationId, seasonId, staff, mode = 'assign',
-}: {
-  evaluationId: string
-  seasonId: string
-  staff: AssignableStaff[]
-  mode?: 'assign' | 'reassign'
-}) {
-  if (staff.length === 0) return <span className="section-note">選べる職員がいない</span>
-  return (
-    <form action={mode === 'assign' ? assignAction : reassignAction} className="context-action-form editable-region">
-      <input type="hidden" name="evaluationId" value={evaluationId} />
-      <input type="hidden" name="seasonId" value={seasonId} />
-      <label className="visually-hidden" htmlFor={`staff-${evaluationId}`}>担当にする面接官</label>
-      <select id={`staff-${evaluationId}`} name="staffId" defaultValue="" required>
-        <option value="" disabled>{mode === 'assign' ? '担当を選ぶ…' : '別の担当を選ぶ…'}</option>
-        {staff.map((member) => (
-          <option key={member.staff_id} value={member.staff_id}>
-            {member.display_name}（待ち {member.pending}）
-          </option>
-        ))}
-      </select>
-      <button type="submit" className="button-primary">{mode === 'assign' ? '担当を決める' : '担当を替える'}</button>
-    </form>
-  )
-}
+export default async function BorderlinePage({
+  searchParams,
+}: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams
+  const db = await getDb()
 
-function TaskAction({
-  task, seasonId, staff,
-}: { task: Awaited<ReturnType<typeof getOpenTasks>>[number]; seasonId: string; staff: AssignableStaff[] }) {
-  if (task.kind === 'assign') return <AssignForm evaluationId={task.source_id} seasonId={seasonId} staff={staff} />
-  if (task.kind === 'reassign') {
-    return <AssignForm evaluationId={task.source_id} seasonId={seasonId} staff={staff} mode="reassign" />
-  }
-  if (task.kind === 'unhold') {
+  const seasons = await listSeasons(db)
+  const season = (await getSeason(db, sp.season))
+    ?? seasons.find((s) => s.is_live)
+    ?? seasons[0]
+
+  if (!season) {
     return (
-      <form action={unholdAction} className="context-action-form editable-region">
-        <input type="hidden" name="evaluationId" value={task.source_id} />
-        <input type="hidden" name="seasonId" value={seasonId} />
-        <button type="submit" className="button-primary">保留を解く</button>
-      </form>
+      <Shell active="borderline">
+        <p className="hh-empty-shell">
+          年度が1件も登録されていない。選考は年度ごとに動くため、
+          年度が無いと候補者を置く場所が決まらない。
+        </p>
+      </Shell>
     )
   }
-  // 「評価する」には**保留にする**を並べる。解けるのに止められないのは
-  // 片道で、運営が最初に踏む段差になる（C-35）。理由は必須。
-  return (
-    <div className="context-action-stack">
-      <Link className="button-primary context-action-link" href={`/applications/${task.application_id}`}>評価する</Link>
-      <form action={holdAction} className="context-action-form context-hold-form editable-inline">
-        <input type="hidden" name="evaluationId" value={task.source_id} />
-        <input type="hidden" name="seasonId" value={seasonId} />
-        <label className="visually-hidden" htmlFor={`hold-${task.source_id}`}>保留の理由</label>
-        <input id={`hold-${task.source_id}`} name="reason" type="text" required
-               maxLength={200} placeholder="何を待つのか（必須）" />
-        <button type="submit" className="button-secondary">保留にする</button>
-      </form>
-    </div>
-  )
-}
 
-function ForestCard({ forest, seasonId }: { forest: ForestRow; seasonId: string }) {
-  return (
-    <Link href={`/reach-zones/${forest.forest_id}?season=${seasonId}`} className="forest-focus-card">
-      <div className="forest-focus-head">
-        <span className="forest-marker" aria-hidden="true">●</span>
-        <span>{forest.name}</span>
-        <span className="section-note">アプローチ可能圏</span>
-      </div>
-      <FactFlags flags={forest.flags} overdueTasks={forest.overdue_tasks} />
-      <div className="forest-fact-grid">
-        <div className="estimate-fact"><span>推定リーチ</span><strong>{forest.estimated_reach === null ? '記録なし' : num(forest.estimated_reach)}</strong><small>接触機会・推定</small></div>
-        <div><span>接点のある実人数</span><strong>{num(forest.persons_touched)} 人</strong><small>この年度</small></div>
-        <div><span>進行中の応募</span><strong>{num(forest.applications)} 件</strong><small>この年度</small></div>
-        <div><span>やること</span><strong>{num(forest.open_tasks)} 件</strong><small>この年度</small></div>
-      </div>
-      <p className="forest-card-note">推定リーチ・実人数・応募件数は単位が異なります</p>
-    </Link>
-  )
-}
-
-function CommunityNode({ community, forestId, seasonId }: {
-  community: CommunityMapRow
-  forestId: string
-  seasonId: string
-}) {
-  return (
-    <Link href={`/reach-zones/${forestId}?season=${seasonId}`} className={`community-node${community.flags.length > 0 ? ' needs-attention' : ''}`}>
-      <div className="community-node-top">
-        <span className="community-node-name">{community.name}</span>
-        {community.open_tasks > 0 && <span className="task-count">未処理 {num(community.open_tasks)} 件</span>}
-      </div>
-      <div className="community-node-facts">
-        <span>接点のある実人数 <strong>{num(community.persons_touched)} 人</strong></span>
-        <span>{community.last_touch_on ? `最終接点 ${jstDay(community.last_touch_on)}` : '最終接点の記録なし'}</span>
-      </div>
-      <FactFlags flags={community.flags} overdueTasks={community.overdue_tasks} />
-    </Link>
-  )
-}
-
-export default async function CockpitPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ season?: string; assign?: string; unhold?: string; reassign?: string; hold?: string }>
-}) {
-  const db = await getDb()
-  const params = await searchParams
-  const seasons = await listSeasons(db)
-  if (seasons.length === 0) return <Empty>年度が登録されていない。</Empty>
-
-  const season = (await getSeason(db, params.season)) ?? seasons.find((item) => item.is_live) ?? seasons[0]!
-  const [tasks, totals, forests, staff, steps] = await Promise.all([
-    getOpenTasks(db, season.id), getTaskTotals(db, season.id), getForests(db, season.id),
-    listAssignableStaff(db, season.id), getStepFlow(db, season.id),
+  const [manual, derived, stepTabs] = await Promise.all([
+    listManualTasks(db, season.id),
+    listDerivedTasks(db, season.id),
+    listStepTabs(db, season.id),
   ])
-  const selectedTask = tasks[0] ?? null
-  const selectedForest = forests[0] ?? null
-  const [selectedApplication, evaluations, timeline, touchpoints, communities] = selectedTask && selectedForest
-    ? await Promise.all([
-      getApplication(db, selectedTask.application_id),
-      getApplicationEvaluations(db, selectedTask.application_id),
-      getApplicationTimeline(db, selectedTask.application_id),
-      getPersonTouchpoints(db, selectedTask.person_id),
-      getCommunityMap(db, selectedForest.forest_id, season.id),
-    ])
-    : [null, [], [], [], []]
 
-  const overdue = tasks.filter((task) => task.is_overdue)
-  const attention = forests.filter((forest) => forest.flags.length > 0)
-  const assigned = parseAssignCode(params.assign)
-  const unheld = parseUnholdCode(params.unhold)
-  const holdResult = parseHoldCode(params.hold)
-  const reassigned = parseReassignCode(params.reassign)
-  const nextEvaluation = evaluations.find((evaluation) => evaluation.can_score)
-  const activeEvaluation = evaluations.find((evaluation) => evaluation.evaluation_id === selectedTask?.source_id)
-  const firstTouch = touchpoints[touchpoints.length - 1]
-  const lastTouch = touchpoints[0]
+  // --- やること。出どころが2つあるので、ここで初めて合流させる ---
+  const tasks = [
+    ...manual.map((t) => ({
+      key: `m-${t.manual_task_id}`,
+      title: t.title,
+      person_name: t.person_name,
+      owner: t.owner_name,
+      urgency: t.is_overdue ? 'overdue' : t.urgency,
+      due_on: t.due_on as Date | null,
+      due_time: t.due_time,
+      waiting_days: null as number | null,
+      href: null as string | null,
+    })),
+    ...derived.map((t) => ({
+      key: `d-${t.source_id}`,
+      title: taskSentence(t.kind, t.person_name, t.step_name),
+      person_name: t.person_name,
+      owner: t.owner,
+      urgency: t.is_overdue ? 'overdue' : 'due',
+      due_on: null as Date | null,
+      due_time: null as string | null,
+      waiting_days: t.waiting_days as number | null,
+      href: `/applications/${t.source_id}`,
+    })),
+  ].sort((a, b) => {
+    const rank = (u: string) => (u === 'overdue' ? 0 : u === 'due' ? 1 : u === 'in_progress' ? 2 : 3)
+    return rank(a.urgency) - rank(b.urgency)
+  })
+
+  // --- 一覧のタブ ---
+  const tabId = one(sp.tab) ?? 'confidence'
+  const tab = FIXED_TABS.find((t) => t.id === tabId) ?? FIXED_TABS[0]!
+  const step = tab.stepOrder === null
+    ? null
+    : stepTabs.find((s) => s.sort_order === tab.stepOrder) ?? null
+
+  const pageParam = Number(one(sp.page) ?? '1')
+  const page = Number.isInteger(pageParam) && pageParam >= 1 ? pageParam : 1
+
+  const [candidates, stepRows] = await Promise.all([
+    tab.stepOrder === null
+      ? listCandidatesByConfidence(db, season.id, {
+        limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
+      })
+      : Promise.resolve(null),
+    step ? listCandidatesByStep(db, season.id, step.selection_step_id) : Promise.resolve(null),
+  ])
+
+  // 先頭4件しか出さないので、出ていない分を数で示す。
+  // **並びは緊急度順**（期限超過が先）なので、放っておくと
+  // 「進行中」「タスク」が一度も画面に現れない年度がある。
+  const byUrgency = {
+    overdue: tasks.filter((t) => t.urgency === 'overdue').length,
+    due: tasks.filter((t) => t.urgency === 'due').length,
+    in_progress: tasks.filter((t) => t.urgency === 'in_progress').length,
+    later: tasks.filter((t) => t.urgency === 'later').length,
+  }
+
+  const totalPages = candidates ? Math.max(1, Math.ceil(candidates.total / PAGE_SIZE)) : 1
+
+  // タブに載っていないステップ。件数ごと出して、隠れていないことを示す。
+  const shownOrders = FIXED_TABS.flatMap((t) => (t.stepOrder === null ? [] : [t.stepOrder]))
+  const hiddenSteps = stepTabs.filter((s) => !shownOrders.includes(s.sort_order))
+
+  // --- 右のパネル。指定が無ければ一覧の先頭 ---
+  const requested = one(sp.person)
+  const personId = requested && UUID.test(requested)
+    ? requested
+    : (candidates?.rows[0]?.person_id ?? stepRows?.[0]?.person_id ?? null)
+  const panel = personId ? await getBorderlinePanel(db, personId, season.id) : null
+
+  // --- 週の日程 ---
+  const weekParam = one(sp.week)
+  const anchor = weekParam && DAY.test(weekParam)
+    ? weekParam
+    : new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+  const monday = mondayOf(anchor)
+  const sunday = addDays(monday, 6)
+  const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+  const appointments = await listAppointments(db, season.id, monday, sunday)
+
+  const href = (q: Record<string, string>) =>
+    `/borderline?${new URLSearchParams({ season: season.id, tab: tab.id, ...q })}`
 
   return (
-    <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/borderline" />}>
+    <Shell
+      active="borderline"
+      years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/borderline" />}
+    >
       <Breadcrumb
         year={season.enrollment_year}
         crumbs={[
-          { label: 'ボーダーライン', href: '/borderline' },
-          ...(selectedTask ? [{ label: selectedTask.person_name }] : []),
+          { label: 'ボーダーライン', href: `/borderline?season=${season.id}` },
+          ...(panel ? [{ label: panel.person_name }] : []),
         ]}
       />
 
-      <div className="cockpit-head">
-        <div>
-          <h1 className="page-title">{season.enrollment_year} 年度のボーダーライン</h1>
-          <p className="page-sub">今日、選考を前へ進めるための作業場所</p>
+      <div className="hh-grid">
+        <div className="hh-col-main">
+          {/* --- やること --- */}
+          <section className="panel-card">
+            <header className="hh-head">
+              <h2>やること</h2>
+              <Link href={`/operations?season=${season.id}`} className="hh-more">すべて見る ›</Link>
+            </header>
+            {tasks.length === 0 ? (
+              <p className="hh-empty">開いているやることは無い。</p>
+            ) : (
+              <ul className="hh-tasks">
+                {tasks.slice(0, 4).map((t) => (
+                  <li key={t.key} className="task-card">
+                    <span className={
+                      t.urgency === 'overdue' ? 'chip-amber'
+                        : t.urgency === 'in_progress' ? 'chip-green'
+                          : t.urgency === 'due' ? 'chip-blue' : 'chip-gray'
+                    }>
+                      {t.urgency === 'overdue' ? '期限超過'
+                        : t.urgency === 'in_progress' ? '進行中'
+                          : t.urgency === 'due' ? '要対応' : 'タスク'}
+                    </span>
+                    <p className="task-title">
+                      {t.href ? <Link href={t.href}>{t.title}</Link> : t.title}
+                    </p>
+                    <p className="task-meta">
+                      {t.due_on !== null && (
+                        <>{jstDay(t.due_on)}
+                          {t.due_time ? ` ${t.due_time.slice(0, 5)} まで` : ' まで'}</>
+                      )}
+                      {t.waiting_days !== null && <>{t.waiting_days} 日待ち</>}
+                      {t.owner ? <> ・ 担当 {t.owner}</> : <> ・ 担当未割当</>}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="hh-note">
+              単位は件（1人が複数持ちうる）。開いているやること {num(tasks.length)} 件のうち、
+              <strong>期限の近い順に先頭4件</strong>だけを出している。
+              内訳は 期限超過 {num(byUrgency.overdue)} ・ 要対応 {num(byUrgency.due)} ・
+              進行中 {num(byUrgency.in_progress)} ・ タスク {num(byUrgency.later)}。
+              <strong>出どころは2つ</strong> ―― 人が作ったもの {num(manual.length)} 件と、
+              選考の記録から導いたもの {num(derived.length)} 件。
+              期限の時刻は、決まっているものにだけ出る（無いことを 0:00 と読み替えない）。
+            </p>
+          </section>
+
+          {/* --- 候補者リスト --- */}
+          <section className="panel-card">
+            <header className="hh-head">
+              <h2>{tab.stepOrder === null ? '確度順候補者リスト' : `${tab.label.replace(/^\d+\. /, '')}の候補者`}</h2>
+            </header>
+
+            <div className="bl-tabs">
+              {FIXED_TABS.map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/borderline?season=${season.id}&tab=${t.id}`}
+                  className={t.id === tab.id ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
+                  aria-current={t.id === tab.id ? 'page' : undefined}
+                >
+                  {t.label}
+                </Link>
+              ))}
+            </div>
+
+            {tab.stepOrder !== null && !step && (
+              <p className="hh-empty">
+                このタブに対応する選考ステップが、この年度には登録されていない。
+              </p>
+            )}
+
+            {candidates && (
+              candidates.rows.length === 0 ? (
+                <p className="hh-empty">この年度の対象者がまだ1人も登録されていない。</p>
+              ) : (
+                <table className="hh-table bl-table">
+                  <thead>
+                    <tr>
+                      <th className="num">確度</th><th>順位</th><th>名前</th>
+                      <th>学校・学部</th><th>最終接触日</th><th>次のアクション</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candidates.rows.map((r) => (
+                      <tr key={r.person_id} className={r.person_id === personId ? 'is-current' : ''}>
+                        <td className="num strong">
+                          <Confidence ratio={r.confidence_ratio} />
+                          <RankDelta delta={r.rank_delta} hasPrevious={r.has_previous_run} />
+                        </td>
+                        <td><Rank rank={r.rank_in_season} /></td>
+                        <td>
+                          <Link href={href({ person: r.person_id })} className="bl-person">
+                            <Avatar src={r.photo_data_url} name={r.person_name} />
+                            {r.person_name}
+                          </Link>
+                        </td>
+                        <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
+                        <td className="dim">
+                          {r.last_touchpoint_on ? jstDay(r.last_touchpoint_on) : 'この年度は接点なし'}
+                        </td>
+                        <td>
+                          {r.approach_code && r.approach_label
+                            ? <ApproachChip code={r.approach_code} label={r.approach_label} />
+                            : <span className="muted-note">未登録</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            )}
+
+            {stepRows && (
+              stepRows.length === 0 ? (
+                <p className="hh-empty">このステップで動いている応募は無い。</p>
+              ) : (
+                <table className="hh-table bl-table">
+                  <thead>
+                    <tr>
+                      <th className="num">100点換算</th><th className="num">軸</th><th>名前</th>
+                      <th>学校・学部</th><th className="num">待ち</th><th>担当</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stepRows.map((r) => (
+                      <tr key={r.application_id} className={r.person_id === personId ? 'is-current' : ''}>
+                        <td className="num strong">{r.score_100 ?? '—'}</td>
+                        <td className="num dim">{r.scored_criteria}</td>
+                        <td>
+                          <Link href={href({ person: r.person_id })} className="bl-person">
+                            <Avatar src={r.photo_data_url} name={r.person_name} />
+                            {r.person_name}
+                          </Link>
+                        </td>
+                        <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
+                        <td className="num dim">{r.waiting_days} 日</td>
+                        <td className="dim">{r.owner ?? '未割当'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            )}
+
+            {candidates && candidates.total > PAGE_SIZE && (
+              <div className="bl-pager">
+                <span className="hh-note">
+                  {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, candidates.total)} /{' '}
+                  {num(candidates.total)} 名
+                </span>
+                <span className="bl-pages">
+                  {page > 1 && (
+                    <Link className="bl-page btn-physical" href={href({ page: String(page - 1) })}>‹</Link>
+                  )}
+                  <span className="bl-page is-on">{page}</span>
+                  {page < totalPages && (
+                    <Link className="bl-page btn-physical" href={href({ page: String(page + 1) })}>›</Link>
+                  )}
+                  <span className="hh-note">/ {totalPages}</span>
+                </span>
+              </div>
+            )}
+
+            <p className="hh-note">
+              {tab.stepOrder === null ? (
+                <>
+                  単位は人。母集団は見送りに至っておらず、個人情報の削除依頼も
+                  受けていないこの年度の対象者 {num(candidates?.total ?? 0)} 人。
+                  <strong>順位と確度は凍結された値</strong>で、算出日より後の接点は
+                  反映されていない。確度が無い人は後ろに回している。
+                </>
+              ) : (
+                <>
+                  単位は応募（人ではない）。母集団はこのステップに
+                  <strong>まだ提出されていない評価がある応募</strong>。
+                  100点換算は<strong>実際に受けた軸の満点</strong>で割った達成率で、
+                  「軸」が少ないほど根拠は薄い。
+                </>
+              )}
+              {hiddenSteps.length > 0 && (
+                <>
+                  <br />
+                  <strong>タブに載っていない選考ステップがある</strong>:{' '}
+                  {hiddenSteps.map((s) => `${s.step_name}（${s.open_applications} 件）`).join(' ・ ')}。
+                  タブは4つ固定のため、ここからは開けない。
+                </>
+              )}
+            </p>
+          </section>
+        </div>
+
+        <div className="hh-col-side">
+          {/* --- 候補者パネル --- */}
+          <section className="panel-card">
+            {!panel ? (
+              <p className="hh-empty">候補者がまだ1人も居ない。</p>
+            ) : (
+              <>
+                <header className="hh-person-head">
+                  <div className="bl-person-head">
+                    <Avatar src={panel.photo_data_url} name={panel.person_name} />
+                    <div>
+                      <h2 className="hh-person-name">{panel.person_name}</h2>
+                      {panel.person_kana && <p className="hh-person-kana">{panel.person_kana}</p>}
+                    </div>
+                  </div>
+                  <div className="bl-person-chips">
+                    <span className="chip-green"><Confidence ratio={panel.confidence_ratio} /></span>
+                    {panel.approach_code && panel.approach_label && (
+                      <ApproachChip code={panel.approach_code} label={panel.approach_label} />
+                    )}
+                  </div>
+                </header>
+
+                <h3 className="hh-sub">基本情報</h3>
+                <dl className="hh-facts">
+                  <dt>学校</dt><dd>{panel.school}</dd>
+                  <dt>学部・学科</dt><dd>{panel.faculty ?? '—'}</dd>
+                  <dt>メール</dt><dd>{panel.email}</dd>
+                  <dt>電話番号</dt><dd>{panel.phone ?? '—'}</dd>
+                  <dt>生年月日</dt><dd>{jstDay(panel.birth_date)}（{panel.age} 歳）</dd>
+                  <dt>最終接触日</dt>
+                  <dd>{panel.last_touchpoint_on ? jstDay(panel.last_touchpoint_on) : 'この年度は接点なし'}</dd>
+                  <dt>順位</dt>
+                  <dd>{panel.rank_in_season !== null ? `${panel.rank_in_season} 位` : '—'}</dd>
+                  <dt>成績（100点換算）</dt><dd>{panel.score_100 ?? '—'}</dd>
+                </dl>
+
+                {panel.note && (
+                  <>
+                    <h3 className="hh-sub">メモ</h3>
+                    <p className="hh-memo">{panel.note}</p>
+                  </>
+                )}
+
+                <Link href={`/people/${panel.person_id}?season=${season.id}`} className="hh-more">
+                  詳細を見る ›
+                </Link>
+              </>
+            )}
+          </section>
+
+          {/* --- 日程カレンダー --- */}
+          <section className="panel-card">
+            <header className="hh-head">
+              <h2>日程カレンダー</h2>
+              <span className="bl-week-nav">
+                <Link className="bl-page btn-physical" href={href({ week: addDays(monday, -7) })}>‹</Link>
+                <Link className="bl-page btn-physical" href={href({ week: today })}>今日</Link>
+                <Link className="bl-page btn-physical" href={href({ week: addDays(monday, 7) })}>›</Link>
+              </span>
+            </header>
+            <p className="hh-note" style={{ marginTop: 0 }}>
+              {monday.replace(/-/g, '/')} 〜 {sunday.replace(/-/g, '/')}
+            </p>
+            {appointments.length === 0 ? (
+              <p className="hh-empty">この週に登録された予定は無い。</p>
+            ) : (
+              <WeekCalendar monday={monday} appointments={appointments} today={today} />
+            )}
+            <p className="hh-note">
+              単位は件。母集団はこの年度の、取り消されていない予定 {num(appointments.length)} 件。
+              <strong>予定は接点とは別の記録</strong>で、起きたかどうかは分からない
+              （実際に会った事実は接点として別に記録する）。
+            </p>
+          </section>
         </div>
       </div>
 
-      {(assigned || unheld || reassigned || holdResult) && (
-        <p className="callout ok">
-          {assigned ? ASSIGN_CODE_MESSAGE[assigned]
-            : unheld ? UNHOLD_CODE_MESSAGE[unheld]
-            : holdResult ? HOLD_CODE_MESSAGE[holdResult]
-            : REASSIGN_CODE_MESSAGE[reassigned!]}
-        </p>
-      )}
-
-      <div className="cockpit-layout">
-        <main className="cockpit-workspace">
-          <section className="today-section" aria-labelledby="today-title">
-            <div className="section-heading-row">
-              <div>
-                <p className="eyebrow">PRIORITY 01</p>
-                <h2 id="today-title" className="workspace-title">今日やること <span>{num(tasks.length)} 件</span></h2>
-              </div>
-              <p className="section-note">期限超過 → 待ち日数 → 選考ステップの順</p>
-            </div>
-            {tasks.length === 0 ? <Empty>いま判断すべき応募はありません。</Empty> : (
-              <div className="task-queue">
-                {tasks.slice(0, 7).map((task, index) => (
-                  <Link href={`/applications/${task.application_id}`} className={`task-row${task.is_overdue ? ' is-overdue' : ''}${index === 0 ? ' is-selected' : ''}`} key={`${task.kind}-${task.source_id}`}>
-                    <span className="task-priority">{index + 1}</span>
-                    <div className="task-main">
-                      <div className="task-label-row"><span className={KIND_CLASS[task.kind]}>{KIND_LABEL[task.kind]}</span>{task.is_overdue && <span className="overdue-label">期限超過</span>}</div>
-                      <strong>{task.person_name}</strong>
-                      <span>{task.step_order}. {task.step_name}{task.detail && ` ・ ${task.detail}`}</span>
-                    </div>
-                    <div className="task-owner"><span>担当</span><strong>{task.owner ?? '未設定'}</strong></div>
-                    <div className="task-wait"><span>待ち</span><strong>{num(task.waiting_days)} 日</strong></div>
-                    <span className="task-arrow" aria-hidden="true">→</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-            {tasks.length > 7 && <p className="section-note task-more">上位 7 件を表示 ／ 全 {num(tasks.length)} 件</p>}
-          </section>
-
-          <section className="forest-section" aria-labelledby="forest-title">
-            <div className="section-heading-row">
-              <div><p className="eyebrow">PRIORITY 03</p><h2 id="forest-title" className="workspace-title">アプローチ可能圏</h2></div>
-              <p className="section-note">要注意 {num(attention.length)} 圏 ／ 滞留・休眠・接点なしは事実フラグ</p>
-            </div>
-            {selectedForest ? <ForestCard forest={selectedForest} seasonId={season.id} /> : <Empty>アプローチ可能圏が登録されていない。</Empty>}
-            {selectedForest && (
-              <div className="community-map">
-                <div className="map-connection" aria-hidden="true" />
-                {communities.map((community) => <CommunityNode key={community.community_id} community={community} forestId={selectedForest.forest_id} seasonId={season.id} />)}
-              </div>
-            )}
-            <p className="map-caption">連携先を開くと候補者へ、候補者を選ぶと右側の作業欄に出ます。</p>
-          </section>
-
-          <section className="pipeline-section" aria-labelledby="pipeline-title">
-            <div className="section-heading-row"><div><p className="eyebrow">PRIORITY 04</p><h2 id="pipeline-title" className="workspace-title">現在の選考状況</h2></div><p className="section-note">応募件数。人ではありません</p></div>
-            <div className="application-flow">
-              {steps.map((step, index) => {
-                const denominator = index === 0 ? null : Number(steps[index - 1]!.reached)
-                const rate = denominator && denominator > 0 ? `${((Number(step.reached) / denominator) * 100).toFixed(1)}%` : null
-                return <div className="application-stage" key={step.sort_order}>
-                  <span>{step.sort_order}. {step.name}</span>
-                  <strong>{num(step.reached)} 件</strong>
-                  <small>{rate ? `前段 ${num(denominator)} 件に対する到達率 ${rate}` : '提出応募を母集団とする'}</small>
-                </div>
-              })}
-            </div>
-          </section>
-        </main>
-
-        <aside className="person-context" aria-label="選択中の候補者と応募">
-          {selectedTask && selectedApplication ? (
-            <>
-              <div className="context-topline"><span className="context-live-dot" />選択中の候補者と応募</div>
-              <section className="context-person">
-                <div className="person-avatar" aria-hidden="true">{selectedApplication.applicant_name.slice(0, 1)}</div>
-                <div><h2>{selectedApplication.applicant_name}</h2><p>{selectedApplication.school_name}</p></div>
-              </section>
-              <section className="context-block">
-                <p className="context-label">対象年度と現在の選考ステップ</p>
-                <strong>{selectedApplication.enrollment_year} 年度 ・ {selectedTask.step_order}. {selectedTask.step_name}</strong>
-                <span className={KIND_CLASS[selectedTask.kind]}>{KIND_LABEL[selectedTask.kind]}</span>
-              </section>
-              <section className="context-block context-details">
-                <div><span>現在の担当者</span><strong>{selectedTask.owner ?? '未設定'}</strong></div>
-                <div><span>期限</span><strong>{selectedTask.sla_days ? `${num(selectedTask.sla_days)} 日` : '設定なし'}</strong></div>
-                <div><span>保留の理由</span><strong>{activeEvaluation?.hold_reason ?? 'なし'}</strong></div>
-              </section>
-              <section className="context-block context-next-action">
-                <p className="context-label">推奨される次の操作</p>
-                <h3>{KIND_LABEL[selectedTask.kind]}</h3>
-                <TaskAction task={selectedTask} seasonId={season.id} staff={staff} />
-              </section>
-              <section className="context-block">
-                <p className="context-label">評価の進捗</p>
-                {/* 軸が0本の段は「全部付け終わった」と同じ見た目になる（C-33）。
-                    4段のうち3段が該当し、書類選考は満点16が確定しているのに
-                    軸が無い。**点を付けずに確定できる**ことを画面に出す。
-                    確定そのものは止めない ―― 止めると選考が回らなくなる。 */}
-                {Number(selectedTask.criteria_total) === 0 ? (
-                  <div className="evaluation-progress">
-                    <strong>評価の観点が未登録</strong>
-                    <span>この段は点を付けずに確定できます</span>
-                  </div>
-                ) : (
-                  <div className="evaluation-progress">
-                    <strong>{num(selectedTask.criteria_scored)} / {num(selectedTask.criteria_total)} 軸</strong>
-                    <span>{nextEvaluation ? `次に評価できる: ${nextEvaluation.step_name}` : '評価待ちの軸はありません'}</span>
-                  </div>
-                )}
-              </section>
-              <section className="context-block">
-                <p className="context-label">接点</p>
-                <div className="touchpoint-facts">
-                  <div><span>初回接点</span><strong>{firstTouch ? jstDateTime(firstTouch.occurred_at) : '記録なし'}</strong></div>
-                  <div><span>最終接点</span><strong>{lastTouch ? jstDateTime(lastTouch.occurred_at) : '記録なし'}</strong></div>
-                  <div><span>接点回数</span><strong>{num(touchpoints.length)} 件</strong></div>
-                  <div><span>最近の接点種別</span><strong>{lastTouch?.channel ?? '記録なし'}</strong></div>
-                </div>
-                <p className="touchpoint-note"><span>接点メモ</span>{lastTouch?.note ?? '記録なし'}</p>
-              </section>
-              <section className="context-block context-history">
-                <p className="context-label">選考履歴</p>
-                {timeline.length === 0 ? <span className="section-note">選考履歴はまだありません</span> : timeline.slice(-3).reverse().map((entry) => <div className="history-item" key={entry.history_id}><span>{jstDateTime(entry.occurred_at)}</span><strong>{entry.transition_type === 'advance' ? '通過' : entry.transition_type === 'reject' ? '不合格' : entry.transition_type === 'withdraw' ? '辞退' : '差し戻し'}{entry.step_name && ` ・ ${entry.step_name}`}</strong></div>)}
-              </section>
-              <Link href={`/applications/${selectedApplication.application_id}`} className="context-detail-link">応募の詳細を開く →</Link>
-            </>
-          ) : <Empty>選択できる応募がありません。</Empty>}
-        </aside>
-      </div>
-
-      <p className="unit-note cockpit-unit-note">
-        <strong>単位と母集団。</strong> 「今日やること」は件、「接点のある実人数」は人、「現在の選考状況」は年度内の応募件数です。推定リーチ は接触機会の推定値であり、実人数・応募件数とは単位が異なるため、比率や進捗バーにしていません。休眠は最終接点から {DORMANT_DAYS} 日以上、要注意は合成スコアではなく滞留・休眠・接点なしの事実を表示しています。
-      </p>
+      <section className="panel-card hh-gaps">
+        <h2>この画面にまだ無いもの（記録層に事実が無い）</h2>
+        <ul>
+          <li><strong>学年（4年生・2026年卒）</strong> — 入学年の記録が無い。生年月日から年齢は出せるが、<strong>年齢で学年を代用していない</strong></li>
+          <li><strong>評価サマリーの4軸</strong>（スキル・ポテンシャル・カルチャーフィット・リーダーシップ）— 実際の軸は年度ごとの登録で、名前も数も違う</li>
+          <li><strong>通知</strong> — 記録層が無い</li>
+          <li><strong>アカウント・設定・ログアウト</strong> — 認証がまだ無い</li>
+          <li><strong>並べ替えと絞り込みの操作</strong> — 並びは確度順で固定。切り替える記録も要件もまだ無い</li>
+          <li><strong>予定が実際に起きたかの記録</strong> — 予定と接点をつなぐ手当てが未実装</li>
+          <li><strong>やることを画面から作る・終える操作</strong> — 記録層はあるが、書き込む入口がまだ無い</li>
+          <li><strong>手で作ったやることの全件一覧</strong> — 「すべて見る」は選考オペレーション（導出のぶん）へ行く</li>
+          <li><strong>予定を画面から作る・動かす操作</strong> — 記録層と変更履歴はあるが、入口がまだ無い</li>
+        </ul>
+      </section>
     </Shell>
   )
 }
