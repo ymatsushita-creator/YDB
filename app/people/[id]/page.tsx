@@ -63,7 +63,10 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             )}
           </p>
         </div>
-        <Link className="button button-secondary" href={`/headhunting?person=${person.person_id}`}>
+        {/* 編集フォーム（深い層）へ直接行く。実行⑩で編集を深い層へ移したとき、
+            このボタンだけ古い行き先（/headhunting?person=…）のまま残っていて、
+            押しても編集できなかった。行き先を編集ページに正す（実行⑪）。 */}
+        <Link className="button button-secondary" href={`/people/${person.person_id}/edit`}>
           基本情報を編集
         </Link>
       </div>
@@ -81,12 +84,6 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
              meta="人" />
       </div>
 
-      {/* 編集は深い層に置いてある（実行⑩）。詳細から1つ降りる。 */}
-      <div className="section">
-        <Link href={`/people/${person.person_id}/edit`} className="hh-more">
-          プロフィールを編集 ›
-        </Link>
-      </div>
 
       <div className="section grid grid-2">
         <Card title="連絡先と紐づき">
