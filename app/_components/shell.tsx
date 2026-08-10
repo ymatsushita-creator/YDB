@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { isDemoMode } from '../../src/db/server.ts'
 import type { Season } from '../../src/queries/dashboard.ts'
+import { signOutAction } from '../login/actions.ts'
 
 /**
  * アプリ全体の外枠（実行⑨で全画面共通にした）。
@@ -114,6 +115,10 @@ export function Shell({
           {isDemoMode()
             ? <p className="hh-demo">デモ ・ 架空データ ・ 保存されません</p>
             : <p className="hh-live">運用中</p>}
+          {/* 出る。合言葉は共有なので、**共用の端末では必ず出る。** */}
+          <form action={signOutAction}>
+            <button type="submit" className="hh-signout">出る</button>
+          </form>
         </div>
       </aside>
 

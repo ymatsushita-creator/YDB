@@ -57,6 +57,9 @@ describe('記入できる場所と固定の場所の印', () => {
     // 検索フォーム（method="get"）は記録を書かないので対象外。
     const unmarked: string[] = []
     for (const [path, src] of sources) {
+      // ★ 合言葉の画面は対象外（C-82）。印が示すのは**記録を編集できる場所**で、
+      //   合言葉は記録ではない。付けると「記入できます」の札が入口に出る。
+      if (path === 'app/login/page.tsx') continue
       // コメントを落としてから走査する。設計の説明として
       // `<form action={...}>` と書いてある行を、実装として数えない。
       const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
