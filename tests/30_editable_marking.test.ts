@@ -71,3 +71,31 @@ describe('記入できる場所と固定の場所の印', () => {
       '書き込むフォームに editable-region / editable-inline が付いていない')
   })
 })
+
+/**
+ * 期はタブより**上の層**である（実行⑩。依頼者の指摘）。
+ *
+ * タブを押した先で期が既定へ戻ると、2期を見ていたのに3期になる。
+ * 実際そうなっていた ―― `Shell` のタブが `href` だけを持ち、
+ * 期を持ち回っていなかったため。
+ */
+describe('期はタブを移っても保たれる', () => {
+  test('★ 期を持っている画面は、必ず Shell へ期を渡す', () => {
+    const missing: string[] = []
+    for (const [path, src] of sources) {
+      // 期の切替を出している画面は、その画面が期を持っている証拠である。
+      if (!/years=\{<YearSwitch/.test(src)) continue
+      if (!/seasonId=\{/.test(src)) missing.push(path)
+    }
+    assert.deepEqual(missing, [],
+      '期の切替を出しているのに、タブへ期を渡していない'
+      + '（押すと期が既定へ戻る）')
+  })
+
+  test('タブのリンクは、期があるときだけ期を付ける', async () => {
+    // `sources` は page.tsx だけを集めている。外枠は別に読む。
+    const shell = await readFile(join(APP, '_components', 'shell.tsx'), 'utf8')
+    assert.match(shell, /seasonId \? .+season=.+ : href/,
+      '期を持たない画面（その人の記録など）で、空の season を付けない')
+  })
+})

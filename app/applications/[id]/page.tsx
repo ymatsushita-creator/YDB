@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
 import {
@@ -23,7 +22,7 @@ import {
   assignAction, unholdAction, reassignAction,
 } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
-import { Shell } from '../../_components/shell.tsx'
+import { Shell, Breadcrumb, seasonLabel } from '../../_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -164,10 +163,6 @@ export default async function ApplicationPage({
     <div className="section">
       <Card
         title={`${decidable.step_name} の判定`}
-        note={`評価は ${num(decidable.submitted_evaluations)} 件すべて確定済み。`
-          + (decidable.next_step_name
-            ? `通過にすると「${decidable.next_step_name}」の担当を決める段になる`
-            : '最終ステップなので、通過にすると合格になる')}
       >
         <form action={decideAction} className="decide-form editable-region">
           <input type="hidden" name="applicationId" value={app.application_id} />
@@ -188,24 +183,26 @@ export default async function ApplicationPage({
             不合格にする
           </button>
         </form>
-        <p className="section-note" style={{ marginTop: 'var(--space-xs)' }}>
-          押し間違えても、下の「経緯」から編集できる。
-          <strong>元の判定は消えず、編集した事実が1行積まれる</strong>
-        </p>
       </Card>
     </div>
   )
 
   return (
-    <Shell active="borderline">
+    <Shell active="borderline" seasonId={app.season_id}>
+      {/* 現在地の帯。**ここだけ無かった**ので、この画面には
+          いま何を開いているかも、上へ戻る道も出ていなかった。 */}
+      <Breadcrumb
+        root={seasonLabel(app)}
+        crumbs={[
+          { label: 'ボーダーライン', href: `/borderline?season=${app.season_id}` },
+          { label: app.applicant_name, href: `/borderline/${app.person_id}?season=${app.season_id}` },
+          { label: '応募' },
+        ]}
+      />
       {savedNotice}
       {decisionPanel}
       <div className="page-head">
         <div>
-          <p className="page-sub">
-            <Link href="/people">人を探す</Link> ／{' '}
-            <Link href={`/people/${app.person_id}`}>{app.applicant_name}</Link> ／ 応募
-          </p>
           <h1 className="page-title">
             {app.enrollment_year} 年度の応募
           </h1>
@@ -227,12 +224,8 @@ export default async function ApplicationPage({
       {app.is_voided && (
         <div className="section">
           <p className="callout">
-            この応募は {jstDateTime(app.voided_at)} に無効化されている
-            （{app.void_reason_label ?? '理由未記録'}）。
-            {app.is_countable
-              ? '無効化理由に代替の応募が生まれないため、応募が起きた事実として集計する。'
-              : '無効化理由に代替の応募が生まれるため、応募には数えない。'
-                + ' 下の評価と遷移は記録層に残っているものをそのまま出している。'}
+            {jstDateTime(app.voided_at)} 無効化
+            （{app.void_reason_label ?? '理由未記録'}）
           </p>
         </div>
       )}
@@ -240,7 +233,6 @@ export default async function ApplicationPage({
       <div className="section">
         <Card
           title="経緯"
-          note="編集で打ち消された記録も残す。結論ではなく経緯が答えになる"
         >
           {timeline.length === 0 ? <Empty>まだ遷移が記録されていない</Empty> : (
             <div className="timeline">
@@ -260,22 +252,16 @@ export default async function ApplicationPage({
                     {h.note && <div className="section-note">{h.note}</div>}
                     {h.is_correction && (
                       <div className="section-note">
-                        <span className="badge-tag-purple">編集</span>{' '}
-                        前の記録を打ち消して記録し直したもの
+                        <span className="badge-tag-purple">編集</span>
                       </div>
                     )}
                     {h.corrected_by_history_id && (
                       <div className="section-note">
-                        {h.is_effective
-                          ? 'この記録は一度打ち消されたが、その編集がさらに編集されたため有効に戻っている'
-                          : 'この記録は後の編集で打ち消されている'}
+                        {h.is_effective ? '打ち消しは取り消され、有効' : '後の編集で打ち消し'}
                       </div>
                     )}
                     {!h.step_name && h.transition_type !== 'advance' && (
-                      <div className="section-note">
-                        ステップの記録なし（<code>reject</code> と <code>withdraw</code> は
-                        選考ステップを持たない）
-                      </div>
+                      <div className="section-note">ステップの記録なし</div>
                     )}
 
                     {/*
@@ -308,11 +294,6 @@ export default async function ApplicationPage({
                               : '「通過」に変更する'}
                           </button>
                         </form>
-                        <p className="section-note">
-                          元の判定は消えない。編集した事実が1行積まれる。
-                          {editable.transition_type === 'reject' && editable.next_step_name
-                            && `「通過」に変更すると「${editable.next_step_name}」の担当を決める段になる。`}
-                        </p>
                       </details>
                     )}
                   </div>
@@ -320,21 +301,12 @@ export default async function ApplicationPage({
               ))}
             </div>
           )}
-          <p className="unit-note">
-            編集しても元の記録は消えず、打ち消しとして積み重なる。
-            編集をさらに編集すると元の判定が有効に戻るため、
-            「編集された＝無効」ではない。いま有効かどうかは左の点で示している
-            （塗りが有効）。この判定はシステムが自動で行っており、
-            画面側で数え直してはいない。
-            {' '}「合格」の定義は最終ステップ「{app.final_step_name}」への有効な通過。
-          </p>
         </Card>
       </div>
 
       <div className="section">
         <Card
           title="評価"
-          note="誰が、どのステップで、何を根拠に判断したか"
         >
           {evaluations.length === 0 ? <Empty>まだ評価が生成されていない</Empty> : (
             <div className="stack" style={{ gap: 'var(--space-md)' }}>
@@ -342,7 +314,10 @@ export default async function ApplicationPage({
                 <div className="card-base" key={e.evaluation_id}>
                   <div className="row-between" style={{ flexWrap: 'wrap' }}>
                     <div>
-                      <strong>{e.step_order}. {e.step_name}</strong>
+                      {/* 面接シートへ。点では表せない所見はあちらにある。 */}
+                      <a href={`/interviews/${e.evaluation_id}`}>
+                        <strong>{e.step_order}. {e.step_name}</strong>
+                      </a>
                       {e.attempt > 1 && (
                         <span className="badge-tag-purple" style={{ marginLeft: 6 }}>
                           {e.attempt} 回目
@@ -427,7 +402,7 @@ export default async function ApplicationPage({
                   {e.pending_criteria.length > 0 && (
                     <div style={{ marginTop: 'var(--space-sm)' }}>
                       <p className="section-note">
-                        これから点と根拠を付ける軸（{e.pending_criteria.length} 件）
+                        残り {e.pending_criteria.length} 軸
                       </p>
                       <ul className="criteria-list">
                         {e.pending_criteria.map((c) => (
@@ -465,9 +440,6 @@ export default async function ApplicationPage({
                       <button type="submit" className="button-primary">
                         この評価を確定する
                       </button>
-                      <span className="section-note">
-                        確定すると判断待ちから外れ、選考の判定に進める
-                      </span>
                     </form>
                   )}
 
@@ -487,9 +459,6 @@ export default async function ApplicationPage({
                              maxLength={200} placeholder="何を待つのか（必須）"
                              className="rationale-input" />
                       <button type="submit" className="button-secondary">保留にする</button>
-                      <span className="section-note">
-                        止めた理由は、解くときにそのまま読める
-                      </span>
                     </form>
                   )}
 
@@ -535,22 +504,9 @@ export default async function ApplicationPage({
               ))}
             </div>
           )}
-          <p className="unit-note">
-            根拠エピソードは必須（資料5-3）。空白だけの入力も制約で弾いている。
-            点だけが残って理由が残らない評価は、後から誰も説明できない。
-            判断待ち・保留の評価も落とさずに出す。判断が下りていないことも事実で、
-            落とすと「いま誰の判断待ちか」がこの画面から消える。
-          </p>
         </Card>
       </div>
 
-      <p className="footnote">
-        この画面は集計ではないので、無効化された応募も個人情報削除の対象外なら表示する。
-        逆に個人情報削除（<code>deleted_at</code>）を受けた Person の応募は、
-        集計からもこの画面からも外れる。
-        <code>form_response_id</code>{': '}
-        <code>{app.form_response_id ?? '（取り込み経由ではない）'}</code>
-      </p>
     </Shell>
   )
 }

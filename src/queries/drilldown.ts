@@ -154,10 +154,10 @@ export interface PersonDetail {
   given_name: string
   family_name_kana: string | null
   given_name_kana: string | null
-  birth_date: Date
+  birth_date: Date | null
   school_name: string
   faculty: string | null
-  email: string
+  email: string | null
   phone: string | null
   line_user_id: string | null
   note: string | null
@@ -258,6 +258,8 @@ export interface PersonApplicationRow {
   application_id: string
   season_id: string
   enrollment_year: number
+  /** 期の番号。呼び名は `seasonLabel` が決める（画面ごとに呼び分けない）。 */
+  cohort_number: number | null
   submitted_at: Date
   is_reapplication: boolean
   outcome: ApplicationOutcome
@@ -353,6 +355,8 @@ export interface ApplicationDetail {
   school_name: string
   season_id: string
   enrollment_year: number
+  /** 期の番号。呼び名は `seasonLabel` が決める（画面ごとに呼び分けない）。 */
+  cohort_number: number | null
   submitted_at: Date
   form_response_id: string | null
   is_reapplication: boolean
@@ -376,7 +380,8 @@ export const getApplication = (db: Db, applicationId: string | string[] | undefi
     SELECT a.id AS application_id, a.person_id,
            p.family_name || ' ' || p.given_name AS applicant_name,
            sc.name AS school_name,
-           a.season_id, se.enrollment_year, a.submitted_at, a.form_response_id,
+           a.season_id, se.enrollment_year, se.cohort_number,
+           a.submitted_at, a.form_response_id,
            a.is_reapplication,
            o.outcome, (o.outcome = 'in_selection') AS is_in_selection,
            COALESCE(s.is_voided, a.voided_at IS NOT NULL) AS is_voided,

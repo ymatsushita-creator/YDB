@@ -11,12 +11,18 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const PHOTO_MAX_BYTES = 2 * 1024 * 1024
 
+/**
+ * 書いた場所へ戻す。
+ *
+ * ★ 編集は**深い層**（`/people/{id}/edit`）に出した（実行⑩）。
+ *   ヘッドハンティングの一覧へ戻すと、書いた結果がその場で見られない。
+ */
 function back(personId: string, seasonId: string, code: string): never {
   const params = new URLSearchParams()
-  if (UUID.test(personId)) params.set('person', personId)
   if (UUID.test(seasonId)) params.set('season', seasonId)
   params.set('edit', code)
-  redirect(`/headhunting?${params}`)
+  if (!UUID.test(personId)) redirect(`/people?${params}`)
+  redirect(`/people/${personId}/edit?${params}`)
 }
 
 async function photoFrom(formData: FormData): Promise<string | null | undefined | ProfileFailure> {
@@ -54,7 +60,9 @@ export async function updateProfileAction(formData: FormData): Promise<void> {
   if (!result.ok) back(personId, seasonId, result.reason)
 
   revalidatePath('/headhunting')
+  revalidatePath('/borderline')
   revalidatePath(`/people/${personId}`)
+  revalidatePath(`/people/${personId}/edit`)
   back(personId, seasonId, 'saved')
 }
 
@@ -71,5 +79,7 @@ export async function updateApproachAction(formData: FormData): Promise<void> {
   })
   if (!result.ok) back(personId, seasonId, result.reason)
   revalidatePath('/headhunting')
+  revalidatePath('/borderline')
+  revalidatePath(`/people/${personId}/edit`)
   back(personId, seasonId, 'approach_saved')
 }

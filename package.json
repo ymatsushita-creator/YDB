@@ -10,6 +10,7 @@
   "scripts": {
     "db:reset": "node scripts/db-reset.ts",
     "db:migrate:production": "node scripts/db-migrate-production.ts",
+    "import:legacy:2026": "node scripts/import-legacy-2026.ts",
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",
     "tokens": "node scripts/build-tokens.ts",
     "dev": "next dev",

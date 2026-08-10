@@ -300,8 +300,17 @@ describe('実年度と創作のデモは同居しない（C-28）', () => {
   })
 
   test('本番の環境にサンプルの参照データは入らない', async () => {
+    // ★ チャネルは実行⑩で確定した（C-79）ので、件数では確かめられない。
+    //   確かめるのは**創作の分類が入っていないこと**である。
     const db = await productionDb()
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM channels`), 0)
+    const names = (await all<{ name: string }>(db, `SELECT name FROM channels`))
+      .map((r) => r.name)
+    for (const invented of ['SNS広告', 'SNS自然流入', '卒業生からの紹介']) {
+      assert.equal(names.includes(invented), false,
+        `本番に創作の分類「${invented}」が入っている`)
+    }
+    assert.ok(names.includes('LINE') && names.includes('Instagram'),
+      '依頼者が名指しした SNS は入っている')
     await db.close()
   })
 })

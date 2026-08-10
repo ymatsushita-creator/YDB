@@ -54,9 +54,13 @@ export const jstTime = (d: Date) => {
 /**
  * 週の日程。
  *
- * ★ 9時〜18時の外にある予定は、格子には置かず**下に別で並べる。**
+ * ★ 格子は**位置で時刻を表す**もので、名前を読む場所ではない
+ *   （1升 44px しかなく、氏名は必ず切れる）。名前と種別は下の一覧で読む。
+ *
+ * ★ 9時〜18時の外にある予定は格子に置かない。
  *   格子の外へはみ出させると、位置が時刻を表さなくなる
  *   （置き場所が無いものを、近い場所へ寄せてはいけない）。
+ *   一覧には出し、「格子外」と印を付ける。**落とさない。**
  */
 export function WeekCalendar({
   monday, appointments, today,
@@ -68,17 +72,18 @@ export function WeekCalendar({
     const { hour } = jstParts(a.starts_at)
     return hour >= HOUR_FROM && hour < HOUR_TO
   })
-  const outside = appointments.filter((a) => !placed.includes(a))
 
   return (
-    <>
+    /* 格子と一覧を1つの器に入れる。**縮む先には必ず送る器を対にする**（C-52）。 */
+    <div className="cal-wrap">
       {/*
-        行の高さは固定（36px）。可変にすると、狭い画面で行が潰れて
+        行の高さは固定（24px）。可変にすると、狭い画面で行が潰れて
         升の文字が読めなくなる ―― **読めない格子は、無いのと同じ。**
-        入りきらないときは格子の中で送る（ページは伸ばさない）。
+        36px から詰めたのは、**格子の下の一覧を、送る前に見えるところまで上げる**ため。
+        格子は位置だけを表すので、1行の高さは目盛りが読めれば足りる。
       */}
       <div className="cal"
-           style={{ gridTemplateRows: `auto repeat(${hours.length}, 36px)` }}>
+           style={{ gridTemplateRows: `auto repeat(${hours.length}, 24px)` }}>
         <div className="cal-corner" />
         {days.map((d) => (
           <div key={d} className={`cal-head${d === today ? ' is-today' : ''}`}>
@@ -123,14 +128,37 @@ export function WeekCalendar({
         })}
       </div>
 
-      {outside.length > 0 && (
-        <p className="hh-note">
-          {String(HOUR_FROM).padStart(2, '0')}:00〜{HOUR_TO}:00 の外にある予定が
-          {outside.length} 件ある（格子には置いていない）:{' '}
-          {outside.map((a) => `${jstTime(a.starts_at)} ${a.person_name ?? a.title}`).join(' ・ ')}
-        </p>
+      {/*
+        ★ 升の中の氏名は必ず切れる（7列で右の縦長パネルを割るので1升 44px）。
+          升は**位置で時刻を表す**ためのもので、名前を読む場所ではない。
+          そこで週の予定を、格子の下に読める形で並べる。**切らない。**
+
+          格子に置けなかった予定（9時前・18時以降）もここに混ぜ、
+          置けなかったことだけを印で示す ―― 別の場所へ追いやると、
+          「その週に何があるか」を2箇所読まないと分からなくなる。
+      */}
+      {appointments.length > 0 && (
+        <ul className="cal-list">
+          {[...appointments]
+            // 文字列で並べない ―― `starts_at` は Date なので、
+            // 文字列化すると "Fri Aug 14" のような曜日始まりで並ぶ。
+            .sort((a, b) =>
+              new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+            .map((a) => (
+              <li key={a.appointment_id}>
+                <span className={`cal-dot ${KIND_CLASS[a.kind_code] ?? 'appt-internal'}`} />
+                <span className="cal-list-when">
+                  {jstParts(a.starts_at).day.slice(5).replace('-', '/')}{' '}
+                  {jstTime(a.starts_at)}
+                </span>
+                <span className="cal-list-who">{a.person_name ?? a.title}</span>
+                <span className="cal-list-kind">{a.kind_label}</span>
+                {!placed.includes(a) && <span className="cal-list-out">格子外</span>}
+              </li>
+            ))}
+        </ul>
       )}
-    </>
+    </div>
   )
 }
 

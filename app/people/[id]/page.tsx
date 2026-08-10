@@ -6,6 +6,8 @@ import {
   getPerson, getPersonSeasonStates, getPersonApplications, getPersonTouchpoints,
   OUTCOME_LABEL,
 } from '../../../src/queries/drilldown.ts'
+import { listPersonInterviews } from '../../../src/queries/interview.ts'
+import { RECOMMENDATION_LABEL } from '../../../src/commands/interview.ts'
 import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime, filled,
 } from '../../_components/ui.tsx'
@@ -22,10 +24,13 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   // 削除済みだけ別の応答にすると、その差が「その人は存在した」を漏らす。
   if (!person) notFound()
 
-  const [states, applications, touchpoints] = await Promise.all([
+  const [states, applications, touchpoints, interviews] = await Promise.all([
     getPersonSeasonStates(db, person.person_id),
     getPersonApplications(db, person.person_id),
     getPersonTouchpoints(db, person.person_id),
+    // 詳細画面から面接画面へ行くための入口（依頼者の指示。実行⑩）。
+    // 期で絞らない ―― 再応募した人の前年度の面接も、ここから開ける。
+    listPersonInterviews(db, person.person_id),
   ])
 
   const kana = [person.family_name_kana, person.given_name_kana].filter(Boolean).join(' ')
@@ -34,7 +39,6 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
     <Shell active="headhunting">
       {/* 年度を持たない画面。この人の記録は年度をまたぐので、根に年度を置けない。 */}
       <Breadcrumb
-        readOnly
         crumbs={[
           { label: 'ヘッドハンティング', href: '/headhunting' },
           { label: '人を探す', href: '/people' },
@@ -51,7 +55,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             {kana && <>{kana} ・ </>}
             {person.school_name}
             {person.faculty && <> {person.faculty}</>}
-            {' ・ '}{ymd(person.birth_date)} 生
+            {person.birth_date && <>{' ・ '}{ymd(person.birth_date)} 生</>}
             {person.staff_display_name && (
               <span className="badge-tag-purple" style={{ marginLeft: 8 }}>
                 スタッフ {person.staff_display_name}
@@ -71,14 +75,21 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
         <Kpi label="接点" value={num(person.touchpoint_count)}
              meta={`最終接触 ${jstDay(person.last_touch_at)}`} />
         <Kpi label="識別された日" value={jstDay(person.identified_at)}
-             meta="候補者として登録した日。persons.created_at" />
+             meta="登録日" />
         <Kpi label="この人が紹介した人" value={num(person.referred_count)}
              tone={person.referred_count ? undefined : 'muted'}
-             meta="紹介チャネルの検証に使う" />
+             meta="人" />
+      </div>
+
+      {/* 編集は深い層に置いてある（実行⑩）。詳細から1つ降りる。 */}
+      <div className="section">
+        <Link href={`/people/${person.person_id}/edit`} className="hh-more">
+          プロフィールを編集 ›
+        </Link>
       </div>
 
       <div className="section grid grid-2">
-        <Card title="連絡先と紐づき" note="運用のための情報。集計には使わない">
+        <Card title="連絡先と紐づき">
           <table className="data">
             <tbody>
               <tr><td>メール</td><td className="mono">{person.email}</td></tr>
@@ -107,7 +118,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           {person.note && <p className="unit-note">{person.note}</p>}
         </Card>
 
-        <Card title="年度ごとの現在地" note="段は年度内の最高到達点。窓は接点の鮮度">
+        <Card title="年度ごとの現在地">
           {states.length === 0 ? <Empty>どの年度の母集団にも入っていない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -134,18 +145,12 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </table>
             </div>
           )}
-          <p className="unit-note">
-            「未応募・接点休止」は、その年度に応募しておらず、基準日から遡って
-            {' '}{ACTIVE_WINDOW_DAYS} 日以内に接点も無い状態。年度サマリの
-            接点継続中には数えられない。応募到達状態と接点判定窓は別の軸である。
-          </p>
         </Card>
       </div>
 
       <div className="section">
         <Card
           title="応募"
-          note="無効化されたものも出す。集計に数えるかどうかは別の列で示す"
         >
           {applications.length === 0 ? <Empty>応募したことがない</Empty> : (
             <div className="table-wrap">
@@ -199,17 +204,75 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </table>
             </div>
           )}
-          <p className="unit-note">
-            無効化された応募は、理由の <code>counts_as_application</code> によって
-            応募に数えるかどうかが決まる（名寄せ誤りは数えない、取り下げは数える）。
-            数えない応募も、そこにぶら下がった評価と遷移は記録層に残っているので、
-            個別の画面からは消さない。集計の都合で事実を隠さないため。
-          </p>
+        </Card>
+      </div>
+
+      {/* 面接（実行⑩）。**詳細画面から面接画面へ行く入口はここ。**
+          ヘッドハンティング・ボーダーライン・名前検索、どこから来ても
+          氏名を押せばこの画面に着き、ここから面接シートを開く。 */}
+      <div className="section">
+        <Card title="面接">
+          {interviews.length === 0 ? <Empty>面接がまだ生成されていない</Empty> : (
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>期</th>
+                    <th>段</th>
+                    <th>面接官</th>
+                    <th>面接日</th>
+                    <th className="num">点</th>
+                    <th>所見</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {interviews.map((iv) => (
+                    <tr key={iv.evaluation_id}>
+                      <td className="nowrap">
+                        {iv.cohort_number !== null
+                          ? `${iv.cohort_number}期` : `${iv.enrollment_year}年度`}
+                      </td>
+                      <td className="nowrap">
+                        {iv.step_name}
+                        {iv.attempt > 1 && (
+                          <span className="badge-tag-purple" style={{ marginLeft: 6 }}>
+                            {iv.attempt} 回目
+                          </span>
+                        )}
+                      </td>
+                      <td>{iv.interviewer_name ?? (
+                        <span className="badge-tag-orange">未割当</span>
+                      )}</td>
+                      <td className="nowrap">
+                        {iv.interviewed_on ? jstDay(iv.interviewed_on) : '—'}
+                      </td>
+                      <td className="num">
+                        {num(iv.scored_criteria)}
+                        <span className="section-note"> / {num(iv.total_criteria)}</span>
+                      </td>
+                      <td>
+                        {iv.recommendation
+                          ? RECOMMENDATION_LABEL[
+                            iv.recommendation as keyof typeof RECOMMENDATION_LABEL]
+                          : <span className="section-note">—</span>}
+                      </td>
+                      <td>
+                        <Link href={`/interviews/${iv.evaluation_id}`}>
+                          {iv.has_sheet ? '面接シート' : '面接シートを書く'}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       </div>
 
       <div className="section">
-        <Card title="接点" note="集客の経緯そのもの。年度帰属は接点の日付から都度判定する">
+        <Card title="接点">
           {touchpoints.length === 0 ? <Empty>接点が記録されていない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -256,20 +319,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </table>
             </div>
           )}
-          <p className="unit-note">
-            「未割当」は、どの年度の期間にも入らない接点。集計から落とすだけだと
-            チャネル別の人数が実際の接点数に届かない理由が画面に出ないので、
-            (4)流入元でも件数として出している。
-          </p>
         </Card>
       </div>
 
-      <p className="footnote">
-        表示している日時はすべて運用タイムゾーン（Asia/Tokyo）。
-        集計の日付境界も同じタイムゾーンで揃えており、表示側とずれない。
-        年度の段と接点の鮮度は、直近 {ACTIVE_WINDOW_DAYS} 日以内に接点があるかで集計側が決めており、
-        画面側では数え直していない。
-      </p>
     </Shell>
   )
 }

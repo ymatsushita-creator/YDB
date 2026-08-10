@@ -52,9 +52,9 @@ export default async function FunnelPage(
   const target = season.target_application_count ?? 0
 
   return (
-    <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/funnel" />}>
+    <Shell active="approach" seasonId={season.id}
+      years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/funnel" />}>
       <Breadcrumb
-        readOnly
         root={seasonLabel(season)}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
@@ -79,12 +79,12 @@ export default async function FunnelPage(
              meta={target ? `目標 ${num(target)} に対して ${pct(s.applicant, target)}` : undefined}
              fill={target ? { ratio: s.applicant / target } : undefined} />
         <Kpi label="合格" value={num(s.accepted)}
-             meta={`到達した事実。辞退があっても減らない`} />
+             meta="人" />
         <Kpi label="辞退控除後の合格" value={num(s.net_accepted)}
              meta={capacity ? `定員 ${num(capacity)} に対して ${pct(s.net_accepted, capacity)}` : undefined}
              fill={capacity ? { ratio: s.net_accepted / capacity, over: s.net_accepted > capacity } : undefined} />
         <Kpi label="選考中" value={num(s.in_progress)} tone={s.in_progress ? undefined : 'muted'}
-             meta="まだ結論が出ていない応募" />
+             meta="件" />
       </div>
 
       <div className="section grid grid-2">
@@ -104,14 +104,9 @@ export default async function FunnelPage(
           <p className="section-note" style={{ marginTop: 16 }}>
             不合格 {num(s.rejected)} ・ 辞退 {num(s.withdrawn)} ・ 再応募 {num(s.reapplicant)}
           </p>
-          <p className="unit-note">
-            接点継続中は人数、応募・合格は応募件数。同一人物が複数年度に応募すると
-            応募・合格は重複しうる。接点継続中は直近 {ACTIVE_WINDOW_DAYS} 日のローリング、
-            応募・合格は年度の累積なので、この2段の間で割り算はしていない。
-          </p>
         </Card>
 
-        <Card title="ステップ別の到達と通過" note="どこで落ちているか">
+        <Card title="ステップ別の到達と通過">
           {steps.length === 0 ? <Empty>選考ステップが未定義</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -142,7 +137,6 @@ export default async function FunnelPage(
       <div className="section">
         <Card
           title="年度の接点継続中 → 応募"
-          note="日次ではなく期間全体で数える。分母も分子も実人数"
         >
           {!reach ? <Empty>年度が取得できない</Empty> : (
             <div className="row-between" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
@@ -160,39 +154,24 @@ export default async function FunnelPage(
               </span>
             </div>
           )}
-          {reach && (
-            <p className="unit-note">
-              分母は募集期間（{ymd(reach.period_from)} 〜 {ymd(reach.period_to)}）に
-              一度でも接点があった人の実人数。ローリングウィンドウではないので
-              窓の幅に依存しない。
-              {reach.is_final
-                ? ' 選考完了日を過ぎたため確定値。'
-                : ' 選考完了日までは分母が増え続けるため暫定値。'}
-            </p>
-          )}
         </Card>
       </div>
 
       <div className="section">
-        <Card title="日次の累積" note="到達したことがあるかで数える。差し戻しがあっても戻らない">
+        <Card title="日次の累積">
           <TimeSeries points={funnel} series={[...SERIES]} valueLabel="応募と選考結果" />
           <Legend series={[...SERIES]} />
         </Card>
       </div>
 
       <div className="section">
-        <Card title="接点継続中の推移" note={`その日から遡って ${ACTIVE_WINDOW_DAYS} 日以内に接点がある人。累積ではない`}>
+        <Card title="接点継続中の推移">
           <TimeSeries points={funnel} series={[...GROVE]} height={160} valueLabel="接点継続中" />
-          <p className="unit-note">
-            アクティブ判定の窓 {ACTIVE_WINDOW_DAYS} 日は<strong>仮の値</strong>。
-            運用データが溜まってから、スコアリングの減衰半減期と合わせて決める。
-            窓を変えると接点継続中の人数も、上の年度転換率以外の転換率もすべて動く。
-          </p>
         </Card>
       </div>
 
       <div className="section grid grid-2">
-        <Card title="チャネル別" note="初回接触アトリビューション。人数列は接点継続中ではなく、その年度の初回接触の累積">
+        <Card title="チャネル別">
           {channels.length === 0 ? <Empty>接点がまだない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -228,7 +207,7 @@ export default async function FunnelPage(
           )}
         </Card>
 
-        <Card title="辞退理由" note="不合格と混ぜない。チャネルの質を表す">
+        <Card title="辞退理由">
           {withdrawals.length === 0 ? <Empty>辞退はまだ記録されていない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -247,12 +226,6 @@ export default async function FunnelPage(
         </Card>
       </div>
 
-      <p className="footnote">
-        すべての日付境界は同じ運用タイムゾーンで揃えている。
-        サーバの設定が変わっても集計値は動かない。
-        訂正された遷移はシステムが自動で解決済みにしている。
-        接点継続中の判定窓 {ACTIVE_WINDOW_DAYS} 日は仮の値で、正式な日数は未決定。
-      </p>
     </Shell>
   )
 }

@@ -17,3 +17,11 @@ db/private/
 # 旧NEO-YouthからCodexが抽出した個人情報を含む移行データ
 Codexから移行した旧YouthDBデータ_*/
 scripts/sim-out/
+
+# 実在データを含みうるもの。**追跡しない。**
+# `.xlsx` / `.pptx` は運営から受け取った資料で、氏名を含むことがある。
+# `:memory:` は PGlite を ':memory:' で開いたときにできる一時ディレクトリ
+# （実行⑩で誤って作った。**リポジトリの外に出せない場所なので無視する**）。
+/:memory:/
+*.xlsx
+*.pptx

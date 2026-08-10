@@ -1,0 +1,158 @@
+/* =============================================================
+   ブランド配色（実行⑩。依頼者の指示 ――「グラデーションカラー基調に
+   合わせて配色も変えて」）
+
+   ★ 出どころは2つ。どちらも創作していない。
+     ① ロゴ `public/brand/logo_gradient.png` から実測した色
+     ② NEO ACADEMIA の意匠規定（ネオンイエロー / ピンク / シアン / グリーン）
+
+   ★★ 原則は **「色は線、面は黒」**。★★
+     アクセントカラーで面を塗らない。塗ってよい面は白と黒だけ。
+     カラーの面塗りは躍動感ではなく「ポップで安っぽい印象」になる。
+
+     そのため `monochrome.css`（白黒の土台）は**外していない。**
+     面と地はそのまま灰のままにして、**ここでは線と文字と印だけ**を色にする。
+     読み込みは tokens → monochrome → brand の順で、
+     **brand.css を外せば白黒に、2枚とも外せば元の色に戻る。**
+
+   ★ 文字に使う色は、同じ色相のまま濃さだけ落としてある。
+     ネオンイエロー `#F0F000` は白地の上で読めない。
+     **読めない色は、意味を伝えていない。**
+     線と印には原色、文字には濃い版、と使い分ける。
+   ============================================================= */
+
+:root {
+  /* --- 面。**塗るのは黒と白だけ**（原則） --- */
+  --color-primary: #0a0a0a;
+  --color-primary-pressed: #000000;
+  --color-primary-deep: #0a0a0a;
+  --color-on-primary: #ffffff;
+
+  /* --- 線と印。ロゴの原色をそのまま --- */
+  --color-brand-yellow: #f0f000;
+  --color-brand-pink: #f03090;
+  --color-brand-teal: #00c0f0;
+  --color-brand-green: #50f000;
+  --color-brand-orange: #f03090;
+  --color-brand-purple: #7860a8;   /* ロゴのシンボル中央から実測 */
+  --color-brand-purple-800: #3d3da8;
+  --color-brand-purple-300: #dcdcf7;
+
+  /* --- 文字。色相はそのまま、白地で読める濃さへ --- */
+  --color-link-blue: #0b7ea4;          /* シアン系 */
+  --color-link-blue-pressed: #085f7c;
+  --color-semantic-success: #2f7a10;   /* グリーン系 */
+  --color-semantic-warning: #8a6a00;   /* イエロー系 */
+  --color-semantic-error: #c01e5a;     /* ピンク系 */
+  --color-unset: #c01e5a;
+  --color-brand-orange-deep: #a8215f;
+  --color-rank-up: #2f7a10;
+  --color-rank-down: #c01e5a;
+  --color-crest-gold: #b58900;
+  --color-star-on: #d8a800;
+
+  /* 編集できる欄は、シアンの薄いふちで示す（面は塗らない）。 */
+  --color-editable: #ffffff;
+  --color-editable-soft: #ffffff;
+  --color-editable-border: #7fd4ee;
+  --color-editable-ink: #0b7ea4;
+}
+
+/* =============================================================
+   ロゴから伸びる帯（ブランドのモチーフ）
+
+   ロゴの下端と、そこから続く横バーの下端に、**同じ1本の線**を通す。
+   ロゴ・縦バー・横バーの寸法はすでに揃えてある（C-66 / C-68）ので、
+   線はロゴの左端から画面の右端まで途切れずに走る。
+
+   ★ 面ではなく線。太さは 3px までに留める。
+   ============================================================= */
+.hh-brand, .zoom-bar { position: relative; }
+.hh-brand::after, .zoom-bar::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    #f03090 0%, #f0c030 22%, #f0f000 38%, #a8c000 52%, #50f000 62%,
+    #00c0f0 78%, #6078c0 92%, #7860a8 100%);
+}
+/* 角丸に沿わせる。はみ出すと、丸の外に色が残って見える。 */
+.hh-brand { overflow: hidden; }
+.zoom-bar { overflow: hidden; }
+/* 横バーは右上・右下だけ丸い（左は縦バーへ着いている）。 */
+.zoom-bar::after { border-bottom-right-radius: var(--rounded-lg); }
+
+/* =============================================================
+   線としてのアクセント
+
+   バッジ・チップは面を塗らない。**左に色の線を1本立てる**だけにする。
+   ============================================================= */
+.badge-tag-purple, .badge-tag-orange, .badge-tag-green, .badge-tag-gray,
+.badge-tag-blue, .chip-green, .chip-amber, .chip-blue {
+  border-left: 3px solid currentColor;
+}
+.badge-tag-orange { color: var(--color-brand-orange-deep); }
+.badge-tag-green, .chip-green { color: var(--color-semantic-success); }
+.badge-tag-purple { color: var(--color-brand-purple-800); }
+.chip-amber { color: var(--color-semantic-warning); }
+.chip-blue, .badge-tag-blue { color: var(--color-link-blue); }
+
+/* 表の見出しの下線と、カードの見出しの脇に、細く色を差す。 */
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 1em;
+  margin-right: var(--space-xs);
+  background: linear-gradient(180deg, #f03090, #f0f000, #50f000, #00c0f0);
+  border-radius: var(--rounded-full);
+}
+
+/* 現在地は、沈んだ面＋下のグラデーション線で示す。
+   押せる段（浮いた面）と、根（破線の枠）と、**形で見分けが付く。** */
+.zoom-crumb-current {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+.zoom-crumb-current::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #f03090, #f0f000, #50f000, #00c0f0);
+}
+
+/* =============================================================
+   読める濃さに揃える（依頼者の指摘「見づらい」）
+
+   白黒にしたとき、補助文字の灰は**明るいまま**残っていた。
+   カードの地（#f3f3f3）やページの地（#e9e9e9）の上では
+   コントラスト比が 2.5〜4.1 しかなく、本文の基準（4.5）に届かない。
+
+   ★ 目分量で暗くしない。**いちばん暗い地（#e9e9e9）の上で 4.5 を満たす、
+     もっとも明るい灰**を計算して置いている。
+       steel #696969 … 地 4.52 / 白 5.49
+       stone #6b6b6b … 選ばれている行（薄い面）の上でも 4.5 を満たす
+       muted #7a7a7a … 罫線寄りの最も薄い文字
+
+   ★ リンクのシアンも同じ理由で1段暗くした（#0b7ea4 は地の上で 3.81）。
+     **色相は変えていない。濃さだけ。**
+   ============================================================= */
+:root {
+  --color-steel: #696969;
+  --color-stone: #6b6b6b;
+  --color-muted: #7a7a7a;
+  --color-on-dark-muted: #c8c8c8;
+  --color-link-blue: #096a8a;
+  --color-link-blue-pressed: #075a75;
+  --color-editable-ink: #096a8a;
+  /* 王冠は飾りで、順位は必ず数字でも出している。それでも読める濃さにする。 */
+  --color-crest-gold: #8a6800;
+  --color-star-on: #8a6800;
+}
+
+/* デモの断り書きは**暗い操作柱の上**に乗る。
+   `--color-star-on` を白地用に暗くしたので、ここだけ読めなくなった。
+   ★ **同じトークンを、明るい地と暗い地の両方で使わない。** */
+.hh-demo { color: #f0d060; }

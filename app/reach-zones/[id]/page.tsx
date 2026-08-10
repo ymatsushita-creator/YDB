@@ -45,9 +45,9 @@ export default async function ReachZonePage({
   const overduePersons = persons.filter((p) => p.overdue)
 
   return (
-    <Shell active="approach" years={<YearSwitch seasons={seasons} currentId={season.id} basePath={`/reach-zones/${forest.forest_id}`} />}>
+    <Shell active="approach" seasonId={season.id}
+      years={<YearSwitch seasons={seasons} currentId={season.id} basePath={`/reach-zones/${forest.forest_id}`} />}>
       <Breadcrumb
-        readOnly
         root={seasonLabel(season)}
         crumbs={[
           { label: 'アプローチ', href: '/approach' },
@@ -69,10 +69,10 @@ export default async function ReachZonePage({
       <div className="grid grid-kpi">
         <Kpi label="構成コミュニティ" value={num(forest.communities)}
              tone={Number(forest.communities) ? undefined : 'muted'}
-             meta="このアプローチ可能圏を構成する組織" />
+             meta="団体" />
         <Kpi label="接点のある人" value={num(forest.persons_touched)}
              tone={Number(forest.persons_touched) ? undefined : 'muted'}
-             meta={`実人数・年度を問わない（接点 ${num(forest.touchpoints)} 件）`} />
+             meta={`人（接点 ${num(forest.touchpoints)} 件）`} />
         <Kpi label="最終接触" value={forest.last_touch_on ? ymd(forest.last_touch_on) : '—'}
              tone={forest.last_touch_on ? undefined : 'muted'}
              meta={forest.days_since_touch === null
@@ -80,7 +80,7 @@ export default async function ReachZonePage({
                : `${num(forest.days_since_touch)} 日前${dormant ? '（休眠）' : ''}`} />
         <Kpi label="推定リーチ" value={num(forest.estimated_reach)}
              tone={forest.estimated_reach === null ? 'muted' : undefined}
-             meta="接触機会の推定値。人数ではない" />
+             meta="件" />
       </div>
 
       <div className="section">
@@ -91,8 +91,7 @@ export default async function ReachZonePage({
           </p>
         ) : forest.days_since_touch === null ? (
           <p className="callout">
-            リーチの記録はあるが、このアプローチ可能圏では接点のある人をまだ識別できていない。
-            推定リーチと識別済みの人数は<strong>単位が違う</strong>ので、割って率にはしない。
+            リーチの記録はあるが、接点のある人をまだ識別できていない。
           </p>
         ) : dormant ? (
           <p className="callout">
@@ -106,7 +105,6 @@ export default async function ReachZonePage({
       <div className="section">
         <Card
           title="構成コミュニティ"
-          note="圏に直接記録された接点は含まない。コミュニティの合計は圏全体に一致しない"
         >
           {communities.length === 0 ? (
             <Empty>構成コミュニティはまだ登録されていない。接点は圏に直接記録されている</Empty>
@@ -142,7 +140,6 @@ export default async function ReachZonePage({
       <div className="section">
         <Card
           title="このアプローチ可能圏に接点がある人"
-          note="所属ではなく、接触があったという事実。待っている人を先に出す"
         >
           {persons.length === 0 ? (
             <Empty>識別できている人はまだいない</Empty>
@@ -188,23 +185,7 @@ export default async function ReachZonePage({
         </Card>
       </div>
 
-      <p className="unit-note">
-        <strong>単位と母集団。</strong>
-        「接点のある人」は<strong>実人数</strong>で、年度を問わない。
-        「推定リーチ」は<code>partner_reaches</code> の<strong>接触機会の推定値</strong>で、
-        同じ人へ2回リーチすれば2と数える。
-        <strong>この2つを割ってはならない。</strong>
-        未識別と識別済みの境界をまたぐ割り算になる。
-        「やること」は {season.enrollment_year} 年度の<strong>件数</strong>で、
-        母集団は<code>いま選考が動いている応募</code>。個人情報削除を受けた人は入らない。
-      </p>
 
-      <p className="footnote">
-        構成コミュニティに付いた接点も、このアプローチ可能圏の数に含めている。
-        団体の階層は2段までで、3段目はトリガが拒否する。
-        アプローチ可能圏の健全性・担当・関係上の役割は未実装。
-        記録層にその事実が無いので、画面では作らない。
-      </p>
     </Shell>
   )
 }

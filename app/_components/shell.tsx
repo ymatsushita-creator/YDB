@@ -15,8 +15,9 @@ import type { Season } from '../../src/queries/dashboard.ts'
  * 切り替えは稀な操作なので操作柱の隅に置き、いまどの年度を見ているかは
  * 常時の関心なので帯の先頭に出す。**頻度の低い操作を主役の場所に置かない。**
  *
- * ★ 行き先は3つだけ。ファネル・アプローチ可能圏・選考オペレーションなどは
- *   **タブから外した**（消したのではなく、3つのタブの中に畳んだ）。
+ * ★ 行き先は4つ。ファネル・アプローチ可能圏・選考オペレーションなどは
+ *   **タブから外した**（消したのではなく、タブの中に畳んだ）。
+ *   4つ目の「面接」は実行⑩で依頼者の指示により足した。
  *
  * ★ `'use client'` は使っていない。
  *   いま居るタブと年度を知るために `usePathname()` / `useSearchParams()` を
@@ -25,29 +26,48 @@ import type { Season } from '../../src/queries/dashboard.ts'
  *   「いまどの年度か」を知る手段が無くなり、年度の切替を操作柱に置けない。
  */
 
-export type Tab = 'headhunting' | 'borderline' | 'approach'
+export type Tab = 'headhunting' | 'borderline' | 'approach' | 'interview'
 
 const TABS: Array<{ id: Tab; href: string; label: string; note: string }> = [
   { id: 'headhunting', href: '/headhunting', label: 'ヘッドハンティング', note: '誰に声を掛けるか' },
   { id: 'borderline', href: '/borderline', label: 'ボーダーライン', note: '誰を通すか' },
   { id: 'approach', href: '/approach', label: 'アプローチ', note: 'どこから来ているか' },
+  // 面接はアプローチの下（依頼者の指示。実行⑩）。
+  { id: 'interview', href: '/interviews', label: '面接', note: '何を見て決めたか' },
 ]
 
 export function Shell({
-  active, years, children,
+  active, years, seasonId, children,
 }: {
   active: Tab
   /** 操作柱の一番下に置く年度の切替。年度を持たない画面では省略する。 */
   years?: ReactNode
+  /**
+   * いま見ている期。**タブに持ち回る。**
+   *
+   * ★ 渡さないと、タブを押した先で期が既定（進行中の期）へ戻る。
+   *   実際、2期を見ているときにヘッドハンティングを押すと3期になっていた。
+   *   期はタブより**上の層**なので、タブを移っても保たれなければならない。
+   *
+   * 期を持たない画面（その人の記録など）では省略する。
+   */
+  seasonId?: string
   children: ReactNode
 }) {
+  const tabHref = (href: string) =>
+    (seasonId ? `${href}?season=${seasonId}` : href)
+
   return (
     <div className="hh-frame">
       <aside className="sidebar-region hh-sidebar">
         <div className="hh-brand">
+          {/* グラデーション版（依頼者の指示。実行⑩）。
+              **ロゴを変形・着色・装飾しない。** 比は 1283:305 で固定し、
+              高さは `--logo-h` に反映してある。 */}
           <img
             className="hh-brand-logo"
-            src="/brand/logo_black.png"
+            src="/brand/logo_gradient.png"
+            width={1283} height={305}
             alt="NEO ACADEMIA"
           />
         </div>
@@ -56,7 +76,7 @@ export function Shell({
           {TABS.map((t) => (
             <Link
               key={t.id}
-              href={t.href}
+              href={tabHref(t.href)}
               className={t.id === active ? 'sidebar-item-active btn-physical' : 'sidebar-item btn-physical'}
               aria-current={t.id === active ? 'page' : undefined}
             >
@@ -72,6 +92,9 @@ export function Shell({
           打った検索語である。判定の結果を URL に載せないという規律とは別）。
         */}
         <form className="hh-search" action="/people" method="get" role="search">
+          {/* 検索も期を持ち回る。押した先で期が変わると、
+              「2期を見ていたのに3期の結果が出る」ことになる。 */}
+          {seasonId && <input type="hidden" name="season" value={seasonId} />}
           <label className="sidebar-section-label" htmlFor="hh-q">名前で検索</label>
           <div className="hh-search-row">
             <input
@@ -135,20 +158,11 @@ export interface Crumb {
  * （画面ごとに「最後だけ href を外す」条件を書かせると必ずどこかで漏れる）。
  */
 export function Breadcrumb({
-  root, crumbs, readOnly,
+  root, crumbs,
 }: {
   /** 先頭に置く根（期の呼び名）。押せない。 */
   root?: string
   crumbs: Crumb[]
-  /**
-   * この画面には書き込む場所が1つも無い、という宣言。
-   *
-   * 記入できる領域は面の色で分かるが、**「この画面には書ける場所が
-   * 無い」ことは、無いものを見て気づけない。** 探させないために書く。
-   * 各画面が自分で名乗る（数えて自動判定すると、フォームを足した日に
-   * 表示だけ古くなる）。
-   */
-  readOnly?: boolean
 }) {
   const segments: Crumb[] = root === undefined
     ? crumbs
@@ -169,7 +183,6 @@ export function Breadcrumb({
           </span>
         )
       })}
-      {readOnly && <span className="readonly-note">この画面は記録を映すだけ</span>}
     </nav>
   )
 }
@@ -202,8 +215,8 @@ export function YearSwitch({
             className={s.id === currentId ? 'hh-year is-on' : 'hh-year'}
             aria-current={s.id === currentId ? 'page' : undefined}
           >
+            {/* 募集中の点（`is_live`）は出さない。依頼者の指示で外した。 */}
             {seasonLabel(s)}
-            {s.is_live && <i className="zoom-live" aria-label="募集中" />}
           </Link>
         ))}
       </div>

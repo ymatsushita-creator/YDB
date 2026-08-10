@@ -3,8 +3,13 @@ import { getDb } from '../../src/db/server.ts'
 import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
 import {
   listManualTasks, listDerivedTasks, listCandidatesByConfidence, listStepTabs,
-  listCandidatesByStep, listAppointments, getBorderlinePanel,
+  listCandidatesByStep, listAppointments, getBorderlinePanel, getScoringSheet,
 } from '../../src/queries/borderline.ts'
+import {
+  parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
+} from '../../src/commands/score.ts'
+import { parseDecideCode, DECIDE_CODE_MESSAGE } from '../../src/commands/decide.ts'
+import { ScoreSheet } from '../_components/scoring.tsx'
 import { jstDay, num, filled, NotDerived } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 import { ApproachChip, Confidence, RankDelta, taskSentence } from '../_components/headhunting.tsx'
@@ -16,8 +21,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 
-/** 1ページの行数。画像は 1-5 / 120名 だった。 */
-const PAGE_SIZE = 5
+/**
+ * 一覧は**全件出す**（依頼者の指示）。
+ *
+ * かつては1ページ5行で送っていた。48人の期で**10ページ**になり、
+ * 「確度順の候補者リスト」なのに**上位5人しか一覧できなかった。**
+ * 表はカードの中で送れる（`.scroll-pane`）ので、ページに割る理由が無い。
+ */
+const LIST_LIMIT = 500
 
 /**
  * ★ タブは画像の4つで固定する（依頼者の判断）。
@@ -47,10 +58,7 @@ export default async function BorderlinePage({
   if (!season) {
     return (
       <Shell active="borderline">
-        <p className="hh-empty-shell">
-          年度が1件も登録されていない。選考は年度ごとに動くため、
-          年度が無いと候補者を置く場所が決まらない。
-        </p>
+        <p className="hh-empty-shell">年度が1件も登録されていない。</p>
       </Shell>
     )
   }
@@ -83,7 +91,8 @@ export default async function BorderlinePage({
       due_on: null as Date | null,
       due_time: null as string | null,
       waiting_days: t.waiting_days as number | null,
-      href: `/applications/${t.source_id}`,
+      // `source_id` は評価のID。応募のIDと取り違えると 404 になる（C-60）。
+      href: `/applications/${t.application_id}`,
     })),
   ].sort((a, b) => {
     const rank = (u: string) => (u === 'overdue' ? 0 : u === 'due' ? 1 : u === 'in_progress' ? 2 : 3)
@@ -97,13 +106,10 @@ export default async function BorderlinePage({
     ? null
     : stepTabs.find((s) => s.sort_order === tab.stepOrder) ?? null
 
-  const pageParam = Number(one(sp.page) ?? '1')
-  const page = Number.isInteger(pageParam) && pageParam >= 1 ? pageParam : 1
-
   const [candidates, stepRows] = await Promise.all([
     tab.stepOrder === null
       ? listCandidatesByConfidence(db, season.id, {
-        limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
+        limit: LIST_LIMIT, offset: 0,
       })
       : Promise.resolve(null),
     step ? listCandidatesByStep(db, season.id, step.selection_step_id) : Promise.resolve(null),
@@ -119,7 +125,6 @@ export default async function BorderlinePage({
     later: tasks.filter((t) => t.urgency === 'later').length,
   }
 
-  const totalPages = candidates ? Math.max(1, Math.ceil(candidates.total / PAGE_SIZE)) : 1
 
   // タブに載っていないステップ。件数ごと出して、隠れていないことを示す。
   const shownOrders = FIXED_TABS.flatMap((t) => (t.stepOrder === null ? [] : [t.stepOrder]))
@@ -131,6 +136,17 @@ export default async function BorderlinePage({
     ? requested
     : (candidates?.rows[0]?.person_id ?? stepRows?.[0]?.person_id ?? null)
   const panel = personId ? await getBorderlinePanel(db, personId, season.id) : null
+
+  // --- 採点シート（実行⑩）---
+  // 選考タブに居るときだけ。**一覧の行が名指しした評価をそのまま渡す。**
+  // ここで「この人のこのステップの評価」を引き直すと、面接官が2人のときに
+  // 一覧が畳んだのとは別の評価へ点が入りうる（src/queries/borderline.ts）。
+  const scoringRow = stepRows?.find((r) => r.person_id === personId) ?? null
+  const sheet = scoringRow ? await getScoringSheet(db, scoringRow.evaluation_id) : null
+
+  // 直前の保存の結果。知らないコードは「何も起きていない」として捨てる。
+  const savedScore = parseSaveScoreCode(sp.score)
+  const savedDecide = parseDecideCode(sp.decide)
 
   // --- 週の日程 ---
   const weekParam = one(sp.week)
@@ -145,9 +161,14 @@ export default async function BorderlinePage({
   const href = (q: Record<string, string>) =>
     `/borderline?${new URLSearchParams({ season: season.id, tab: tab.id, ...q })}`
 
+  /** 氏名を押したときの行き先 ―― 採点レイヤー。どのタブから来たかを持たせる。 */
+  const scoreHref = (personId: string) =>
+    `/borderline/${personId}?${new URLSearchParams({ season: season.id, tab: tab.id })}`
+
   return (
     <Shell
       active="borderline"
+      seasonId={season.id}
       years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/borderline" />}
     >
       <Breadcrumb
@@ -196,11 +217,6 @@ export default async function BorderlinePage({
                 ))}
               </ul>
             )}
-            <p className="hh-note">
-              単位は件。開いているやること {num(tasks.length)} 件 ――
-              期限超過 {num(byUrgency.overdue)} ・ 要対応 {num(byUrgency.due)} ・
-              進行中 {num(byUrgency.in_progress)} ・ タスク {num(byUrgency.later)}。
-            </p>
           </section>
 
           {/* --- 候補者リスト --- */}
@@ -223,9 +239,7 @@ export default async function BorderlinePage({
             </div>
 
             {tab.stepOrder !== null && !step && (
-              <p className="hh-empty">
-                このタブに対応する選考ステップが、この年度には登録されていない。
-              </p>
+              <p className="hh-empty">この期にこの選考は無い。</p>
             )}
 
             {candidates && (
@@ -250,10 +264,15 @@ export default async function BorderlinePage({
                           </td>
                           <td><Rank rank={r.rank_in_season} /></td>
                           <td>
-                            <Link href={href({ person: r.person_id })} className="bl-person">
+                            {/* 氏名を押したら採点できる（依頼者の指示）。
+                                右の「›」はその人の記録。押す先で行き先が違う。 */}
+                            <Link href={scoreHref(r.person_id)} className="bl-person">
                               <Avatar src={r.photo_data_url} name={r.person_name} />
                               {r.person_name}
                             </Link>
+                            <Link href={`/people/${r.person_id}?season=${season.id}`}
+                                  className="row-detail"
+                                  aria-label={`${r.person_name} の記録を開く`}>›</Link>
                           </td>
                           <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
                           <td className="dim">
@@ -291,10 +310,13 @@ export default async function BorderlinePage({
                           <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
                           <td className="num dim">{r.scored_criteria}</td>
                           <td>
-                            <Link href={href({ person: r.person_id })} className="bl-person">
+                            <Link href={scoreHref(r.person_id)} className="bl-person">
                               <Avatar src={r.photo_data_url} name={r.person_name} />
                               {r.person_name}
                             </Link>
+                            <Link href={`/applications/${r.application_id}`}
+                                  className="row-detail"
+                                  aria-label={`${r.person_name} の応募を開く`}>›</Link>
                           </td>
                           <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
                           <td className="num dim">{r.waiting_days} 日</td>
@@ -307,44 +329,7 @@ export default async function BorderlinePage({
               )
             )}
 
-            {candidates && candidates.total > PAGE_SIZE && (
-              <div className="bl-pager">
-                <span className="hh-note">
-                  {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, candidates.total)} /{' '}
-                  {num(candidates.total)} 名
-                </span>
-                <span className="bl-pages">
-                  {page > 1 && (
-                    <Link className="bl-page btn-physical" href={href({ page: String(page - 1) })}>‹</Link>
-                  )}
-                  <span className="bl-page is-on">{page}</span>
-                  {page < totalPages && (
-                    <Link className="bl-page btn-physical" href={href({ page: String(page + 1) })}>›</Link>
-                  )}
-                  <span className="hh-note">/ {totalPages}</span>
-                </span>
-              </div>
-            )}
 
-            <p className="hh-note">
-              {tab.stepOrder === null ? (
-                <>
-                  単位は人。母集団はこの期の対象者 {num(candidates?.total ?? 0)} 人。
-                </>
-              ) : (
-                <>
-                  単位は応募。母集団はこの選考で<strong>判断待ちの応募</strong>。
-                  100点換算は実際に受けた軸の満点で割った達成率。
-                </>
-              )}
-              {hiddenSteps.length > 0 && (
-                <>
-                  <br />
-                  <strong>このタブに出ていない選考</strong>:{' '}
-                  {hiddenSteps.map((s) => `${s.step_name} ${s.open_applications} 件`).join(' ・ ')}
-                </>
-              )}
-            </p>
           </section>
         </div>
 
@@ -372,6 +357,37 @@ export default async function BorderlinePage({
                 </header>
 
                 <div className="scroll-pane">
+                {/* 採点（実行⑩）。選考タブで、その人がその段に居るときだけ出す。
+                    出す条件は一覧と同じ行から来ている ―― 一覧に居ない人の
+                    採点欄は出ない（母集団の一致。CLAUDE.md）。 */}
+                {sheet && (
+                  <>
+                    {(savedScore || savedDecide) && (
+                      <>
+                        {savedScore && (
+                          <p className={`callout${savedScore === 'saved' ? ' ok' : ''}`}>
+                            {SAVE_SCORE_CODE_MESSAGE[savedScore]}
+                          </p>
+                        )}
+                        {savedDecide && (
+                          <p className={`callout${savedDecide === 'submitted' ? ' ok' : ''}`}>
+                            {DECIDE_CODE_MESSAGE[savedDecide]}
+                          </p>
+                        )}
+                      </>
+                    )}
+                    <ScoreSheet
+                      sheet={sheet}
+                      context={{
+                        seasonId: season.id,
+                        tab: tab.id,
+                        personId: sheet.person_id,
+                        week: monday,
+                      }}
+                    />
+                  </>
+                )}
+
                 <h3 className="hh-sub">基本情報</h3>
                 <dl className="hh-facts">
                   <dt>学校</dt><dd>{panel.school}</dd>
@@ -421,7 +437,6 @@ export default async function BorderlinePage({
             ) : (
               <WeekCalendar monday={monday} appointments={appointments} today={today} />
             )}
-            <p className="hh-note">単位は件。この週の予定 {num(appointments.length)} 件。</p>
           </section>
         </div>
       </div>

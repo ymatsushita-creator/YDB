@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react'
 import './tokens.css'
 import './base.css'
+// ★ 白黒の土台（依頼者の指示）。**トークンの後に読む**ので、外せば元の色に戻る。
+import './monochrome.css'
+// ★ ブランド配色。ロゴのグラデーションから採った色を**線と文字にだけ**入れる。
+//   面は白と黒のまま（意匠規定「色は線、面は黒」）。外せば白黒に戻る。
+import './brand.css'
 
 export const metadata = {
   title: 'YouthDB — TALENT INTELLIGENCE',

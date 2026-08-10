@@ -209,15 +209,33 @@ describe('本番の参照データ', () => {
     // 集計に関わるマスタは追加と非活性化でしか運用できない（原則3）。
     // 最初に入った値が事実上の初期値として固定化されるため、
     // 分類が決まるまで仮の値を入れない。
+    //
+    // ★ `channels` は実行⑩で**確定した**（C-79）。依頼者が
+    //   「LINE、インスタなどからの Google フォームの回答から SNS 分析も行う」
+    //   と名指しし、旧システムの `select_options` にも運営の語が並んでいた。
+    //   **仮の値ではなく、受け取った語である。**
     const db = await freshDb({ seeds: 'production' })
     const counts = await one<Record<string, number>>(db, `
-      SELECT (SELECT count(*) FROM channels)         AS channels,
-             (SELECT count(*) FROM void_reasons)     AS void_reasons,
+      SELECT (SELECT count(*) FROM void_reasons)     AS void_reasons,
              (SELECT count(*) FROM withdraw_reasons) AS withdraw_reasons`)
     assert.deepEqual(
       Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, Number(v)])),
-      { channels: 0, void_reasons: 0, withdraw_reasons: 1 },
+      { void_reasons: 0, withdraw_reasons: 1 },
     )
+    await db.close()
+  })
+
+  test('★ 流入チャネルは、受け取った語だけが入る', async () => {
+    // 名前は運営の言葉のまま。**こちらで言い換えない**（Pilot Rule）。
+    // 足すのは自由だが、**既存の行の名前を書き換えない** ――
+    // 書き換えると、過去の接点の意味が後から変わる。
+    const db = await freshDb({ seeds: 'production' })
+    const rows = await all<{ name: string; category: string }>(db,
+      `SELECT name, category FROM channels ORDER BY name`)
+    const sns = rows.filter((r) => r.category === 'sns').map((r) => r.name).sort()
+    assert.deepEqual(sns, ['Instagram', 'LINE', 'TikTok', 'X', 'YouTube'],
+      'SNS 分析はこの束で行う')
+    assert.equal(rows.every((r) => r.name.trim() !== ''), true)
     await db.close()
   })
 
@@ -231,11 +249,23 @@ describe('本番の参照データ', () => {
   })
 
   test('サンプルの参照データは本番のシードに混ざらない', async () => {
+    // ★ 本番のチャネルは実行⑩で確定した（C-79）ので、0件では確かめられない。
+    //   確かめるのは**サンプルの語が本番に無いこと**である ――
+    //   「SNS広告」「卒業生からの紹介」などは創作の分類で、
+    //   運営から受け取った語ではない。
     const production = await freshDb({ seeds: 'production' })
     const examples = await freshDb({ seeds: 'examples' })
-    const n = (db: Db) => scalar<string>(db, `SELECT count(*) FROM channels`)
-    assert.equal(Number(await n(production)), 0)
-    assert.ok(Number(await n(examples)) > 0, 'サンプルを明示したときだけ入る')
+    const names = (db: Db) =>
+      all<{ name: string }>(db, `SELECT name FROM channels`).then((r) => r.map((x) => x.name))
+
+    const prod = await names(production)
+    const sample = await names(examples)
+    const invented = ['SNS広告', 'SNS自然流入', '卒業生からの紹介', '進路指導室の掲示']
+    for (const n of invented) {
+      assert.ok(sample.includes(n), `サンプルには「${n}」がある`)
+      assert.equal(prod.includes(n), false, `本番に創作の分類「${n}」が入っている`)
+    }
+    assert.ok(prod.length > 0, '本番のチャネルは確定済み（C-79）')
     await production.close()
     await examples.close()
   })

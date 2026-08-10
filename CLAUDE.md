@@ -44,7 +44,8 @@ process.md   作業手順
 - `pnpm exec tsc --noEmit`
 - `pnpm build`
 - 画面またはSQLで結果を確認
-- 数字には単位と母集団を表示
+- 単位と母集団は**画面に書かない**（依頼者の指示。C-62）。
+  定義はクエリのコメントと `db/DECISIONS.md` に置く
 - `db/DECISIONS.md` に理由とテストを記録
 
 ## 禁止
