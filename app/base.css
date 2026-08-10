@@ -1053,3 +1053,45 @@ html, body { height: 100%; overflow: hidden; }
    幅が足りないときは表ごと横に送る（`.table-wrap`）。
    1文字ずつ折り返した列は、読めないだけでなく行の高さも壊す。 */
 .cell-name { white-space: nowrap; }
+
+/* =============================================================
+   合言葉の画面（実行⑩。依頼者の指示）
+
+   外枠を被らない。**入る前に中身の形を見せない。**
+   ============================================================= */
+.login-frame {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: var(--space-lg); background: var(--color-shell);
+}
+.login-card {
+  width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: var(--space-sm);
+  padding: var(--space-xxl);
+  background: var(--color-canvas);
+  /* 縁は自分で持つ。`editable-region`（記録の印）に借りていたのを外した（C-82）。 */
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-2);
+}
+.login-logo { width: 100%; height: auto; margin-bottom: var(--space-lg); }
+.login-label { font-size: 13px; font-weight: 600; color: var(--color-slate); }
+.login-input {
+  font-family: inherit; font-size: 16px; padding: 10px 12px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas); color: var(--color-ink);
+}
+.login-button { margin-top: var(--space-xs); padding: 10px; border: 0; cursor: pointer; }
+.login-error { color: var(--color-semantic-error); font-size: 13px; font-weight: 600; }
+
+/* 出る。合言葉は共有なので、共用の端末では必ず出る。 */
+.hh-signout {
+  margin-top: var(--space-xs); padding: 4px 10px;
+  font-family: inherit; font-size: 11px;
+  color: var(--color-on-dark-muted);
+  background: transparent;
+  border: 1px solid var(--color-sidebar-hairline);
+  border-radius: var(--rounded-sm);
+  cursor: pointer;
+}
+.hh-signout:hover { color: var(--color-on-dark); }
