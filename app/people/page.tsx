@@ -51,9 +51,9 @@ export default async function PeoplePage(
   const comparable = new Date() >= new Date(season.application_open_date)
 
   return (
-    <Shell active="headhunting" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/people" />}>
+    <Shell active="headhunting" seasonId={season.id}
+      years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/people" />}>
       <Breadcrumb
-        readOnly
         root={seasonLabel(season)}
         crumbs={[
           { label: 'ヘッドハンティング', href: `/headhunting?season=${season.id}` },
@@ -64,10 +64,7 @@ export default async function PeoplePage(
       <div className="page-head">
         <div>
           <h1 className="page-title">人を探す</h1>
-          <p className="page-sub">
-            {season.enrollment_year} 年度から見た現在地。個人を開くと、
-            その人の年度別の状態・応募・接点がすべて出る
-          </p>
+          <p className="page-sub">{season.enrollment_year} 年度</p>
         </div>
       </div>
 
@@ -97,7 +94,6 @@ export default async function PeoplePage(
       <div className="section">
         <Card
           title={`${season.enrollment_year} 年度の内訳`}
-          note="段は年度内の最高到達点。窓は基準日から遡って接点があるか"
         >
           <div className="table-wrap">
             <table className="data">
@@ -131,30 +127,12 @@ export default async function PeoplePage(
               </tfoot>
             </table>
           </div>
-          <p className="unit-note">
-            {comparable ? (
-              <>
-                「うち直近に接点あり」の合計 {num(inWindow)} 人は、ファネル画面の
-                <strong> 接点継続中 {num(grove)} 人</strong>と同じ数である。
-                {inWindow !== grove && (
-                  <strong style={{ color: 'var(--color-semantic-error)' }}>
-                    {' '}一致していない。集計の定義が壊れている。
-                  </strong>
-                )}
-              </>
-            ) : (
-              <>応募開始前の年度なのでファネルの断面がまだ無く、接点継続中とは突き合わせられない。</>
-            )}
-            {' '}応募到達状態と接点判定窓は別の軸で、応募・合格した人も接点を持てば接点継続中に数えられる。
-            窓は直近 {ACTIVE_WINDOW_DAYS} 日で、これは<strong>仮の値</strong>。
-          </p>
         </Card>
       </div>
 
       <div className="section">
         <Card
           title={q ? `「${q}」の検索結果` : '最近接点があった順'}
-          note={`最終接触の新しい順に ${LIMIT} 件まで`}
         >
           {people.length === 0 ? <Empty>該当する人がいない</Empty> : (
             <div className="table-wrap">
@@ -197,23 +175,9 @@ export default async function PeoplePage(
               </table>
             </div>
           )}
-          <p className="unit-note">
-            「この年度には現れない」は、その人が識別されたのが年度の選考終了日より
-            後だったということ。年度の母集団に入らないので段を持たない。
-            接点の鮮度を測る基準日は
-            {season.is_live
-              ? '今日'
-              : `${season.enrollment_year} 年度の選考終了日（${jstDay(season.selection_end_date)}）`}。
-          </p>
         </Card>
       </div>
 
-      <p className="footnote">
-        個人情報削除の依頼（資料9-2）を受けた Person は、集計だけでなく
-        この一覧と個人の画面からも外れる。氏名の見える窓を残さない。
-        段と「直近に接点あり」の定義は集計の仕組みが決めており、
-        画面側では数え直していない。
-      </p>
     </Shell>
   )
 }

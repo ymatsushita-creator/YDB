@@ -25,6 +25,7 @@ import { all, maybeOne, type Db } from '../db/client.ts'
 export interface HeadhuntingRow {
   person_id: string
   person_name: string
+  photo_data_url: string | null
   approach_code: string
   approach_label: string
   state_since: Date
@@ -43,6 +44,7 @@ export const listHeadhunting = (db: Db, seasonId: string, limit = 12) =>
   all<HeadhuntingRow>(db, `
     SELECT h.person_id,
            p.family_name || ' ' || p.given_name AS person_name,
+           p.photo_data_url,
            h.approach_code, h.approach_label, h.state_since,
            c.confidence_ratio, c.rank_in_season
       FROM v_headhunting_list h
@@ -78,6 +80,7 @@ export const getApproachTotals = (db: Db, seasonId: string) =>
 export interface ConfidenceRow {
   person_id: string
   person_name: string
+  photo_data_url: string | null
   rank_in_season: number
   confidence_ratio: number | null
   total_points: number
@@ -96,6 +99,7 @@ export const listConfidence = (db: Db, seasonId: string, limit = 5) =>
   all<ConfidenceRow>(db, `
     SELECT c.person_id,
            p.family_name || ' ' || p.given_name AS person_name,
+           p.photo_data_url,
            c.rank_in_season, c.confidence_ratio, c.total_points, c.max_points,
            c.rank_delta, c.has_previous_run
       FROM v_candidate_confidence_latest c
@@ -139,6 +143,7 @@ export interface ScoreRow {
   application_id: string
   person_id: string
   person_name: string
+  photo_data_url: string | null
   rank_in_season: number
   /** 得点の合計。 */
   earned: number
@@ -182,6 +187,7 @@ export const listApplicantScores = (db: Db, seasonId: string, limit = 5) =>
     )
     SELECT s.application_id, s.person_id,
            p.family_name || ' ' || p.given_name AS person_name,
+           p.photo_data_url,
            rank() OVER (ORDER BY s.earned::numeric / s.possible DESC) AS rank_in_season,
            s.earned, s.possible,
            round(s.earned::numeric / s.possible * 100, 1) AS score_100,
@@ -210,9 +216,9 @@ export interface PersonPanel {
   person_kana: string | null
   school: string
   school_id: string
-  birth_date: Date
+  birth_date: Date | null
   faculty: string | null
-  email: string
+  email: string | null
   phone: string | null
   line_user_id: string | null
   referrer_person_id: string | null

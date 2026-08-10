@@ -76,9 +76,9 @@ export default async function PilotPage(
   const forDecide = pick('evaluate')
 
   return (
-    <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/pilot" />}>
+    <Shell active="borderline" seasonId={season.id}
+      years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/pilot" />}>
       <Breadcrumb
-        readOnly
         root={seasonLabel(season)}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },
@@ -90,7 +90,7 @@ export default async function PilotPage(
         <div>
           <h1 className="page-title">試運転の手順（30 分）</h1>
           <p className="page-sub">
-            {season.enrollment_year} 年度の実際のデータで、採用の1周を通してもらう
+            {season.enrollment_year} 年度
           </p>
         </div>
       </div>
@@ -109,7 +109,7 @@ export default async function PilotPage(
       </div>
 
       <div className="section">
-        <Card title="この順に押す" note="それぞれ、いま実在する1件へ直接つながっている">
+        <Card title="この順に押す">
           <ol className="pilot-list">
             {STEPS.map((step, i) => {
               const task = step.kind === 'decide' ? forDecide : pick(step.kind)
@@ -137,7 +137,9 @@ export default async function PilotPage(
                     </span>
                   </div>
                   <p className="section-note">やること: {step.what}</p>
-                  <p className="unit-note" style={{ marginTop: 4 }}>
+                  {/* これは画面の説明ではなく、この画面の中身そのもの
+                      （運営に何を見てきてほしいかの依頼）。`hh-memo` で置く。 */}
+                  <p className="hh-memo" style={{ marginTop: 4 }}>
                     <strong>教えてほしいこと:</strong> {step.watch}
                   </p>
                 </li>
@@ -150,7 +152,6 @@ export default async function PilotPage(
       <div className="section">
         <Card
           title="最後に、これだけ教えてほしい"
-          note="ここで出たものだけが、次に作るものを決める"
         >
           <ol className="pilot-list">
             <li className="pilot-step">
@@ -179,12 +180,6 @@ export default async function PilotPage(
         </Card>
       </div>
 
-      <p className="footnote">
-        いま {season.enrollment_year} 年度に残っているやることは {num(tasks.length)} 件。
-        この手順で触るのはそのうち最大4件で、どれもやり直せる。
-        判定は上書きではなく、編集した事実が1行積まれる。
-        書き込みが起きるのは 1〜4 の操作だけで、この画面自体は何も書かない。
-      </p>
     </Shell>
   )
 }

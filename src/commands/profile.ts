@@ -31,11 +31,17 @@ const blankToNull = (value: string) => value.trim() || null
 
 export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<ProfileResult> {
   if (!UUID.test(input.personId)) return { ok: false, reason: 'person_not_found' }
-  if (!input.familyName.trim() || !input.givenName.trim() || !input.email.trim()) {
-    return { ok: false, reason: 'required' }
+  // ★ 姓だけは要る。無ければその人を指す手段が1つも無い。
+  //   名・メール・生年月日は 0023 で「無いこともある」になった ――
+  //   旧システムから移した人は持っていない。**必須にすると、
+  //   その人のプロフィールを他の項目だけ直すことすらできなくなる。**
+  if (!input.familyName.trim()) return { ok: false, reason: 'required' }
+  if (input.email.trim() && !/^\S+@\S+\.\S+$/.test(input.email.trim())) {
+    return { ok: false, reason: 'bad_email' }
   }
-  if (!/^\S+@\S+\.\S+$/.test(input.email.trim())) return { ok: false, reason: 'bad_email' }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) return { ok: false, reason: 'bad_date' }
+  if (input.birthDate.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) {
+    return { ok: false, reason: 'bad_date' }
+  }
   if (!UUID.test(input.schoolId)) return { ok: false, reason: 'school_not_found' }
   if (input.referrerPersonId && (!UUID.test(input.referrerPersonId) || input.referrerPersonId === input.personId)) {
     return { ok: false, reason: 'bad_referrer' }
@@ -67,7 +73,7 @@ export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<
            SET family_name = btrim($2), given_name = btrim($3),
                family_name_kana = $4, given_name_kana = $5,
                birth_date = $6, school_id = $7, faculty = $8,
-               email = btrim($9), phone = $10, line_user_id = $11,
+               email = nullif(btrim($9), ''), phone = $10, line_user_id = $11,
                referrer_person_id = $12, note = $13,
                photo_data_url = CASE WHEN $14::boolean THEN $15 ELSE photo_data_url END,
                updated_at = now()
@@ -86,7 +92,7 @@ export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<
       input.personId,
       input.familyName, input.givenName,
       blankToNull(input.familyNameKana), blankToNull(input.givenNameKana),
-      input.birthDate, input.schoolId, blankToNull(input.faculty), input.email,
+      blankToNull(input.birthDate), input.schoolId, blankToNull(input.faculty), input.email,
       blankToNull(input.phone), blankToNull(input.lineUserId),
       blankToNull(input.referrerPersonId), blankToNull(input.note),
       input.photoDataUrl !== undefined, input.photoDataUrl ?? null,

@@ -33,9 +33,9 @@ export default async function OperationsPage(
   const unassignedCount = Number(unassigned?.count ?? 0)
 
   return (
-    <Shell active="borderline" years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/operations" />}>
+    <Shell active="borderline" seasonId={season.id}
+      years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/operations" />}>
       <Breadcrumb
-        readOnly
         root={seasonLabel(season)}
         crumbs={[
           { label: 'ボーダーライン', href: '/borderline' },
@@ -54,17 +54,17 @@ export default async function OperationsPage(
 
       <div className="grid grid-kpi">
         <Kpi label="判断待ち" value={num(pending.length)}
-             tone={pending.length ? undefined : 'muted'} meta="まだ確定していない評価" />
+             tone={pending.length ? undefined : 'muted'} meta="件" />
         <Kpi label="SLA 超過" value={num(overSla.length)}
              tone={overSla.length ? undefined : 'muted'}
-             meta="ステップごとの sla_days を超えて滞留" />
+             meta="件" />
         <Kpi label="担当未割当" value={num(unassignedCount)}
              tone={unassignedCount ? undefined : 'muted'}
-             meta={unassigned?.oldest_days ? `最長 ${num(unassigned.oldest_days)} 日` : '面接官が決まっていない'} />
+             meta={unassigned?.oldest_days ? `最長 ${num(unassigned.oldest_days)} 日` : '件'} />
         <Kpi label="保留" value={num(held.length)}
-             tone={held.length ? undefined : 'muted'} meta="保留にしている評価" />
+             tone={held.length ? undefined : 'muted'} meta="件" />
         <Kpi label="利益相反" value={num(conflicts.length)}
-             tone={conflicts.length ? undefined : 'muted'} meta="紹介者または本人が面接官" />
+             tone={conflicts.length ? undefined : 'muted'} meta="件" />
       </div>
 
       {overSla.length > 0 && (
@@ -82,7 +82,7 @@ export default async function OperationsPage(
       )}
 
       <div className="section">
-        <Card title="判断待ちの評価" note="滞留の起点は割り当て時刻。基準日は運用タイムゾーンの今日">
+        <Card title="判断待ちの評価">
           {pending.length === 0 ? <Empty>判断待ちの評価はない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -128,7 +128,7 @@ export default async function OperationsPage(
       </div>
 
       <div className="section grid grid-2">
-        <Card title="面接官別の負荷" note="偏りは滞留の原因になる">
+        <Card title="面接官別の負荷">
           {load.length === 0 ? <Empty>割り当てがまだない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -157,7 +157,7 @@ export default async function OperationsPage(
           )}
         </Card>
 
-        <Card title="保留" note="理由が必須なので、必ず読める形で残る">
+        <Card title="保留">
           {held.length === 0 ? <Empty>保留はない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -181,7 +181,7 @@ export default async function OperationsPage(
       </div>
 
       <div className="section">
-        <Card title="利益相反" note="紹介チャネルの合格率が実力かバイアスかの検証に使う">
+        <Card title="利益相反">
           {conflicts.length === 0 ? <Empty>検出されていない</Empty> : (
             <div className="table-wrap">
               <table className="data">
@@ -209,10 +209,6 @@ export default async function OperationsPage(
         </Card>
       </div>
 
-      <p className="footnote">
-        滞留日数は、担当が決まった日から今日までの日数（日本時間で数える）。
-        サーバの時計ではなく日本時間の日付で数えているため、深夜をまたいでも数字が動かない。
-      </p>
     </Shell>
   )
 }

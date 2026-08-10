@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react'
 
+/**
+ * ★ 見出しに添える説明（`note`）は持たない。**依頼者の指示で全画面から外した。**
+ *   定義や単位を画面に書き足さない ―― 読む相手は運営であって、
+ *   毎回同じ説明を読まされる相手ではない。
+ */
 export function Card({
-  children, title, note, tint,
-}: { children: ReactNode; title?: string; note?: string; tint?: string }) {
+  children, title, tint,
+}: { children: ReactNode; title?: string; tint?: string }) {
   return (
     <section className={tint ?? 'card-base'}>
-      {title && (
-        <h2 className={`section-title${note ? ' section-title-with-note' : ''}`}>
-          {title}
-          {note && <span className="section-note">{note}</span>}
-        </h2>
-      )}
+      {title && <h2 className="section-title">{title}</h2>}
       {children}
     </section>
   )
@@ -55,7 +55,14 @@ export const pct = (a: number, b: number) =>
   b === 0 ? '—' : `${((a / b) * 100).toFixed(1)}%`
 
 /** date 列は UTC 深夜の Date として返る。暦日をそのまま読む。 */
-export const ymd = (d: Date) => new Date(d).toISOString().slice(0, 10)
+/**
+ * `YYYY-MM-DD`。**受け取っていないときは空文字。**
+ *
+ * 0023 で生年月日が「無いこともある」になった。無いものを
+ * 1970-01-01 のような値で埋めない ―― 埋めると嘘の事実が1つ増える。
+ */
+export const ymd = (d: Date | null | undefined) =>
+  (d ? new Date(d).toISOString().slice(0, 10) : '')
 export const md = (d: Date) => new Date(d).toISOString().slice(5, 10).replace('-', '/')
 
 /**

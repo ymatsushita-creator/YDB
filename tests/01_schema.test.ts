@@ -121,6 +121,10 @@ describe('マイグレーション', () => {
       'v_appointments',
       // 0020: まだ終わっていない、人が作ったやること
       'v_manual_tasks',
+      // 0022: 面接シートに、評価から辿れる事実を添えたもの
+      'v_interview_sheets',
+      // 0025: フォーム回答を SNS（チャネル）別に見る形
+      'v_form_response_channels',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

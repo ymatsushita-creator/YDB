@@ -71,8 +71,17 @@ export const listDerivedTasks = (db: Db, seasonId: string) =>
     source_id: string; kind: string; person_id: string; person_name: string
     step_name: string; owner: string | null; waiting_days: number
     sla_days: number | null; is_overdue: boolean
+    /**
+     * やることが指している応募。
+     *
+     * ★ `source_id` は**評価のID**であって応募のIDではない（0014）。
+     *   画面のリンクを `source_id` で組み立てていたため、
+     *   「◯◯さんの二次面接を評価する」を押すと 404 になっていた ――
+     *   **画面から点を入れられる唯一の経路が壊れていた**（C-60）。
+     */
+    application_id: string
   }>(db, `
-    SELECT t.source_id, t.kind, t.person_id,
+    SELECT t.source_id, t.kind, t.person_id, t.application_id,
            p.family_name || ' ' || p.given_name AS person_name,
            t.step_name, st.display_name AS owner,
            t.waiting_days, t.sla_days, t.is_overdue
@@ -191,6 +200,16 @@ export const listStepTabs = (db: Db, seasonId: string) =>
 
 export interface StepCandidateRow {
   application_id: string
+  /**
+   * この行が代表している評価。**採点はこの評価に対して行う。**
+   *
+   * 1つの応募に同じステップの評価が2件あることがある（面接官が2人）ので、
+   * 一覧は待ちの長いほうへ畳んでいる。畳んだ結果を持ち歩かずに
+   * 「この応募のこのステップの評価」を採点側で引き直すと、
+   * **画面が出している「n 軸」と、点が入る先が別の評価になりうる。**
+   * 操作できる母集団と画面に出す母集団を一致させる（CLAUDE.md）。
+   */
+  evaluation_id: string
   person_id: string
   person_name: string
   photo_data_url: string | null
@@ -223,7 +242,7 @@ export const listCandidatesByStep = (db: Db, seasonId: string, stepId: string) =
          GROUP BY a.id
     )
     SELECT DISTINCT ON (a.id)
-           a.id AS application_id, a.person_id,
+           a.id AS application_id, e.id AS evaluation_id, a.person_id,
            p.family_name || ' ' || p.given_name AS person_name,
            p.photo_data_url, sc.name AS school, p.faculty,
            CASE WHEN s.possible > 0
@@ -244,6 +263,147 @@ export const listCandidatesByStep = (db: Db, seasonId: string, stepId: string) =
      -- 一覧は応募の単位なので、待ちの長いほうを代表にして1行へ畳む。
      ORDER BY a.id, e.assigned_at`,
   [seasonId, stepId])
+
+export interface ScoringCriterion {
+  criteria_id: string
+  criteria_name: string
+  scale_max: number
+  applies_to: string
+  /** まだ付いていなければ null。 */
+  score: number | null
+  rationale: string | null
+}
+
+export interface ScoringSheet {
+  evaluation_id: string
+  application_id: string
+  person_id: string
+  person_name: string
+  step_name: string
+  attempt: number
+  interviewer: string | null
+  state: string
+  criteria: ScoringCriterion[]
+  /** まだ点が付いていない軸の数。 */
+  unscored_count: number
+  /** そもそも軸が1本も登録されていない。 */
+  no_criteria: boolean
+  /** いま点を付けられるか。判定は `v_open_tasks` の種別だけ（C-25）。 */
+  can_score: boolean
+  /** 付けられない理由。付けられるときは null。 */
+  blocked_by: string | null
+  /** いま確定できるか。 */
+  can_submit: boolean
+}
+
+/**
+ * 採点シート（実行⑩。依頼者の指示 ――「そこで採点入力する」）。
+ *
+ * 選考タブは成績（100点換算）と付いた軸の数を出しているのに、
+ * **その場で点を入れる入口が無かった。** 点を入れられるのは応募の画面だけで、
+ * そこへは「やること」からしか行けない。ここはその欠けを埋める。
+ *
+ * ★ **応募とステップではなく、評価そのもので引く。**
+ *   一覧は面接官が2人のとき応募あたり1行へ畳んでいる。同じ条件を
+ *   ここで書き直すと、畳み方が食い違ったときに**画面の数字と点の行き先が
+ *   別の評価になる。** 一覧が名指しした `evaluation_id` を受け取る。
+ *
+ * ★ 判定を書き写していない。点を付けられるかは `v_open_tasks` の種別、
+ *   実際に保存できるかは記録層の CHECK とトリガが決める（C-25）。
+ *   ここは**何を評価するのか**と**いま何が足りないのか**を出すだけ。
+ */
+export const getScoringSheet = async (
+  db: Db, evaluationId: string | undefined,
+): Promise<ScoringSheet | null> => {
+  if (!evaluationId || !UUID.test(evaluationId)) return null
+
+  const head = await maybeOne<
+    Omit<ScoringSheet, 'criteria' | 'unscored_count' | 'no_criteria'
+    | 'can_score' | 'blocked_by' | 'can_submit'>
+    & { task_kind: string | null }
+  >(db, `
+    SELECT e.id AS evaluation_id, a.id AS application_id, p.id AS person_id,
+           p.family_name || ' ' || p.given_name AS person_name,
+           ss.name AS step_name, e.attempt, e.state,
+           stf.display_name AS interviewer,
+           (SELECT t.kind FROM v_open_tasks t WHERE t.source_id = e.id) AS task_kind
+      FROM evaluations e
+      JOIN applications a ON a.id = e.application_id AND a.deleted_at IS NULL
+      JOIN persons p ON p.id = a.person_id AND p.deleted_at IS NULL
+      JOIN selection_steps ss ON ss.id = e.selection_step_id
+      LEFT JOIN staffs stf ON stf.id = e.interviewer_staff_id
+     WHERE e.id = $1`, [evaluationId])
+  if (!head) return null
+
+  // 適用される軸を、付いた点ごと1回で引く。
+  // 適用の規則（applies_to と再応募）はトリガ evaluation_scores_applicability
+  // と同じもので、tests/19 が両者の一致を固定している。
+  const criteria = await all<ScoringCriterion>(db, `
+    SELECT ec.id AS criteria_id, ec.name AS criteria_name, ec.scale_max, ec.applies_to,
+           es.score, es.rationale
+      FROM evaluations e
+      JOIN applications a ON a.id = e.application_id
+      JOIN evaluation_criteria ec ON ec.selection_step_id = e.selection_step_id
+      LEFT JOIN evaluation_scores es
+             ON es.evaluation_id = e.id AND es.criteria_id = ec.id
+     WHERE e.id = $1
+       AND (ec.applies_to = 'all'
+            OR (ec.applies_to = 'reapplicant_only' AND a.is_reapplication))
+     ORDER BY ec.sort_order`, [evaluationId])
+
+  const { task_kind, ...rest } = head
+  const canScore = task_kind === 'evaluate'
+  const unscored = criteria.filter((c) => c.score === null).length
+
+  return {
+    ...rest,
+    criteria,
+    unscored_count: unscored,
+    no_criteria: criteria.length === 0,
+    can_score: canScore,
+    // 知らない種別が来ても「できるように見える」形にしない。
+    blocked_by: canScore ? null : SCORE_BLOCKED_BY[task_kind ?? 'none'] ?? 'いまは点を付けられない',
+    // ★ 軸が0本のときを「全軸そろった」と読まない。0 件そろっても、
+    //   点が1つも無い評価が確定できてしまう。確定の可否は最後に
+    //   `submitEvaluation` が記録層の規則で決めるが、**押せる形で出さない。**
+    can_submit: canScore && criteria.length > 0 && unscored === 0,
+  }
+}
+
+/**
+ * その人が、その期に持っている評価をすべて（実行⑩。依頼者の指示 ――
+ * 「個人名押したら採点できるレイヤー」）。
+ *
+ * ★ 一覧のタブは「いまその段に居る応募」しか出さない。
+ *   採点する人が開きたいのは**その候補者の採点用紙そのもの**で、
+ *   段は選ぶものではなく並んでいるものである。
+ *   だからここは**段で絞らない。** 確定済みも落とさない ――
+ *   前の段で何点だったかを見ずに次の段は付けられない。
+ */
+export const listPersonEvaluationIds = (db: Db, personId: string, seasonId: string) =>
+  all<{ evaluation_id: string }>(db, `
+    SELECT e.id AS evaluation_id
+      FROM evaluations e
+      JOIN applications a ON a.id = e.application_id AND a.deleted_at IS NULL
+      JOIN persons p ON p.id = a.person_id AND p.deleted_at IS NULL
+      JOIN selection_steps ss ON ss.id = e.selection_step_id
+     WHERE a.person_id = $1 AND a.season_id = $2
+     ORDER BY ss.sort_order, e.attempt, e.assigned_at`, [personId, seasonId])
+
+/**
+ * 点を付けられない理由。**次にやることを名指しする。**
+ *
+ * 応募の画面（`src/queries/drilldown.ts`）と同じ言葉を使う。
+ * 同じ状態を2つの画面が別の言い方で呼ぶと、どちらが正しいか分からなくなる。
+ */
+const SCORE_BLOCKED_BY: Record<string, string> = {
+  assign: '先に担当を決める',
+  unhold: '先に保留を解く',
+  reassign: '先に担当を替える',
+  none: 'この応募はもう動いていない',
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // -------------------------------------------------------------
 // 3. 日程（画像 右下）
@@ -291,9 +451,9 @@ export interface BorderlinePanel {
   photo_data_url: string | null
   school: string
   faculty: string | null
-  email: string
+  email: string | null
   phone: string | null
-  birth_date: Date
+  birth_date: Date | null
   /** 生年月日から出した満年齢。学年という概念は存在しない（期で数える）。 */
   age: number
   note: string | null
