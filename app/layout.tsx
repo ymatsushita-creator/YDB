@@ -10,8 +10,11 @@ import './brand.css'
 export const metadata = {
   title: 'YouthDB — TALENT INTELLIGENCE',
   description: '集客から選考までを、ヘッドハンティング・個人アプローチ・団体アプローチの3つに集約する',
+  // ★ `/brand/` 配下を参照する。入口の proxy は `/favicon.png` を通さないため
+  //   （許可は `/favicon` 完全一致と `/brand/`）、ここを `/favicon.png` にすると
+  //   タブのアイコン要求が 307 でログインへ弾かれ、**アイコンが出ない。**
   icons: {
-    icon: '/favicon.png',
+    icon: '/brand/logo_ydb.png',
   },
 }
 
