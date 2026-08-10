@@ -4,15 +4,17 @@ import { readFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import {
-  issueSession, verifySession, checkPassword, constantTimeEqual,
+  issueSession, verifySession, checkPassword, constantTimeEqual, matchTier,
   SESSION_COOKIE, SESSION_MAX_AGE_SECONDS,
 } from '../src/auth/session.ts'
+import { canOpen, TIER_HOME, TIERS, isTier } from '../src/auth/tiers.ts'
 
 /**
- * 合言葉1つで入る仕組み（実行⑩。依頼者の指示）。
+ * 合言葉で入る仕組み（実行⑩）。実行⑪で**層ごとに分けた**（依頼者の指示）。
  *
- * ★★ **これは「誰が」を記録しない。** 合言葉を共有するので、
- *   入った人を見分ける手段が無い。満たすのは入口を閉じることだけ。
+ * ★★ **これは「誰が」を記録しない。** 合言葉を層の全員で共有するので、
+ *   入った人を見分ける手段が無い。満たすのは入口を閉じることと、
+ *   **層で分けること**だけ。
  */
 
 const SECRET = 'test-secret-not-the-real-one'
@@ -34,43 +36,120 @@ describe('合言葉と引換券', () => {
   })
 
   test('引換券は、自分で発行したものだけを受け付ける', async () => {
-    const token = await issueSession(SECRET, NOW)
-    assert.equal(await verifySession(SECRET, token, NOW), true)
-    assert.equal(await verifySession('別の秘密鍵', token, NOW), false,
+    const token = await issueSession(SECRET, 'all', NOW)
+    assert.equal(await verifySession(SECRET, token, NOW), 'all')
+    assert.equal(await verifySession('別の秘密鍵', token, NOW), null,
       '秘密鍵が違えば通らない')
   })
 
   test('★ 期限だけ書き換えた偽の券は通らない', async () => {
-    const token = await issueSession(SECRET, NOW)
-    const [, mac] = token.split('.')
-    const forged = `${Math.floor(NOW / 1000) + 999_999}.${mac}`
-    assert.equal(await verifySession(SECRET, forged, NOW), false)
+    const token = await issueSession(SECRET, 'all', NOW)
+    const [, , mac] = token.split('.')
+    const forged = `${Math.floor(NOW / 1000) + 999_999}.all.${mac}`
+    assert.equal(await verifySession(SECRET, forged, NOW), null)
+  })
+
+  test('★★ 層だけ書き換えた偽の券は通らない', async () => {
+    // 署名が期限しか覆っていないと、入力層の券の層名を書き換えるだけで
+    // 全部が開く。**署名は期限と層の両方を覆う。**
+    const token = await issueSession(SECRET, 'input', NOW)
+    const [exp, , mac] = token.split('.')
+    assert.equal(await verifySession(SECRET, `${exp}.all.${mac}`, NOW), null)
+    assert.equal(await verifySession(SECRET, `${exp}.personal.${mac}`, NOW), null)
+    // 元の券はそのまま通る（壊したのは偽物だけ）。
+    assert.equal(await verifySession(SECRET, token, NOW), 'input')
   })
 
   test('期限が切れた券は通らない', async () => {
-    const token = await issueSession(SECRET, NOW)
+    const token = await issueSession(SECRET, 'personal', NOW)
     const later = NOW + (SESSION_MAX_AGE_SECONDS + 1) * 1000
-    assert.equal(await verifySession(SECRET, token, later), false)
-    assert.equal(await verifySession(SECRET, token, NOW + 1000), true)
+    assert.equal(await verifySession(SECRET, token, later), null)
+    assert.equal(await verifySession(SECRET, token, NOW + 1000), 'personal')
   })
 
   test('壊れた券・空の券は通らない', async () => {
-    for (const bad of [undefined, '', '.', 'abc', 'abc.def', '.sig', '123', '12x.sig']) {
-      assert.equal(await verifySession(SECRET, bad, NOW), false, String(bad))
+    for (const bad of [undefined, '', '.', 'abc', 'abc.def', '.sig', '123',
+      '12x.sig', '123.sig', '123.nosuchtier.sig', '123.all.sig.extra']) {
+      assert.equal(await verifySession(SECRET, bad, NOW), null, String(bad))
     }
   })
 
   test('★ 券に合言葉そのものは入らない', async () => {
-    const token = await issueSession(SECRET, NOW)
+    const token = await issueSession(SECRET, 'all', NOW)
     assert.equal(token.includes(SECRET), false)
-    // 中身は「いつまで有効か」と署名だけ。
-    assert.match(token, /^\d+\.[A-Za-z0-9_-]+$/)
+    // 中身は「いつまで有効か」「どの層か」と署名だけ。
+    assert.match(token, /^\d+\.[a-z]+\.[A-Za-z0-9_-]+$/)
   })
 
   test('突き合わせは、長さが違っても早く返らない', () => {
     assert.equal(constantTimeEqual('abc', 'abc'), true)
     assert.equal(constantTimeEqual('abc', 'abcd'), false)
     assert.equal(constantTimeEqual('', ''), true)
+  })
+})
+
+describe('層（実行⑪。依頼者の指示）', () => {
+  const PASSWORDS = { all: 'aaa', personal: 'ppp', input: 'iii' }
+
+  test('打たれた合言葉から層が決まる', () => {
+    assert.equal(matchTier(PASSWORDS, 'aaa'), 'all')
+    assert.equal(matchTier(PASSWORDS, 'ppp'), 'personal')
+    assert.equal(matchTier(PASSWORDS, 'iii'), 'input')
+    assert.equal(matchTier(PASSWORDS, 'zzz'), null)
+  })
+
+  test('★ 設定されていない層には誰も入れない', () => {
+    // 未設定を素通しにすると、設定を忘れた層が全員に開く。
+    assert.equal(matchTier({ all: 'aaa' }, ''), null)
+    assert.equal(matchTier({}, 'なんでも'), null)
+    assert.equal(matchTier({ all: undefined, personal: '' }, ''), null)
+  })
+
+  test('★★ 同じ合言葉が2つの層に設定されていたら、どちらも通さない', () => {
+    // 強いほうを採ると、入力層に配った合言葉が全部を開ける事故が
+    // 「設定の重複」という気付きにくい形で起きる。**曖昧なら閉じる。**
+    assert.equal(matchTier({ all: 'same', input: 'same' }, 'same'), null)
+    assert.equal(matchTier({ all: 'same', personal: 'same', input: 'x' }, 'same'), null)
+  })
+
+  test('ヘッドハンティングを開けるのは all だけ', () => {
+    assert.equal(canOpen('all', '/headhunting'), true)
+    assert.equal(canOpen('personal', '/headhunting'), false)
+    assert.equal(canOpen('input', '/headhunting'), false)
+    // 配下も同じ扱い。前方一致で閉じる。
+    assert.equal(canOpen('personal', '/headhunting/anything'), false)
+    // 名前が似ているだけの別の道は巻き込まない。
+    assert.equal(canOpen('personal', '/headhunting-notes'), true)
+  })
+
+  test('personal はヘッドハンティング以外を開ける', () => {
+    for (const p of ['/borderline', '/interviews', '/approach', '/people',
+      '/applications/x', '/operations', '/people/new']) {
+      assert.equal(canOpen('personal', p), true, p)
+    }
+  })
+
+  test('★ input が開けるのは入力の2枚だけ', () => {
+    assert.equal(canOpen('input', '/people/new'), true)
+    assert.equal(canOpen('input', '/approach/new'), true)
+    for (const p of ['/borderline', '/people', '/approach', '/interviews',
+      '/operations', '/funnel', '/applications/x', '/']) {
+      assert.equal(canOpen('input', p), false, p)
+    }
+  })
+
+  test('★ どの層も、自分の入口だけは必ず開ける（輪にならない）', () => {
+    // 入口が開けない層があると、送られた先でまた弾かれて回り続ける。
+    for (const tier of TIERS) {
+      assert.equal(canOpen(tier, TIER_HOME[tier]), true, tier)
+    }
+  })
+
+  test('層の名前は閉じた集合', () => {
+    assert.deepEqual([...TIERS], ['all', 'personal', 'input'])
+    assert.equal(isTier('all'), true)
+    assert.equal(isTier('ALL'), false)
+    assert.equal(isTier('admin'), false)
   })
 })
 
@@ -92,10 +171,14 @@ describe('入口の閉じ方', () => {
   test('★ 合言葉が、追跡されるファイルに書かれていない', async () => {
     const env = await readFile(fileURLToPath(new URL('../.env.local', import.meta.url)), 'utf8')
       .catch(() => null)
-    const password = env?.match(/^YOUTHDB_PASSWORD=(.*)$/m)?.[1]?.trim().replace(/^["']|["']$/g, '')
-    if (!password) {
+    // ★ 層が増えたら見張る合言葉も増える（実行⑪）。1つだけ見ていると、
+    //   増やした層の合言葉が見張りの外で公開される。
+    const passwords = [...(env ?? '').matchAll(/^YOUTHDB_PASSWORD[A-Z_]*=(.*)$/gm)]
+      .map((m) => m[1]!.trim().replace(/^["']|["']$/g, ''))
+      .filter((v) => v !== '')
+    if (passwords.length === 0) {
       // 相手が無いので比べられない。**通ったことにしない**ために印を残す。
-      console.log('  ℹ .env.local に YOUTHDB_PASSWORD が無いので突き合わせを省いた')
+      console.log('  ℹ .env.local に合言葉が無いので突き合わせを省いた')
       return
     }
 
@@ -107,8 +190,8 @@ describe('入口の閉じ方', () => {
 
     const leaked: string[] = []
     for (const p of tracked) {
-      const src = await read(p).catch(() => null)
-      if (src?.toLowerCase().includes(password.toLowerCase())) leaked.push(p)
+      const src = (await read(p).catch(() => null))?.toLowerCase()
+      if (src && passwords.some((w) => src.includes(w.toLowerCase()))) leaked.push(p)
     }
     // ★ 一致したファイル名だけを出す。**値は出さない。**
     assert.deepEqual(leaked, [], '合言葉が追跡されるファイルに書かれている')
@@ -127,6 +210,19 @@ describe('入口の閉じ方', () => {
     const src = await read('proxy.ts')
     assert.match(src, /if \(!secret\) return toLogin/,
       '未設定のときに素通しする道があってはならない')
+  })
+
+  test('★ 層の判定も入口の1箇所でやる', async () => {
+    // 画面ごとに書くと、1枚でも書き忘れたところが層を無視して開く。
+    const src = await read('proxy.ts')
+    assert.match(src, /canOpen\(tier, req\.nextUrl\.pathname\)/)
+  })
+
+  test('★ 権限が足りないときは合言葉を聞き直さない（輪にしない）', async () => {
+    // 入れているのに開けないだけなので `/login` へ送ると回り続ける。
+    const src = await read('proxy.ts')
+    assert.match(src, /toHome\(req, tier\)/)
+    assert.match(src, /url\.pathname = TIER_HOME\[tier\]/)
   })
 
   test('通すのは、合言葉の画面と資材だけ', async () => {

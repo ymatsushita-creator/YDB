@@ -14,6 +14,12 @@ import type { Db, QueryResult } from './client.ts'
 export async function openPostgres(connectionString: string): Promise<Db> {
   const pool = new Pool({
     connectionString,
+    // Vercel は同じアプリの実行環境を複数立ち上げる。pg の既定値（各環境10本）だと
+    // Supabase session pooler の上限を数環境だけで使い切るため、1環境1接続に絞る。
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
+    allowExitOnIdle: true,
     // マネージド Postgres の証明書チェーンが Node の既定 CA ストアに無いことがある。
     // 接続文字列に sslmode=disable が明示されている場合だけ SSL を切る
     // （ローカルの検証用途）。それ以外は暗号化だけ有効にし、証明書の厳密検証はしない。

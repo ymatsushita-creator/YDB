@@ -492,3 +492,92 @@ export const getBorderlinePanel = (db: Db, personId: string, seasonId: string) =
       LEFT JOIN v_candidate_confidence_latest c
              ON c.person_id = p.id AND c.season_id = $2
      WHERE p.id = $1 AND p.deleted_at IS NULL`, [personId, seasonId])
+
+
+// -------------------------------------------------------------
+// 5. メモ（実行⑪。依頼者の指示）
+// -------------------------------------------------------------
+
+export interface PersonNote {
+  note_id: string
+  author_name: string
+  /** 出来事の日時（手入力）。 */
+  noted_at: Date
+  /** 行が記録された時刻（自動）。手入力の日時とは別物。 */
+  created_at: Date
+  body: string
+}
+
+/**
+ * その人のメモ。**有効な行だけ**（訂正チェーンを解決したビューを読む）。
+ *
+ * 並びは出来事の日時の新しい順。同じ日時なら記録された順で決める ――
+ * 順序が決まらないと、同じ問いに画面ごとに違う答えが出る。
+ */
+export const listPersonNotes = (db: Db, personId: string) =>
+  all<PersonNote>(db, `
+    SELECT n.id AS note_id, n.author_name, n.noted_at, n.created_at, n.body
+      FROM v_effective_person_notes n
+     WHERE n.person_id = $1
+     ORDER BY n.noted_at DESC, n.created_at DESC, n.id DESC`, [personId])
+
+
+// -------------------------------------------------------------
+// 6. 予定の参加者（実行⑪。依頼者の指示）
+// -------------------------------------------------------------
+
+export interface AppointmentDetail {
+  appointment_id: string
+  title: string
+  kind_label: string
+  starts_at: Date
+  ends_at: Date
+  owner_name: string
+  person_name: string | null
+  cancelled: boolean
+}
+
+export const getAppointmentDetail = (db: Db, appointmentId: string, seasonId: string) =>
+  maybeOne<AppointmentDetail>(db, `
+    SELECT a.id AS appointment_id, a.title, k.label AS kind_label,
+           a.starts_at, a.ends_at, s.display_name AS owner_name,
+           p.family_name || ' ' || p.given_name AS person_name,
+           (a.cancelled_at IS NOT NULL) AS cancelled
+      FROM appointments a
+      JOIN appointment_kinds k ON k.id = a.kind_id
+      JOIN staffs s ON s.id = a.owner_staff_id
+      LEFT JOIN persons p ON p.id = a.person_id
+     WHERE a.id = $1 AND a.season_id = $2`, [appointmentId, seasonId])
+
+export interface AttendanceCandidate {
+  person_id: string
+  person_name: string
+  photo_data_url: string | null
+  school: string
+  attended: boolean
+}
+
+/**
+ * 参加者のチェック欄に並べる人。
+ *
+ * ★ 母集団は**その期の一覧と同じ**（`v_headhunting_list`）。
+ *   ここだけ別の母集団にすると、「一覧に居ないのにチェックできる人」か
+ *   「チェックできないのに一覧に居る人」が出る（CLAUDE.md）。
+ *   コマンド側も同じビューで確かめている（`src/commands/attend.ts`）。
+ */
+export const listAttendanceCandidates = (
+  db: Db, appointmentId: string, seasonId: string,
+) =>
+  all<AttendanceCandidate>(db, `
+    SELECT h.person_id,
+           p.family_name || ' ' || p.given_name AS person_name,
+           p.photo_data_url, sc.name AS school,
+           (ea.attendance_id IS NOT NULL) AS attended
+      FROM v_headhunting_list h
+      JOIN persons p ON p.id = h.person_id
+      JOIN schools sc ON sc.id = p.school_id
+      LEFT JOIN v_event_attendance ea
+             ON ea.person_id = h.person_id AND ea.appointment_id = $1
+     WHERE h.season_id = $2
+     ORDER BY (ea.attendance_id IS NOT NULL) DESC, p.family_name, p.given_name, p.id`,
+  [appointmentId, seasonId])

@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
 import {
   getForest, getCommunities, getForestPersons, DORMANT_DAYS,
 } from '../../../src/queries/cockpit.ts'
 import { Card, Kpi, Empty, num, ymd } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
+import { Avatar } from '../../_components/borderline.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +34,7 @@ export default async function ReachZonePage({
   }
   const season =
     (await getSeason(db, (await searchParams).season)) ??
-    seasons.find((s) => s.is_live) ?? seasons[0]!
+    defaultSeason(seasons)!
 
   const [communities, persons] = await Promise.all([
     getCommunities(db, forest.forest_id),
@@ -50,7 +51,7 @@ export default async function ReachZonePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'アプローチ', href: '/approach' },
+          { label: '団体アプローチ', href: '/approach' },
           { label: forest.name },
         ]}
       />
@@ -159,7 +160,10 @@ export default async function ReachZonePage({
                   {persons.map((p) => (
                     <tr key={p.person_id}>
                       <td className="nowrap">
-                        <Link href={`/people/${p.person_id}`}>{p.person_name}</Link>
+                        <Link className="bl-person" href={`/people/${p.person_id}`}>
+                          <Avatar src={null} name={p.person_name} />
+                          {p.person_name}
+                        </Link>
                       </td>
                       <td>{p.via}</td>
                       <td className="nowrap">{ymd(p.last_touch_on)}</td>

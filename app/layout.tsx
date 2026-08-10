@@ -9,7 +9,10 @@ import './brand.css'
 
 export const metadata = {
   title: 'YouthDB — TALENT INTELLIGENCE',
-  description: '集客から選考までを、ヘッドハンティング・ボーダーライン・アプローチの3つに集約する',
+  description: '集客から選考までを、ヘッドハンティング・個人アプローチ・団体アプローチの3つに集約する',
+  icons: {
+    icon: '/favicon.png',
+  },
 }
 
 /**

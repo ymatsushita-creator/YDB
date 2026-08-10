@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import {
-  listSeasons, getSeason, getSummary, ACTIVE_WINDOW_DAYS,
+  listSeasons, defaultSeason, getSeason, getSummary, ACTIVE_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
 import { searchPersons, getSeasonLevelBreakdown } from '../../src/queries/drilldown.ts'
 import { Card, Empty, LevelBadge, num, jstDay } from '../_components/ui.tsx'
@@ -31,7 +31,7 @@ export default async function PeoplePage(
 
   const params = await searchParams
   const season =
-    (await getSeason(db, params.season)) ?? seasons.find((s) => s.is_live) ?? seasons[0]!
+    (await getSeason(db, params.season)) ?? defaultSeason(seasons)!
   const q = (params.q ?? '').trim()
   const level = params.level ?? ''
 

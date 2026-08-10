@@ -207,7 +207,19 @@ table.data td.num, table.data th.num { white-space: nowrap; }
   --logo-w: 204px;
   --logo-h: 67px;
   --logo-pad: 12px;
+
+  /* ★ 2本のバーの面は**ここ1箇所**で決める（依頼者の指示。実行⑪で真っ黒）。
+       横バーと縦バーは1つの面である（C-90）。別々に書くと、片方を変えた
+       ときにもう一方が取り残されて、また2枚に見える。
+
+     ★ `--color-brand-navy`（#242424）ではなく**真っ黒**である。
+       この上に置くものは、黒より暗くできない ―― 沈んで見せる形
+       （`.zoom-crumb-current`）は、面を少し明るくして縁で表す。 */
+  --bar-face: #000;
 }
+
+/* 縦バー。面は `.sidebar-region`（生成物）が塗るので、ここで上書きする。 */
+.hh-sidebar { background: var(--bar-face); }
 
 /* ★ 列の隙間は 0 にする。
    隙間を空けたまま横バーをマイナスマージンで引き戻すと、**箱は接するのに
@@ -231,22 +243,36 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 }
 /* 縦バーの内側の余白を突き抜けて、左上の角いっぱいに置く。
    角丸も縦バーに合わせる ―― ここだけ丸みが違うと、
-   **貼り付けた別物**に見える。 */
+   **貼り付けた別物**に見える。`.sidebar-region` は `--rounded-xl` なので、
+   ここも `--rounded-xl`（以前は `--rounded-lg` で 4px ずれていた）。
+
+   ★ **右上は丸めない**（依頼者の指示。実行⑪）。
+     ここはロゴが横バーへ接する辺である。丸めると、接している2つの間に
+     地の色の三日月が残り、**触れているのに切れて見える。**
+     外へ向いた角（左上）だけを丸め、continuation の側は四角で突き合わせる。 */
 .hh-brand {
   display: flex;
   align-items: center;
   height: var(--logo-h);
   margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
   padding: var(--logo-pad);
-  border-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
+  border-radius: var(--rounded-xl) 0 0 0;
   background: #fff;
 }
 .hh-brand-logo { display: block; width: 100%; height: auto; }
 .hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
 .hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
 .hh-nav a:hover { text-decoration: none; }
-.hh-nav em { font-style: normal; font-size: 10px; font-weight: 500; color: var(--color-on-dark-muted); }
-.sidebar-item-active em { color: var(--color-on-dark); opacity: .75; }
+/* 副文（`<em>`）の指定は消した ―― 出さなくなったため（実行⑪。依頼者の指示）。
+   使わない見た目の指定を残すと、次に触る人が「まだあるもの」として扱う。 */
+.hh-nav-add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-sidebar-hairline);
+}
 
 /* 名前で検索。素の form なので JS 無しで動く。 */
 .hh-search { display: flex; flex-direction: column; gap: 6px; }
@@ -316,15 +342,24 @@ table.data td.num, table.data th.num { white-space: nowrap; }
    ★ `flex: 0 0 auto` を必ず添える。`.hh-main` は縦の flex なので、
      高さを指定しても**既定（flex-shrink: 1）で縮む。**
      実際、送る画面（選考オペレーションなど）だけ 81 → 58 に潰れていた。 */
+/* ★ 横バーと縦バーは**1つの面**である（依頼者の指示。実行⑪）。
+     以前は別々の黒（#111 と縦バーの面）で、ふちと影も別に持っていた。
+     幾何は接していても、**色と縁が違えば2枚に見える。**
+
+       面   … 縦バーと同じ `--color-brand-navy`。別の黒を置かない
+       ふち … 持たない（縦バーも持っていない）
+       影   … 落とさない。浮かせると、そこで面が終わって見える
+       角丸 … 外へ向いた側だけ。縦バーと同じ `--rounded-xl` にそろえる
+
+     L字の内側の角（ロゴの右下）は四角のまま突き合わせる。 */
 .zoom-bar {
   display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
   flex: 0 0 auto;
   height: var(--logo-h);
   padding: var(--space-xs) var(--space-sm);
-  background: #111;
-  border: 1px solid #000;
-  border-radius: var(--rounded-lg);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 22%), 0 2px 6px rgb(26 26 26 / 14%);
+  background: var(--bar-face);
+  border: 0;
+  border-radius: var(--rounded-xl);
 
   /* ★ ロゴの右端から続ける（依頼者の指示）。
      `.hh-main` の内側の余白ぶんだけ左へ戻すと、左端が縦バーの右端に
@@ -361,10 +396,15 @@ a.zoom-crumb:hover { text-decoration: none; }
      以前は面が灰だったので暗い文字でも読めていたが、
      配色を変えた（面を黒にした）ときに読めなくなった。
      **面の色を変えたら、その上の文字を必ず測り直す。** */
+/* ★ 面が真っ黒になったので、沈み方を作り直した（実行⑪）。
+     以前は面を #000 にして沈めていたが、バーも #000 になった以上
+     **黒の上に黒**で、現在地が消える。黒より暗い色は無い。
+     そこで面をわずかに明るくし、**下のふちの光**で溝に見せる。
+     （C-73「配色を変えたら、その上の文字と形を必ず測り直す」） */
 .zoom-crumb-current {
-  background: #000;
+  background: #171717;
   color: #fff;
-  box-shadow: inset 0 2px 6px rgb(0 0 0 / 60%), inset 0 -1px 0 rgb(255 255 255 / 12%);
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 90%), inset 0 -1px 0 rgb(255 255 255 / 14%);
   font-weight: 700;
 }
 .zoom-bar .zoom-crumb-current { color: #fff; }
@@ -673,6 +713,8 @@ a.zoom-crumb:hover { text-decoration: none; }
 .cal-cell.is-today { background: var(--color-card-tint-cream); }
 .cal-event {
   display: flex; align-items: center;
+  /* 押すと参加者のポップアップが開く（実行⑪）。下線は升を狭くするので出さない。 */
+  text-decoration: none;
   margin: 1px; padding: 2px 4px;
   border-radius: var(--rounded-xs);
   overflow: hidden; line-height: 1.2;
@@ -1095,3 +1137,97 @@ html, body { height: 100%; overflow: hidden; }
   cursor: pointer;
 }
 .hh-signout:hover { color: var(--color-on-dark); }
+
+/* =============================================================
+   ポップアップ（実行⑪。依頼者の指示）
+
+   ★ 開閉は URL で行う。JS は使っていない（`Popup`）。
+     覆いそのものが戻り先へのリンクなので、外を押せば閉じる。
+   ============================================================= */
+.popup-layer { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; }
+/* 覆いはリンク。押すと閉じる。中身より下に敷く。 */
+.popup-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.32); }
+.popup-card {
+  position: relative;
+  width: min(560px, calc(100vw - 2 * var(--space-lg)));
+  /* 画面より高くしない。中身は器の中で送る（C-52）。 */
+  max-height: min(76vh, 720px);
+  display: flex; flex-direction: column; gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.popup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); }
+.popup-title { font-size: 15px; font-weight: 600; }
+.popup-sub { margin-top: 2px; font-size: 12px; color: var(--color-stone); }
+.popup-close { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+.popup-close:hover { text-decoration: none; }
+/* 送るのは中身だけ。頭と入力欄は動かさない。 */
+.popup-body { min-height: 0; flex: 1 1 auto; }
+
+/* メモ。書いた人・日時・内容はすべて記入必須（依頼者の指示）。 */
+.memo-form { display: flex; flex-direction: column; gap: var(--space-sm); }
+.memo-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+.memo-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.memo-field > span { font-weight: 600; color: var(--color-slate); }
+.memo-field input, .memo-field textarea {
+  font-family: inherit; font-size: 13px; padding: 6px 8px;
+  border-radius: var(--rounded-sm); resize: vertical;
+}
+.memo-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.memo-item { padding-bottom: var(--space-sm); border-bottom: 1px solid var(--color-hairline-soft); }
+.memo-item:last-child { border-bottom: 0; }
+.memo-meta { display: flex; gap: var(--space-sm); font-size: 12px; }
+.memo-meta .dim { font-variant-numeric: tabular-nums; }
+/* 改行を残す。面談のメモは箇条書きで書かれる。 */
+.memo-body { margin-top: 2px; font-size: 13px; white-space: pre-wrap; }
+
+/* 予定の参加者。チェックを入れると接点が1件積まれる。 */
+.attend-form { display: flex; flex-direction: column; gap: var(--space-sm); min-height: 0; }
+.attend-list { display: flex; flex-direction: column; }
+.attend-item { border-bottom: 1px solid var(--color-hairline-soft); }
+.attend-item:last-child { border-bottom: 0; }
+.attend-item label {
+  display: flex; align-items: center; gap: var(--space-xs);
+  padding: 6px 2px; font-size: 13px; cursor: pointer;
+}
+.attend-item .avatar { width: 26px; height: 26px; font-size: 10px; }
+.attend-name { font-weight: 500; }
+.attend-item .dim { margin-left: auto; font-size: 12px; }
+
+/* 名前を押すと出るボタン（メモ・採点）。行の中に収める。 */
+.row-actions { display: inline-flex; gap: 4px; margin-left: var(--space-xs); }
+.row-action {
+  padding: 2px 8px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas); color: var(--color-slate);
+}
+.row-action:hover { text-decoration: none; color: var(--color-ink); }
+
+/* 予定の一覧は行ごと押せる（参加者のポップアップを開く）。 */
+.cal-list-link {
+  display: flex; align-items: center; gap: var(--space-xs);
+  width: 100%; color: inherit;
+}
+.cal-list-link:hover { text-decoration: none; color: var(--color-brand-orange-deep); }
+
+/* 戻る ―― 帯の先頭。**1つ上の階層へ**（実行⑪。依頼者の指示）。
+   現在地より左に置く。行き先が無い画面には出さない。 */
+.zoom-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-right: var(--space-sm); padding: 4px 10px;
+  font-size: 12px; font-weight: 600;
+  color: var(--color-on-dark);
+  background: transparent;
+  border: 1px solid var(--color-sidebar-hairline);
+  border-radius: var(--rounded-sm);
+  white-space: nowrap;
+}
+.zoom-back:hover { text-decoration: none; background: rgba(255, 255, 255, 0.08); }
+
+/* デモ期。実在の期と同じ顔で並べない（0029）。 */
+.hh-year.is-demo { border-style: dashed; }

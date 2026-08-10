@@ -1,13 +1,14 @@
 /**
- * 合言葉1つで入る仕組み（依頼者の指示。実行⑩）。
+ * 合言葉で入る仕組み（依頼者の指示。実行⑩）。
+ * 実行⑪で**層ごとに分けた**（`src/auth/tiers.ts`）。
  *
  * ★★ **これは「誰が」を記録しない。** ★★
- *   合言葉を全員で共有するので、入った人を見分ける手段が無い。
+ *   合言葉を層の全員で共有するので、入った人を見分ける手段が無い。
  *   `docs/pilot/DEPLOY-READINESS.md` が求める認証は満たさない ――
  *   「誰がプロフィールを変えたか」は、これでも記録できないままである。
- *   満たすのは**入口を閉じること**だけ。
+ *   満たすのは**入口を閉じること**と、**層で分けること**だけ。
  *
- * ★ 合言葉そのものはリポジトリに書かない（`YOUTHDB_PASSWORD`）。
+ * ★ 合言葉そのものはリポジトリに書かない（`YOUTHDB_PASSWORD*`）。
  *   **両リモートは公開である。** 書いた瞬間、閉じた意味が消える。
  *
  * ★ Cookie には合言葉を入れない。**署名した引換券**を入れる。
@@ -15,6 +16,8 @@
  *
  * Edge でも動くよう Web Crypto だけを使う（middleware から呼ぶ）。
  */
+
+import { TIERS, isTier, type Tier } from './tiers.ts'
 
 export const SESSION_COOKIE = 'youthdb_session'
 
@@ -53,16 +56,25 @@ export const constantTimeEqual = (a: string, b: string): boolean => {
   return diff === 0
 }
 
-/** 引換券を作る。中身は「いつまで有効か」と、その署名だけ。 */
+/**
+ * 引換券を作る。中身は「いつまで有効か」「どの層か」と、その署名だけ。
+ *
+ * ★ 署名は**期限と層の両方**を覆う。層を署名の外に置くと、
+ *   `input` の券の層だけ `all` に書き換えたものが通る。
+ */
 export const issueSession = async (
-  secret: string, nowMs: number,
+  secret: string, tier: Tier, nowMs: number,
 ): Promise<string> => {
   const exp = String(Math.floor(nowMs / 1000) + SESSION_MAX_AGE_SECONDS)
-  return `${exp}.${await sign(secret, exp)}`
+  const payload = `${exp}.${tier}`
+  return `${payload}.${await sign(secret, payload)}`
 }
 
 /**
- * 引換券を確かめる。
+ * 引換券を確かめ、**層を返す。** 通らなければ null。
+ *
+ * ★ 真偽ではなく層を返す。真偽にすると、呼ぶ側が層をもう一度どこかから
+ *   取り直すことになり、その経路が署名の外側になる。
  *
  * ★ 署名を先に確かめてから期限を見る。順を逆にすると、
  *   **期限だけ書き換えた偽の券**を「期限切れ」として扱ってしまい、
@@ -70,15 +82,15 @@ export const issueSession = async (
  */
 export const verifySession = async (
   secret: string, token: string | undefined, nowMs: number,
-): Promise<boolean> => {
-  if (!token) return false
-  const dot = token.indexOf('.')
-  if (dot <= 0) return false
-  const exp = token.slice(0, dot)
-  const mac = token.slice(dot + 1)
-  if (!/^\d+$/.test(exp)) return false
-  if (!constantTimeEqual(mac, await sign(secret, exp))) return false
-  return Number(exp) * 1000 > nowMs
+): Promise<Tier | null> => {
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  const [exp, tier, mac] = parts as [string, string, string]
+  if (!/^\d+$/.test(exp)) return null
+  if (!isTier(tier)) return null
+  if (!constantTimeEqual(mac, await sign(secret, `${exp}.${tier}`))) return null
+  return Number(exp) * 1000 > nowMs ? tier : null
 }
 
 /**
@@ -91,4 +103,22 @@ export const verifySession = async (
 export const checkPassword = (expected: string | undefined, given: string): boolean => {
   if (!expected) return false
   return constantTimeEqual(expected, given)
+}
+
+/**
+ * 打たれた合言葉が、どの層のものか。合わなければ null。
+ *
+ * ★ **途中で止めない。** 合った時点で返すと、層の並び順が
+ *   応答時間に出る（先頭の層ほど早く返る）。全部見てから決める。
+ *
+ * ★ **同じ合言葉が2つ以上の層に設定されていたら、どちらも通さない。**
+ *   強いほうを採ると、入力層に配った合言葉が全部を開ける事故が
+ *   「設定の重複」という気付きにくい形で起きる。**曖昧なら閉じる。**
+ */
+export const matchTier = (
+  passwords: Readonly<Partial<Record<Tier, string | undefined>>>,
+  given: string,
+): Tier | null => {
+  const hit = TIERS.filter((t) => checkPassword(passwords[t], given))
+  return hit.length === 1 ? hit[0]! : null
 }

@@ -1,7 +1,13 @@
-import type { Appointment } from '../../src/queries/borderline.ts'
+import type { ReactNode } from 'react'
+import Link from 'next/link'
+import type {
+  Appointment, AppointmentDetail, AttendanceCandidate, PersonNote,
+} from '../../src/queries/borderline.ts'
+import { AUTHOR_MAX, BODY_MAX } from '../../src/commands/note.ts'
+import { addNoteAction, saveAttendanceAction } from '../borderline/actions.ts'
 
 /**
- * ボーダーライン画面の部品（実行⑨）。
+ * 個人アプローチ画面の部品（実行⑨。表示名は実行⑪で変えた。URL は `/borderline`）。
  *
  * ここに SQL は書かない。数の加工もしない。
  * 渡された事実を、単位と母集団を添えて置くだけにする。
@@ -63,8 +69,18 @@ export const jstTime = (d: Date) => {
  *   一覧には出し、「格子外」と印を付ける。**落とさない。**
  */
 export function WeekCalendar({
-  monday, appointments, today,
-}: { monday: string; appointments: Appointment[]; today: string }) {
+  monday, appointments, today, hrefFor,
+}: {
+  monday: string
+  appointments: Appointment[]
+  today: string
+  /**
+   * 予定を押したときの行き先（実行⑪）。参加者のポップアップを開く。
+   * **格子の升と下の一覧の両方を押せるようにする** ―― 升は狭く、
+   * 押せるものが片方だけだと「押せない予定」ができる。
+   */
+  hrefFor: (appointmentId: string) => string
+}) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
   const hours = Array.from({ length: HOUR_TO - HOUR_FROM }, (_, i) => HOUR_FROM + i)
 
@@ -111,8 +127,9 @@ export function WeekCalendar({
             Math.round((new Date(a.ends_at).getTime() - new Date(a.starts_at).getTime()) / 3600_000),
           ))
           return (
-            <div
+            <Link
               key={a.appointment_id}
+              href={hrefFor(a.appointment_id)}
               className={`cal-event ${KIND_CLASS[a.kind_code] ?? 'appt-internal'}`}
               style={{ gridColumn: di + 2, gridRow: `${hour - HOUR_FROM + 2} / span ${span}` }}
               title={`${jstTime(a.starts_at)} ${a.kind_label}${a.person_name ? ` ・ ${a.person_name}` : ''}`}
@@ -123,7 +140,7 @@ export function WeekCalendar({
                 升には1行だけ置き、種別と時刻は title で補う。
               */}
               <strong>{a.person_name ?? a.title}</strong>
-            </div>
+            </Link>
           )
         })}
       </div>
@@ -146,14 +163,16 @@ export function WeekCalendar({
               new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
             .map((a) => (
               <li key={a.appointment_id}>
-                <span className={`cal-dot ${KIND_CLASS[a.kind_code] ?? 'appt-internal'}`} />
-                <span className="cal-list-when">
-                  {jstParts(a.starts_at).day.slice(5).replace('-', '/')}{' '}
-                  {jstTime(a.starts_at)}
-                </span>
-                <span className="cal-list-who">{a.person_name ?? a.title}</span>
-                <span className="cal-list-kind">{a.kind_label}</span>
-                {!placed.includes(a) && <span className="cal-list-out">格子外</span>}
+                <Link href={hrefFor(a.appointment_id)} className="cal-list-link">
+                  <span className={`cal-dot ${KIND_CLASS[a.kind_code] ?? 'appt-internal'}`} />
+                  <span className="cal-list-when">
+                    {jstParts(a.starts_at).day.slice(5).replace('-', '/')}{' '}
+                    {jstTime(a.starts_at)}
+                  </span>
+                  <span className="cal-list-who">{a.person_name ?? a.title}</span>
+                  <span className="cal-list-kind">{a.kind_label}</span>
+                  {!placed.includes(a) && <span className="cal-list-out">格子外</span>}
+                </Link>
               </li>
             ))}
         </ul>
@@ -179,4 +198,186 @@ export function Avatar({ src, name }: { src: string | null; name: string }) {
   return src
     ? <img className="avatar" src={src} alt="" width={36} height={36} />
     : <span className="avatar avatar-fallback" aria-hidden>{initial}</span>
+}
+
+/**
+ * ポップアップの器（実行⑪。依頼者の指示）。
+ *
+ * ★ `'use client'` を増やしていない。**URL で開いて URL で閉じる。**
+ *   JS で開閉すると、開いた状態が戻る・進むで消え、再読み込みで閉じる。
+ *   開いていることは画面の状態ではなく、**いまどこを見ているか**である。
+ *
+ * ★ `aria-modal` は付けない。焦点を閉じ込める仕組みが無いのに付けると、
+ *   支援技術に「外は読めない」と嘘をつくことになる。
+ */
+export function Popup({
+  title, subtitle, closeHref, children,
+}: {
+  title: string
+  subtitle?: ReactNode
+  closeHref: string
+  children: ReactNode
+}) {
+  return (
+    <div className="popup-layer">
+      {/* 外を押しても閉じる。JS を使わずに済ませるため、
+          覆いそのものを戻り先へのリンクにする。 */}
+      <Link href={closeHref} className="popup-scrim" aria-label="閉じる" />
+      <div className="popup-card" role="dialog" aria-label={title}>
+        <header className="popup-head">
+          <div>
+            <h2 className="popup-title">{title}</h2>
+            {subtitle && <p className="popup-sub">{subtitle}</p>}
+          </div>
+          <Link href={closeHref} className="popup-close btn-physical">閉じる</Link>
+        </header>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * メモ（実行⑪。依頼者の指示）。
+ *
+ * ★ 書いた人・日時・内容は**すべて記入必須。**
+ *   日時は既定値を入れない ―― いま時刻を入れておくと、
+ *   3日前の面談が「今日」として積まれる。**打った人が決める。**
+ *
+ * ★ 書いた人は手入力の自己申告である（0027）。名簿から選ばせない。
+ */
+export function MemoPopup({
+  personName, notes, closeHref, message, ok, context,
+}: {
+  personName: string
+  notes: PersonNote[]
+  closeHref: string
+  message: string | null
+  ok: boolean
+  context: { personId: string; seasonId: string; tab: string; week: string }
+}) {
+  return (
+    <Popup title={`${personName} のメモ`} closeHref={closeHref}
+           subtitle={`${notes.length} 件`}>
+      {message && <p className={`callout${ok ? ' ok' : ''}`}>{message}</p>}
+
+      <form action={addNoteAction} className="memo-form editable-region">
+        <input type="hidden" name="personId" value={context.personId} />
+        <input type="hidden" name="seasonId" value={context.seasonId} />
+        <input type="hidden" name="tab" value={context.tab} />
+        <input type="hidden" name="week" value={context.week} />
+
+        <div className="memo-fields">
+          <label className="memo-field">
+            <span>書いた人</span>
+            <input name="authorName" type="text" required maxLength={AUTHOR_MAX}
+                   autoComplete="off" placeholder="氏名" />
+          </label>
+          <label className="memo-field">
+            <span>日時</span>
+            <input name="notedAt" type="datetime-local" required />
+          </label>
+        </div>
+        <label className="memo-field">
+          <span>内容</span>
+          <textarea name="body" required rows={4} maxLength={BODY_MAX} />
+        </label>
+        <button type="submit" className="button-primary">メモを追加</button>
+      </form>
+
+      <div className="scroll-pane popup-body">
+        {notes.length === 0 ? (
+          <p className="hh-empty">メモはまだ1件も無い。</p>
+        ) : (
+          <ul className="memo-list">
+            {notes.map((n) => (
+              <li key={n.note_id} className="memo-item">
+                <p className="memo-meta">
+                  <strong>{n.author_name}</strong>
+                  <span className="dim">{jstStamp(n.noted_at)}</span>
+                </p>
+                {/* 改行を残す。面談のメモは箇条書きで書かれる。 */}
+                <p className="memo-body">{n.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Popup>
+  )
+}
+
+/** 日時の表示。**手入力された日時**をそのまま JST で出す。 */
+export const jstStamp = (d: Date) => {
+  const t = new Date(new Date(d).getTime() + 9 * 3600_000)
+  return `${t.toISOString().slice(0, 10).replace(/-/g, '/')} ${jstTime(d)}`
+}
+
+/**
+ * 予定の参加者（実行⑪。依頼者の指示）。
+ *
+ * ★ チェックを入れて保存すると、その人に**接点が1件積まれる。**
+ *   接点は確度（0017）が数える事実なので、ここが確度に効く。
+ *   外して保存すると、その接点は消える（残すと数え続けるため）。
+ *
+ * ★ 並ぶのは**その期の一覧に居る人だけ。** 画面とコマンドで同じ母集団を見る。
+ */
+export function AttendancePopup({
+  appointment, candidates, closeHref, message, ok, context,
+}: {
+  appointment: AppointmentDetail
+  candidates: AttendanceCandidate[]
+  closeHref: string
+  message: string | null
+  ok: boolean
+  context: { seasonId: string; tab: string; week: string }
+}) {
+  const recorded = candidates.filter((c) => c.attended).length
+  return (
+    <Popup
+      title={appointment.title}
+      closeHref={closeHref}
+      subtitle={
+        <>
+          {jstStamp(appointment.starts_at)} 〜 {jstTime(appointment.ends_at)}
+          {' ・ '}{appointment.kind_label}
+          {' ・ '}担当 {appointment.owner_name}
+          {' ・ '}参加 {recorded} 人
+        </>
+      }
+    >
+      {message && <p className={`callout${ok ? ' ok' : ''}`}>{message}</p>}
+      {appointment.cancelled && <p className="callout">この予定は取り消されている。</p>}
+
+      <form action={saveAttendanceAction} className="attend-form editable-region">
+        <input type="hidden" name="appointmentId" value={appointment.appointment_id} />
+        <input type="hidden" name="seasonId" value={context.seasonId} />
+        <input type="hidden" name="tab" value={context.tab} />
+        <input type="hidden" name="week" value={context.week} />
+
+        {candidates.length === 0 ? (
+          <p className="hh-empty">この期の一覧に候補者が1人も居ない。</p>
+        ) : (
+          <>
+            <div className="scroll-pane popup-body">
+              <ul className="attend-list">
+                {candidates.map((c) => (
+                  <li key={c.person_id} className="attend-item">
+                    <label>
+                      <input type="checkbox" name="person" value={c.person_id}
+                             defaultChecked={c.attended} />
+                      <Avatar src={c.photo_data_url} name={c.person_name} />
+                      <span className="attend-name">{c.person_name}</span>
+                      <span className="dim">{c.school}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button type="submit" className="button-primary">参加者を保存</button>
+          </>
+        )}
+      </form>
+    </Popup>
+  )
 }

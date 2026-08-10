@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { SESSION_COOKIE, verifySession } from './src/auth/session.ts'
+import { canOpen, TIER_HOME, type Tier } from './src/auth/tiers.ts'
 
 /**
  * 入口を1箇所で閉じる（依頼者の指示。実行⑩）。
+ * 実行⑪で**層の判定もここでやる**（`src/auth/tiers.ts`）。
  *
  * ★ **画面ごとに書かない。** 1枚でも書き忘れると、そこだけ開く。
  *   ここは全部の要求を通るので、閉じ忘れが起きない。
@@ -29,7 +31,21 @@ export default function proxy(req: NextRequest) {
   if (!secret) return toLogin(req, 'unconfigured')
 
   return verifySession(secret, req.cookies.get(SESSION_COOKIE)?.value, Date.now())
-    .then((ok) => (ok ? NextResponse.next() : toLogin(req, null)))
+    .then((tier) => {
+      if (!tier) return toLogin(req, null)
+      // ★ 入れているのに開けないだけなら、**合言葉は聞き直さない。**
+      //   `/login` へ送ると、入れる→開けない→聞かれる→入れる…と輪になる。
+      return canOpen(tier, req.nextUrl.pathname)
+        ? NextResponse.next()
+        : toHome(req, tier)
+    })
+}
+
+function toHome(req: NextRequest, tier: Tier) {
+  const url = req.nextUrl.clone()
+  url.pathname = TIER_HOME[tier]
+  url.search = ''
+  return NextResponse.redirect(url)
 }
 
 function toLogin(req: NextRequest, reason: string | null) {

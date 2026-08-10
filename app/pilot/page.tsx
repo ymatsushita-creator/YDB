@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import { getOpenTasks, type OpenTask } from '../../src/queries/cockpit.ts'
 import { Card, Empty, num } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
+import { Avatar } from '../_components/borderline.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,7 +66,7 @@ export default async function PilotPage(
   }
   const season =
     (await getSeason(db, (await searchParams).season)) ??
-    seasons.find((s) => s.is_live) ?? seasons[0]!
+    defaultSeason(seasons)!
 
   const tasks = await getOpenTasks(db, season.id)
 
@@ -81,7 +82,7 @@ export default async function PilotPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ボーダーライン', href: '/borderline' },
+          { label: '個人アプローチ', href: '/borderline' },
           { label: '試運転' },
         ]}
       />
@@ -126,7 +127,10 @@ export default async function PilotPage(
                               ? `/borderline?season=${season.id}`
                               : `/applications/${task.application_id}`
                           }>
-                            {task.person_name} の {task.step_name} を開く
+                            <span className="bl-person">
+                              <Avatar src={null} name={task.person_name} />
+                              {task.person_name} の {task.step_name} を開く
+                            </span>
                           </Link>
                         </>
                       ) : (
