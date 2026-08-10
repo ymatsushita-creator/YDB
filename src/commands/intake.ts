@@ -19,6 +19,7 @@ import { maybeOne, one, all, type Db } from '../db/client.ts'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 const blank = (v: string | null | undefined) => ((v ?? '').trim() || null)
+const PHOTO = /^data:image\/(jpeg|png|webp);base64,/
 
 export interface NewCandidateInput {
   seasonId: string
@@ -33,6 +34,7 @@ export interface NewCandidateInput {
   phone: string
   lineUserId: string
   note: string
+  photoDataUrl?: string
   /** どこで知ったか。**接点はこのチャネルで積む。** */
   channelId: string
   /** 接点の日。空なら今日。 */
@@ -46,7 +48,7 @@ export interface NewCandidateInput {
 export type NewCandidateFailure =
   | 'season_not_found' | 'required' | 'bad_email' | 'bad_date'
   | 'school_not_found' | 'channel_not_found' | 'staff_not_found'
-  | 'form_response_not_found' | 'form_response_taken' | 'duplicate_line'
+  | 'form_response_not_found' | 'form_response_taken' | 'duplicate_line' | 'bad_photo'
 
 export type NewCandidateResult =
   | { ok: true; personId: string; number: number }
@@ -85,6 +87,8 @@ export async function addCandidate(
   if (birthDate && !DAY.test(birthDate)) return { ok: false, reason: 'bad_date' }
   const contactedOn = blank(input.contactedOn)
   if (contactedOn && !DAY.test(contactedOn)) return { ok: false, reason: 'bad_date' }
+  const photoDataUrl = blank(input.photoDataUrl)
+  if (photoDataUrl && !PHOTO.test(photoDataUrl)) return { ok: false, reason: 'bad_photo' }
 
   const season = await maybeOne(db, `SELECT 1 FROM seasons WHERE id = $1`, [input.seasonId])
   if (!season) return { ok: false, reason: 'season_not_found' }
@@ -110,16 +114,22 @@ export async function addCandidate(
   try {
     await db.exec('BEGIN')
 
+    // ★ 世界の印は**期から取る**（0029）。デモ期で追加した人は架空の人になる。
+    //   ここで付けないと、次の approach_events で境界のトリガに弾かれる ――
+    //   弾かれるのは正しいが、原因は「印を付け忘れたこと」のほうである。
     const person = await one<{ id: string }>(db, `
       INSERT INTO persons
         (family_name, given_name, family_name_kana, given_name_kana,
-         birth_date, school_id, faculty, email, phone, line_user_id, note)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         birth_date, school_id, faculty, email, phone, line_user_id, note, photo_data_url,
+         is_demo)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+              (SELECT s.is_demo FROM seasons s WHERE s.id = $13))
       RETURNING id`, [
       blank(input.familyName), blank(input.givenName) ?? '',
       blank(input.familyNameKana), blank(input.givenNameKana),
       birthDate, input.schoolId, blank(input.faculty), email,
-      blank(input.phone), blank(input.lineUserId), blank(input.note),
+      blank(input.phone), blank(input.lineUserId), blank(input.note), photoDataUrl,
+      input.seasonId,
     ])
 
     const number = await nextCandidateNumber(db, input.seasonId)
@@ -175,6 +185,7 @@ export const ADD_CANDIDATE_MESSAGE: Record<AddCandidateCode, string> = {
   form_response_not_found: 'そのフォーム回答は見つからなかった。',
   form_response_taken: 'そのフォーム回答は、すでに別の人へ結び付いている。',
   duplicate_line: 'その LINE ID は別の人が使っている。',
+  bad_photo: '写真は JPEG / PNG / WebP の 2MB 以下。',
 }
 
 // -------------------------------------------------------------
@@ -194,10 +205,11 @@ export interface NewReachInput {
   /** 推定リーチ。**分からなければ空のまま。0 と空は違う。** */
   estimatedReach: string
   note: string
+  photoDataUrl?: string
 }
 
 export type NewReachFailure =
-  | 'partner_required' | 'bad_date' | 'bad_estimate' | 'partner_not_found'
+  | 'partner_required' | 'bad_date' | 'bad_estimate' | 'partner_not_found' | 'bad_photo'
 
 export type NewReachResult =
   | { ok: true; partnerId: string }
@@ -208,6 +220,8 @@ export async function addPartnerReach(
 ): Promise<NewReachResult> {
   const occurredOn = blank(input.occurredOn)
   if (!occurredOn || !DAY.test(occurredOn)) return { ok: false, reason: 'bad_date' }
+  const photoDataUrl = blank(input.photoDataUrl)
+  if (photoDataUrl && !PHOTO.test(photoDataUrl)) return { ok: false, reason: 'bad_photo' }
 
   // ★ 空と 0 は違う。「分からない」を 0 にすると「届かなかった」になる。
   const raw = blank(input.estimatedReach)
@@ -228,14 +242,15 @@ export async function addPartnerReach(
     if (!name) return { ok: false, reason: 'partner_required' }
     // 同じ名前なら足さない（`partners_name_key`）。
     partnerId = (await one<{ id: string }>(db, `
-      INSERT INTO partners (name, category, contact_name, contact_email)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO partners (name, category, contact_name, contact_email, photo_data_url)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (name) DO UPDATE SET
         category      = coalesce(partners.category, EXCLUDED.category),
         contact_name  = coalesce(partners.contact_name, EXCLUDED.contact_name),
-        contact_email = coalesce(partners.contact_email, EXCLUDED.contact_email)
+        contact_email = coalesce(partners.contact_email, EXCLUDED.contact_email),
+        photo_data_url = coalesce(partners.photo_data_url, EXCLUDED.photo_data_url)
       RETURNING id`,
-    [name, blank(input.category), blank(input.contactName), blank(input.contactEmail)])).id
+    [name, blank(input.category), blank(input.contactName), blank(input.contactEmail), photoDataUrl])).id
   }
 
   // 年度は日付から決める。どの期にも入らない接触は NULL のまま（寄せない）。
@@ -259,6 +274,7 @@ export const ADD_REACH_MESSAGE: Record<AddReachCode, string> = {
   bad_date: '接触した日は YYYY-MM-DD で入れる。',
   bad_estimate: '推定リーチは 0 以上の整数で入れる。分からなければ空のまま。',
   partner_not_found: 'その団体は見つからなかった。',
+  bad_photo: '写真は JPEG / PNG / WebP の 2MB 以下。',
 }
 
 // -------------------------------------------------------------

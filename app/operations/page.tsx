@@ -1,6 +1,6 @@
 import { getDb } from '../../src/db/server.ts'
 import {
-  listSeasons, getSeason, getPendingEvaluations, getHeldEvaluations,
+  listSeasons, defaultSeason, getSeason, getPendingEvaluations, getHeldEvaluations,
   getInterviewerLoad, getConflicts, getUnassignedSummary,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num } from '../_components/ui.tsx'
@@ -19,7 +19,7 @@ export default async function OperationsPage(
 
   const season =
     (await getSeason(db, (await searchParams).season)) ??
-    seasons.find((s) => s.is_live) ?? seasons[0]!
+    defaultSeason(seasons)!
 
   const [pending, held, load, conflicts, unassigned] = await Promise.all([
     getPendingEvaluations(db, season.id),
@@ -38,7 +38,7 @@ export default async function OperationsPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ボーダーライン', href: '/borderline' },
+          { label: '個人アプローチ', href: '/borderline' },
           { label: '選考オペレーション' },
         ]}
       />

@@ -1,8 +1,15 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { isDemoMode } from '../../src/db/server.ts'
-import type { Season } from '../../src/queries/dashboard.ts'
+import { getDb, isDemoMode } from '../../src/db/server.ts'
+import { isDemoSeason, type Season } from '../../src/queries/dashboard.ts'
+import { currentTier } from '../../src/auth/current.ts'
+import { canOpen } from '../../src/auth/tiers.ts'
 import { signOutAction } from '../login/actions.ts'
+import { backHref, seasonLabel, type Crumb } from './labels.ts'
+
+// 画面はこの2つを `shell.tsx` から読んでいる。置き場所が変わっただけなので、
+// 呼び出し側は触らない（判定は `.ts` にある。テストで固定するため）。
+export { seasonLabel, type Crumb } from './labels.ts'
 
 /**
  * アプリ全体の外枠（実行⑨で全画面共通にした）。
@@ -20,6 +27,11 @@ import { signOutAction } from '../login/actions.ts'
  *   **タブから外した**（消したのではなく、タブの中に畳んだ）。
  *   4つ目の「面接」は実行⑩で依頼者の指示により足した。
  *
+ * ★ 出すタブは**層で決まる**（実行⑪）。判定は `src/auth/tiers.ts` の
+ *   `canOpen` 1箇所で、`proxy.ts` が弾く条件と同じものを見ている。
+ *   **押せるのに開かないタブを出さない**（CLAUDE.md「操作可能な母集団と
+ *   画面に出す母集団を一致させる」）。
+ *
  * ★ `'use client'` は使っていない。
  *   いま居るタブと年度を知るために `usePathname()` / `useSearchParams()` を
  *   使うとクライアント境界が要る。代わりに**各画面が自分でこの外枠を被る**。
@@ -29,15 +41,32 @@ import { signOutAction } from '../login/actions.ts'
 
 export type Tab = 'headhunting' | 'borderline' | 'approach' | 'interview'
 
-const TABS: Array<{ id: Tab; href: string; label: string; note: string }> = [
-  { id: 'headhunting', href: '/headhunting', label: 'ヘッドハンティング', note: '誰に声を掛けるか' },
-  { id: 'borderline', href: '/borderline', label: 'ボーダーライン', note: '誰を通すか' },
-  { id: 'approach', href: '/approach', label: 'アプローチ', note: 'どこから来ているか' },
-  // 面接はアプローチの下（依頼者の指示。実行⑩）。
-  { id: 'interview', href: '/interviews', label: '面接', note: '何を見て決めたか' },
+/**
+ * ★ 表示名だけ変えた（依頼者の指示。実行⑪）。
+ *   ボーダーライン → **個人アプローチ**、アプローチ → **団体アプローチ**。
+ *   URL（`/borderline` `/approach`）と識別子は据え置きである ――
+ *   変えると外に配ったリンクが切れる。**呼び名と場所は別の問題。**
+ *   「アプローチ可能圏」「アプローチ状態」は別の語なので触らない。
+ *
+ * ★ 説明の副文（「誰に声を掛けるか」など）は**外した**（依頼者の指示。実行⑪）。
+ *   毎日見る場所に、毎日は要らない説明を置かない。
+ *   `note` の列ごと消してある ―― 使わない値を残すと、次に触る人が
+ *   「出し忘れ」と読んで戻す。
+ */
+const TABS: Array<{ id: Tab; href: string; label: string }> = [
+  { id: 'headhunting', href: '/headhunting', label: 'ヘッドハンティング' },
+  { id: 'borderline', href: '/borderline', label: '個人アプローチ' },
+  { id: 'approach', href: '/approach', label: '団体アプローチ' },
+  // 面接は団体アプローチの下（依頼者の指示。実行⑩）。
+  { id: 'interview', href: '/interviews', label: '面接' },
 ]
 
-export function Shell({
+const ADD_LINKS = [
+  { href: '/people/new', label: '候補者を追加' },
+  { href: '/approach/new', label: '連携団体を追加' },
+]
+
+export async function Shell({
   active, years, seasonId, children,
 }: {
   active: Tab
@@ -58,6 +87,19 @@ export function Shell({
   const tabHref = (href: string) =>
     (seasonId ? `${href}?season=${seasonId}` : href)
 
+  // 券が無い（＝層が分からない）ことは、ここでは起こらない。
+  // proxy が先に弾いているので、ここへ来たなら券は通っている。
+  // それでも null を「全部見せる」に倒さない ―― 分からないなら閉じる。
+  const tier = await currentTier()
+  const opens = (href: string) => tier !== null && canOpen(tier, href)
+  const tabs = TABS.filter((t) => opens(t.href))
+  const addLinks = ADD_LINKS.filter((l) => opens(l.href))
+
+  // ★ デモ期を開いていることを、**どの画面でも**言う（0029）。
+  //   期の呼び名（「デモ期」）だけだと、帯の隅の1語である。
+  //   架空の数字を実在の数字として読ませないために、札も出す。
+  const demoSeason = seasonId ? await isDemoSeason(await getDb(), seasonId) : false
+
   return (
     <div className="hh-frame">
       <aside className="sidebar-region hh-sidebar">
@@ -74,7 +116,7 @@ export function Shell({
         </div>
 
         <nav className="hh-nav" aria-label="主なナビゲーション">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <Link
               key={t.id}
               href={tabHref(t.href)}
@@ -82,16 +124,29 @@ export function Shell({
               aria-current={t.id === active ? 'page' : undefined}
             >
               <span>{t.label}</span>
-              <em>{t.note}</em>
             </Link>
           ))}
+          <div className="hh-nav-add" aria-label="追加">
+            {addLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={tabHref(item.href)}
+                className="sidebar-item btn-physical"
+              >
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </div>
         </nav>
 
         {/*
           名前で検索。素の <form> なので JS が無くても動く。
           結果は人の一覧へ渡す（氏名を URL に載せるが、これは利用者自身が
           打った検索語である。判定の結果を URL に載せないという規律とは別）。
+
+          ★ 一覧が開かない層には出さない（実行⑪）。押すと弾かれる窓を残さない。
         */}
+        {opens('/people') && (
         <form className="hh-search" action="/people" method="get" role="search">
           {/* 検索も期を持ち回る。押した先で期が変わると、
               「2期を見ていたのに3期の結果が出る」ことになる。 */}
@@ -105,6 +160,7 @@ export function Shell({
             <button className="btn-physical hh-search-go" type="submit">探す</button>
           </div>
         </form>
+        )}
 
         <div className="hh-sidebar-foot">
           {years}
@@ -114,7 +170,10 @@ export function Shell({
           */}
           {isDemoMode()
             ? <p className="hh-demo">デモ ・ 架空データ ・ 保存されません</p>
-            : <p className="hh-live">運用中</p>}
+            : demoSeason
+              /* デモ期は**保存される。** 使い捨てのデモ環境と混同させない。 */
+              ? <p className="hh-demo">デモ期 ・ 架空データ ・ 記録は残ります</p>
+              : <p className="hh-live">運用中</p>}
           {/* 出る。合言葉は共有なので、**共用の端末では必ず出る。** */}
           <form action={signOutAction}>
             <button type="submit" className="hh-signout">出る</button>
@@ -125,22 +184,6 @@ export function Shell({
       <div className="hh-main">{children}</div>
     </div>
   )
-}
-
-/**
- * 年度の呼び名。**期があれば期、無ければ年度。**
- *
- * 期は運営が数える番号で、年度からは導けない（募集を休んだ年があると
- * 番号がずれる）。分からない年度を 0 期や 1 期で埋めない。
- * 呼び方をここ1箇所に置くのは、画面ごとに違う呼び方をしないため。
- */
-export const seasonLabel = (s: { cohort_number: number | null; enrollment_year: number }) =>
-  s.cohort_number !== null ? `${s.cohort_number}期` : `${s.enrollment_year}年度`
-
-export interface Crumb {
-  label: string
-  /** 押すとその階層へ戻る。現在地（末尾）は href を持たない。 */
-  href?: string
 }
 
 /**
@@ -162,18 +205,44 @@ export interface Crumb {
  * ボタンは壊れていると読まれる。末尾の `href` は渡されても無視する
  * （画面ごとに「最後だけ href を外す」条件を書かせると必ずどこかで漏れる）。
  */
-export function Breadcrumb({
+export async function Breadcrumb({
   root, crumbs,
 }: {
   /** 先頭に置く根（期の呼び名）。押せない。 */
   root?: string
   crumbs: Crumb[]
 }) {
-  const segments: Crumb[] = root === undefined
+  // ★ 開けない階層は**押せなくする**（実行⑪）。
+  //   入力層に「ヘッドハンティング ›」の押せる段が出ていた ―― 押すと
+  //   弾かれて入力画面へ戻るだけで、壊れたボタンと区別が付かない。
+  //   ここで落とせば、画面ごとに条件を書かなくて済む。
+  const tier = await currentTier()
+  const openable = (href: string) =>
+    tier !== null && canOpen(tier, href.split('?')[0]!)
+
+  const segments: Crumb[] = (root === undefined
     ? crumbs
     : [{ label: root }, ...crumbs]
+  ).map((c) => (c.href && !openable(c.href) ? { label: c.label } : c))
+
+  const back = backHref(segments)
   return (
     <nav className="zoom-bar" aria-label="いま開いている階層">
+      {/*
+        戻る（依頼者の指示。実行⑪）。**1つ上の階層へ戻る。**
+
+        ★ ブラウザの履歴を戻すのではない。履歴で戻ると、
+          保存の直後は「保存する前の画面」へ戻り、同じ操作をもう一度
+          送ってしまう。階層は URL から決まるので、どこから来ても同じ場所へ戻る。
+
+        ★ 戻る先が無い画面には**出さない。** 押しても何も起きないボタンは
+          壊れていると読まれる（この帯の既存の判断と同じ）。
+      */}
+      {back && (
+        <Link href={back} className="zoom-back btn-physical" aria-label="1つ上へ戻る">
+          <span aria-hidden>‹</span> 戻る
+        </Link>
+      )}
       {segments.map((c, i) => {
         const isLast = i === segments.length - 1
         const isRoot = root !== undefined && i === 0
@@ -217,7 +286,12 @@ export function YearSwitch({
           <Link
             key={s.id}
             href={`${basePath}?season=${s.id}`}
-            className={s.id === currentId ? 'hh-year is-on' : 'hh-year'}
+            className={[
+              'hh-year',
+              s.id === currentId ? 'is-on' : '',
+              // デモ期は実在の期と同じ顔で並べない（0029）。
+              s.is_demo ? 'is-demo' : '',
+            ].filter(Boolean).join(' ')}
             aria-current={s.id === currentId ? 'page' : undefined}
           >
             {/* 募集中の点（`is_live`）は出さない。依頼者の指示で外した。 */}

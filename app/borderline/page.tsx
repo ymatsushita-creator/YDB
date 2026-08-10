@@ -1,19 +1,24 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import {
   listManualTasks, listDerivedTasks, listCandidatesByConfidence, listStepTabs,
   listCandidatesByStep, listAppointments, getBorderlinePanel, getScoringSheet,
+  listPersonNotes, getAppointmentDetail, listAttendanceCandidates,
 } from '../../src/queries/borderline.ts'
 import {
   parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
 } from '../../src/commands/score.ts'
 import { parseDecideCode, DECIDE_CODE_MESSAGE } from '../../src/commands/decide.ts'
+import { parseAddNoteCode, ADD_NOTE_MESSAGE } from '../../src/commands/note.ts'
+import { parseAttendanceCode, ATTENDANCE_MESSAGE } from '../../src/commands/attend.ts'
 import { ScoreSheet } from '../_components/scoring.tsx'
 import { jstDay, num, filled, NotDerived } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 import { ApproachChip, Confidence, RankDelta, taskSentence } from '../_components/headhunting.tsx'
-import { WeekCalendar, mondayOf, addDays, Rank, Avatar } from '../_components/borderline.tsx'
+import {
+  WeekCalendar, mondayOf, addDays, Rank, Avatar, MemoPopup, AttendancePopup,
+} from '../_components/borderline.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,8 +57,7 @@ export default async function BorderlinePage({
 
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
-    ?? seasons.find((s) => s.is_live)
-    ?? seasons[0]
+    ?? defaultSeason(seasons)
 
   if (!season) {
     return (
@@ -131,11 +135,21 @@ export default async function BorderlinePage({
   const hiddenSteps = stepTabs.filter((s) => !shownOrders.includes(s.sort_order))
 
   // --- 右のパネル。指定が無ければ一覧の先頭 ---
-  const requested = one(sp.person)
+  // ★ メモを開いているなら、その人をパネルにも出す。
+  //   別の人のパネルを横に置いたままメモを開くと、どちらの人の話か分からなくなる。
+  const memoParam = one(sp.memo)
+  const memoPersonId = memoParam && UUID.test(memoParam) ? memoParam : null
+  const requested = memoPersonId ?? one(sp.person)
   const personId = requested && UUID.test(requested)
     ? requested
     : (candidates?.rows[0]?.person_id ?? stepRows?.[0]?.person_id ?? null)
   const panel = personId ? await getBorderlinePanel(db, personId, season.id) : null
+
+  // 名前を押した人。押すとその行に「メモ」と「採点」が出る（実行⑪）。
+  const openParam = one(sp.open)
+  const openPersonId = openParam && UUID.test(openParam) ? openParam : memoPersonId
+
+  const notes = memoPersonId ? await listPersonNotes(db, memoPersonId) : []
 
   // --- 採点シート（実行⑩）---
   // 選考タブに居るときだけ。**一覧の行が名指しした評価をそのまま渡す。**
@@ -158,12 +172,30 @@ export default async function BorderlinePage({
   const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
   const appointments = await listAppointments(db, season.id, monday, sunday)
 
+  // --- 予定の参加者（実行⑪）---
+  const apptParam = one(sp.appt)
+  const apptId = apptParam && UUID.test(apptParam) ? apptParam : null
+  const appointment = apptId ? await getAppointmentDetail(db, apptId, season.id) : null
+  const attendees = appointment
+    ? await listAttendanceCandidates(db, appointment.appointment_id, season.id)
+    : []
+
   const href = (q: Record<string, string>) =>
     `/borderline?${new URLSearchParams({ season: season.id, tab: tab.id, ...q })}`
+
+  /** 見ている週を落とさずに戻る先。ポップアップの開閉で週が今週へ戻らない。 */
+  const hereHref = (q: Record<string, string>) =>
+    `/borderline?${new URLSearchParams({
+      season: season.id, tab: tab.id, week: monday, ...q,
+    })}`
 
   /** 氏名を押したときの行き先 ―― 採点レイヤー。どのタブから来たかを持たせる。 */
   const scoreHref = (personId: string) =>
     `/borderline/${personId}?${new URLSearchParams({ season: season.id, tab: tab.id })}`
+
+  // 直前の保存の結果（メモ・参加者）。
+  const savedNote = parseAddNoteCode(sp.note)
+  const savedAttend = parseAttendanceCode(sp.attend)
 
   return (
     <Shell
@@ -174,7 +206,7 @@ export default async function BorderlinePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ボーダーライン', href: `/borderline?season=${season.id}` },
+          { label: '個人アプローチ', href: `/borderline?season=${season.id}` },
           ...(panel ? [{ label: panel.person_name }] : []),
         ]}
       />
@@ -264,15 +296,29 @@ export default async function BorderlinePage({
                           </td>
                           <td><Rank rank={r.rank_in_season} /></td>
                           <td>
-                            {/* 氏名を押したら採点できる（依頼者の指示）。
-                                右の「›」はその人の記録。押す先で行き先が違う。 */}
-                            <Link href={scoreHref(r.person_id)} className="bl-person">
+                            {/* 氏名を押すと、その行に「メモ」と「採点」が出る
+                                （実行⑪。依頼者の指示）。押しただけでは何も起きず、
+                                行き先は出てきたボタンが決める。
+                                右の「›」はその人の記録。 */}
+                            <Link href={hereHref({ person: r.person_id, open: r.person_id })}
+                                  className="bl-person">
                               <Avatar src={r.photo_data_url} name={r.person_name} />
                               {r.person_name}
                             </Link>
                             <Link href={`/people/${r.person_id}?season=${season.id}`}
                                   className="row-detail"
                                   aria-label={`${r.person_name} の記録を開く`}>›</Link>
+                            {openPersonId === r.person_id && (
+                              <span className="row-actions">
+                                <Link className="row-action btn-physical"
+                                      href={hereHref({
+                                        person: r.person_id, open: r.person_id,
+                                        memo: r.person_id,
+                                      })}>メモ</Link>
+                                <Link className="row-action btn-physical"
+                                      href={scoreHref(r.person_id)}>採点</Link>
+                              </span>
+                            )}
                           </td>
                           <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
                           <td className="dim">
@@ -310,13 +356,25 @@ export default async function BorderlinePage({
                           <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
                           <td className="num dim">{r.scored_criteria}</td>
                           <td>
-                            <Link href={scoreHref(r.person_id)} className="bl-person">
+                            <Link href={hereHref({ person: r.person_id, open: r.person_id })}
+                                  className="bl-person">
                               <Avatar src={r.photo_data_url} name={r.person_name} />
                               {r.person_name}
                             </Link>
                             <Link href={`/applications/${r.application_id}`}
                                   className="row-detail"
                                   aria-label={`${r.person_name} の応募を開く`}>›</Link>
+                            {openPersonId === r.person_id && (
+                              <span className="row-actions">
+                                <Link className="row-action btn-physical"
+                                      href={hereHref({
+                                        person: r.person_id, open: r.person_id,
+                                        memo: r.person_id,
+                                      })}>メモ</Link>
+                                <Link className="row-action btn-physical"
+                                      href={scoreHref(r.person_id)}>採点</Link>
+                              </span>
+                            )}
                           </td>
                           <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
                           <td className="num dim">{r.waiting_days} 日</td>
@@ -435,11 +493,40 @@ export default async function BorderlinePage({
             {appointments.length === 0 ? (
               <p className="hh-empty">この週に登録された予定は無い。</p>
             ) : (
-              <WeekCalendar monday={monday} appointments={appointments} today={today} />
+              <WeekCalendar
+                monday={monday} appointments={appointments} today={today}
+                hrefFor={(id) => hereHref({ appt: id })}
+              />
             )}
           </section>
         </div>
       </div>
+
+      {/* --- メモ（実行⑪。依頼者の指示）--- */}
+      {memoPersonId && panel && (
+        <MemoPopup
+          personName={panel.person_name}
+          notes={notes}
+          closeHref={hereHref({ person: memoPersonId, open: memoPersonId })}
+          message={savedNote ? ADD_NOTE_MESSAGE[savedNote] : null}
+          ok={savedNote === 'saved'}
+          context={{
+            personId: memoPersonId, seasonId: season.id, tab: tab.id, week: monday,
+          }}
+        />
+      )}
+
+      {/* --- 予定の参加者（実行⑪。依頼者の指示）--- */}
+      {appointment && (
+        <AttendancePopup
+          appointment={appointment}
+          candidates={attendees}
+          closeHref={hereHref({})}
+          message={savedAttend ? ATTENDANCE_MESSAGE[savedAttend] : null}
+          ok={savedAttend === 'saved'}
+          context={{ seasonId: season.id, tab: tab.id, week: monday }}
+        />
+      )}
     </Shell>
   )
 }

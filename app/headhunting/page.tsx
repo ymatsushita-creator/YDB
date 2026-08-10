@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import {
   listHeadhunting, getApproachTotals, listConfidence, getConfidenceMeta,
   listApplicantScores, getPersonPanel, listCriterionScores, listHeadhuntingTasks,
@@ -36,8 +36,7 @@ export default async function HeadhuntingPage({
 
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
-    ?? seasons.find((s) => s.is_live)
-    ?? seasons[0]
+    ?? defaultSeason(seasons)
 
   if (!season) {
     return (

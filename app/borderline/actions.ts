@@ -5,6 +5,10 @@ import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
 import { saveScore, type SaveScoreCode } from '../../src/commands/score.ts'
 import { submitEvaluation, type DecideCode } from '../../src/commands/decide.ts'
+import { addPersonNote, type AddNoteFailure } from '../../src/commands/note.ts'
+import {
+  setEventAttendance, type SetAttendanceFailure,
+} from '../../src/commands/attend.ts'
 
 /**
  * ボーダーラインの選考タブで採点する（実行⑩。依頼者の指示）。
@@ -86,4 +90,66 @@ export async function submitOnBorderlineAction(formData: FormData): Promise<void
   revalidatePath('/borderline')
   revalidatePath(`/applications/${String(formData.get('applicationId') ?? '')}`)
   back('submitted')
+}
+
+/**
+ * メモを1件足す（実行⑪。依頼者の指示）。
+ *
+ * 判定は `src/commands/note.ts`。ここは受け渡しと戻り先だけ。
+ *
+ * ★ 戻り先は**メモのポップアップを開いたまま**にする。
+ *   閉じて戻すと、足したメモが並んだところを見ずに一覧へ放り出される。
+ *   失敗したときはなおさら ―― 打った文字が消えたうえに理由だけが残る。
+ *
+ * ★ URL に載せるのは ID と結果コードだけ。氏名も本文も載せない。
+ */
+export async function addNoteAction(formData: FormData): Promise<void> {
+  const personId = String(formData.get('personId') ?? '')
+  const authorName = String(formData.get('authorName') ?? '')
+  const notedAt = String(formData.get('notedAt') ?? '')
+  const body = String(formData.get('body') ?? '')
+
+  const back = (code: AddNoteFailure | 'saved') => redirect(backTo(formData, {
+    note: code,
+    // ポップアップを開いたまま戻す。
+    ...(UUID.test(personId) ? { memo: personId } : {}),
+  }))
+
+  const db = await getDb()
+  const result = await addPersonNote(db, { personId, authorName, notedAt, body })
+  if (!result.ok) return back(result.reason)
+
+  // 同じメモがその人の記録にも出る。片方だけ古いままにしない。
+  revalidatePath('/borderline')
+  revalidatePath(`/people/${personId}`)
+  back('saved')
+}
+
+/**
+ * 予定の参加者を保存する（実行⑪。依頼者の指示）。
+ *
+ * 判定は `src/commands/attend.ts`。**チェックの集合をそのまま渡す。**
+ * ここで「増えた分だけ送る」といった加工をすると、外したことが伝わらない。
+ *
+ * ★ 参加は接点として積まれ、確度（0017）の材料になる。
+ */
+export async function saveAttendanceAction(formData: FormData): Promise<void> {
+  const appointmentId = String(formData.get('appointmentId') ?? '')
+  const seasonId = String(formData.get('seasonId') ?? '')
+  const personIds = formData.getAll('person').map(String)
+
+  const back = (code: SetAttendanceFailure | 'saved') => redirect(backTo(formData, {
+    attend: code,
+    // ポップアップを開いたまま戻す。
+    ...(UUID.test(appointmentId) ? { appt: appointmentId } : {}),
+  }))
+
+  const db = await getDb()
+  const result = await setEventAttendance(db, { appointmentId, seasonId, personIds })
+  if (!result.ok) return back(result.reason)
+
+  // 接点が動いたので、最終接触日と確度の材料が変わる画面を作り直す。
+  revalidatePath('/borderline')
+  revalidatePath('/headhunting')
+  back('saved')
 }

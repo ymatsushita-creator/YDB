@@ -73,15 +73,50 @@
   position: absolute;
   left: 0; right: 0; bottom: 0;
   height: 3px;
-  background: linear-gradient(90deg,
-    #f03090 0%, #f0c030 22%, #f0f000 38%, #a8c000 52%, #50f000 62%,
-    #00c0f0 78%, #6078c0 92%, #7860a8 100%);
+
+  /* ★ 色の並びを**回文**にする（依頼者の指示。実行⑪で動かした）。
+       端と端が同じ色（#f03090）なので、繰り返しても継ぎ目が出ない。
+       行って戻る並びなので、流れると**波**に見える。 */
+  background-image: linear-gradient(90deg,
+    #f03090 0%,  #f0c030 6%,  #f0f000 12%, #a8c000 18%, #50f000 25%,
+    #00c0f0 33%, #6078c0 42%, #7860a8 50%,
+    #6078c0 58%, #00c0f0 67%, #50f000 75%, #a8c000 82%, #f0f000 88%,
+    #f0c030 94%, #f03090 100%);
+  background-repeat: repeat-x;
+
+  /* ★ 波の1周期は**px で固定する。** % にすると、ロゴ（204px）と
+       横バー（残り全部）で波長が変わり、**1本の線が2本に割れて見える。** */
+  --wave-len: 960px;
+  --wave-shift: 0px;
+  background-size: var(--wave-len) 100%;
+  background-position-x: var(--wave-shift);
+
+  /* ゆっくり。1周 30 秒 ＝ 秒速 32px。目で追える速さにしない。 */
+  animation: brand-wave 30s linear infinite;
+}
+
+/* ★ 横バーはロゴの右端から続く。**位相をロゴの幅だけずらす。**
+     ずらさないと、両方が自分の左端から波を始めるので、
+     継ぎ目（ロゴの右端）で色が飛ぶ。 */
+.zoom-bar::after { --wave-shift: calc(var(--logo-w) * -1); }
+
+@keyframes brand-wave {
+  from { background-position-x: var(--wave-shift); }
+  to   { background-position-x: calc(var(--wave-shift) + var(--wave-len)); }
+}
+
+/* ★ 動きを減らす設定の人には**動かさない。**
+     線そのものは残す（意匠であって、動きが情報ではない）。 */
+@media (prefers-reduced-motion: reduce) {
+  .hh-brand::after, .zoom-bar::after { animation: none; }
 }
 /* 角丸に沿わせる。はみ出すと、丸の外に色が残って見える。 */
 .hh-brand { overflow: hidden; }
 .zoom-bar { overflow: hidden; }
-/* 横バーは右上・右下だけ丸い（左は縦バーへ着いている）。 */
-.zoom-bar::after { border-bottom-right-radius: var(--rounded-lg); }
+/* 横バーは右上・右下だけ丸い（左は縦バーへ着いている）。
+   丸みは**バー本体と同じ値**にする（実行⑪で `--rounded-lg` → `--rounded-xl`）。
+   ここだけ古い値のままだと、線が角の外へ 4px はみ出す。 */
+.zoom-bar::after { border-bottom-right-radius: var(--rounded-xl); }
 
 /* =============================================================
    線としてのアクセント

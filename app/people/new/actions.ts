@@ -12,9 +12,23 @@ import { addCandidate, type AddCandidateCode } from '../../../src/commands/intak
  * 素の `<form action={...}>` なので `'use client'` は増えない。
  */
 const text = (f: FormData, n: string) => String(f.get(n) ?? '')
+const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const PHOTO_MAX_BYTES = 2 * 1024 * 1024
+
+async function photoData(formData: FormData): Promise<string | null> {
+  const photo = formData.get('photo')
+  if (!(photo instanceof File) || photo.size === 0) return null
+  if (!PHOTO_TYPES.has(photo.type) || photo.size > PHOTO_MAX_BYTES) return null
+  return `data:${photo.type};base64,${Buffer.from(await photo.arrayBuffer()).toString('base64')}`
+}
 
 export async function addCandidateAction(formData: FormData): Promise<void> {
   const seasonId = text(formData, 'seasonId')
+  const photo = formData.get('photo')
+  if (photo instanceof File && photo.size > 0
+      && (!PHOTO_TYPES.has(photo.type) || photo.size > PHOTO_MAX_BYTES)) {
+    redirect(`/people/new?season=${seasonId}&add=bad_photo`)
+  }
   const db = await getDb()
   const result = await addCandidate(db, {
     seasonId,
@@ -29,6 +43,7 @@ export async function addCandidateAction(formData: FormData): Promise<void> {
     phone: text(formData, 'phone'),
     lineUserId: text(formData, 'lineUserId'),
     note: text(formData, 'note'),
+    photoDataUrl: await photoData(formData) ?? '',
     channelId: text(formData, 'channelId'),
     contactedOn: text(formData, 'contactedOn'),
     staffId: text(formData, 'staffId'),

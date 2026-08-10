@@ -1,0 +1,17 @@
+# デプロイに送らないもの（実行⑪）。
+#
+# ★ Vercel CLI は作業ディレクトリを丸ごと送る。**追跡外＝送られない、ではない。**
+#   実在の個人情報を含みうるものは、ここで明示的に外す。
+#   （画面から見えなくても、置いた時点で外部サービスの上に載る）
+
+.git
+node_modules
+.next
+.pgdata
+.tmp
+db/private
+お顔データ
+*.xlsx
+*.pptx
+scripts/sim-out
+Codexから移行した旧YouthDBデータ_*

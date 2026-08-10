@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getDb } from '../../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
 import {
   getIntakeOptions, listUnmatchedResponses, getFormResponse, listCandidateNumbers,
 } from '../../../src/queries/intake.ts'
@@ -8,6 +8,7 @@ import { nextCandidateNumber, ADD_CANDIDATE_MESSAGE } from '../../../src/command
 import { addCandidateAction } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
+import { Avatar } from '../../_components/borderline.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,8 +37,7 @@ export default async function NewCandidatePage({
 
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
-    ?? seasons.find((s) => s.is_live)
-    ?? seasons[0]
+    ?? defaultSeason(seasons)
 
   if (!season) {
     return (
@@ -171,6 +171,10 @@ export default async function NewCandidatePage({
               <label className="iv-field">LINE ID
                 <input name="lineUserId" defaultValue={from?.respondent_line ?? ''} />
               </label>
+              <label className="iv-field">顔写真
+                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+                <small>JPEG / PNG / WebP、2MB以下</small>
+              </label>
             </div>
             <label className="iv-field iv-field-wide">担当者メモ
               <textarea name="note" rows={3} />
@@ -224,7 +228,10 @@ export default async function NewCandidatePage({
                       <td className="num strong">{num(n.number)}</td>
                       <td className="cell-name">
                         <Link href={`/people/${n.person_id}?season=${season.id}`}>
-                          {n.person_name}
+                          <span className="bl-person">
+                            <Avatar src={n.photo_data_url} name={n.person_name} />
+                            {n.person_name}
+                          </span>
                         </Link>
                       </td>
                       <td className="nowrap">{jstDateTime(n.assigned_at)}</td>

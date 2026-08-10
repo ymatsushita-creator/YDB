@@ -1,6 +1,6 @@
 import { getDb } from '../../src/db/server.ts'
 import {
-  listSeasons, getSeason, getFunnel, getSummary, getStepFlow,
+  listSeasons, defaultSeason, getSeason, getFunnel, getSummary, getStepFlow,
   getChannelPerformance, getWithdrawReasons, getReachConversion, ACTIVE_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, pct, ymd } from '../_components/ui.tsx'
@@ -33,7 +33,7 @@ export default async function FunnelPage(
 
   const season =
     (await getSeason(db, (await searchParams).season)) ??
-    seasons.find((s) => s.is_live) ?? seasons[0]!
+    defaultSeason(seasons)!
 
   const [summary, funnel, steps, channels, withdrawals, reach] = await Promise.all([
     getSummary(db, season.id),
@@ -57,7 +57,7 @@ export default async function FunnelPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'アプローチ', href: '/approach' },
+          { label: '団体アプローチ', href: '/approach' },
           { label: 'ファネル' },
         ]}
       />

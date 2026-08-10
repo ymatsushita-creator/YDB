@@ -100,6 +100,7 @@ export interface CandidateNumberRow {
   number: number
   person_id: string
   person_name: string
+  photo_data_url: string | null
   assigned_at: Date
 }
 
@@ -108,7 +109,8 @@ export const listCandidateNumbers = (db: Db, seasonId: string | undefined) => {
   if (!seasonId || !UUID.test(seasonId)) return Promise.resolve([])
   return all<CandidateNumberRow>(db, `
     SELECT n.number, n.person_id, n.assigned_at,
-           p.family_name || ' ' || p.given_name AS person_name
+           p.family_name || ' ' || p.given_name AS person_name,
+           p.photo_data_url
       FROM candidate_numbers n
       JOIN persons p ON p.id = n.person_id AND p.deleted_at IS NULL
      WHERE n.season_id = $1

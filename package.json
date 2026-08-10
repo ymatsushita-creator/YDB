@@ -9,8 +9,11 @@
   },
   "scripts": {
     "db:reset": "node scripts/db-reset.ts",
-    "db:migrate:production": "node scripts/db-migrate-production.ts",
+    "db:migrate:production": "node --env-file-if-exists=.env.local scripts/db-migrate-production.ts",
+    "db:backup": "node --env-file-if-exists=.env.local scripts/db-backup.ts",
+    "db:restore": "node --env-file-if-exists=.env.local scripts/db-restore.ts",
     "import:legacy:2026": "node scripts/import-legacy-2026.ts",
+    "seed:demo-season": "node --env-file-if-exists=.env.local scripts/seed-demo-season.ts",
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",
     "tokens": "node scripts/build-tokens.ts",
     "dev": "next dev",

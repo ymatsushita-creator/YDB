@@ -125,6 +125,10 @@ describe('マイグレーション', () => {
       'v_interview_sheets',
       // 0025: フォーム回答を SNS（チャネル）別に見る形
       'v_form_response_channels',
+      // 0027: メモの訂正チェーンを解決した有効なメモ
+      'v_effective_person_notes',
+      // 0028: 予定ごとの参加者（参加した事実そのものは touchpoints が持つ）
+      'v_event_attendance',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

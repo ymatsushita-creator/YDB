@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
 import {
   getBorderlinePanel, getScoringSheet, listPersonEvaluationIds,
 } from '../../../src/queries/borderline.ts'
@@ -48,8 +48,7 @@ export default async function BorderlineScorePage({
   const db = await getDb()
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
-    ?? seasons.find((s) => s.is_live)
-    ?? seasons[0]
+    ?? defaultSeason(seasons)
   if (!season) notFound()
 
   const panel = await getBorderlinePanel(db, person, season.id)
@@ -79,7 +78,7 @@ export default async function BorderlineScorePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ボーダーライン', href: backHref },
+          { label: '個人アプローチ', href: backHref },
           { label: panel.person_name },
         ]}
       />

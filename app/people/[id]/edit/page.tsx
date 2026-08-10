@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { getDb } from '../../../../src/db/server.ts'
 import { getPerson } from '../../../../src/queries/drilldown.ts'
 import { getPersonPanel, getProfileEditOptions } from '../../../../src/queries/headhunting.ts'
-import { listSeasons, getSeason } from '../../../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../../../src/queries/dashboard.ts'
 import { updateProfileAction, updateApproachAction } from '../../../headhunting/actions.ts'
 import { ymd } from '../../../_components/ui.tsx'
 import { Shell, Breadcrumb, seasonLabel } from '../../../_components/shell.tsx'
@@ -53,8 +53,7 @@ export default async function PersonEditPage({
 
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
-    ?? seasons.find((s) => s.is_live)
-    ?? seasons[0]
+    ?? defaultSeason(seasons)
   if (!season) notFound()
 
   const [panel, options] = await Promise.all([

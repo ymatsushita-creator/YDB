@@ -33,12 +33,46 @@ export interface Season {
   cohort_number: number | null
   /** 今日が選考期間の中にあるか。 */
   is_live: boolean
+  /** 幻のデモ期（0029）。架空データだけが入る期。 */
+  is_demo: boolean
 }
 
+/**
+ * 期の一覧。
+ *
+ * ★ **デモ期は最後**（0029）。年度の降順に混ぜると、実在しない年
+ *   （9999）が先頭に来て、切替の一番上がデモ期になる。
+ */
 export const listSeasons = (db: Db) =>
   all<Season>(db, `
     SELECT s.*, (jst_today() BETWEEN s.outreach_start_date AND s.selection_end_date) AS is_live
-      FROM seasons s ORDER BY s.enrollment_year DESC`)
+      FROM seasons s ORDER BY s.is_demo, s.enrollment_year DESC`)
+
+/**
+ * 期の指定が無いときに開く期。
+ *
+ * ★ **デモ期は既定にしない。** 架空の期が既定になると、入った人は
+ *   自分がデモを見ていることに気づかないまま数字を読む。
+ *   実在の期が1つも無いときだけ、最後の手段としてデモ期を返す。
+ */
+export const defaultSeason = (seasons: Season[]): Season | undefined => {
+  const real = seasons.filter((s) => !s.is_demo)
+  return real.find((s) => s.is_live) ?? real[0] ?? seasons[0]
+}
+
+
+/**
+ * その期はデモ期か。**画面の注意書きの判定はここ1箇所。**
+ *
+ * 外枠（`Shell`）が毎回引く。期の一覧を持たない画面でも同じ札が出るように、
+ * 期の ID だけで答えられる形にしてある。
+ */
+export const isDemoSeason = async (db: Db, seasonId: string): Promise<boolean> => {
+  if (!UUID.test(seasonId)) return false
+  const row = await maybeOne<{ is_demo: boolean }>(db,
+    `SELECT is_demo FROM seasons WHERE id = $1`, [seasonId])
+  return row?.is_demo ?? false
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -176,7 +210,10 @@ export const getReachConversion = (db: Db, seasonId: string) =>
          JOIN persons p ON p.id = t.person_id AND p.deleted_at IS NULL
         WHERE jst_date(t.occurred_at)
               BETWEEN s.outreach_start_date AND s.application_close_date
-          AND jst_date(t.occurred_at) <= jst_today())          AS reached_persons,
+          AND jst_date(t.occurred_at) <= jst_today()
+          -- 架空の人は架空の期にだけ数える（0029）。ここは年度を日付の窓で
+          -- 見るので、窓が重なれば混ざる。**窓の置き方に依存させない。**
+          AND p.is_demo = s.is_demo)                           AS reached_persons,
       (SELECT count(DISTINCT a.person_id)
          FROM v_application_state a
         WHERE a.season_id = s.id
@@ -317,6 +354,7 @@ export const REACH_WINDOW_DAYS = 90
 export interface PartnerReachRow {
   partner_id: string
   partner_name: string
+  photo_data_url: string | null
   /** 推定値。実人数と同じ軸に並べない。 */
   estimated_reach_total: number | null
   contact_occasions: number
@@ -329,7 +367,7 @@ export interface PartnerReachRow {
 /** 団体別のリーチ。年度で絞る。 */
 export const getPartnerReach = (db: Db, seasonId: string, windowDays = REACH_WINDOW_DAYS) =>
   all<PartnerReachRow>(db, `
-    SELECT r.partner_id, p.name AS partner_name,
+    SELECT r.partner_id, p.name AS partner_name, p.photo_data_url,
            COALESCE(r.estimated_reach_total, 0) AS estimated_reach_total,
            r.contact_occasions, r.first_reach_on, r.last_reach_on, r.identified_count
       FROM f_partner_reach_summary($2) r

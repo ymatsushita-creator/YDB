@@ -208,7 +208,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* 面接（実行⑩）。**詳細画面から面接画面へ行く入口はここ。**
-          ヘッドハンティング・ボーダーライン・名前検索、どこから来ても
+          ヘッドハンティング・個人アプローチ・名前検索、どこから来ても
           氏名を押せばこの画面に着き、ここから面接シートを開く。 */}
       <div className="section">
         <Card title="面接">

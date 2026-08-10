@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import {
-  listSeasons, getSeason, getPartnerReach, getReachTotals,
+  listSeasons, defaultSeason, getSeason, getPartnerReach, getReachTotals,
   getChannelAttribution, REACH_WINDOW_DAYS,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, ymd } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
+import { Avatar } from '../_components/borderline.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ export default async function ApproachPage(
 
   const season =
     (await getSeason(db, sp.season)) ??
-    seasons.find((s) => s.is_live) ?? seasons[0]!
+    defaultSeason(seasons)!
 
   const [partners, totals, attribution] = await Promise.all([
     getPartnerReach(db, season.id),
@@ -48,7 +49,7 @@ export default async function ApproachPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'アプローチ', href: '/approach' },
+          { label: '団体アプローチ', href: '/approach' },
         ]}
       />
 
@@ -120,7 +121,12 @@ export default async function ApproachPage(
                 <tbody>
                   {partners.map((p) => (
                     <tr key={p.partner_id}>
-                      <td className="cell-name">{p.partner_name}</td>
+                      <td className="cell-name">
+                        <span className="bl-person">
+                          <Avatar src={p.photo_data_url} name={p.partner_name} />
+                          {p.partner_name}
+                        </span>
+                      </td>
                       <td className="nowrap mono">
                         {ymd(p.first_reach_on)} 〜 {ymd(p.last_reach_on)}
                       </td>

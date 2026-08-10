@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getDb } from '../../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
 import { getIntakeOptions, listChannelResponses } from '../../../src/queries/intake.ts'
 import { ADD_REACH_MESSAGE } from '../../../src/commands/intake.ts'
 import { addReachAction } from './actions.ts'
@@ -31,8 +31,7 @@ export default async function NewReachPage({
 
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
-    ?? seasons.find((s) => s.is_live)
-    ?? seasons[0]
+    ?? defaultSeason(seasons)
 
   if (!season) {
     return (
@@ -61,7 +60,7 @@ export default async function NewReachPage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'アプローチ', href: `/approach?season=${season.id}` },
+          { label: '団体アプローチ', href: `/approach?season=${season.id}` },
           { label: 'アプローチ追加' },
         ]}
       />
@@ -96,6 +95,10 @@ export default async function NewReachPage({
               <label className="iv-field">窓口<input name="contactName" /></label>
               <label className="iv-field">窓口のメール
                 <input name="contactEmail" type="email" />
+              </label>
+              <label className="iv-field">団体の写真
+                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+                <small>JPEG / PNG / WebP、2MB以下</small>
               </label>
             </div>
           </Card>

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
-import { listSeasons, getSeason } from '../../src/queries/dashboard.ts'
+import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import { listSeasonInterviews } from '../../src/queries/interview.ts'
 import { RECOMMENDATION_LABEL } from '../../src/commands/interview.ts'
 import { Card, Empty, num, jstDay } from '../_components/ui.tsx'
@@ -29,8 +29,7 @@ export default async function InterviewsPage({
 
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
-    ?? seasons.find((s) => s.is_live)
-    ?? seasons[0]
+    ?? defaultSeason(seasons)
 
   if (!season) {
     return (
