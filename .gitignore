@@ -25,3 +25,4 @@ scripts/sim-out/
 /:memory:/
 *.xlsx
 *.pptx
+.vercel
