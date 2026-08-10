@@ -28,9 +28,11 @@ export async function signInAction(formData: FormData): Promise<void> {
 
   const secret = process.env.YOUTHDB_SESSION_SECRET
   // 未設定の層は `checkPassword` が誰も通さない（既定値を持たない）。
+  // 普通の層は YOUTHDB_PASSWORD2 でも設定できる（依頼者が本番でこの名前を使った）。
+  // 明示された PASSWORD2 を優先する。
   const tier = matchTier({
     all: process.env.YOUTHDB_PASSWORD,
-    personal: process.env.YOUTHDB_PASSWORD_PERSONAL,
+    personal: process.env.YOUTHDB_PASSWORD2 ?? process.env.YOUTHDB_PASSWORD_PERSONAL,
     input: process.env.YOUTHDB_PASSWORD_INPUT,
   }, password)
 
