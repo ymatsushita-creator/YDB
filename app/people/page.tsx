@@ -56,7 +56,7 @@ export default async function PeoplePage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ヘッドハンティング', href: `/headhunting?season=${season.id}` },
+          { label: '特別選考', href: `/headhunting?season=${season.id}` },
           { label: '人を探す' },
         ]}
       />

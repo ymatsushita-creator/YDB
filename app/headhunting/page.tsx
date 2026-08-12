@@ -81,7 +81,7 @@ export default async function HeadhuntingPage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ヘッドハンティング', href: '/headhunting' },
+          { label: '特別選考', href: '/headhunting' },
           ...(panel ? [{ label: panel.person_name }] : []),
         ]}
       />
@@ -280,10 +280,10 @@ export default async function HeadhuntingPage({
             )}
           </section>
 
-          {/* --- G ヘッドハンティングリスト --- */}
+          {/* --- G 特別選考リスト（画面の語だけ変えた。実行⑫） --- */}
           <section className="panel-card">
             <header className="hh-head">
-              <h2>ヘッドハンティングリスト</h2>
+              <h2>特別選考リスト</h2>
               <Link href={`/people/new?season=${season.id}`} className="hh-more">
                 候補者を追加 ›
               </Link>

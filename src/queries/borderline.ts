@@ -506,6 +506,11 @@ export interface PersonNote {
   /** 行が記録された時刻（自動）。手入力の日時とは別物。 */
   created_at: Date
   body: string
+  /**
+   * どう関わったか（0030。実行⑫）。自由入力の1行で、任意。
+   * **マスタではないので数えられない**（表記が揺れる）。
+   */
+  involvement: string | null
 }
 
 /**
@@ -516,7 +521,8 @@ export interface PersonNote {
  */
 export const listPersonNotes = (db: Db, personId: string) =>
   all<PersonNote>(db, `
-    SELECT n.id AS note_id, n.author_name, n.noted_at, n.created_at, n.body
+    SELECT n.id AS note_id, n.author_name, n.noted_at, n.created_at, n.body,
+           n.involvement
       FROM v_effective_person_notes n
      WHERE n.person_id = $1
      ORDER BY n.noted_at DESC, n.created_at DESC, n.id DESC`, [personId])

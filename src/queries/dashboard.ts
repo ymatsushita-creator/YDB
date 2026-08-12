@@ -373,7 +373,13 @@ export const getPartnerReach = (db: Db, seasonId: string, windowDays = REACH_WIN
       FROM f_partner_reach_summary($2) r
       JOIN partners p ON p.id = r.partner_id
      WHERE r.season_id = $1
-     ORDER BY r.estimated_reach_total DESC NULLS LAST, r.identified_count DESC, p.name`,
+     -- ★ 並びは**直近の接触が新しい順**（依頼者の指示。実行⑫）。
+     --   実行⑪までは推定リーチの多い順だったが、旧データに推定リーチが
+     --   1件も無いため（作れば「届かなかった」が「届いた」に化ける。C-78）、
+     --   実データでは事実上ただの識別人数順になっていた。
+     --   日付が無い団体は後ろへ（NULLS LAST）、同日は名前で決める ――
+     --   並びが決まらないと、同じ問いに開くたび違う答えが出る。
+     ORDER BY r.last_reach_on DESC NULLS LAST, p.name`,
     [seasonId, windowDays])
 
 export interface ReachTotals {

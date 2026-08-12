@@ -39,7 +39,7 @@ export { seasonLabel, type Crumb } from './labels.ts'
  *   「いまどの年度か」を知る手段が無くなり、年度の切替を操作柱に置けない。
  */
 
-export type Tab = 'headhunting' | 'borderline' | 'approach' | 'interview'
+export type Tab = 'home' | 'headhunting' | 'borderline' | 'approach' | 'interview'
 
 /**
  * ★ 表示名だけ変えた（依頼者の指示。実行⑪）。
@@ -53,17 +53,33 @@ export type Tab = 'headhunting' | 'borderline' | 'approach' | 'interview'
  *   `note` の列ごと消してある ―― 使わない値を残すと、次に触る人が
  *   「出し忘れ」と読んで戻す。
  */
+/**
+ * ★ 実行⑫で2つ変えた（依頼者の指示）――
+ *
+ *   ① ヘッドハンティング → **特別選考**。**画面に出る語だけ**である。
+ *      URL（`/headhunting`）・識別子（`headhunting`）・クエリ名・テストは据え置き。
+ *      **字が違うので定義は衝突しない** ―― 旧生態系比喩で踏んだ
+ *      「同じ言葉が2つの意味を持つ」（D-11）とは別の形である。
+ *   ② 一番上に **ホーム**を足した（既存4本の上。入れ子にはしない）。
+ */
 const TABS: Array<{ id: Tab; href: string; label: string }> = [
-  { id: 'headhunting', href: '/headhunting', label: 'ヘッドハンティング' },
+  { id: 'home', href: '/', label: 'ホーム' },
+  { id: 'headhunting', href: '/headhunting', label: '特別選考' },
   { id: 'borderline', href: '/borderline', label: '個人アプローチ' },
   { id: 'approach', href: '/approach', label: '団体アプローチ' },
   // 面接は団体アプローチの下（依頼者の指示。実行⑩）。
   { id: 'interview', href: '/interviews', label: '面接' },
 ]
 
+/**
+ * ★ 「入力者を追加」を足した（実行⑫）。
+ *   表の「記録した人」は職員を選ばせるのに、**選択肢を増やす画面が無かった**
+ *   ―― 取り込みが唯一の経路だった（C-75）。
+ */
 const ADD_LINKS = [
   { href: '/people/new', label: '候補者を追加' },
   { href: '/approach/new', label: '連携団体を追加' },
+  { href: '/staff/new', label: '入力者を追加' },
 ]
 
 export async function Shell({

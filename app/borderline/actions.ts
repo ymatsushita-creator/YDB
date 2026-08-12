@@ -108,6 +108,8 @@ export async function addNoteAction(formData: FormData): Promise<void> {
   const authorName = String(formData.get('authorName') ?? '')
   const notedAt = String(formData.get('notedAt') ?? '')
   const body = String(formData.get('body') ?? '')
+  // どう関わったか（0030。実行⑫）。任意なので空のまま来る。
+  const involvement = String(formData.get('involvement') ?? '')
 
   const back = (code: AddNoteFailure | 'saved') => redirect(backTo(formData, {
     note: code,
@@ -116,7 +118,9 @@ export async function addNoteAction(formData: FormData): Promise<void> {
   }))
 
   const db = await getDb()
-  const result = await addPersonNote(db, { personId, authorName, notedAt, body })
+  const result = await addPersonNote(db, {
+    personId, authorName, notedAt, body, involvement,
+  })
   if (!result.ok) return back(result.reason)
 
   // 同じメモがその人の記録にも出る。片方だけ古いままにしない。

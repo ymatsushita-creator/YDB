@@ -38,9 +38,20 @@ export type AddNoteFailure =
   | 'body_required'
   /** 内容が長すぎる。 */
   | 'body_too_long'
+  /** 関わり方が長すぎる。**任意なので「空」は失敗ではない。** */
+  | 'involvement_too_long'
 
 export const AUTHOR_MAX = 60
 export const BODY_MAX = 2000
+/**
+ * 関わり方の上限（0030。実行⑫）。
+ *
+ * 依頼者の指示は「自由入力の1行」。**1行に収まる長さ**を上限にした ――
+ * 書いた人（`AUTHOR_MAX`）と同じ 60 文字。これは決めた値なので記録に残す
+ * （`db/DECISIONS.md`）。本文を書く欄は別にある（`BODY_MAX`）ので、
+ * ここが長くなるのは「関わり方の欄に経緯を書いている」ときである。
+ */
+export const INVOLVEMENT_MAX = 60
 
 /**
  * 日時の受け取り方。
@@ -76,6 +87,14 @@ export async function addPersonNote(
     authorName: string
     notedAt: string
     body: string
+    /**
+     * どう関わったか（自由入力の1行・任意。0030。実行⑫）。
+     *
+     * ★ 空白だけは **NULL に倒す。** 拒否しない ――
+     *   任意の列なので「書いていない」と読むほうが実際に近い。
+     *   記録層の CHECK は、コマンドを通らない書き込みへの最後の砦である。
+     */
+    involvement?: string | null
     /** 打ち消し行として足す場合の、打ち消す相手。 */
     correctsNoteId?: string | null
   },
@@ -83,11 +102,16 @@ export async function addPersonNote(
 ): Promise<AddNoteResult> {
   const author = input.authorName.trim()
   const body = input.body.trim()
+  // JS の trim は全角スペース（U+3000）も落とす。0015 の btrim と同じ範囲。
+  const involvement = (input.involvement ?? '').trim() || null
 
   if (author === '') return { ok: false, reason: 'author_required' }
   if (author.length > AUTHOR_MAX) return { ok: false, reason: 'author_too_long' }
   if (body === '') return { ok: false, reason: 'body_required' }
   if (body.length > BODY_MAX) return { ok: false, reason: 'body_too_long' }
+  if (involvement !== null && involvement.length > INVOLVEMENT_MAX) {
+    return { ok: false, reason: 'involvement_too_long' }
+  }
 
   if (input.notedAt.trim() === '') return { ok: false, reason: 'noted_at_required' }
   const notedAt = parseJstDateTime(input.notedAt)
@@ -107,10 +131,11 @@ export async function addPersonNote(
   const corrects = input.correctsNoteId ?? null
   const row = await maybeOne<{ id: string }>(db, `
     INSERT INTO person_notes
-        (person_id, author_name, noted_at, body, is_correction, corrects_note_id)
-    VALUES ($1, $2, $3, $4, $5::uuid IS NOT NULL, $5::uuid)
+        (person_id, author_name, noted_at, body, is_correction, corrects_note_id,
+         involvement)
+    VALUES ($1, $2, $3, $4, $5::uuid IS NOT NULL, $5::uuid, $6)
     RETURNING id`,
-  [input.personId, author, notedAt.toISOString(), body, corrects])
+  [input.personId, author, notedAt.toISOString(), body, corrects, involvement])
 
   return { ok: true, noteId: row!.id }
 }
@@ -127,6 +152,7 @@ export const ADD_NOTE_MESSAGE: Record<AddNoteFailure | 'saved', string> = {
   noted_at_future: '日時が未来になっている。',
   body_required: '内容が空。',
   body_too_long: `内容が長すぎる（${BODY_MAX} 文字まで）。`,
+  involvement_too_long: `関わり方が長すぎる（${INVOLVEMENT_MAX} 文字まで）。`,
 }
 
 const CODES = new Set<string>([...Object.keys(ADD_NOTE_MESSAGE)])

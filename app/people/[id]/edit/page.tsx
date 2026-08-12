@@ -70,7 +70,7 @@ export default async function PersonEditPage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ヘッドハンティング', href: `/headhunting?season=${season.id}` },
+          { label: '特別選考', href: `/headhunting?season=${season.id}` },
           { label: panel.person_name, href: `/people/${id}?season=${season.id}` },
           { label: '編集' },
         ]}

@@ -40,7 +40,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
       {/* 年度を持たない画面。この人の記録は年度をまたぐので、根に年度を置けない。 */}
       <Breadcrumb
         crumbs={[
-          { label: 'ヘッドハンティング', href: '/headhunting' },
+          { label: '特別選考', href: '/headhunting' },
           { label: '人を探す', href: '/people' },
           { label: `${person.family_name} ${person.given_name}` },
         ]}

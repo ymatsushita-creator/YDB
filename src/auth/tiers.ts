@@ -36,18 +36,24 @@ export const isTier = (v: string): v is Tier =>
  *   入れているのに開けないだけなので、**その層の入口へ送る。**
  */
 export const TIER_HOME: Record<Tier, string> = {
-  all: '/headhunting',
-  personal: '/borderline',
-  input: '/people/new',
+  // ★ 実行⑫でホームを作った（依頼者の指示）。**全層がホームを開く** ――
+  //   タブの先頭に開けない画面を置くと、入った直後に弾かれる。
+  //   中身は層ごとに変える（`app/page.tsx`）。
+  all: '/',
+  personal: '/',
+  input: '/',
 }
 
 /**
  * 入力層に開く画面。**増やすときはここだけを増やす。**
  *
- * 操作柱の「追加」に並んでいる2つと同じである（`ADD_LINKS`）。
+ * 操作柱の「追加」に並んでいる3つと同じである（`ADD_LINKS`）。
  * メモと参加者の記録は個人アプローチの画面の中にあるので、ここには無い。
+ *
+ * ★ 「入力者を追加」は実行⑫で足した。表の「記録した人」の選択肢を
+ *   増やす道が取り込みしか無かった（C-75）。
  */
-const INPUT_PATHS = ['/people/new', '/approach/new']
+const INPUT_PATHS = ['/people/new', '/approach/new', '/staff/new']
 
 /** ヘッドハンティングだけが `all` の持ち物。ここが3層を分ける唯一の線。 */
 const ALL_ONLY_PATHS = ['/headhunting']
@@ -65,6 +71,9 @@ const under = (pathname: string, prefix: string) =>
  * 線を増やすときは、増やした線をここに足す。
  */
 export const canOpen = (tier: Tier, pathname: string): boolean => {
+  // ★ ホームは全層が開く。**`under(pathname, '/')` は全部に当たる**ので、
+  //   ホームを一覧に混ぜず、完全一致で見る ―― 混ぜた瞬間に入力層が全画面を開ける。
+  if (pathname === '/') return true
   if (tier === 'input') return INPUT_PATHS.some((p) => under(pathname, p))
   if (tier === 'personal') return !ALL_ONLY_PATHS.some((p) => under(pathname, p))
   return true

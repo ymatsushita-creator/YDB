@@ -641,6 +641,49 @@ a.zoom-crumb:hover { text-decoration: none; }
    面は白のまま、値だけを少し沈めて「読むもの」と分かるようにする。 */
 
 /* =============================================================
+   スプシ形式の表（実行⑫。依頼者の指示）
+
+   ★ 面を色で塗らない（「色は線、面は黒」）。失敗した行も**線**で示す。
+   ★ 横は必ず送れるようにする。列が多い表なので、はみ出したまま切ると
+      右端の列が読めない（C-62 で踏んだ形）。
+   ============================================================= */
+
+.sheet-wrap { max-height: 70vh; overflow: auto; }
+table.data.sheet th, table.data.sheet td { padding: 4px 6px; vertical-align: middle; }
+table.data.sheet thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--color-canvas);
+}
+table.data.sheet input,
+table.data.sheet select {
+  width: 100%; min-width: 84px; box-sizing: border-box;
+  padding: 4px 6px; font-size: 13px; font-family: inherit;
+  border-radius: var(--rounded-sm);
+}
+.sheet-lead {
+  white-space: nowrap; text-align: right;
+  color: var(--color-steel); font-size: 12px; font-weight: 600;
+  text-transform: none; letter-spacing: 0;
+}
+/* 触らせない列。入力に見せない。 */
+.sheet-fixed { display: block; padding: 4px 6px; font-size: 13px; color: var(--color-steel); }
+/* 落ちた行。**線で示す**（面を塗らない）。 */
+.sheet-row-bad td, .sheet-row-bad th { border-bottom-color: var(--color-ink); }
+.sheet-row-bad th.sheet-lead { box-shadow: inset 3px 0 0 0 var(--color-semantic-error); }
+.sheet-result { white-space: nowrap; font-size: 12px; color: var(--color-ink); }
+/* 落ちた行の理由。表の右端まで送らずに読めるよう、表の下にも出す。 */
+.sheet-errors {
+  margin: var(--space-md) 0 0;
+  padding-left: var(--space-lg);
+  font-size: 13px; color: var(--color-ink);
+}
+.sheet-errors li { margin-bottom: 2px; }
+.sheet-actions {
+  display: flex; gap: var(--space-sm); align-items: center;
+  margin-top: var(--space-md);
+}
+
+/* =============================================================
    ボーダーライン（実行⑨。依頼者の画像）
    ============================================================= */
 

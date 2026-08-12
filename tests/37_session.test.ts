@@ -129,13 +129,27 @@ describe('層（実行⑪。依頼者の指示）', () => {
     }
   })
 
-  test('★ input が開けるのは入力の2枚だけ', () => {
+  test('★ input が開けるのは入力の画面とホームだけ', () => {
     assert.equal(canOpen('input', '/people/new'), true)
     assert.equal(canOpen('input', '/approach/new'), true)
+    // 入力者を追加（実行⑫）。表の「記録した人」の選択肢を増やす道である。
+    assert.equal(canOpen('input', '/staff/new'), true)
     for (const p of ['/borderline', '/people', '/approach', '/interviews',
-      '/operations', '/funnel', '/applications/x', '/']) {
+      '/operations', '/funnel', '/applications/x']) {
       assert.equal(canOpen('input', p), false, p)
     }
+  })
+
+  test('★ ホームは全層が開く。ただし「/」で全部が開いてはいけない', () => {
+    // ホームはタブの先頭なので、開けない層があると入った直後に弾かれる。
+    for (const tier of TIERS) assert.equal(canOpen(tier, '/'), true, tier)
+
+    // ★ `under(pathname, '/')` は**全部の道に当たる。** ホームを
+    //   前方一致の一覧へ混ぜると、入力層が全画面を開ける。
+    //   混ざっていないことを、開いてはいけない道で確かめる。
+    assert.equal(canOpen('input', '/headhunting'), false)
+    assert.equal(canOpen('input', '/people'), false)
+    assert.equal(canOpen('personal', '/headhunting'), false)
   })
 
   test('★ どの層も、自分の入口だけは必ず開ける（輪にならない）', () => {
