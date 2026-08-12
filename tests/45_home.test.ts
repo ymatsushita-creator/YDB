@@ -123,8 +123,11 @@ describe('タブの名称と構造', () => {
 })
 
 describe('表（スプシ形式）', () => {
-  test('★ クライアントに置いたのは表だけである', async () => {
-    // 実行⑪まで `'use client'` は 0 件だった。**増やしたのは1つだけ。**
+  test('★ クライアントに置いたのは表と追従光だけである', async () => {
+    // 実行⑪まで `'use client'` は 0 件だった。**増やしたのは2つだけ** ――
+    //   表（行の状態を持つ。C-95）
+    //   追従光（ポインタの座標を持つ。C-104。仕様書 §6）
+    // どちらも**判定と見た目を持たない。** 増えたらここで気づく。
     const found: string[] = []
     const walk = async (dir: string) => {
       for (const e of await readdir(join(ROOT, dir), { withFileTypes: true })) {
@@ -136,7 +139,8 @@ describe('表（スプシ形式）', () => {
       }
     }
     await walk('app')
-    assert.deepEqual(found, ['app/_components/sheet.tsx'])
+    assert.deepEqual(found.sort(),
+      ['app/_components/glass.tsx', 'app/_components/sheet.tsx'])
   })
 
   test('★ 表は判定を持たない（コマンドを呼ぶだけ）', async () => {

@@ -1,0 +1,492 @@
+/* =============================================================
+   リキッドグラス（依頼者の指示。実行⑫）
+
+   依頼者から仕様書（`liquid-glass-pc-spec.md`）を受領し、
+   **ボタンUIをこれで直す**という指示を受けた。決めたのは依頼者である ――
+
+     範囲   **浮いているものだけ**（操作柱のタブ・現在地の帯・ポップアップ・主ボタン）
+     背景   **敷かない**（「色は線、面は黒」の意匠規定を守る。C-71）
+     追従光 **入れる**（`'use client'` をもう1つ増やす）
+
+   ★ これは4枚目の層である。**外せば物理ボタン（実行⑨）に戻る。**
+     `tokens.css`（生成物）も `basic/DESIGN.md`（原典）も触っていない。
+
+   ---------------------------------------------------------------
+   ★★ 仕様書どおりにしていない箇所が3つある。理由を書く。 ★★
+   ---------------------------------------------------------------
+
+   ① **単色の面の上では `backdrop-filter` を使わない**（仕様 §9 の禁止事項そのもの）
+
+      操作柱と現在地の帯は**真っ黒な単色**（`--bar-face: #000`）で、
+      背後に情報が無い。ぼかしても**何も変わらないのにコストだけ掛かる。**
+      依頼者は「背景は敷かない」と決めたので、ここは
+      ティント・多段の縁・連続角丸・影・追従光で質感を作る。
+      ぼかしを入れるのは**背後にコンテンツがある浮遊物だけ**
+      （ポップアップの器）。仕様 §10 の「同時可視3枚」に収まる。
+
+   ② **`prefers-color-scheme` で切り替えない**
+
+      仕様 §3 はダークモードでティントの色を差し替えよと言う。
+      この製品の明暗は**OSの設定ではなく面で決まる** ――
+      操作柱と帯は常に黒、カードは常に白である。
+      OS の設定で白いカードのティントを暗色に差し替えると、
+      **黒い文字が暗い面に載って読めなくなる**（C-73 で踏んだ穴と同じ形）。
+      だから「暗い地の上」用のトークンを別に持つ。
+
+   ③ **主ボタンのティントは暗色にする**
+
+      仕様 §3 の既定は白の半透明だが、主ボタンは**白いカードの上に載り、
+      文字が白い。** 白の半透明にすると白地に白文字になる。
+      面は黒のまま（意匠規定どおり）で、その上に縁と追従光を重ねる。
+
+   ============================================================= */
+
+:root {
+  /* --- 1. 厚み（ぼかし量）。使うのは浮遊物だけ（上の①） --- */
+  --lg-blur-thin:    8px;
+  --lg-blur-regular: 20px;
+  --lg-blur-thick:   40px;
+
+  /* --- 2. ティント（明るい地の上） --- */
+  --lg-tint:        rgb(255 255 255 / .18);
+  --lg-tint-strong: rgb(255 255 255 / .42);
+  --lg-tint-hover:  rgb(255 255 255 / .26);
+
+  /* --- 2b. ティント（暗い地の上＝操作柱・帯）
+             ★ 白の透過率を下げても暗くならない。**色そのものを差し替える。** --- */
+  --lg-dark-tint:        rgb(28 28 32 / .55);
+  --lg-dark-tint-strong: rgb(20 20 24 / .72);
+  --lg-dark-tint-hover:  rgb(52 52 60 / .62);
+
+  /* --- 2c. ティント（★ 白い地の上に載る黒いガラス＝主ボタン）
+     ★★ 上の `--lg-dark-tint`（.55）を白いカードの上で使ったら、
+        実効の面が灰 130 になり、**白文字とのコントラストが 3.83** しか無かった
+        （基準 4.5。実測して見つけた）。C-73 と同じ穴である ――
+        **面の色を変えたら、その上の文字を必ず測り直す。**
+
+        白（255）と混ざる前提で、白文字が 4.5 を満たす濃さを計算した ――
+        実効の面は灰 117 以下でなければならず、rgb(20 20 24) なら透過率 .61 以上。
+        余裕を見て .78 にしてある（実効 72 ・ 比 7.4）。
+        ホバーは明るく**見える**が、実効 82・比 6.9 で基準を割らない。 */
+  --lg-solid:       rgb(20 20 24 / .78);
+  --lg-solid-hover: rgb(44 44 52 / .82);
+
+  /* --- 2d. ティント（白い器の上に載る白いガラス＝ポップアップの閉じる）
+     黒文字を載せるので、面は白のまま濃くする。
+     縁は白では見えないので、下と横だけ**暗い線**にする（下の規則）。 */
+  --lg-light-tint:       rgb(255 255 255 / .52);
+  --lg-light-tint-hover: rgb(255 255 255 / .70);
+  --lg-rim-ink:          rgb(26 26 26 / .18);
+  --lg-rim-ink-side:     rgb(26 26 26 / .10);
+
+  /* --- 2e. ポップアップの器のティント
+     ★★ 仕様 §8 は「**最も明るい背景と最も暗い背景の両方で** AA を満たすか
+        検証し、満たせないならティントを上げよ」と言う。
+        `--lg-tint-strong`（.42）で測ったら、**背後が暗いコンテンツのとき
+        実効 107 ・ 比 3.02** だった（要 4.5）。仕様どおり上げた ――
+        黒文字（#212121）で 4.5 を満たすには実効の面が灰 134 以上、
+        つまり黒の上での透過率は .53 以上。余裕を見て .72（実効 184 ・ 比 8.2）。
+        ★ 濃くしてもぼかしは見える。**読めることを先に満たす。** */
+  --lg-card-tint: rgb(255 255 255 / .72);
+
+  /* --- 3. 背景の吸い上げ ---
+     ★ この製品は白黒（`monochrome.css`）なので、彩度を上げても**色は出ない。**
+        意匠規定（色は線、面は黒）を破らずに仕様の項目を満たしている。
+        色が戻った日には、ここが効き始める。 */
+  --lg-saturate:   180%;
+  --lg-brightness: 1.08;
+
+  /* --- 4. 縁（光源は上）。border は使わない --- */
+  --lg-rim-top:    rgb(255 255 255 / .65);
+  --lg-rim-side:   rgb(255 255 255 / .20);
+  --lg-rim-bottom: rgb(255 255 255 / .08);
+  /* 暗い地の上では、同じ明るさの縁が浮きすぎる。 */
+  --lg-rim-top-dark:    rgb(255 255 255 / .28);
+  --lg-rim-side-dark:   rgb(255 255 255 / .10);
+  --lg-rim-bottom-dark: rgb(255 255 255 / .04);
+
+  /* --- 5. 浮遊影 --- */
+  --lg-shadow:      0 8px 32px rgb(0 0 0 / .18), 0 1px 2px rgb(0 0 0 / .10);
+  --lg-shadow-dark: 0 8px 32px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .30);
+
+  /* --- 6. 形状。ボタンは小さいので器より控えめにする --- */
+  --lg-radius:        22px;
+  --lg-radius-button: 12px;
+
+  /* --- 7. モーション --- */
+  --lg-ease: cubic-bezier(.2, .8, .2, 1);
+  --lg-dur:  .25s;
+
+  /* --- 8. 追従光の半径。ボタンは小さいので仕様の 240px では面全体が光る --- */
+  --lg-glow: 120px;
+}
+
+
+/* =============================================================
+   ボタン ―― ガラスの面（ぼかし無し。上の①）
+
+   対象は**浮いているものだけ**（依頼者の判断）。
+   一覧の中のボタン（`.bl-page` など）は物理ボタンのまま残す ――
+   ガラスは「上に浮いているもの」に使う（仕様 §9）。
+   ============================================================= */
+
+.hh-nav .sidebar-item,
+.hh-nav .sidebar-item-active,
+.hh-sidebar .btn-physical,
+.hh-year,
+.hh-search-go,
+.zoom-bar .btn-physical,
+.zoom-bar .zoom-crumb,
+.popup-close,
+.button-primary {
+  position: relative;
+  isolation: isolate;
+
+  /* 面。**単色の地の上なのでぼかしは掛けない**（何も変わらずコストだけ掛かる） */
+  background-color: var(--lg-dark-tint);
+  background-image: none;
+
+  /* 形。連続曲率。未対応の環境（Chromium 139 未満・Safari・Firefox）では
+     ふつうの円弧に落ちる ―― 落ちても形として成立する。 */
+  border-radius: var(--lg-radius-button);
+  corner-shape: squircle;
+
+  /* 縁は擬似要素が描く（下）。border は四辺が同じ明るさになり光源が消える。 */
+  border: 0;
+
+  box-shadow: var(--lg-shadow-dark);
+  transition:
+    background-color var(--lg-dur) var(--lg-ease),
+    box-shadow var(--lg-dur) var(--lg-ease);
+
+  /* ペイント境界を閉じる（仕様 §10）。 */
+  contain: paint;
+}
+
+/* --- 縁の層（仕様 §5）。多段 inset で上下に明度差をつける --- */
+.hh-nav .sidebar-item::before,
+.hh-nav .sidebar-item-active::before,
+.hh-sidebar .btn-physical::before,
+.hh-year::before,
+.hh-search-go::before,
+.zoom-bar .btn-physical::before,
+.zoom-bar .zoom-crumb::before,
+.popup-close::before,
+.button-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  corner-shape: inherit;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    inset  0  1px 0 var(--lg-rim-top-dark),
+    inset  0 -1px 0 var(--lg-rim-bottom-dark),
+    inset  1px 0 0 var(--lg-rim-side-dark),
+    inset -1px 0 0 var(--lg-rim-side-dark);
+}
+
+/* --- 追従光の層（仕様 §6）。座標は `GlassPointer` が CSS 変数へ書く --- */
+.hh-nav .sidebar-item::after,
+.hh-nav .sidebar-item-active::after,
+.hh-sidebar .btn-physical::after,
+.hh-year::after,
+.hh-search-go::after,
+.zoom-bar .btn-physical::after,
+.zoom-bar .zoom-crumb::after,
+.popup-close::after,
+.button-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  corner-shape: inherit;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity var(--lg-dur) var(--lg-ease);
+  background: radial-gradient(
+    var(--lg-glow) circle at var(--lg-mx, 50%) var(--lg-my, 50%),
+    rgb(255 255 255 / .28),
+    transparent 62%
+  );
+}
+
+/* 中身を縁と光より上に置く。ボタンの中の文字はテキストノードなので、
+   擬似要素に z-index を持たせたうえで面の合成を `isolation` で閉じている。 */
+.hh-nav .sidebar-item > *,
+.hh-nav .sidebar-item-active > *,
+.zoom-bar .zoom-crumb > *,
+.button-primary > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- 反応（仕様 §6） --- */
+.hh-nav .sidebar-item:hover,
+.hh-sidebar .btn-physical:hover,
+.hh-year:hover,
+.hh-search-go:hover,
+.zoom-bar .btn-physical:hover,
+.zoom-bar .zoom-crumb:hover,
+.popup-close:hover,
+.button-primary:hover {
+  background-color: var(--lg-dark-tint-hover);
+  /* 物理ボタンの `filter: brightness()` は使わない ――
+     祖先に filter が付くと backdrop root が変わり、
+     浮遊物のぼかしが効かなくなる（仕様 §9）。 */
+  filter: none;
+}
+
+.hh-nav .sidebar-item:hover::after,
+.hh-sidebar .btn-physical:hover::after,
+.hh-year:hover::after,
+.hh-search-go:hover::after,
+.zoom-bar .btn-physical:hover::after,
+.zoom-bar .zoom-crumb:hover::after,
+.popup-close:hover::after,
+.button-primary:hover::after {
+  opacity: 1;
+}
+
+/* 押し込み。ガラスは沈む（影を薄くし、内側に影を落とす）。 */
+.hh-nav .sidebar-item:active,
+.hh-sidebar .btn-physical:active,
+.hh-year:active,
+.hh-search-go:active,
+.zoom-bar .btn-physical:active,
+.zoom-bar .zoom-crumb:active,
+.popup-close:active,
+.button-primary:active {
+  top: 1px;
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / .45);
+}
+
+/* ★ ガラスの上でも見えるアウトライン（仕様 §11 の確認項目）。 */
+.hh-nav .sidebar-item:focus-visible,
+.hh-nav .sidebar-item-active:focus-visible,
+.hh-sidebar .btn-physical:focus-visible,
+.hh-year:focus-visible,
+.hh-search-go:focus-visible,
+.zoom-bar .btn-physical:focus-visible,
+.zoom-bar .zoom-crumb:focus-visible,
+.popup-close:focus-visible,
+.button-primary:focus-visible {
+  outline: 2px solid rgb(255 255 255 / .8);
+  outline-offset: 2px;
+}
+
+/* --- いま居る場所（選ばれているタブ・期）は**厚いガラス**にする ---
+   押せることではなく「ここに居る」ことを形で示す（実行⑨からの規律）。
+   ガラスでは「濃さ」がそれに当たる。 */
+.hh-nav .sidebar-item-active,
+.hh-year.is-on {
+  background-color: var(--lg-dark-tint-strong);
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / .45),
+    var(--lg-shadow-dark);
+}
+.hh-nav .sidebar-item-active::before,
+.hh-year.is-on::before {
+  box-shadow:
+    inset  0  1px 0 var(--lg-rim-top),
+    inset  0 -1px 0 var(--lg-rim-bottom-dark),
+    inset  1px 0 0 var(--lg-rim-side-dark),
+    inset -1px 0 0 var(--lg-rim-side-dark);
+}
+
+/* --- ★ 白い地の上に載るもの ―― 面の濃さを別に決める ---
+
+   同じティントを明るい地と暗い地の両方で使わない（C-73 の教訓）。
+   ここを間違えると、**面はきれいなのに文字が読めない**状態になる。 */
+
+/* 主ボタン（進む操作）。面は黒のまま ―― 意匠規定「面は黒」を守り、
+   白文字が 4.5 を満たす濃さにしてある（トークンの注記に計算がある）。 */
+.button-primary {
+  background-color: var(--lg-solid);
+  color: var(--color-on-primary);
+}
+.button-primary:hover { background-color: var(--lg-solid-hover); }
+/* 縁は上を明るく。黒い面なので白の縁が効く。 */
+.button-primary::before {
+  box-shadow:
+    inset  0  1px 0 var(--lg-rim-top),
+    inset  0 -1px 0 var(--lg-rim-bottom),
+    inset  1px 0 0 var(--lg-rim-side),
+    inset -1px 0 0 var(--lg-rim-side);
+}
+
+/* ポップアップの中の「閉じる」。**白い器の上に黒文字**なので、白いガラスにする。 */
+.popup-close {
+  background-color: var(--lg-light-tint);
+  color: var(--color-ink);
+}
+.popup-close:hover { background-color: var(--lg-light-tint-hover); }
+/* 白い縁は白い器の上で消える。上だけ白、下と横は**暗い線**にして形を出す。 */
+.popup-close::before {
+  box-shadow:
+    inset  0  1px 0 var(--lg-rim-top),
+    inset  0 -1px 0 var(--lg-rim-ink),
+    inset  1px 0 0 var(--lg-rim-ink-side),
+    inset -1px 0 0 var(--lg-rim-ink-side);
+}
+/* 白い面の上では白い光も見えない。**暗い光**にする（弱く、面を汚さない程度に）。 */
+.popup-close::after {
+  background: radial-gradient(
+    var(--lg-glow) circle at var(--lg-mx, 50%) var(--lg-my, 50%),
+    rgb(26 26 26 / .10),
+    transparent 62%
+  );
+}
+
+/* デモ期の破線は残す（架空データの印。0029）。ガラスでも消さない。 */
+.hh-year.is-demo {
+  outline: 1px dashed rgb(255 255 255 / .45);
+  outline-offset: -1px;
+}
+
+/* 検索の窓と行を、ボタンの形に揃える。 */
+.hh-search-input {
+  border-radius: var(--lg-radius-button);
+  corner-shape: squircle;
+}
+
+
+/* =============================================================
+   浮遊物 ―― ここだけ `backdrop-filter` を使う
+
+   背後にコンテンツがあるのはポップアップの器だけである。
+   同時に見えるガラス（ぼかし）は **1枚**（仕様 §10 は3枚まで）。
+   ============================================================= */
+
+.popup-card {
+  /* ★ `--lg-tint-strong`（.42）では**背後が暗いときに読めない**（上の 2e）。 */
+  background-color: var(--lg-card-tint);
+  /* ★★ **2つの値を違えてはいけない。** 仕様書は `-webkit-` 側から
+     `brightness()` を落とした例を載せているが、そのまま書くと
+     ビルド（Lightning CSS）が**プレフィックス無しのほうを消し、
+     `-webkit-` だけを残す。** その結果 Chromium でぼかしが1つも効かなかった
+     （画面で「ぼかしを持つ要素 0 件」と出て気づいた）。
+     **同じ値を、プレフィックス付き → 無しの順で並べる。** */
+  -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.08);
+  backdrop-filter: blur(40px) saturate(180%) brightness(1.08);
+  border: 0;
+  border-radius: var(--lg-radius);
+  corner-shape: squircle;
+  box-shadow: var(--lg-shadow);
+  /* ★ `overflow: hidden` は base.css が持っている。**contain: paint を重ねない**
+     ―― 器の中で送る作りなので、ペイント境界は既に閉じている。 */
+}
+/* 器の縁。**入れ子のガラスは作らない**（仕様 §9）ので、中のボタンには
+   ぼかしを付けていない（面と縁だけ）。 */
+.popup-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  corner-shape: inherit;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    inset  0  1px 0 var(--lg-rim-top),
+    inset  0 -1px 0 var(--lg-rim-bottom),
+    inset  1px 0 0 var(--lg-rim-side),
+    inset -1px 0 0 var(--lg-rim-side);
+}
+.popup-card > * { position: relative; z-index: 1; }
+
+
+/* =============================================================
+   フォールバック（仕様 §8）。**3つとも入れる**
+   ============================================================= */
+
+/* `backdrop-filter` 非対応。ぼかしを当てにしている器だけ、面を濃くする。 */
+@supports not (backdrop-filter: blur(1px)) {
+  .popup-card { background-color: rgb(245 245 247 / .96); }
+}
+
+/* 透過を減らす設定。**ガラスをやめる。** */
+@media (prefers-reduced-transparency: reduce) {
+  .hh-nav .sidebar-item,
+  .hh-nav .sidebar-item-active,
+  .hh-sidebar .btn-physical,
+  .hh-year,
+  .hh-search-go,
+  .zoom-bar .btn-physical,
+  .zoom-bar .zoom-crumb,
+  .popup-close,
+  .button-primary,
+  .popup-card {
+    /* 値を揃えて、プレフィックス付き → 無しの順（上の注記と同じ理由）。 */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+  }
+  .hh-nav .sidebar-item::after,
+  .hh-nav .sidebar-item-active::after,
+  .hh-sidebar .btn-physical::after,
+  .hh-year::after,
+  .hh-search-go::after,
+  .zoom-bar .btn-physical::after,
+  .zoom-bar .zoom-crumb::after,
+  .popup-close::after,
+  .button-primary::after { display: none; }
+}
+
+/* ハイコントラスト。面と縁をシステム色に任せる。 */
+@media (forced-colors: active) {
+  .hh-nav .sidebar-item,
+  .hh-nav .sidebar-item-active,
+  .hh-sidebar .btn-physical,
+  .hh-year,
+  .hh-search-go,
+  .zoom-bar .btn-physical,
+  .zoom-bar .zoom-crumb,
+  .popup-close,
+  .button-primary,
+  .popup-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: Canvas;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+  .hh-nav .sidebar-item::before,
+  .hh-nav .sidebar-item::after,
+  .hh-nav .sidebar-item-active::before,
+  .hh-nav .sidebar-item-active::after,
+  .hh-sidebar .btn-physical::before,
+  .hh-sidebar .btn-physical::after,
+  .hh-year::before, .hh-year::after,
+  .hh-search-go::before, .hh-search-go::after,
+  .zoom-bar .btn-physical::before, .zoom-bar .btn-physical::after,
+  .zoom-bar .zoom-crumb::before, .zoom-bar .zoom-crumb::after,
+  .popup-close::before, .popup-close::after,
+  .button-primary::before, .button-primary::after,
+  .popup-card::before { display: none; }
+}
+
+/* モーション低減。 */
+@media (prefers-reduced-motion: reduce) {
+  .hh-nav .sidebar-item,
+  .hh-nav .sidebar-item-active,
+  .hh-sidebar .btn-physical,
+  .hh-year,
+  .hh-search-go,
+  .zoom-bar .btn-physical,
+  .zoom-bar .zoom-crumb,
+  .popup-close,
+  .button-primary { transition: none; }
+  .hh-nav .sidebar-item::after,
+  .hh-nav .sidebar-item-active::after,
+  .hh-sidebar .btn-physical::after,
+  .hh-year::after,
+  .hh-search-go::after,
+  .zoom-bar .btn-physical::after,
+  .zoom-bar .zoom-crumb::after,
+  .popup-close::after,
+  .button-primary::after { transition: none; }
+}

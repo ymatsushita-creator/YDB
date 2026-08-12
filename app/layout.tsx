@@ -6,6 +6,10 @@ import './monochrome.css'
 // ★ ブランド配色。ロゴのグラデーションから採った色を**線と文字にだけ**入れる。
 //   面は白と黒のまま（意匠規定「色は線、面は黒」）。外せば白黒に戻る。
 import './brand.css'
+// ★ リキッドグラス（依頼者の指示。実行⑫。仕様書を受領）。
+//   **浮いているボタンだけ**をガラスにする。外せば物理ボタン（実行⑨）に戻る。
+import './glass.css'
+import { GlassPointer } from './_components/glass.tsx'
 
 export const metadata = {
   title: 'YouthDB — TALENT INTELLIGENCE',
@@ -32,7 +36,12 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* ポインタの座標を CSS 変数へ書くだけ。光は `glass.css` が描く。
+            画面を1つも描かないので、ここに置いても外枠の作りは変わらない。 */}
+        <GlassPointer />
+      </body>
     </html>
   )
 }

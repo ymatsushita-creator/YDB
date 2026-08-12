@@ -23,8 +23,10 @@ process.md   作業手順
 - 適用済みマイグレーションを編集しない。新番号で追加する
 - 書き込み判定は `src/commands/`、読み取りは `src/queries/` に置く
 - 画面は値の受け渡しと表示に限定する
-- `'use client'` は**表（`app/_components/sheet.tsx`）だけ**。増やさない（C-95）。
-  表が持つのは行の状態だけで、判定は `src/commands/sheet.ts` に置く
+- `'use client'` は**表（`app/_components/sheet.tsx`）と追従光
+  （`app/_components/glass.tsx`）の2つだけ**。増やさない（C-95 / C-104）。
+  表が持つのは行の状態、追従光が持つのはポインタの座標だけで、
+  判定は `src/commands/` に、見た目は CSS に置く
 - 操作可能な母集団と画面に出す母集団を一致させる
 - 層（権限）の判定は `src/auth/tiers.ts` の `canOpen` だけで行う。
   入口（`proxy.ts`）もタブもパンくずも同じ判定を見る（C-84）
