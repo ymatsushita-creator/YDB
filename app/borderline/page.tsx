@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import {
-  listManualTasks, listDerivedTasks, listCandidatesByConfidence, listStepTabs,
+  listCandidatesByConfidence, listStepTabs,
   listCandidatesByStep, listAppointments, getBorderlinePanel, getScoringSheet,
   listPersonNotes, getAppointmentDetail, listAttendanceCandidates,
 } from '../../src/queries/borderline.ts'
@@ -15,7 +15,7 @@ import { parseAttendanceCode, ATTENDANCE_MESSAGE } from '../../src/commands/atte
 import { ScoreSheet } from '../_components/scoring.tsx'
 import { jstDay, num, filled, NotDerived } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
-import { ApproachChip, Confidence, RankDelta, taskSentence } from '../_components/headhunting.tsx'
+import { ApproachChip, Confidence, RankDelta } from '../_components/headhunting.tsx'
 import {
   WeekCalendar, mondayOf, addDays, Rank, Avatar, MemoPopup, AttendancePopup,
 } from '../_components/borderline.tsx'
@@ -73,41 +73,7 @@ export default async function BorderlinePage({
     )
   }
 
-  const [manual, derived, stepTabs] = await Promise.all([
-    listManualTasks(db, season.id),
-    listDerivedTasks(db, season.id),
-    listStepTabs(db, season.id),
-  ])
-
-  // --- やること。出どころが2つあるので、ここで初めて合流させる ---
-  const tasks = [
-    ...manual.map((t) => ({
-      key: `m-${t.manual_task_id}`,
-      title: t.title,
-      person_name: t.person_name,
-      owner: t.owner_name,
-      urgency: t.is_overdue ? 'overdue' : t.urgency,
-      due_on: t.due_on as Date | null,
-      due_time: t.due_time,
-      waiting_days: null as number | null,
-      href: null as string | null,
-    })),
-    ...derived.map((t) => ({
-      key: `d-${t.source_id}`,
-      title: taskSentence(t.kind, t.person_name, t.step_name),
-      person_name: t.person_name,
-      owner: t.owner,
-      urgency: t.is_overdue ? 'overdue' : 'due',
-      due_on: null as Date | null,
-      due_time: null as string | null,
-      waiting_days: t.waiting_days as number | null,
-      // `source_id` は評価のID。応募のIDと取り違えると 404 になる（C-60）。
-      href: `/applications/${t.application_id}`,
-    })),
-  ].sort((a, b) => {
-    const rank = (u: string) => (u === 'overdue' ? 0 : u === 'due' ? 1 : u === 'in_progress' ? 2 : 3)
-    return rank(a.urgency) - rank(b.urgency)
-  })
+  const stepTabs = await listStepTabs(db, season.id)
 
   // --- 一覧のタブ ---
   const tabId = one(sp.tab) ?? 'confidence'
@@ -124,17 +90,6 @@ export default async function BorderlinePage({
       : Promise.resolve(null),
     step ? listCandidatesByStep(db, season.id, step.selection_step_id) : Promise.resolve(null),
   ])
-
-  // 先頭4件しか出さないので、出ていない分を数で示す。
-  // **並びは緊急度順**（期限超過が先）なので、放っておくと
-  // 「進行中」「タスク」が一度も画面に現れない年度がある。
-  const byUrgency = {
-    overdue: tasks.filter((t) => t.urgency === 'overdue').length,
-    due: tasks.filter((t) => t.urgency === 'due').length,
-    in_progress: tasks.filter((t) => t.urgency === 'in_progress').length,
-    later: tasks.filter((t) => t.urgency === 'later').length,
-  }
-
 
   // タブに載っていないステップ。件数ごと出して、隠れていないことを示す。
   const shownOrders = FIXED_TABS.flatMap((t) => (t.stepOrder === null ? [] : [t.stepOrder]))
@@ -219,44 +174,6 @@ export default async function BorderlinePage({
 
       <div className="hh-grid">
         <div className="hh-col-main">
-          {/* --- やること --- */}
-          <section className="panel-card">
-            <header className="hh-head">
-              <h2>やること</h2>
-              <Link href={`/operations?season=${season.id}`} className="hh-more">すべて見る ›</Link>
-            </header>
-            {tasks.length === 0 ? (
-              <p className="hh-empty">開いているやることは無い。</p>
-            ) : (
-              <ul className="hh-tasks">
-                {tasks.slice(0, 4).map((t) => (
-                  <li key={t.key} className="task-card">
-                    <span className={
-                      t.urgency === 'overdue' ? 'chip-amber'
-                        : t.urgency === 'in_progress' ? 'chip-green'
-                          : t.urgency === 'due' ? 'chip-blue' : 'chip-gray'
-                    }>
-                      {t.urgency === 'overdue' ? '期限超過'
-                        : t.urgency === 'in_progress' ? '進行中'
-                          : t.urgency === 'due' ? '要対応' : 'タスク'}
-                    </span>
-                    <p className="task-title">
-                      {t.href ? <Link href={t.href}>{t.title}</Link> : t.title}
-                    </p>
-                    <p className="task-meta">
-                      {t.due_on !== null && (
-                        <>{jstDay(t.due_on)}
-                          {t.due_time ? ` ${t.due_time.slice(0, 5)} まで` : ' まで'}</>
-                      )}
-                      {t.waiting_days !== null && <>{t.waiting_days} 日待ち</>}
-                      {t.owner ? <> ・ 担当 {t.owner}</> : <> ・ 担当未割当</>}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
           {/* --- 候補者リスト --- */}
           <section className="panel-card">
             <header className="hh-head">

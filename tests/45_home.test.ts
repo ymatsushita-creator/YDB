@@ -244,6 +244,14 @@ describe('一覧', () => {
   })
 })
 
+describe('特別選考', () => {
+  test('やることの画面を出さず、問い合わせも行わない', async () => {
+    const page = await read('app/borderline/page.tsx')
+    assert.doesNotMatch(page, /<h2>やること<\/h2>/)
+    assert.doesNotMatch(page, /listManualTasks|listDerivedTasks/)
+  })
+})
+
 describe('評価基準（横バー）', () => {
   /**
    * 依頼者の指示（実行⑫）――
