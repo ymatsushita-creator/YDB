@@ -367,6 +367,7 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .zoom-sep { color: var(--color-on-primary); opacity: .6; padding: 0 2px; }
 .zoom-crumb, .zoom-crumb-current {
   display: inline-flex; align-items: center; gap: 6px;
+  min-height: 42px;
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--rounded-md);
   color: var(--color-on-primary);
@@ -400,11 +401,12 @@ a.zoom-crumb:hover { text-decoration: none; }
    押せる段（btn-physical）とも、現在地（沈んだ面）とも見分けが付く形にする。 */
 .zoom-root {
   display: inline-flex; align-items: center;
+  min-height: 42px;
   padding: var(--space-xs) var(--space-md);
   color: var(--color-on-primary);
   font-size: 14px; font-weight: 700; letter-spacing: .2px;
   border-radius: var(--rounded-md);
-  border: 1px dashed rgb(255 255 255 / 45%);
+  border: 0;
 }
 
 /* 年度の切り替え —— 操作柱の一番下。**目立たせない。**
@@ -1001,6 +1003,7 @@ html, body { height: 100%; overflow: hidden; }
 .hh-search-go { padding: 0 var(--space-sm); height: 34px; }
 /* 操作柱のタブは行き先そのものなので、他のボタンより大きく取る。 */
 .sidebar-item, .sidebar-item-active {
+  min-height: 44px;
   padding: var(--space-sm) var(--space-md); border-radius: var(--rounded-lg);
   font-size: 15px;
 }

@@ -141,9 +141,13 @@ describe('リキッドグラス', () => {
     assert.ok(top !== null && bottom !== null)
     assert.ok(top! > bottom!, `上の縁が下より明るい（${top} > ${bottom}）`)
 
-    // ボタンは `border` を持たない（物理ボタンの1px を打ち消している）。
+    // ボタンは `border` を持たない（物理ボタンの1pxを打ち消す）。
     const buttonRule = css.match(/\.hh-nav \.sidebar-item,[\s\S]*?\{([\s\S]*?)\}/)
     assert.match(buttonRule![1]!, /border:\s*0/)
+
+    // 実行⑬の指示で、ボタンだけは疑似要素の鏡面リムも外す。
+    assert.match(css,
+      /\.popup-close::before,\s*\.button-primary::before\s*\{\s*box-shadow:\s*none;/)
   })
 
   // -----------------------------------------------------------

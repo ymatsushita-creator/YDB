@@ -331,6 +331,21 @@
     inset  1px 0 0 var(--lg-rim-ink-side),
     inset -1px 0 0 var(--lg-rim-ink-side);
 }
+
+/* 実行⑬：ボタンの外周線は出さない。
+   `border: 0` だけでは上の疑似要素が四辺を描くため、選択中を含む
+   ボタンに限って鏡面リムも外す。面と影は残すので、押せる形は失わない。 */
+.hh-nav .sidebar-item::before,
+.hh-nav .sidebar-item-active::before,
+.hh-sidebar .btn-physical::before,
+.hh-year::before,
+.hh-search-go::before,
+.zoom-bar .btn-physical::before,
+.zoom-bar .zoom-crumb::before,
+.popup-close::before,
+.button-primary::before {
+  box-shadow: none;
+}
 /* 白い面の上では白い光も見えない。**暗い光**にする（弱く、面を汚さない程度に）。 */
 .popup-close::after {
   background: radial-gradient(
