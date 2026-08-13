@@ -35,8 +35,9 @@
             **依頼者の判断でミラーへは push しない。** 古いまま残る
 ```
 
-★ 接続先は `.vercel/project.json`（gitignore 済み）にあり、**リポジトリから見張れない。**
-`vercel link` で別プロジェクトへ繋ぎ替えると、デプロイが黙って別の場所へ行く。
+**出すときは `pnpm deploy:production` を使う**（C-124）。`.vercel/project.json` を
+読んで約束した先かを指紋で照合し、名乗ってから `vercel --prod` を渡す。
+読めない・違う先なら**出さない**。`vercel --prod` を直に打つと照合を飛ばせる。
 
 ### ★ 本番はデモモードのまま（C-94）
 
@@ -174,7 +175,7 @@ pnpm exec tsc --noEmit
 pnpm build
 ```
 
-現在 **590件 全通過**。`tsc` / `build` クリーン。
+現在 **595件 全通過**。`tsc` / `build` クリーン。
 
 見張りとして置いてあるもの ――
 
@@ -185,8 +186,9 @@ tests/48_criteria_weighting.test.ts 重み付け（必須/加点）と、軸を�
 tests/50_partner_recommendation.test.ts 推薦枠が期ごとに分かれているか
 tests/51_migration_provenance.test.ts  **誰が適用したかが帳簿に残るか**
 tests/52_season3_alignment.test.ts     **本番の形に 0006 を当てても収束するか**
+tests/53_deploy_target.test.ts          **デプロイ先が約束した1つのままか**
 tests/10_decisions_references.test.ts  DECISIONS が実在しないテストを指していないか
 ```
 
-変更理由は `db/DECISIONS.md` に **C-124 から**追記し、
+変更理由は `db/DECISIONS.md` に **C-125 から**追記し、
 次の報告書は `REPORT-15.0.md` とする。

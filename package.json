@@ -12,6 +12,7 @@
     "db:migrate:production": "node --env-file-if-exists=.env.local scripts/db-migrate-production.ts",
     "db:backup": "node --env-file-if-exists=.env.local scripts/db-backup.ts",
     "db:restore": "node --env-file-if-exists=.env.local scripts/db-restore.ts",
+    "deploy:production": "node scripts/deploy-production.ts",
     "import:legacy:2026": "node scripts/import-legacy-2026.ts",
     "import:approach:2026": "node --env-file-if-exists=.env.local scripts/import-approach-2026.ts",
     "seed:demo-season": "node --env-file-if-exists=.env.local scripts/seed-demo-season.ts",
