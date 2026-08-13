@@ -1439,8 +1439,9 @@ html, body { height: 100%; overflow: hidden; }
 }
 .hh-criteria-axis {
   display: inline-flex; align-items: center; gap: 4px;
-  /* 依頼者の指示で大きくした（10px → 13px。実行⑭）。1行なので高さに余裕がある。 */
-  font-size: 13px; font-weight: 600; line-height: 1.2;
+  /* 依頼者の指示で2度大きくした（10px → 13px → **16px**。実行⑭ / 実行⑮）。
+     1行に収めているので、帯の高さ（--logo-h = 67px）にはまだ余裕がある。 */
+  font-size: 16px; font-weight: 600; line-height: 1.2;
   color: var(--color-on-dark-muted);
 }
 /* ★ 重み付けの札（必須／加点）は**消した**（依頼者の指示。実行⑮。C-134）。
