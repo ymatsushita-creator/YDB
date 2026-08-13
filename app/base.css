@@ -1386,16 +1386,21 @@ html, body { height: 100%; overflow: hidden; }
   .hh-criteria-group[aria-hidden="true"] { display: none; }
 }
 .home-dashboard {
-  height: calc(100vh - var(--logo-h) - 112px);
+  height: calc(100vh - var(--logo-h) - 108px);
   min-height: 420px; overflow: hidden;
-  display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--space-md);
+  display: grid; grid-template-rows: 104px minmax(0, 1fr); gap: var(--space-md);
 }
 .home-dashboard .section { margin: 0; min-height: 0; }
 .home-dashboard .panel-card { height: 100%; overflow: hidden; }
 .home-dashboard .pick-card { padding: var(--space-sm); }
-.home-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); }
-.home-detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr); gap: var(--space-md); min-height: 0; }
-.home-metric { display: grid; grid-template-columns: minmax(110px, auto) minmax(100px, 1fr); align-items: center; gap: var(--space-sm); margin-top: var(--space-xs); font-size: 14px; }
-.home-metric-bar { position: relative; height: 30px; overflow: hidden; border-radius: var(--rounded-md); background: var(--color-surface); }
-.home-metric-bar > span { position: absolute; inset: 0 auto 0 0; min-width: 30px; background: var(--color-brand-green); border-radius: inherit; }
-.home-metric-bar strong { position: relative; z-index: 1; display: flex; align-items: center; height: 100%; padding: 0 var(--space-xs); font-variant-numeric: tabular-nums; }
+.home-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
+.home-detail-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, .75fr); gap: var(--space-md); min-height: 0; }
+.home-kpi {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: var(--space-md); border-radius: var(--rounded-xl);
+  background: var(--color-canvas); box-shadow: 0 2px 8px rgb(20 27 36 / 6%);
+}
+.home-kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(#f03090, #f0f000, #50f000, #00c0f0); }
+.home-kpi-label { color: var(--color-steel); font-size: 13px; font-weight: 600; line-height: 1.2; }
+.home-kpi-value { color: var(--color-ink); font-size: clamp(28px, 3vw, 42px); line-height: 1; font-variant-numeric: tabular-nums; }

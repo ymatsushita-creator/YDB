@@ -14,14 +14,11 @@ import { Shell, Breadcrumb, YearSwitch, seasonLabel } from './_components/shell.
 
 export const dynamic = 'force-dynamic'
 
-function HomeMetric({ label, value, max }: { label: string; value: number; max: number }) {
+function HomeKpi({ label, value }: { label: string; value: number }) {
   return (
-    <div className="home-metric">
-      <span>{label}</span>
-      <span className="home-metric-bar">
-        <span style={{ width: `${Math.max(3, value / Math.max(1, max) * 100)}%` }} />
-        <strong>{num(value)}</strong>
-      </span>
+    <div className="home-kpi">
+      <span className="home-kpi-label">{label}</span>
+      <strong className="home-kpi-value">{num(value)}</strong>
     </div>
   )
 }
@@ -98,10 +95,9 @@ export default async function Home(
     { key: 'candidates' as const, label: '候補者', color: '#f03090' },
     { key: 'partners' as const, label: '連携団体数', color: '#f0f000' },
     { key: 'regular_a' as const, label: '通常選考者（確度A以上）', color: '#50f000' },
-    { key: 'special' as const, label: '特別選考者', color: '#00c0f0' },
+    { key: 'special' as const, label: '特別選考者', color: '#00c0f0', dashed: true },
   ]
   const latest = trends.at(-1) ?? { candidates: 0, partners: 0, regular_a: 0, special: 0 }
-  const metricMax = Math.max(1, latest.candidates, latest.partners, latest.regular_a, latest.special)
 
   return (
     <Shell
@@ -120,16 +116,10 @@ export default async function Home(
 
       <div className="home-dashboard">
         <div className="home-summary-grid">
-          <Card title="候補者">
-            <HomeMetric label="候補者" value={latest.candidates} max={metricMax} />
-          </Card>
-          <Card title="連携団体">
-            <HomeMetric label="連携団体数" value={latest.partners} max={metricMax} />
-          </Card>
-          <Card title="選考状況">
-            <HomeMetric label="通常選考者（確度A以上）" value={latest.regular_a} max={metricMax} />
-            <HomeMetric label="特別選考者" value={latest.special} max={metricMax} />
-          </Card>
+          <HomeKpi label="候補者" value={latest.candidates} />
+          <HomeKpi label="連携団体" value={latest.partners} />
+          <HomeKpi label="通常選考 A以上" value={latest.regular_a} />
+          <HomeKpi label="特別選考" value={latest.special} />
         </div>
 
         <div className="home-detail-grid">
@@ -137,7 +127,7 @@ export default async function Home(
           <Card title="推移">
             {trends.length < 2 ? <Empty>推移を描ける記録がまだ無い</Empty> : (
               <>
-                <TimeSeries points={trends} series={series} height={210} valueLabel="候補者と選考" />
+                <TimeSeries points={trends} series={series} height={300} valueLabel="候補者と選考" />
                 <Legend series={series} />
               </>
             )}
