@@ -172,6 +172,16 @@ export default async function BorderlinePage({
         ]}
       />
 
+      {/* ★ 試運転の手順（`/pilot`）へ入る道。**その画面は「通常選考 › 試運転」と
+          名乗っているのに、どこからもリンクされていなかった**（実行⑬で数えて分かった）。
+          名乗った親から繋ぐ ―― 手打ちのURLでしか開けない画面は、無いのと同じである。
+          Pilot は HOLD のままで、これは足場である（観測が取れたら消してよい）。 */}
+      <p className="pilot-entry">
+        <Link href={`/pilot?season=${season.id}`} className="hh-more">
+          試運転の手順（30 分）›
+        </Link>
+      </p>
+
       <div className="hh-grid">
         <div className="hh-col-main">
           {/* --- 候補者リスト --- */}

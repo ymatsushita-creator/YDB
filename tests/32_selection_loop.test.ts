@@ -36,7 +36,7 @@ describe('選考フローを回し続ける', () => {
       `SELECT id FROM seasons WHERE cohort_number = 2`)
     steps = await all<{ id: string; sort_order: number }>(db,
       `SELECT id, sort_order FROM selection_steps
-        WHERE season_id = $1 ORDER BY sort_order`, [seasonId])
+        WHERE season_id = $1 AND name <> '特別選考' ORDER BY sort_order`, [seasonId])
     schoolId = await scalar<string>(db,
       `INSERT INTO schools (name) VALUES ('架空高校') RETURNING id`)
     staff = (await all<{ id: string }>(db, `

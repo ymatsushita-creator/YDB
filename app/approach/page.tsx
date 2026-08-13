@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
+import { all } from '../../src/db/client.ts'
 import {
   listSeasons, defaultSeason, getSeason, getPartnerReach, getReachTotals,
   getChannelAttribution, REACH_WINDOW_DAYS,
@@ -37,9 +38,15 @@ export default async function ApproachPage(
     getReachTotals(db, season.id),
     getChannelAttribution(db, season.id),
     // 実行⑫。表（入力）が読む行。**集計とは別のクエリ**である。
-    listPartnerSheetRows(db),
+    // 推薦枠ステイタス（0035）は期ごとなので、どの期で読むかを渡す。
+    listPartnerSheetRows(db, season.id),
     getIntakeOptions(db),
   ])
+
+  // 推薦枠ステイタスのマスタ（0035）。**非活性は選ばせない**（原則3）。
+  const recommendationStates = await all<{ id: string; label: string }>(db, `
+    SELECT id, label FROM partner_recommendation_states
+     WHERE is_active ORDER BY sort_order`)
 
   const reachTotal = Number(totals?.estimated_reach_total ?? 0)
   const identified = Number(totals?.identified_persons ?? 0)
@@ -64,9 +71,17 @@ export default async function ApproachPage(
   const partnerColumns: SheetColumn[] = [
     { key: 'category', label: '分類', type: 'text', width: 120 },
     { key: 'contactName', label: '窓口', type: 'text', width: 120 },
+    // 先方のどの部署か／NEO 側の受け持ち（0034。応募管理表 011 にあってDBに無かった）。
+    { key: 'contactDepartment', label: '担当部署', type: 'text', width: 180 },
     { key: 'contactEmail', label: '窓口のメール', type: 'email', width: 190 },
+    { key: 'internalOwner', label: '社内担当', type: 'text', width: 110 },
     // NEO としてどう関わるか（0031）。自由入力の1行（依頼者の判断）。
     { key: 'engagement', label: 'NEO としての関わり', type: 'text', width: 220 },
+    // 推薦枠ステイタス（0035）。**その期のもの**を出す（期を変えれば変わる）。
+    {
+      key: 'recommendationStateId', label: '推薦枠', type: 'select', width: 150,
+      options: recommendationStates.map((s) => ({ id: s.id, label: s.label })),
+    },
     { key: 'staffId', label: '入力者', type: 'select', options: options.staffs, width: 130 },
   ]
 
@@ -158,12 +173,16 @@ export default async function ApproachPage(
                 values: {
                   category: p.category ?? '',
                   contactName: p.contact_name ?? '',
+                  contactDepartment: p.contact_department ?? '',
                   contactEmail: p.contact_email ?? '',
+                  internalOwner: p.internal_owner ?? '',
                   engagement: p.engagement ?? '',
+                  recommendationStateId: p.recommendation_state_id ?? '',
                   staffId: '',
                 },
               }))}
               action={savePartnerSheetAction}
+              hidden={{ seasonId: season.id }}
               leadLabel="団体"
               detail={{
                 href: `/approach?season=${season.id}&view=edit&partner={id}`,
@@ -178,6 +197,16 @@ export default async function ApproachPage(
       {/* 団体の行を開いた先。**その団体の接触だけ**を並べる（依頼者の指示）。 */}
       {openPartner && (
         <div className="section" hidden={view !== 'edit'}>
+          {/* ★ この団体の面（`/reach-zones/{id}`）へ行けるようにする。
+              その画面はパンくずに「連携団体 › 団体名」を出しているのに、
+              **どこからもリンクされていなかった** ―― 名指しの URL を打つ以外に
+              入る道が無い階層は、無いのと同じである。 */}
+          <p>
+            <Link className="hh-more"
+                  href={`/reach-zones/${openPartner.partner_id}?season=${season.id}`}>
+              {openPartner.name} の面を見る ›
+            </Link>
+          </p>
           <Card title={`${openPartner.name} の接触`}>
             <Sheet
               columns={reachColumns}

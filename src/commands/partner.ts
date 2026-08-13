@@ -226,3 +226,73 @@ export const UPDATE_REACH_MESSAGE: Record<UpdateReachFailure | 'saved', string> 
   bad_estimate: '推定リーチは 0 以上の整数で入れる。分からなければ空のまま。',
   staff_not_found: '記録した人が見つからない。',
 }
+
+
+// -------------------------------------------------------------
+// 推薦枠ステイタス（0035）
+// -------------------------------------------------------------
+
+export type SetRecommendationFailure =
+  | 'partner_not_found' | 'season_not_found' | 'state_not_found' | 'staff_not_found'
+
+export type SetRecommendationResult =
+  | { ok: true; changed: boolean }
+  | { ok: false; reason: SetRecommendationFailure }
+
+/**
+ * 団体 × 期の推薦枠ステイタスを置く（0035。依頼者の判断に委ねられた3つのうちの1つ）。
+ *
+ * ★ 形は `setPersonApproachState`（0016）と同じ ―― **追記専用の出来事**を積み、
+ *   現在値はビューが最新から導く。同じ性質のものに別の形を与えない。
+ *
+ * ★ **期ごとに持つ。** 「2期生推薦枠ステイタス」は期の言葉であって、
+ *   団体の現在値を1つ持つと 3期を入れた瞬間に 2期が消える。
+ *
+ * ★ 同じ状態をもう一度置いても**出来事を積まない。**
+ *   積むと「その日に動きがあった」という意味が生まれる（0031 と同じ判断）。
+ */
+export async function setPartnerRecommendationState(
+  db: Db,
+  input: { partnerId: string; seasonId: string; stateId: string; staffId: string; note?: string },
+): Promise<SetRecommendationResult> {
+  if (!UUID.test(input.partnerId)) return { ok: false, reason: 'partner_not_found' }
+  if (!UUID.test(input.seasonId)) return { ok: false, reason: 'season_not_found' }
+  if (!UUID.test(input.stateId)) return { ok: false, reason: 'state_not_found' }
+  if (!UUID.test(input.staffId)) return { ok: false, reason: 'staff_not_found' }
+
+  // 参照先を1つずつ確かめる。**どれが無いのかを言えるようにする**
+  // （まとめて EXISTS で見ると「見つからない」としか言えない）。
+  const found = await maybeOne<{
+    partner: boolean; season: boolean; state: boolean; staff: boolean
+  }>(db, `
+    SELECT EXISTS (SELECT 1 FROM partners WHERE id = $1)                       AS partner,
+           EXISTS (SELECT 1 FROM seasons  WHERE id = $2)                       AS season,
+           EXISTS (SELECT 1 FROM partner_recommendation_states
+                    WHERE id = $3 AND is_active)                               AS state,
+           EXISTS (SELECT 1 FROM staffs   WHERE id = $4 AND is_active)         AS staff`,
+  [input.partnerId, input.seasonId, input.stateId, input.staffId])
+  if (!found?.partner) return { ok: false, reason: 'partner_not_found' }
+  if (!found.season) return { ok: false, reason: 'season_not_found' }
+  if (!found.state) return { ok: false, reason: 'state_not_found' }
+  if (!found.staff) return { ok: false, reason: 'staff_not_found' }
+
+  const now = await maybeOne<{ state_id: string }>(db, `
+    SELECT state_id FROM v_partner_recommendation_state
+     WHERE partner_id = $1 AND season_id = $2`, [input.partnerId, input.seasonId])
+  if (now?.state_id === input.stateId) return { ok: true, changed: false }
+
+  await db.query(`
+    INSERT INTO partner_recommendation_events
+      (partner_id, season_id, state_id, occurred_at, recorded_by_staff_id, note)
+    VALUES ($1, $2, $3, now(), $4, nullif(btrim($5, E' \t\n\r　'), ''))`,
+  [input.partnerId, input.seasonId, input.stateId, input.staffId, input.note ?? null])
+
+  return { ok: true, changed: true }
+}
+
+export const SET_RECOMMENDATION_MESSAGE: Record<SetRecommendationFailure, string> = {
+  partner_not_found: 'その団体が見つからない。',
+  season_not_found: 'その期が見つからない。',
+  state_not_found: 'その推薦枠ステイタスは選べない。',
+  staff_not_found: '入力者が選ばれていない。',
+}

@@ -122,14 +122,15 @@ try {
   // ③ 判断軸9つ。**運営の語をそのまま**（こちらで言い換えない）。
   //    点の幅は既存の面接軸と同じ4段。表に点の定義が無いので、
   //    **点そのものは取り込まない**（面談の所見は文章のままメモへ）。
+  //    重み付け（A〜C=必須 / D〜I=加点）は kind として保存する（0033）。
   let axesAdded = 0
   for (const [i, axis] of JUDGEMENT_AXES.entries()) {
     const r = await db.query<{ id: string }>(`
-      INSERT INTO evaluation_criteria (selection_step_id, name, scale_max, sort_order)
-      VALUES ($1, $2, 4, $3)
+      INSERT INTO evaluation_criteria (selection_step_id, name, scale_max, sort_order, kind)
+      VALUES ($1, $2, 4, $3, $4)
       ON CONFLICT (selection_step_id, sort_order) DO NOTHING
       RETURNING id`,
-    [stepId, axis.name, i + 1])
+    [stepId, axis.name, i + 1, axis.kind])
     axesAdded += r.rows.length
   }
 

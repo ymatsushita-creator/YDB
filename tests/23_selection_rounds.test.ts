@@ -41,7 +41,7 @@ async function world(db: Db): Promise<World> {
     `SELECT id FROM seasons WHERE enrollment_year = 2026`)
   const steps = await all<{ id: string; name: string; sort_order: number }>(
     db, `SELECT id, name, sort_order FROM selection_steps
-          WHERE season_id = $1 ORDER BY sort_order`, [season.id])
+          WHERE season_id = $1 AND name <> '特別選考' ORDER BY sort_order`, [season.id])
   const schoolId = await scalar<string>(
     db, `INSERT INTO schools (name) VALUES ('架空高校') RETURNING id`)
   const staff = (await all<{ id: string }>(db, `
@@ -161,15 +161,19 @@ describe('選考を20周まわす（順序と分岐を毎周変える）', () =>
     const db = await freshDb({ seeds: 'production' })
     const w = await world(db)
     const rand = rng(20260807)
-    const last = w.steps.at(-1)!.sort_order
+    // ★ 落とす段・保留する段は、**実在する段の sort_order から選ぶ。**
+    //   1..last の連番を仮定すると、特別選考を先頭へ足して段が 2..5 へ
+    //   ずれた（0005）とき、どの段にも当たらない値を引いて「落としたはずが
+    //   通ってしまう」。w.steps は運用4段（特別選考を除く）。
+    const pickStep = () => w.steps[Math.floor(rand() * w.steps.length)]!.sort_order
 
     let expectedAccepted = 0
     for (let round = 1; round <= 20; round++) {
       const appId = await newApplication(w, `候補${round}`)
 
       // 周ごとに道を変える。どこで落ちるか / 保留を挟むか / 誰が見るか。
-      const rejectAt = rand() < 0.35 ? 1 + Math.floor(rand() * last) : null
-      const holdAt = rand() < 0.3 ? 1 + Math.floor(rand() * last) : null
+      const rejectAt = rand() < 0.35 ? pickStep() : null
+      const holdAt = rand() < 0.3 ? pickStep() : null
       const withdraw = rejectAt === null && rand() < 0.15
 
       if (withdraw) {

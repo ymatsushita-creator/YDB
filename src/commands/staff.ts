@@ -51,3 +51,50 @@ export const ADD_STAFF_MESSAGE: Record<AddStaffFailure | 'saved' | 'saved_duplic
   name_required: '名前が空。',
   name_too_long: `名前が長すぎる（${STAFF_NAME_MAX} 文字まで）。`,
 }
+
+export type RenameStaffFailure = AddStaffFailure | 'staff_not_found'
+
+export type RenameStaffResult =
+  | { ok: true; changed: boolean; duplicateName: boolean }
+  | { ok: false; reason: RenameStaffFailure }
+
+/**
+ * 入力者の名前を直す（実行⑬。表から直せるようにするため）。
+ *
+ * ★ 判定は `addStaff` と同じ規則（空でない・長さの上限・重複は止めない）。
+ *   入口が増えても規則は1つ ―― 表のために判定を書き直さない。
+ *
+ * ★ 打ち間違いを直すためのものである。**別人に付け替える道ではない。**
+ *   名前は職員の同一性そのものなので（見分ける手段が名前しか無い。C-96）、
+ *   直すと過去の「記録した人」もその名前で読まれることになる。
+ *   それでも直せるようにしたのは、**直す道が無いほうが害が大きい**ためである
+ *   ―― 打ち間違えた名前は選択肢に残り続け、選ぶたびに間違いが増える。
+ *
+ * ★ 変わっていなければ触らない（意味の無い更新をしない）。
+ */
+export async function renameStaff(
+  db: Db, input: { staffId: string; displayName: string },
+): Promise<RenameStaffResult> {
+  const name = input.displayName.trim()
+  if (name === '') return { ok: false, reason: 'name_required' }
+  if (name.length > STAFF_NAME_MAX) return { ok: false, reason: 'name_too_long' }
+
+  const now = await maybeOne<{ display_name: string }>(db,
+    `SELECT display_name FROM staffs WHERE id = $1`, [input.staffId])
+  if (!now) return { ok: false, reason: 'staff_not_found' }
+  if (now.display_name === name) return { ok: true, changed: false, duplicateName: false }
+
+  const existing = await maybeOne(db,
+    `SELECT 1 FROM staffs WHERE display_name = $1 AND id <> $2`, [name, input.staffId])
+
+  await db.query(
+    `UPDATE staffs SET display_name = $2 WHERE id = $1`, [input.staffId, name])
+
+  return { ok: true, changed: true, duplicateName: existing !== null }
+}
+
+export const RENAME_STAFF_MESSAGE: Record<RenameStaffFailure, string> = {
+  name_required: '名前が空。',
+  name_too_long: `名前が長すぎる（${STAFF_NAME_MAX} 文字まで）。`,
+  staff_not_found: 'その入力者が見つからない。',
+}

@@ -130,7 +130,10 @@ describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
 })
 
 describe('本番シードの選考ステップ', () => {
-  test('ステップは4つで、この順番である', async () => {
+  test('ステップは5つで、この順番である（特別選考が先頭。0005）', async () => {
+    // 応募管理表 013_選考フロー の特別選考フローは、事前面談を応募より
+    // 前に置く。事前面談は応募より前の関門なので sort_order は先頭。
+    // 最終面接は最後のまま（合格の定義を動かさない）。
     const db = await productionDb()
     const rows = await all<{ sort_order: number; name: string }>(
       db,
@@ -140,10 +143,11 @@ describe('本番シードの選考ステップ', () => {
     )
 
     assert.deepEqual(rows, [
-      { sort_order: 1, name: '応募受付' },
-      { sort_order: 2, name: '書類選考' },
-      { sort_order: 3, name: 'グループ面接' },
-      { sort_order: 4, name: '最終面接' },
+      { sort_order: 1, name: '特別選考' },
+      { sort_order: 2, name: '応募受付' },
+      { sort_order: 3, name: '書類選考' },
+      { sort_order: 4, name: 'グループ面接' },
+      { sort_order: 5, name: '最終面接' },
     ])
     await db.close()
   })
@@ -178,15 +182,23 @@ describe('本番シードの選考ステップ', () => {
     await db.close()
   })
 
-  test('SLA と通過基準は入れていない（運用時に決める値で、旧システムに記録が無い）', async () => {
+  test('SLA は入れていない（運用時に決める値で、旧システムに記録が無い）', async () => {
     const db = await productionDb()
-    const filled = await scalar<number>(
+    const sla = await scalar<number>(
+      db,
+      `SELECT count(*)::int FROM selection_steps WHERE sla_days IS NOT NULL`,
+    )
+    assert.equal(sla, 0, '推測の SLA が入ると、根拠のない日数で超過が鳴る')
+
+    // 通過基準（pass_criteria）は「決定者への参考情報」で自動判定には使わない。
+    // 特別選考だけ、応募管理表の枠の目的をそのまま持つ（0005）。
+    // 運用の4段（応募受付・書類選考・グループ面接・最終面接）は推測を入れない。
+    const guessed = await scalar<number>(
       db,
       `SELECT count(*)::int FROM selection_steps
-        WHERE sla_days IS NOT NULL OR pass_criteria IS NOT NULL`,
+        WHERE pass_criteria IS NOT NULL AND name <> '特別選考'`,
     )
-
-    assert.equal(filled, 0, '推測の SLA が入ると、根拠のない日数で超過が鳴る')
+    assert.equal(guessed, 0, '運用段に根拠のない通過基準を入れない')
     await db.close()
   })
 })
@@ -268,10 +280,11 @@ describe('シードは何度流しても増えない', () => {
     const db = await productionDb()
     await seed(db)
 
-    // 期は2つ。ステップは 2期の4本＋3期の3本＝7本。軸を持つのは2期だけ。
+    // 期は2つ。ステップは 2期の5本（特別選考を先頭に足した。0005）＋3期の3本＝8本。
+    // 軸は2期の 最終面接6 ＋ 特別選考9 ＝ 15。2回流しても増えない。
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 2)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 7)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 6)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 8)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 15)
     await db.close()
   })
 })

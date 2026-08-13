@@ -2,14 +2,17 @@ import Link from 'next/link'
 import { getDb } from '../../../src/db/server.ts'
 import { all } from '../../../src/db/client.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
-import { ADD_STAFF_MESSAGE, STAFF_NAME_MAX } from '../../../src/commands/staff.ts'
-import { addStaffAction } from './actions.ts'
-import { Card, Empty } from '../../_components/ui.tsx'
+import { saveStaffSheetAction } from './sheet-actions.ts'
+import { Card } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, seasonLabel } from '../../_components/shell.tsx'
+import { Sheet, type SheetColumn } from '../../_components/sheet.tsx'
+
+/** 持つのは表示名だけ（依頼者の判断。C-96）。 */
+const staffColumns: SheetColumn[] = [
+  { key: 'displayName', label: '名前', type: 'text', width: 240 },
+]
 
 export const dynamic = 'force-dynamic'
-
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
 /**
  * 入力者を追加（依頼者の指示。実行⑫）。
@@ -29,16 +32,11 @@ export default async function NewStaffPage({
   const db = await getDb()
 
   const seasons = await listSeasons(db)
-  const season = (await getSeason(db, sp.season)) ?? defaultSeason(seasons)
+  const season = (await getSeason(db, Array.isArray(sp.season) ? sp.season[0] : sp.season))
+    ?? defaultSeason(seasons)
 
   const staffs = await all<{ id: string; label: string; is_active: boolean }>(db, `
     SELECT id, display_name AS label, is_active FROM staffs ORDER BY display_name`)
-
-  const code = one(sp.add)
-  const message = code
-    ? ADD_STAFF_MESSAGE[code as keyof typeof ADD_STAFF_MESSAGE] ?? '追加できなかった。'
-    : null
-  const ok = code === 'saved' || code === 'saved_duplicate'
 
   return (
     <Shell active="headhunting" seasonId={season?.id}>
@@ -52,8 +50,6 @@ export default async function NewStaffPage({
         ]}
       />
 
-      {message && <p className={`callout${ok ? ' ok' : ''}`}>{message}</p>}
-
       <div className="page-head">
         <div>
           <h1 className="page-title">入力者を追加</h1>
@@ -61,41 +57,25 @@ export default async function NewStaffPage({
       </div>
 
       <div className="section">
+        {/* ★ 実行⑬で表（スプシ形式）にした（依頼者の指示 ――
+            「面接シート以外のフォームがスプシ形式になっているか」）。
+            1件ずつの素のフォームでは**まとめて足せず、打ち間違いも直せなかった。**
+            既存の入力者も同じ表に並ぶので、読むための表を別に持たない
+            （同じものを2つの形で出さない）。 */}
         <Card title="入力者">
-          <form action={addStaffAction} className="editable-region">
-            {season && <input type="hidden" name="season" value={season.id} />}
-            <label className="iv-field">名前
-              <input name="displayName" required maxLength={STAFF_NAME_MAX}
-                     autoComplete="off" />
-            </label>
-            <button type="submit" className="button-primary">追加する</button>
-          </form>
-        </Card>
-      </div>
-
-      <div className="section">
-        <Card title="いま登録されている入力者">
-          {staffs.length === 0 ? (
-            <Empty>まだ1人も登録されていない</Empty>
-          ) : (
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr><th>名前</th><th>選べるか</th></tr>
-                </thead>
-                <tbody>
-                  {staffs.map((s) => (
-                    <tr key={s.id}>
-                      <td className="cell-name">{s.label}</td>
-                      {/* 非活性の人は表の選択肢に出ない。ここには出す ――
-                          「居ないのに選べない」と「非活性で選べない」は別である。 */}
-                      <td>{s.is_active ? '選べる' : '選べない（非活性）'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <Sheet
+            columns={staffColumns}
+            rows={staffs.map((s) => ({
+              id: s.id,
+              // 非活性は表の選択肢に出ない。ここには出す ――
+              // 「居ないのに選べない」と「非活性で選べない」は別である。
+              lead: s.is_active ? '選べる' : '選べない（非活性）',
+              values: { displayName: s.label },
+            }))}
+            action={saveStaffSheetAction}
+            leadLabel="選べるか"
+            addLabel="行を追加"
+          />
         </Card>
       </div>
 

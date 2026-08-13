@@ -101,6 +101,9 @@ export interface SeasonCriterion {
   name: string
   scale_max: number
   sort_order: number
+  /** 重み付け（応募管理表の「特別選考」シートの2段。0033）。
+   *  'required' 必須の前提 ／ 'strong' 加点 ／ 'standard' 段分け無し。 */
+  kind: 'standard' | 'required' | 'strong'
 }
 
 /**
@@ -123,7 +126,7 @@ export const listSeasonCriteria = (db: Db, seasonId: string | undefined) => {
   if (!seasonId || !UUID.test(seasonId)) return Promise.resolve([])
   return all<SeasonCriterion>(db, `
     SELECT ss.name AS step_name, ss.sort_order AS step_order,
-           ec.name, ec.scale_max, ec.sort_order
+           ec.name, ec.scale_max, ec.sort_order, ec.kind
       FROM evaluation_criteria ec
       JOIN selection_steps ss ON ss.id = ec.selection_step_id
      WHERE ss.season_id = $1

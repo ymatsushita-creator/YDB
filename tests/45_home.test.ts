@@ -78,6 +78,25 @@ describe('ホーム', () => {
     const src = await read('app/page.tsx')
     assert.match(src, /listConfidence\(db, season\.id, 3\)/)
   })
+
+  test('⑥ 各セクションから詳細タブへ飛べる（依頼者の指示）', async () => {
+    const src = await body('app/page.tsx')
+    // 4つのサマリーと2つのカードが、それぞれの詳細へ行き先を持つ。
+    assert.match(src, /label="候補者"[^>]*href=\{to\('\/people'\)\}/)
+    assert.match(src, /label="連携団体"[^>]*href=\{to\('\/approach'\)\}/)
+    assert.match(src, /label="通常選考 A以上"[^>]*href=\{to\('\/borderline'\)\}/)
+    assert.match(src, /label="特別選考"[^>]*href=\{to\('\/headhunting'\)\}/)
+    assert.match(src, /Card title="推移" titleHref=\{to\('\/funnel'\)\}/)
+    assert.match(src, /Card title="ピックアップ候補者" titleHref=\{to\('\/headhunting'\)\}/)
+  })
+
+  test('⑥ 行き先は canOpen で守る（タブと同じ線。2箇所に書かない）', async () => {
+    const src = await body('app/page.tsx')
+    // 開ける層にだけリンクを渡す判定は canOpen を通す。
+    assert.match(src, /canOpen\(/, '行き先の判定は canOpen を見る')
+    // ホーム専用の層判定（'personal' などのべた書き分岐）を新設していない。
+    assert.doesNotMatch(src, /tier === 'personal'/, 'ホーム専用の層判定を書かない')
+  })
 })
 
 describe('タブの名称と構造', () => {
@@ -276,21 +295,49 @@ describe('評価基準（横バー）', () => {
     assert.ok(criteria > main, '評価基準は左柱ではなく横バーのある主領域に描く')
   })
 
-  test('★ 見出しを出さず、基準だけを自動で横へ流す', async () => {
+  test('★ 見出しを出さず、基準は動かさずに全件を出す（依頼者の指示）', async () => {
+    // ★ 実行⑬で「流す」をやめた ―― 依頼者の指示は
+    //   「評価軸は動かさなくていいので全部入るように」。
+    //   流れているものは狙って読めない。**全件を同時に出す。**
     const shell = await read('app/_components/shell.tsx')
     const ref = shell.slice(shell.indexOf('<div className="hh-criteria-ref"'), shell.indexOf('{children}'))
     assert.doesNotMatch(ref, />評価基準</)
     assert.doesNotMatch(ref, /hh-criteria-step-name/)
+    // 流していた頃は同じ並びを2組出してつないでいた。止めた以上、重複は出さない。
+    assert.doesNotMatch(ref, /\[false, true\]/, '止めたので並びは1組だけ')
 
     const css = await read('app/base.css')
     const rule = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
     assert.ok(rule, '規則がある')
     assert.match(rule![1]!, /height:\s*var\(--logo-h\)/)
-    const track = /\.hh-criteria-track \{([^}]*)\}/.exec(css)
-    assert.match(track![1]!, /animation:\s*criteria-marquee/)
-    assert.match(track![1]!, /align-items:\s*center/)
-    const axis = /\.hh-criteria-axis \{([^}]*)\}/.exec(css)
-    assert.match(axis![1]!, /font-size:\s*15px/)
-    assert.match(css, /prefers-reduced-motion:\s*reduce/)
+    // 動かさない ―― 動きの指定も、その残骸も残さない。
+    assert.doesNotMatch(css, /criteria-marquee/, '流す指定を残さない')
+    const group = /\.hh-criteria-group \{([^}]*)\}/.exec(css)
+    assert.match(group![1]!, /flex-wrap:\s*wrap/, '入らないぶんは折り返して全件出す')
+  })
+
+  test('★ 縦タブと横タブは同じ層（天端・厚みをそろえる。依頼者の指示）', async () => {
+    const css = await read('app/base.css')
+    // 帯の厚みは両方 `--logo-h`。ロゴ枠は**縮ませない**（縮むと厚みが食い違う）。
+    const brand = /\.hh-brand \{([^}]*)\}/.exec(css)
+    assert.match(brand![1]!, /height:\s*var\(--logo-h\)/)
+    assert.match(brand![1]!, /flex:\s*0 0 auto/, 'ロゴ枠を縮ませない（67→24 に潰れていた）')
+    const zoom = /\.zoom-bar \{([^}]*)\}/.exec(css)
+    assert.match(zoom![1]!, /height:\s*var\(--logo-h\)/)
+    // 天端をそろえる。`top` に余白を入れると縦バーだけ 16px 下がる。
+    // （`.hh-sidebar` は面を塗るだけの規則が先にあるので、位置を持つほうを見る）
+    const sidebar = /\.hh-sidebar \{[^}]*position:\s*sticky;\s*top:\s*([^;]+);/.exec(css)
+    assert.ok(sidebar, '位置を決める規則がある')
+    assert.equal(sidebar![1]!.trim(), '0', '天端は横バーと同じ（余白ぶん下げない）')
+  })
+
+  test('★ 縦バーの足元を切らない（出る手段を画面から消さない）', async () => {
+    // 足元（期の切り替え・デモ札・出る）が 60px はみ出して届かなかった。
+    // 送るのは**タブの並びだけ** ―― ロゴ（帯）と足元は動かさない。
+    const css = await read('app/base.css')
+    const nav = /\.hh-nav \{ flex: 1 1 auto;([^}]*)\}/.exec(css)
+    assert.ok(nav, 'タブの並びが伸縮して中で送る')
+    assert.match(nav![1]!, /overflow-y:\s*auto/)
+    assert.match(css, /\.hh-sidebar-foot \{ flex: 0 0 auto; \}/, '足元は縮ませない')
   })
 })

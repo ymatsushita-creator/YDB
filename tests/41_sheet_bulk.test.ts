@@ -2,7 +2,9 @@ import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
 import { all, maybeOne, scalar, type Db } from '../src/db/client.ts'
-import { saveCandidateSheet, savePartnerSheet, saveReachSheet } from '../src/commands/sheet.ts'
+import {
+  saveCandidateSheet, savePartnerSheet, saveReachSheet, saveStaffSheet,
+} from '../src/commands/sheet.ts'
 import { listCandidateSheetRows, listPartnerSheetRows } from '../src/queries/sheet.ts'
 import { addStaff } from '../src/commands/staff.ts'
 
@@ -249,7 +251,8 @@ describe('表のまとめて保存', () => {
     const bad = await savePartnerSheet(db, {
       rows: [{
         partnerId, category: '大学', contactName: '窓口 太郎',
-        contactEmail: 'メールではない', engagement: '共催先', staffId,
+        contactEmail: 'メールではない', contactDepartment: '', internalOwner: '',
+        engagement: '共催先', recommendationStateId: '', staffId,
       }],
     })
     assert.equal(bad.failed, 1, '窓口のメールが読めない行は保存しない')
@@ -257,7 +260,10 @@ describe('表のまとめて保存', () => {
     const good = await savePartnerSheet(db, {
       rows: [{
         partnerId, category: '大学', contactName: '窓口 太郎',
-        contactEmail: 'mado@example.test', engagement: '共催先', staffId,
+        contactEmail: 'mado@example.test',
+        // 0034（応募管理表 011 にあってDBに無かった2列）。
+        contactDepartment: '企画部社会共創課', internalOwner: '架空 職員',
+        engagement: '共催先', recommendationStateId: '', staffId,
       }],
     })
     assert.equal(good.updated, 1)
@@ -265,7 +271,35 @@ describe('表のまとめて保存', () => {
     const sheet = (await listPartnerSheetRows(db)).find((p) => p.partner_id === partnerId)
     assert.equal(sheet?.engagement, '共催先')
     assert.equal(sheet?.category, '大学')
+    assert.equal(sheet?.contact_department, '企画部社会共創課')
+    assert.equal(sheet?.internal_owner, '架空 職員')
     assert.equal(sheet?.engagement_revisions, 1, '関わり方の変更は版に残る')
+  })
+
+  test('担当部署・社内担当だけ直しても保存される（0034）', async () => {
+    // ★ 足した列が「表には出るが保存されない」ことが無いよう、
+    //   **その列だけを変えた行**で確かめる（他の列の変更に相乗りさせない）。
+    const partnerId = await scalar<string>(db,
+      `INSERT INTO partners (name) VALUES ('架空部署団体') RETURNING id`)
+    const r = await savePartnerSheet(db, {
+      rows: [{
+        partnerId, category: '', contactName: '', contactEmail: '',
+        contactDepartment: 'QREC', internalOwner: '', engagement: '', recommendationStateId: '', staffId,
+      }],
+    })
+    assert.equal(r.updated, 1)
+    const sheet = (await listPartnerSheetRows(db)).find((p) => p.partner_id === partnerId)
+    assert.equal(sheet?.contact_department, 'QREC')
+    // 空白だけの値は入れない（0015 の形）。
+    const blank = await savePartnerSheet(db, {
+      rows: [{
+        partnerId, category: '', contactName: '', contactEmail: '',
+        contactDepartment: '　', internalOwner: '', engagement: '', recommendationStateId: '', staffId,
+      }],
+    })
+    assert.equal(blank.failed, 0)
+    const after = (await listPartnerSheetRows(db)).find((p) => p.partner_id === partnerId)
+    assert.equal(after?.contact_department, null, '空白だけなら空にする（空文字を残さない）')
   })
 
   test('接触の表：新しい行は足し、既存行は直して版を積む', async () => {
@@ -300,5 +334,63 @@ describe('表のまとめて保存', () => {
         `SELECT count(*) FROM partner_reach_revisions WHERE reach_id = $1`, [reachId])
         .then(Number),
       1, '直したら版が残る')
+  })
+})
+
+// -----------------------------------------------------------
+// ⑨ 入力者の表（実行⑬。依頼者の指示でスプシ形式にした）
+// -----------------------------------------------------------
+describe('入力者の表', () => {
+  let db: Db
+
+  test('まとめて足せて、打ち間違いを直せる', async () => {
+    db = await freshDb({ seeds: 'production' })
+
+    // ★ まとめて足す ―― 素のフォームでは1件ずつしか足せなかった。
+    const added = await saveStaffSheet(db, {
+      rows: [
+        { staffId: '', displayName: '架空 一郎' },
+        { staffId: '', displayName: '架空 二郎' },
+        { staffId: '', displayName: '   ' },   // 空白だけ ＝ 空行。無視する
+      ],
+    })
+    assert.equal(added.created, 2)
+    assert.equal(added.failed, 0, '空白だけの行は「失敗」ではなく空行として飛ばす')
+
+    const ids = added.rows.filter((r) => r.ok).map((r) => (r as { id: string }).id)
+    assert.equal(ids.length, 2)
+
+    // ★ 打ち間違いを直せる（直す道が無いと、間違った名前が選択肢に残り続ける）。
+    const renamed = await saveStaffSheet(db, {
+      rows: [{ staffId: ids[0]!, displayName: '架空 壱郎' }],
+    })
+    assert.equal(renamed.updated, 1)
+    const name = await scalar<string>(db,
+      `SELECT display_name FROM staffs WHERE id = $1`, [ids[0]!])
+    assert.equal(name, '架空 壱郎')
+
+    // ★ 変わっていない行は触らない（意味の無い更新をしない）。
+    const again = await saveStaffSheet(db, {
+      rows: [{ staffId: ids[0]!, displayName: '架空 壱郎' }],
+    })
+    assert.equal(again.updated, 0)
+
+    // ★ 空の名前は入れない。行は失敗として残り、理由が出る。
+    const empty = await saveStaffSheet(db, {
+      rows: [{ staffId: ids[0]!, displayName: '' }],
+    })
+    assert.equal(empty.failed, 1)
+    assert.equal(await scalar<string>(db,
+      `SELECT display_name FROM staffs WHERE id = $1`, [ids[0]!]), '架空 壱郎',
+    '失敗した行は記録を変えない')
+
+    // ★ 同姓同名は**止めない**（C-96 の判断のまま）。既に居ることは伝える。
+    const dup = await saveStaffSheet(db, {
+      rows: [{ staffId: '', displayName: '架空 壱郎' }],
+    })
+    assert.equal(dup.created, 1, '実在の同姓同名を登録できなくしない')
+    assert.equal((dup.rows[0] as { lead?: string }).lead, '同じ名前が既に居る')
+
+    await db.close()
   })
 })

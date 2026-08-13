@@ -46,14 +46,20 @@ export async function savePartnerSheetAction(
       partnerId: text(r?.id),
       category: text(v.category),
       contactName: text(v.contactName),
+      contactDepartment: text(v.contactDepartment),
       contactEmail: text(v.contactEmail),
+      internalOwner: text(v.internalOwner),
       engagement: text(v.engagement),
+      recommendationStateId: text(v.recommendationStateId),
       staffId: text(v.staffId),
     }
   })
 
+  // 推薦枠ステイタスは**期ごと**なので、どの期の表かを一緒に受け取る。
+  const seasonId = String(formData.get('seasonId') ?? '') || undefined
+
   const db = await getDb()
-  const result = await savePartnerSheet(db, { rows })
+  const result = await savePartnerSheet(db, { rows, seasonId })
   if (result.updated > 0) revalidatePath('/approach')
 
   return { message: summary(result), ok: result.failed === 0, results: result.rows }

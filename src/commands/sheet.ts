@@ -6,9 +6,12 @@ import {
 import type { NewReachFailure } from './intake.ts'
 import { listCandidateSheetRows, type CandidateSheetRow } from '../queries/sheet.ts'
 import {
-  setPartnerEngagement, updatePartnerReach,
-  SET_ENGAGEMENT_MESSAGE, UPDATE_REACH_MESSAGE,
+  setPartnerEngagement, updatePartnerReach, setPartnerRecommendationState,
+  SET_ENGAGEMENT_MESSAGE, UPDATE_REACH_MESSAGE, SET_RECOMMENDATION_MESSAGE,
 } from './partner.ts'
+import {
+  addStaff, renameStaff, ADD_STAFF_MESSAGE, RENAME_STAFF_MESSAGE,
+} from './staff.ts'
 
 /**
  * 表（スプシ形式）のまとめて保存（依頼者の指示。実行⑫）。
@@ -76,6 +79,9 @@ export interface SheetSaveResult {
   /** 空行を除いた、扱った行の結果。**画面はこれを行に貼り直す。** */
   rows: RowResult[]
 }
+
+/** 空白とみなす文字。**記録層の `*_not_blank` 制約と同じ集合**にする（0015）。 */
+const BLANK_CHARS = ' \t\n\r　'
 
 const t = (v: string | null | undefined) => (v ?? '').trim()
 const same = (a: string | null | undefined, b: string | null | undefined) =>
@@ -240,8 +246,14 @@ export interface PartnerRowInput {
   category: string
   contactName: string
   contactEmail: string
+  /** 先方のどの部署か（0034。応募管理表 011 の「担当部署」）。 */
+  contactDepartment: string
+  /** NEO 側の受け持ち（0034。応募管理表 011 の「社内担当」）。 */
+  internalOwner: string
   /** NEO としてどう関わるか（0031）。 */
   engagement: string
+  /** その期の推薦枠ステイタス（0035）。空なら触らない。 */
+  recommendationStateId: string
   /** 記録した人（行ごと）。 */
   staffId: string
 }
@@ -258,7 +270,7 @@ export interface PartnerRowInput {
  *   依頼者から履歴の指示も受けていない。**要らない履歴を作らない。**
  */
 export async function savePartnerSheet(
-  db: Db, input: { rows: PartnerRowInput[] },
+  db: Db, input: { rows: PartnerRowInput[]; seasonId?: string },
 ): Promise<SheetSaveResult> {
   const rows: RowResult[] = []
   let updated = 0
@@ -271,8 +283,10 @@ export async function savePartnerSheet(
     const now = await maybeOne<{
       category: string | null; contact_name: string | null
       contact_email: string | null; engagement: string | null
+      contact_department: string | null; internal_owner: string | null
     }>(db, `
-      SELECT category, contact_name, contact_email, engagement
+      SELECT category, contact_name, contact_email, engagement,
+             contact_department, internal_owner
         FROM partners WHERE id = $1`, [partnerId])
     if (!now) {
       rows.push({ index, ok: false, message: SET_ENGAGEMENT_MESSAGE.partner_not_found })
@@ -297,6 +311,8 @@ export async function savePartnerSheet(
     const attrsChanged = !same(row.category, now.category)
       || !same(row.contactName, now.contact_name)
       || !same(row.contactEmail, now.contact_email)
+      || !same(row.contactDepartment, now.contact_department)
+      || !same(row.internalOwner, now.internal_owner)
     if (attrsChanged) {
       const email = t(row.contactEmail)
       if (email !== '' && !/^\S+@\S+\.\S+$/.test(email)) {
@@ -304,13 +320,37 @@ export async function savePartnerSheet(
         failed++
         continue
       }
+      // ★ 落とす空白は**制約と同じ集合**にする（0015）。`btrim` の既定は
+      //   半角スペースだけなので、全角スペースだけの値が「空ではない」ものとして
+      //   残り、`*_not_blank` に弾かれて**行ごと保存できなくなる。**
+      //   （制約を持たない列では、代わりに「見えない値」が静かに溜まる。）
       await db.query(`
         UPDATE partners
-           SET category = nullif(btrim($2), ''),
-               contact_name = nullif(btrim($3), ''),
-               contact_email = nullif(btrim($4), '')
-         WHERE id = $1`, [partnerId, row.category, row.contactName, row.contactEmail])
+           SET category = nullif(btrim($2, $7), ''),
+               contact_name = nullif(btrim($3, $7), ''),
+               contact_email = nullif(btrim($4, $7), ''),
+               contact_department = nullif(btrim($5, $7), ''),
+               internal_owner = nullif(btrim($6, $7), '')
+         WHERE id = $1`,
+      [partnerId, row.category, row.contactName, row.contactEmail,
+        row.contactDepartment, row.internalOwner, BLANK_CHARS])
       changed = true
+    }
+
+    // 推薦枠ステイタス（0035）。**期ごと**なので、どの期を見ているかが要る。
+    // 空欄は「まだ置いていない」であって「未連絡にする」ではない ―― 触らない。
+    const wantState = t(row.recommendationStateId)
+    if (wantState !== '' && input.seasonId) {
+      const result = await setPartnerRecommendationState(db, {
+        partnerId, seasonId: input.seasonId,
+        stateId: wantState, staffId: row.staffId,
+      })
+      if (!result.ok) {
+        rows.push({ index, ok: false, message: SET_RECOMMENDATION_MESSAGE[result.reason] })
+        failed++
+        continue
+      }
+      changed = changed || result.changed
     }
 
     rows.push({ index, ok: true, id: partnerId, created: false, changed })
@@ -404,4 +444,73 @@ const REACH_ADD_MESSAGE: Record<NewReachFailure, string> = {
   bad_estimate: '推定リーチは 0 以上の整数で入れる。分からなければ空のまま。',
   partner_not_found: 'その団体は見つからなかった。',
   bad_photo: '写真は JPEG / PNG / WebP の 2MB 以下。',
+}
+
+
+// -------------------------------------------------------------
+// 入力者の表（実行⑬）
+// -------------------------------------------------------------
+
+export interface StaffRowInput {
+  /** 既存行なら職員の ID。空なら新規行。 */
+  staffId: string
+  displayName: string
+}
+
+/**
+ * 入力者の表を保存する（依頼者の指示。実行⑬）。
+ *
+ * 「面接シート以外のフォームがスプシ形式になっているか」―― `/staff/new` は
+ * 1件ずつ足す素のフォームで、**まとめて足せず、打ち間違いも直せなかった。**
+ *
+ * ★ 判定は既存のコマンド（`addStaff` / `renameStaff`）を行ごとに呼ぶだけ。
+ *   表のために規則を書き直さない（この表の他の入口と同じ扱い）。
+ *
+ * ★ 同じ名前は**止めない**（C-96 の判断のまま）。実在の同姓同名を
+ *   登録できなくなるほうが害が大きい。既に居ることは言葉で伝える。
+ */
+export async function saveStaffSheet(
+  db: Db, input: { rows: StaffRowInput[] },
+): Promise<SheetSaveResult> {
+  const rows: RowResult[] = []
+  let created = 0
+  let updated = 0
+  let failed = 0
+
+  for (const [index, row] of input.rows.entries()) {
+    const staffId = t(row.staffId)
+    const name = t(row.displayName)
+
+    // 空の行は無視する（表には空行が残っているのが普通）。
+    if (staffId === '' && name === '') continue
+
+    if (staffId === '') {
+      const result = await addStaff(db, { displayName: name })
+      if (!result.ok) {
+        rows.push({ index, ok: false, message: ADD_STAFF_MESSAGE[result.reason] })
+        failed++
+        continue
+      }
+      rows.push({
+        index, ok: true, id: result.staffId, created: true, changed: true,
+        lead: result.duplicateName ? '同じ名前が既に居る' : undefined,
+      })
+      created++
+      continue
+    }
+
+    const result = await renameStaff(db, { staffId, displayName: name })
+    if (!result.ok) {
+      rows.push({ index, ok: false, message: RENAME_STAFF_MESSAGE[result.reason] })
+      failed++
+      continue
+    }
+    rows.push({
+      index, ok: true, id: staffId, created: false, changed: result.changed,
+      lead: result.duplicateName ? '同じ名前が既に居る' : undefined,
+    })
+    if (result.changed) updated++
+  }
+
+  return { created, updated, failed, rows }
 }

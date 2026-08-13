@@ -1,16 +1,23 @@
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 
 /**
  * ★ 見出しに添える説明（`note`）は持たない。**依頼者の指示で全画面から外した。**
  *   定義や単位を画面に書き足さない ―― 読む相手は運営であって、
  *   毎回同じ説明を読まされる相手ではない。
+ *
+ * ★ `titleHref` を渡すと見出しが**その詳細へ飛ぶリンク**になる（依頼者の指示。
+ *   ホームの各セクションから詳細タブへ）。開けない層には渡さない側で null にする
+ *   ので、ここに来た時点で開ける前提 ―― 死にリンクを作らない。
  */
 export function Card({
-  children, title, tint,
-}: { children: ReactNode; title?: string; tint?: string }) {
+  children, title, titleHref, tint,
+}: { children: ReactNode; title?: string; titleHref?: string; tint?: string }) {
   return (
     <section className={tint ?? 'card-base'}>
-      {title && <h2 className="section-title">{title}</h2>}
+      {title && (titleHref
+        ? <Link className="section-title section-title-link" href={titleHref}>{title}<span className="section-title-go" aria-hidden> ›</span></Link>
+        : <h2 className="section-title">{title}</h2>)}
       {children}
     </section>
   )

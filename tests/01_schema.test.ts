@@ -129,6 +129,10 @@ describe('マイグレーション', () => {
       'v_effective_person_notes',
       // 0028: 予定ごとの参加者（参加した事実そのものは touchpoints が持つ）
       'v_event_attendance',
+      // 0035: 推薦枠の訂正チェーンを解決した有効な出来事（0016 と同じ判定）
+      'v_effective_partner_recommendation_events',
+      // 0035: 団体×期の現在の推薦枠ステイタス。**期ごと**なので団体の列にしない
+      'v_partner_recommendation_state',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

@@ -203,24 +203,23 @@ export async function Shell({
 
       <div className="hh-main">
         {/* 評価基準は横バーの右側へ重ねる（依頼者の指示。実行⑬）。
-            値は引き続き記録層から読み、画面へ写し書きしない。 */}
+            値は引き続き記録層から読み、画面へ写し書きしない。
+            ★ **動かさない**（依頼者の指示）。流していた頃は同じ並びを2組出して
+              つないでいたが、止めた以上そのぶんは**重複でしかない。**1組だけ出す。 */}
         {criteria.length > 0 && (
           <div className="hh-criteria-ref" aria-label="評価基準">
             <div className="hh-criteria-scroll">
               <div className="hh-criteria-track">
-                {[false, true].map((duplicate) => (
-                  <span
-                    key={String(duplicate)}
-                    className="hh-criteria-group"
-                    aria-hidden={duplicate || undefined}
-                  >
-                    {criteria.map((c, i) => (
-                      <span key={`${c.step_name}-${c.sort_order}`} className="hh-criteria-axis" title={c.name}>
-                        {i + 1}. {c.name}
-                      </span>
-                    ))}
-                  </span>
-                ))}
+                <span className="hh-criteria-group">
+                  {criteria.map((c, i) => (
+                    <span key={`${c.step_name}-${c.sort_order}`} className="hh-criteria-axis" title={c.name}>
+                      {/* 重み付け（応募管理表の2段。実行⑬）。段分けを持つ軸だけ札を出す。 */}
+                      {c.kind === 'required' && <span className="hh-criteria-tag hh-criteria-tag-req">必須</span>}
+                      {c.kind === 'strong' && <span className="hh-criteria-tag hh-criteria-tag-str">加点</span>}
+                      {i + 1}. {c.name}
+                    </span>
+                  ))}
+                </span>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getDb } from '../src/db/server.ts'
 import { currentTier } from '../src/auth/current.ts'
+import { canOpen, type Tier } from '../src/auth/tiers.ts'
 import {
   listSeasons, defaultSeason, getSeason, getHomeTrends,
 } from '../src/queries/dashboard.ts'
@@ -14,13 +15,18 @@ import { Shell, Breadcrumb, YearSwitch, seasonLabel } from './_components/shell.
 
 export const dynamic = 'force-dynamic'
 
-function HomeKpi({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="home-kpi">
+function HomeKpi({ label, value, href }: { label: string; value: number; href?: string }) {
+  const body = (
+    <>
       <span className="home-kpi-label">{label}</span>
       <strong className="home-kpi-value">{num(value)}</strong>
-    </div>
+    </>
   )
+  // ★ 開ける層にだけリンクにする。開けない層では素のタイルのまま
+  //   （押すと弾かれる窓を残さない。canOpen 1箇所で判定＝タブと同じ線）。
+  return href
+    ? <Link className="home-kpi home-kpi-link" href={href}>{body}</Link>
+    : <div className="home-kpi">{body}</div>
 }
 
 /**
@@ -99,6 +105,12 @@ export default async function Home(
   ]
   const latest = trends.at(-1) ?? { candidates: 0, partners: 0, regular_a: 0, special: 0 }
 
+  // 気になったセクションから、その詳細タブへ飛べるようにする（依頼者の指示）。
+  // 行き先は canOpen で守る ―― 開けない層（personal は特別選考を開けない）には
+  // リンクを渡さず、素の表示に倒す。判定は tiers.ts の1箇所（タブと同じ線）。
+  const to = (path: string): string | undefined =>
+    canOpen(tier as Tier, path) ? `${path}?season=${season.id}` : undefined
+
   return (
     <Shell
       active="home"
@@ -116,15 +128,15 @@ export default async function Home(
 
       <div className="home-dashboard">
         <div className="home-summary-grid">
-          <HomeKpi label="候補者" value={latest.candidates} />
-          <HomeKpi label="連携団体" value={latest.partners} />
-          <HomeKpi label="通常選考 A以上" value={latest.regular_a} />
-          <HomeKpi label="特別選考" value={latest.special} />
+          <HomeKpi label="候補者" value={latest.candidates} href={to('/people')} />
+          <HomeKpi label="連携団体" value={latest.partners} href={to('/approach')} />
+          <HomeKpi label="通常選考 A以上" value={latest.regular_a} href={to('/borderline')} />
+          <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
         </div>
 
         <div className="home-detail-grid">
         <div className="section">
-          <Card title="推移">
+          <Card title="推移" titleHref={to('/funnel')}>
             {trends.length < 2 ? <Empty>推移を描ける記録がまだ無い</Empty> : (
               <>
                 <TimeSeries points={trends} series={series} height={300} valueLabel="候補者と選考" />
@@ -135,7 +147,7 @@ export default async function Home(
         </div>
 
         <div className="section">
-        <Card title="ピックアップ候補者">
+        <Card title="ピックアップ候補者" titleHref={to('/headhunting')}>
           {picks.length === 0 ? (
             <Empty>確度がまだ算出されていない</Empty>
           ) : (

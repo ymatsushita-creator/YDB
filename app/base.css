@@ -215,10 +215,24 @@ table.data td.num, table.data th.num { white-space: nowrap; }
   background: var(--color-shell);
 }
 .hh-sidebar {
-  position: sticky; top: var(--space-md);
+  /* ★ 天端は横バーと同じにする（依頼者の指示。縦タブと横タブは同じ層）。
+     `top` は**枠の余白の内側**から測られるので、`--space-md` を入れると
+     余白ぶん（16px）さらに下がり、**縦バーだけが16px低い**状態になっていた
+     ―― 厚みが同じでも、天端がずれていれば2枚に見える。 */
+  position: sticky; top: 0;
   display: flex; flex-direction: column; gap: var(--space-lg);
   height: calc(100vh - var(--space-xl));
+  min-height: 0;
 }
+/* ★ 足元（期の切り替え・デモ札・出る）が **60px はみ出して届かなかった。**
+   縦バーは高さを固定なのに中身が縮まず、あふれたぶんが切り取られていた
+   ―― **出る手段が画面から消えていた。**
+
+   縦バーごと送ると、天端のロゴまで流れて帯がそこだけ切れる。だから
+   **送るのはタブの並びだけ**にする ―― ロゴ（帯）と足元は動かさない。
+   足りないときは中で送る（C-113 で操作柱に対して行ったのと同じ手当て）。 */
+.hh-nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.hh-sidebar-foot { flex: 0 0 auto; }
 /* 縦バーの内側の余白を突き抜けて、左上の角いっぱいに置く。
    角丸も縦バーに合わせる ―― ここだけ丸みが違うと、
    **貼り付けた別物**に見える。`.sidebar-region` は `--rounded-xl` なので、
@@ -231,6 +245,11 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .hh-brand {
   display: flex;
   align-items: center;
+  /* ★ **縮ませない**（依頼者の指示。横タブと同じ層・同じ幅にする）。
+     縦バーは縦の flex なので、既定（flex-shrink: 1）だと中身が詰まったとき
+     ロゴの枠が 67 → 24 まで潰れ、隣の横バー（67）と厚みが違って
+     **2枚に見えた。** 送る画面の操作柱が 81 → 58 に潰れた C-66 と同じ形。 */
+  flex: 0 0 auto;
   height: var(--logo-h);
   margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
   padding: var(--logo-pad);
@@ -1350,7 +1369,10 @@ html, body { height: 100%; overflow: hidden; }
 .pick-name { font-weight: 600; }
 .home-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-lg); align-items: center; }
 
-/* 評価基準（実行⑬）。横バー右側の1行に置き、横へ送って全件を読む。 */
+/* 評価基準（実行⑬）。横バーの右側に置く。
+   ★ **動かさない**（依頼者の指示）。以前は1行に収めて横へ流していたが、
+     流れているものは狙って読めない。**全件を同時に出す** ―― 帯の高さの
+     中で折り返し、字を詰める。切って隠すのではなく、入るまで畳む（C-65）。 */
 .hh-criteria-ref {
   position: absolute; z-index: 21;
   top: 0; right: var(--space-sm);
@@ -1361,30 +1383,40 @@ html, body { height: 100%; overflow: hidden; }
 }
 .hh-main:has(.hh-criteria-ref) .zoom-bar { padding-right: min(60%, 780px); }
 .hh-criteria-scroll {
-  width: 100%; height: 100%; min-width: 0; overflow: hidden;
+  width: 100%; height: 100%; min-width: 0;
+  display: flex; align-items: center;
+  /* 入りきらない期（軸が極端に多い）だけ、中で送れるようにする。切らない。 */
+  overflow-y: auto;
 }
 .hh-criteria-track {
-  display: flex; align-items: center; width: max-content; height: 100%;
-  animation: criteria-marquee 48s linear infinite;
+  display: flex; align-items: center; width: 100%; min-width: 0;
 }
-.hh-criteria-ref:hover .hh-criteria-track { animation-play-state: paused; }
 .hh-criteria-group {
-  display: inline-flex; align-items: center; gap: var(--space-md);
-  padding-right: var(--space-md); white-space: nowrap;
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 2px var(--space-sm);
+  width: 100%; min-width: 0;
 }
 .hh-criteria-axis {
   display: inline-flex; align-items: baseline; gap: 3px;
-  font-size: 15px; font-weight: 600; line-height: 1;
+  font-size: 11px; font-weight: 600; line-height: 1.25;
   color: var(--color-on-dark-muted);
 }
-@keyframes criteria-marquee {
-  to { transform: translateX(-50%); }
+/* 重み付けの札（必須／加点。実行⑬）。段分けを持つ軸だけに付く。 */
+.hh-criteria-tag {
+  align-self: center;
+  font-size: 10px; font-weight: 700; line-height: 1;
+  padding: 2px 5px; border-radius: 4px; letter-spacing: .04em;
 }
-@media (prefers-reduced-motion: reduce) {
-  .hh-criteria-scroll { overflow-x: auto; }
-  .hh-criteria-track { animation: none; }
-  .hh-criteria-group[aria-hidden="true"] { display: none; }
+.hh-criteria-tag-req {
+  color: var(--color-on-dark);
+  background: color-mix(in srgb, var(--color-on-dark) 26%, transparent);
 }
+.hh-criteria-tag-str {
+  color: var(--color-on-dark-muted);
+  background: color-mix(in srgb, var(--color-on-dark) 12%, transparent);
+}
+/* ★ `prefers-reduced-motion` の分岐は落とした ―― **動かすのをやめた**ので、
+   減らす動きが無い。使わない指定を残すと、次に触る人が「まだあるもの」として扱う。 */
 .home-dashboard {
   height: calc(100vh - var(--logo-h) - 108px);
   min-height: 420px; overflow: hidden;
@@ -1404,3 +1436,12 @@ html, body { height: 100%; overflow: hidden; }
 .home-kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(#f03090, #f0f000, #50f000, #00c0f0); }
 .home-kpi-label { color: var(--color-steel); font-size: 13px; font-weight: 600; line-height: 1.2; }
 .home-kpi-value { color: var(--color-ink); font-size: clamp(28px, 3vw, 42px); line-height: 1; font-variant-numeric: tabular-nums; }
+/* 詳細へ飛べるタイル（依頼者の指示）。開ける層にだけ付く。 */
+a.home-kpi-link { text-decoration: none; transition: box-shadow .12s ease, transform .12s ease; }
+a.home-kpi-link:hover { box-shadow: 0 4px 14px rgb(20 27 36 / 12%); transform: translateY(-1px); }
+a.home-kpi-link:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm); right: var(--space-sm); color: var(--color-steel); font-size: 16px; line-height: 1; }
+/* 見出しから詳細へ飛ぶリンク（推移・ピックアップ）。 */
+.section-title-link { color: inherit; text-decoration: none; }
+.section-title-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.section-title-go { color: var(--color-steel); font-weight: 600; }

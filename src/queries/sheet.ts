@@ -106,8 +106,14 @@ export interface PartnerSheetRow {
   category: string | null
   contact_name: string | null
   contact_email: string | null
+  /** 先方のどの部署か（0034）。 */
+  contact_department: string | null
+  /** NEO 側の受け持ち（0034）。 */
+  internal_owner: string | null
   /** NEO としてどう関わるか（0031）。自由入力の1行。 */
   engagement: string | null
+  /** その期の推薦枠ステイタス（0035）。**期ごと**なので団体の列ではない。 */
+  recommendation_state_id: string | null
   has_photo: boolean
   /** 変更ログの件数。**版があること**だけを出す（中身は行を開いて見る）。 */
   engagement_revisions: number
@@ -118,17 +124,23 @@ export interface PartnerSheetRow {
  *
  * ★ 集計（推定リーチ・接触機会・識別人数）は**この表に出さない。**
  *   `getPartnerReach` が別に持っている ―― 入力列と導出列を混ぜない。
+ *
+ * ★ 推薦枠ステイタス（0035）は**期ごと**なので、どの期で読むかを渡す。
+ *   渡さないと「団体の現在値」に見えてしまう ―― 期をまたげない読み方にしない。
  */
-export const listPartnerSheetRows = (db: Db) =>
+export const listPartnerSheetRows = (db: Db, seasonId?: string) =>
   all<PartnerSheetRow>(db, `
     SELECT p.id AS partner_id, p.name, p.category, p.contact_name, p.contact_email,
-           p.engagement,
+           p.contact_department, p.internal_owner, p.engagement,
            (p.photo_data_url IS NOT NULL) AS has_photo,
            (SELECT count(*)::int FROM partner_engagement_revisions r
-             WHERE r.partner_id = p.id) AS engagement_revisions
+             WHERE r.partner_id = p.id) AS engagement_revisions,
+           rs.state_id AS recommendation_state_id
       FROM partners p
+      LEFT JOIN v_partner_recommendation_state rs
+             ON rs.partner_id = p.id AND rs.season_id = $1
      WHERE p.is_active
-     ORDER BY p.name`)
+     ORDER BY p.name`, [seasonId ?? null])
 
 export interface ReachSheetRow {
   reach_id: string
