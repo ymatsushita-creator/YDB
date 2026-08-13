@@ -93,6 +93,41 @@ export const getSeason = (db: Db, seasonId: string | string[] | undefined) => {
 // (1) 全体サマリとファネル
 // -------------------------------------------------------------
 
+export interface SeasonCriterion {
+  step_name: string
+  step_order: number
+  name: string
+  scale_max: number
+  sort_order: number
+}
+
+/**
+ * その期の評価基準（依頼者の指示。実行⑫）。
+ *
+ * 「期の項目の上に、エクセルから評価基準を持ってきて、参考にできるように貼って」。
+ *
+ * ★ **画面に写し書きしない。** 出すのは `evaluation_criteria`（記録層）で、
+ *   そこへは応募管理表の「特別選考」シートから取り込んである（C-105）。
+ *   画面に文字で置くと、**表を直しても画面が古いまま**になり、
+ *   同じ基準が2箇所に増える。
+ *
+ * ★ 段の順・軸の順のまま出す。**こちらで並べ替えない**
+ *   （運営が並べた順そのものが、見る順である）。
+ *
+ * ★ 軸を持たない段は出さない ―― 「軸が無い」ことは、
+ *   その段の画面（面接シート）が言う仕事である。
+ */
+export const listSeasonCriteria = (db: Db, seasonId: string | undefined) => {
+  if (!seasonId || !UUID.test(seasonId)) return Promise.resolve([])
+  return all<SeasonCriterion>(db, `
+    SELECT ss.name AS step_name, ss.sort_order AS step_order,
+           ec.name, ec.scale_max, ec.sort_order
+      FROM evaluation_criteria ec
+      JOIN selection_steps ss ON ss.id = ec.selection_step_id
+     WHERE ss.season_id = $1
+     ORDER BY ss.sort_order, ec.sort_order`, [seasonId])
+}
+
 export interface FunnelPoint {
   as_of: Date
   relative_day: number

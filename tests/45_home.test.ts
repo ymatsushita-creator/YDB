@@ -235,3 +235,42 @@ describe('一覧', () => {
     assert.match(src, /LIMIT \+ 1/)
   })
 })
+
+describe('評価基準（操作柱）', () => {
+  /**
+   * 依頼者の指示（実行⑫）――
+   * 「期の項目の上に、エクセルから評価基準を持ってきて、参考にできるように貼って」。
+   *
+   * ★ 出すのは**記録層の値**（`evaluation_criteria`）。応募管理表から
+   *   取り込んである（C-105）。**画面に文字で写し書きしない** ――
+   *   写すと、表を直しても画面が古いまま残り、基準が2箇所に増える。
+   */
+  test('★ 評価基準を画面に写し書きしていない（記録層から引く）', async () => {
+    const shell = await body('app/_components/shell.tsx')
+    assert.match(shell, /listSeasonCriteria/, '記録層から引く')
+    // 軸の名前をコードに直接書いていないこと。
+    assert.doesNotMatch(shell, /Be Playful|使い倒せる|賭けたい/,
+      '軸の文字を画面に埋め込まない')
+  })
+
+  test('期の項目より上に置く', async () => {
+    const shell = await read('app/_components/shell.tsx')
+    const criteria = shell.indexOf('hh-criteria-ref')
+    const foot = shell.indexOf('hh-sidebar-foot')
+    assert.ok(criteria > 0 && foot > 0 && criteria < foot,
+      '評価基準は「期」（hh-sidebar-foot の中の years）より前に描く')
+  })
+
+  test('★ 潰れないようにしてある（見出しだけにならない）', async () => {
+    // 操作柱は縦の flex。既定（flex-shrink: 1）だと枠が 0 まで潰れ、
+    // **見出しだけが残る**（C-66 で踏んだのと同じ形）。実際そうなった。
+    const css = await read('app/base.css')
+    const rule = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
+    assert.ok(rule, '規則がある')
+    assert.match(rule![1]!, /flex:\s*1 1 auto/)
+    assert.match(rule![1]!, /min-height:\s*\d+px/)
+    // 足りないときは中で送る（切らない）。
+    const scroll = /\.hh-criteria-scroll \{([^}]*)\}/.exec(css)
+    assert.match(scroll![1]!, /overflow-y:\s*auto/)
+  })
+})

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { getDb, isDemoMode } from '../../src/db/server.ts'
-import { isDemoSeason, type Season } from '../../src/queries/dashboard.ts'
+import { isDemoSeason, listSeasonCriteria, type Season } from '../../src/queries/dashboard.ts'
 import { currentTier } from '../../src/auth/current.ts'
 import { canOpen } from '../../src/auth/tiers.ts'
 import { signOutAction } from '../login/actions.ts'
@@ -114,7 +114,10 @@ export async function Shell({
   // ★ デモ期を開いていることを、**どの画面でも**言う（0029）。
   //   期の呼び名（「デモ期」）だけだと、帯の隅の1語である。
   //   架空の数字を実在の数字として読ませないために、札も出す。
-  const demoSeason = seasonId ? await isDemoSeason(await getDb(), seasonId) : false
+  const db = await getDb()
+  const demoSeason = seasonId ? await isDemoSeason(db, seasonId) : false
+  // 期の上に貼る評価基準（依頼者の指示。実行⑫）。**その期のものだけ。**
+  const criteria = seasonId ? await listSeasonCriteria(db, seasonId) : []
 
   return (
     <div className="hh-frame">
@@ -176,6 +179,37 @@ export async function Shell({
             <button className="btn-physical hh-search-go" type="submit">探す</button>
           </div>
         </form>
+        )}
+
+        {/* ★ 評価基準（依頼者の指示。実行⑫）――「期の項目の上に、
+            エクセルから評価基準を持ってきて、参考にできるように貼って」。
+
+            ★ 出しているのは**記録層の値**（`evaluation_criteria`）である。
+              応募管理表から取り込んだもの（C-105）で、画面に写し書きしていない
+              ―― 写すと、表を直しても画面が古いまま残る。
+
+            ★ 見るだけ。ここから採点はしない（採点は面接シートと採点用紙）。
+            ★ 縦に長いので**中で送る。** 潰して見出しだけにしない（C-57）。 */}
+        {criteria.length > 0 && (
+          <div className="hh-criteria-ref">
+            <span className="sidebar-section-label">評価基準</span>
+            <div className="hh-criteria-scroll">
+              {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).entries()]
+                .map(([step]) => (
+                  <div key={step} className="hh-criteria-step">
+                    <span className="hh-criteria-step-name">{step}</span>
+                    <ol className="hh-criteria-axes">
+                      {criteria.filter((c) => c.step_name === step).map((c) => (
+                        <li key={`${step}-${c.sort_order}`} title={c.name}>
+                          {c.name}
+                          <span className="hh-criteria-scale">{c.scale_max}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+            </div>
+          </div>
         )}
 
         <div className="hh-sidebar-foot">
