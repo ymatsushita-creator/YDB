@@ -455,7 +455,17 @@ a.zoom-crumb:hover { text-decoration: none; }
 }
 .hh-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-md); align-items: start; }
 .hh-col-main, .hh-col-side { display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
-.hh-rankings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-md); }
+/* ランキングの2枚。**この選択子の規則はここ1箇所だけ**にする ――
+   同じ性質を2箇所で決めると、後ろの層が黙って戻す（`.zoom-bar` で踏んだ）。
+   ★ 行の高さを**中身なりにしない**（依頼者の指示。C-137）。中身なりだと、
+     片方が空のときに背の高いほうの高さで止まり、**下に灰色の余りが残る。**
+     `minmax(0, 1fr)` は、狭くて2段に折り返したときも等分に割る。 */
+.hh-rankings {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--space-md); min-height: 0; align-items: stretch;
+}
+.hh-rankings > .panel-card { min-height: 0; overflow: hidden; }
 
 .hh-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .hh-head h2 { font-size: 15px; font-weight: 600; }
@@ -867,6 +877,15 @@ html, body { height: 100%; overflow: hidden; }
   grid-auto-rows: minmax(0, auto);
   grid-template-rows: none;
 }
+/* ★ 1つしか無い列は、その1つへ**残った高さを全部渡す**（依頼者の指示。C-137）。
+   比率（0.6 / 1.4）は上下2枚を前提にした割り付けなので、上のカードを外すと
+   **下の 1.4 が空いたまま残る** ―― 画面の下半分が灰色の余白になっていた。
+   「何枚あるか」で割り付けを変える。**枚数を数えるのは CSS の仕事**である
+   （画面ごとに別のクラスを足すと、次に1枚減ったときにまた余白が出る）。 */
+.hh-col-main:has(> :only-child), .hh-col-side:has(> :only-child) {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 
 .panel-card { display: flex; flex-direction: column; min-height: 0; }
 /* 見出しと注記は動かさない。位置が動くと、読む場所が毎回変わる。 */

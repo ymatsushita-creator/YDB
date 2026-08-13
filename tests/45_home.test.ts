@@ -290,6 +290,30 @@ describe('やることを出さない画面', () => {
   })
 })
 
+describe('残った面積の使い方', () => {
+  /**
+   * 依頼者の指示（実行⑮）――「**ランキング表で使って残り面積使って**」。
+   *
+   * 特別選考から「やること」を外した（C-136）ら、列の割り付け（0.6 / 1.4）が
+   * 上下2枚を前提にしたままで、**下の 1.4 が灰色の余白として残った。**
+   * 枚数を数えるのは CSS の仕事にする ―― 画面ごとに別のクラスを足すと、
+   * 次に1枚減ったときにまた余白が出る。
+   */
+  test('★ 1枚しか無い列は、その1枚に高さを全部渡す', async () => {
+    const css = await read('app/base.css')
+    const rule = /\.hh-col-main:has\(> :only-child\)[^{]*\{([^}]*)\}/.exec(css)
+    assert.ok(rule, '1枚のときの割り付けが無い')
+    assert.match(rule![1]!, /grid-template-rows:\s*minmax\(0, 1fr\)/)
+  })
+
+  test('★ ランキングの行は中身なりにしない（片方が空でも余白を残さない）', async () => {
+    const css = await read('app/base.css')
+    const rule = /\.hh-rankings \{([^}]*)\}/.exec(css)
+    assert.match(rule![1]!, /grid-auto-rows:\s*minmax\(0, 1fr\)/,
+      '中身なりだと、片方が空のときに下へ余りが出る')
+  })
+})
+
 describe('評価基準（横バー）', () => {
   /**
    * 依頼者の指示（実行⑫）――
