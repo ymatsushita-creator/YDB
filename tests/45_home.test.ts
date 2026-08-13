@@ -84,7 +84,10 @@ describe('ホーム', () => {
     // 4つのサマリーと2つのカードが、それぞれの詳細へ行き先を持つ。
     assert.match(src, /label="候補者"[^>]*href=\{to\('\/people'\)\}/)
     assert.match(src, /label="連携団体"[^>]*href=\{to\('\/approach'\)\}/)
-    assert.match(src, /label="通常選考 A以上"[^>]*href=\{to\('\/borderline'\)\}/)
+    // ★ 「通常選考 A以上」を固定していたが、**A は記録に無い格付け**だった
+    //   （応募管理表では A〜C・D〜I が特別選考の軸の記号。C-127）。
+    //   ラベルを直したので、見張りも一緒に直す ―― **見張りが誤りを固定していた。**
+    assert.match(src, /label="確度の高い候補者"[\s\S]{0,80}href=\{to\('\/borderline'\)\}/)
     assert.match(src, /label="特別選考"[^>]*href=\{to\('\/headhunting'\)\}/)
     assert.match(src, /Card title="推移" titleHref=\{to\('\/funnel'\)\}/)
     assert.match(src, /Card title="ピックアップ候補者" titleHref=\{to\('\/headhunting'\)\}/)

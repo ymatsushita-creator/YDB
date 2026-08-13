@@ -1,4 +1,4 @@
-import { all, maybeOne, type Db } from '../db/client.ts'
+import { all, maybeOne, scalar, type Db } from '../db/client.ts'
 
 /**
  * ダッシュボードが必要とする問い合わせ。
@@ -160,9 +160,29 @@ export interface HomeTrendPoint {
   as_of: Date
   candidates: number
   partners: number
-  regular_a: number
+  /**
+   * 確度が閾値以上の候補者。
+   *
+   * ★ **閾値 0.8 は受領していない。** 0017 が「点数と閾値は運用時に決定」と
+   *   書いたまま空で出荷しており、運営の基準は応募管理表
+   *   `003_2期生アプローチリスト` の「参加確度」――
+   *   **帯（020％／050％／080％／100％）と状態語（未計測・興味なし/対象外・応募完了）**
+   *   である。**同じ基準ではない**（C-127）。帯を受け取るまでの仮の線である。
+   * ★ 画面に「A」と名乗らせない ―― 記録に無い格付けで、応募管理表では
+   *   A〜C・D〜I が**特別選考の軸の記号**として別の意味を持つ。
+   */
+  high_confidence: number
   special: number
 }
+
+/**
+ * 確度の算出規則が1件でも登録されているか。
+ *
+ * ★ 規則が無ければ確度は算出されない（0017）。**そのとき0を出さない** ――
+ *   「無いことを 0 と書くと、それは嘘の数字になる」（0017 のコメント）。
+ */
+export const hasScoringRules = async (db: Db): Promise<boolean> =>
+  Number(await scalar<string>(db, `SELECT count(*)::text FROM scoring_rules`)) > 0
 
 /** ホームで並べる4指標の日次累積。すべて同じ期・同じ暦日で数える。 */
 export const getHomeTrends = (db: Db, seasonId: string) =>
@@ -188,7 +208,7 @@ export const getHomeTrends = (db: Db, seasonId: string) =>
       (SELECT count(DISTINCT pr.partner_id) FROM partner_reaches pr
         WHERE pr.season_id = $1 AND pr.occurred_on <= d.as_of)::int AS partners,
       (SELECT count(DISTINCT c.person_id) FROM confidence c
-        WHERE c.calculated_on <= d.as_of AND c.ratio >= .8)::int AS regular_a,
+        WHERE c.calculated_on <= d.as_of AND c.ratio >= .8)::int AS high_confidence,
       (SELECT count(DISTINCT ae.person_id) FROM v_effective_approach_events ae
         WHERE ae.season_id = $1 AND jst_date(ae.occurred_at) <= d.as_of)::int AS special
       FROM days d ORDER BY d.as_of`, [seasonId])

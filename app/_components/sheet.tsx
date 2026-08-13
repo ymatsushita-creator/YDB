@@ -214,8 +214,14 @@ export function Sheet({
                       </select>
                     ) : (
                       <input
+                        /* ★ メールは **`type="email"` にしない**（C-126）。
+                           表は行をまとめて1回で送るので、ブラウザの形式検査が
+                           1セルの不備で**送信そのものを止める** ―― 表は
+                           行ごとに「結果」を返す作りで、判定はサーバに置いてある。
+                           打ち方だけ揃える（キーボードのヒントは出す）。 */
                         type={c.type === 'date' ? 'date' : c.type === 'number' ? 'number' : 'text'}
-                        inputMode={c.type === 'number' ? 'numeric' : undefined}
+                        inputMode={c.type === 'number' ? 'numeric'
+                          : c.type === 'email' ? 'email' : undefined}
                         min={c.type === 'number' ? 0 : undefined}
                         value={row.values[c.key] ?? ''}
                         onChange={(e) => setCell(rowIndex, c.key, e.target.value)}

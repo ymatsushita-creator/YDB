@@ -1,4 +1,5 @@
 import { maybeOne, type Db } from '../db/client.ts'
+import { BLANK_CHARS } from './text.ts'
 import { addCandidate, addPartnerReach, ADD_CANDIDATE_MESSAGE } from './intake.ts'
 import {
   updatePersonProfile, setPersonApproachState, type ProfileFailure,
@@ -81,7 +82,6 @@ export interface SheetSaveResult {
 }
 
 /** 空白とみなす文字。**記録層の `*_not_blank` 制約と同じ集合**にする（0015）。 */
-const BLANK_CHARS = ' \t\n\r　'
 
 const t = (v: string | null | undefined) => (v ?? '').trim()
 const same = (a: string | null | undefined, b: string | null | undefined) =>

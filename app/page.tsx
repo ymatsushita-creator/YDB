@@ -4,7 +4,7 @@ import { getDb } from '../src/db/server.ts'
 import { currentTier } from '../src/auth/current.ts'
 import { canOpen, type Tier } from '../src/auth/tiers.ts'
 import {
-  listSeasons, defaultSeason, getSeason, getHomeTrends,
+  listSeasons, defaultSeason, getSeason, getHomeTrends, hasScoringRules,
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
 import { Card, Empty, num, NotDerived } from './_components/ui.tsx'
@@ -15,11 +15,18 @@ import { Shell, Breadcrumb, YearSwitch, seasonLabel } from './_components/shell.
 
 export const dynamic = 'force-dynamic'
 
-function HomeKpi({ label, value, href }: { label: string; value: number; href?: string }) {
+function HomeKpi(
+  { label, value, href, derived = true }:
+  { label: string; value: number; href?: string; derived?: boolean },
+) {
   const body = (
     <>
       <span className="home-kpi-label">{label}</span>
-      <strong className="home-kpi-value">{num(value)}</strong>
+      {/* ★ 算出できていないものを 0 と出さない ―― 0017 が
+          「無いことを 0 と書くと、それは嘘の数字になる」と書いた形（C-127）。 */}
+      {derived
+        ? <strong className="home-kpi-value">{num(value)}</strong>
+        : <strong className="home-kpi-value"><NotDerived /></strong>}
     </>
   )
   // ★ 開ける層にだけリンクにする。開けない層では素のタイルのまま
@@ -93,17 +100,26 @@ export default async function Home(
     )
   }
 
-  const [trends, picks] = await Promise.all([
+  const [trends, picks, hasRules] = await Promise.all([
     getHomeTrends(db, season.id),
     listConfidence(db, season.id, 3),
+    hasScoringRules(db),
   ])
+  // ★ 確度の系列は、算出規則があるときだけ出す（C-127）。
+  //   規則が0件なら確度は誰にも付かないので、常に0の線になる ――
+  //   それは「無いことを0と書く」ことである（0017）。
   const series = [
     { key: 'candidates' as const, label: '候補者', color: '#f03090' },
     { key: 'partners' as const, label: '連携団体数', color: '#f0f000' },
-    { key: 'regular_a' as const, label: '通常選考者（確度A以上）', color: '#50f000' },
+    // ★ 「確度A以上」と名乗っていたのをやめた（C-127）。**A は記録に無い格付け**で、
+    //   応募管理表では A〜C・D〜I が特別選考の軸の記号（別の意味）である。
+    //   閾値は画面に書かない（C-62）。定義はクエリのコメントと DECISIONS に置く。
+    ...(hasRules
+      ? [{ key: 'high_confidence' as const, label: '確度の高い候補者', color: '#50f000' }]
+      : []),
     { key: 'special' as const, label: '特別選考者', color: '#00c0f0', dashed: true },
   ]
-  const latest = trends.at(-1) ?? { candidates: 0, partners: 0, regular_a: 0, special: 0 }
+  const latest = trends.at(-1) ?? { candidates: 0, partners: 0, high_confidence: 0, special: 0 }
 
   // 気になったセクションから、その詳細タブへ飛べるようにする（依頼者の指示）。
   // 行き先は canOpen で守る ―― 開けない層（personal は特別選考を開けない）には
@@ -130,7 +146,8 @@ export default async function Home(
         <div className="home-summary-grid">
           <HomeKpi label="候補者" value={latest.candidates} href={to('/people')} />
           <HomeKpi label="連携団体" value={latest.partners} href={to('/approach')} />
-          <HomeKpi label="通常選考 A以上" value={latest.regular_a} href={to('/borderline')} />
+          <HomeKpi label="確度の高い候補者" value={latest.high_confidence}
+                   href={to('/borderline')} derived={hasRules} />
           <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
         </div>
 

@@ -1,4 +1,5 @@
 import { maybeOne, one, type Db } from '../db/client.ts'
+import { BLANK_CHARS } from './text.ts'
 
 /**
  * 団体の「NEO としてどう関わるか」（依頼者の指示。実行⑫）。
@@ -284,8 +285,9 @@ export async function setPartnerRecommendationState(
   await db.query(`
     INSERT INTO partner_recommendation_events
       (partner_id, season_id, state_id, occurred_at, recorded_by_staff_id, note)
-    VALUES ($1, $2, $3, now(), $4, nullif(btrim($5, E' \t\n\r　'), ''))`,
-  [input.partnerId, input.seasonId, input.stateId, input.staffId, input.note ?? null])
+    VALUES ($1, $2, $3, now(), $4, nullif(btrim($5, $6), ''))`,
+  [input.partnerId, input.seasonId, input.stateId, input.staffId, input.note ?? null,
+   BLANK_CHARS])
 
   return { ok: true, changed: true }
 }

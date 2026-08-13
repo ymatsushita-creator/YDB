@@ -1,4 +1,5 @@
 import { maybeOne, type Db } from '../db/client.ts'
+import { BLANK_CHARS, blank } from './text.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATA_IMAGE = /^data:image\/(jpeg|png|webp);base64,/
@@ -27,7 +28,8 @@ export type ProfileFailure =
 
 export type ProfileResult = { ok: true } | { ok: false; reason: ProfileFailure }
 
-const blankToNull = (value: string) => value.trim() || null
+/** 空白だけなら null。集合の定義は text.ts（C-126）。 */
+const blankToNull = (value: string) => blank(value)
 
 export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<ProfileResult> {
   if (!UUID.test(input.personId)) return { ok: false, reason: 'person_not_found' }
@@ -70,10 +72,13 @@ export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<
           FROM person_profile_revisions WHERE person_id = $1
       ), updated AS (
         UPDATE persons
-           SET family_name = btrim($2), given_name = btrim($3),
+           -- ★ 落とす空白は**制約と同じ集合**にする（C-126）。既定の btrim は
+           --   半角空白だけで、全角空白が残っていた ―― 表（スプシ）は落とすので、
+           --   同じ文字を打っても記録が違っていた。集合は text.ts の1箇所。
+           SET family_name = btrim($2, $16), given_name = btrim($3, $16),
                family_name_kana = $4, given_name_kana = $5,
                birth_date = $6, school_id = $7, faculty = $8,
-               email = nullif(btrim($9), ''), phone = $10, line_user_id = $11,
+               email = nullif(btrim($9, $16), ''), phone = $10, line_user_id = $11,
                referrer_person_id = $12, note = $13,
                photo_data_url = CASE WHEN $14::boolean THEN $15 ELSE photo_data_url END,
                updated_at = now()
@@ -96,6 +101,7 @@ export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<
       blankToNull(input.phone), blankToNull(input.lineUserId),
       blankToNull(input.referrerPersonId), blankToNull(input.note),
       input.photoDataUrl !== undefined, input.photoDataUrl ?? null,
+      BLANK_CHARS,
     ])
     return rows.length === 1 ? { ok: true } : { ok: false, reason: 'person_not_found' }
   } catch (error) {
