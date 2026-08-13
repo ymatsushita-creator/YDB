@@ -97,10 +97,12 @@ export default async function HeadhuntingPage({
       <div className="hh-grid">
         <div className="hh-col-main">
           <div className="hh-rankings">
-            {/* --- D 応募者成績ランキング --- */}
+            {/* --- D 欲しい人ランキング（依頼者の指示。実行⑮。C-138）――
+                 出す語は「欲しい人ランキング」。**中身は変えていない**
+                 （提出済みの評価の点で並べる）。名前だけを依頼者の語に戻した。 */}
             <section className="panel-card">
               <header className="hh-head">
-                <h2>応募者成績ランキング</h2>
+                <h2>欲しい人ランキング</h2>
                 <Link href={`/operations?season=${season.id}`} className="hh-more">すべて見る ›</Link>
               </header>
               {scores.length === 0 ? (
