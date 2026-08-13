@@ -1,4 +1,3 @@
-import type { FunnelPoint } from '../../src/queries/dashboard.ts'
 import { md } from './ui.tsx'
 
 /**
@@ -10,8 +9,8 @@ const W = 900
 const H = 260
 const PAD = { top: 16, right: 16, bottom: 28, left: 48 }
 
-interface Series {
-  key: keyof FunnelPoint
+interface Series<T> {
+  key: keyof T
   label: string
   color: string
   dashed?: boolean
@@ -136,9 +135,9 @@ export function Ring({
   )
 }
 
-export function TimeSeries({
+export function TimeSeries<T extends { as_of: Date }>({
   points, series, height = H, valueLabel,
-}: { points: FunnelPoint[]; series: Series[]; height?: number; valueLabel: string }) {
+}: { points: T[]; series: Series<T>[]; height?: number; valueLabel: string }) {
   if (points.length < 2) {
     return <p className="empty">系列を描くだけの日数がまだない</p>
   }
@@ -198,7 +197,7 @@ export function TimeSeries({
   )
 }
 
-export function Legend({ series }: { series: Series[] }) {
+export function Legend<T>({ series }: { series: Series<T>[] }) {
   return (
     <div className="legend" style={{ marginTop: 12 }}>
       {series.map((s) => (

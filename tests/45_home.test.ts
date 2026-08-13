@@ -41,9 +41,7 @@ describe('ホーム', () => {
   test('① ホームは画面を持つ（redirect だけではない）', async () => {
     const src = await body('app/page.tsx')
     assert.match(src, /<Shell active="home"/, 'ホームは共通シェルを被る')
-    assert.match(src, /Card title="母集団と歩留まり"/)
-    assert.match(src, /Card title="集客の効き"/)
-    assert.match(src, /Card title="面接の進み具合"/)
+    assert.match(src, /Card title="推移"/)
     assert.match(src, /Card title="ピックアップ候補者"/)
     // 依頼者が選ばなかったものを勝手に足していないこと。
     assert.doesNotMatch(src, /いま止まっているもの/)
@@ -51,7 +49,7 @@ describe('ホーム', () => {
     //   最初は表（`<table>`）と数字のカードで作って突き返された。
     //   **ホームに表を置かない。** 図の部品で読ませる。
     assert.doesNotMatch(src, /<table/, 'ホームに表を置かない')
-    assert.match(src, /FunnelStages|BarList|StackedBar|Ring/, '図の部品で出す')
+    assert.match(src, /TimeSeries/, '推移を折れ線で出す')
   })
 
   test('② 全層がホームを開け、行き先もホームである', () => {
@@ -61,19 +59,14 @@ describe('ホーム', () => {
     }
   })
 
-  test('③ ホームの層判定は canOpen だけを見る', async () => {
+  test('③ 入力層には数字を出さない', async () => {
     const src = await body('app/page.tsx')
-    assert.match(src, /canOpen/, '層の判定を1箇所（canOpen）から借りる')
-    // 層ごとに出すものを変えている（入力層は数字を出さない）。
     assert.match(src, /tier === 'input'/)
-    // ★ 独自の許可リストを作っていないこと。
-    assert.doesNotMatch(src, /ALL_ONLY|INPUT_PATHS/)
   })
 
-  test('④ ホームは新しい集計を作らない（既存のクエリを呼ぶ）', async () => {
+  test('④ ホームの集計はクエリ層から呼ぶ', async () => {
     const src = await body('app/page.tsx')
-    for (const fn of ['getSummary', 'getStepFlow', 'getPartnerReach',
-      'getChannelPerformance', 'listSeasonInterviews', 'listConfidence']) {
+    for (const fn of ['getHomeTrends', 'listConfidence']) {
       assert.match(src, new RegExp(fn), fn)
     }
     // 画面の中で SQL を書いていない（集計の定義が2箇所になる）。
@@ -123,10 +116,15 @@ describe('タブの名称と構造', () => {
     assert.deepEqual(found, [], `画面の語が残っている:\n${found.join('\n')}`)
   })
 
-  test('⑤ 「入力者を追加」が操作柱にあり、入力層でも開く', async () => {
+  test('⑤ 「入力者を追加」を操作柱に出さない', async () => {
     const src = await read('app/_components/shell.tsx')
-    assert.match(src, /href: '\/staff\/new', label: '入力者を追加'/)
+    assert.doesNotMatch(src, /href: '\/staff\/new', label: '入力者を追加'/)
     assert.equal(canOpen('input', '/staff/new'), true)
+  })
+
+  test('ホームと特別選考の間にスラッシュがある', async () => {
+    const src = await body('app/_components/shell.tsx')
+    assert.match(src, /t\.id === 'home'.*hh-nav-slash.*\//)
   })
 })
 

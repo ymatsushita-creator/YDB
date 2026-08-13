@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { getDb, isDemoMode } from '../../src/db/server.ts'
 import { isDemoSeason, listSeasonCriteria, type Season } from '../../src/queries/dashboard.ts'
@@ -79,7 +79,6 @@ const TABS: Array<{ id: Tab; href: string; label: string }> = [
 const ADD_LINKS = [
   { href: '/people/new', label: '候補者を追加' },
   { href: '/approach/new', label: '連携団体を追加' },
-  { href: '/staff/new', label: '入力者を追加' },
 ]
 
 export async function Shell({
@@ -136,14 +135,16 @@ export async function Shell({
 
         <nav className="hh-nav" aria-label="主なナビゲーション">
           {tabs.map((t) => (
-            <Link
-              key={t.id}
-              href={tabHref(t.href)}
-              className={t.id === active ? 'sidebar-item-active btn-physical' : 'sidebar-item btn-physical'}
-              aria-current={t.id === active ? 'page' : undefined}
-            >
-              <span>{t.label}</span>
-            </Link>
+            <Fragment key={t.id}>
+              <Link
+                href={tabHref(t.href)}
+                className={t.id === active ? 'sidebar-item-active btn-physical' : 'sidebar-item btn-physical'}
+                aria-current={t.id === active ? 'page' : undefined}
+              >
+                <span>{t.label}</span>
+              </Link>
+              {t.id === 'home' && <span className="hh-nav-slash" aria-hidden>/</span>}
+            </Fragment>
           ))}
           <div className="hh-nav-add" aria-label="追加">
             {addLinks.map((item) => (
@@ -216,7 +217,6 @@ export async function Shell({
                     {criteria.map((c, i) => (
                       <span key={`${c.step_name}-${c.sort_order}`} className="hh-criteria-axis" title={c.name}>
                         {i + 1}. {c.name}
-                        <span className="hh-criteria-scale">{c.scale_max}</span>
                       </span>
                     ))}
                   </span>

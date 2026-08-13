@@ -45,8 +45,8 @@ const plan = planApproach(book)
 const interviews = planInterviews(book)
 
 console.log(`アプローチリスト  ${plan.people.length} 人（値はあるが氏名が空の行 ${plan.skipped}）`)
-console.log(`  去年（2期）  ${plan.byCohort[2]} 人 ―― 「面談実施」の欄がある`)
-console.log(`  今年（3期）  ${plan.byCohort[3]} 人 ―― 欄が無い`)
+console.log(`  去年（2期）  ${plan.byCohort[2]} 人 ―― 「面談実施」が FALSE`)
+console.log(`  今年（3期）  ${plan.byCohort[3]} 人 ―― FALSE ではない`)
 console.log(`面談シート       ${interviews.length} 件`
   + `（面談日が読めた ${interviews.filter((i) => i.metOn).length} 件）`)
 console.log(`判断軸           ${JUDGEMENT_AXES.length} 軸`)
@@ -151,6 +151,9 @@ try {
   let created = 0
   let noted = 0
   let numbered = 0
+  let cohortCorrections = 0
+  const needsSeason2 = new Set(plan.people.filter((p) => p.cohort === 2)
+    .map((p) => nameKey(p.fullName)))
 
   for (const p of plan.people) {
     const key = nameKey(p.fullName)
@@ -167,6 +170,34 @@ try {
       [p.fullName, p.kana, school.id, p.email]))!.id
       personOf.set(key, personId)
       created++
+    }
+
+    // 旧判定では TRUE も2期へ入れていた。FALSEだけが2期という指示に合わせ、
+    // 応募管理表由来の記録だけを3期へ移す。既存応募がある2期記録は消さない。
+    if (p.cohort === 3 && p.interviewDone === 'TRUE' && !needsSeason2.has(key)) {
+      const season2Id = seasonOf.get(2)!
+      const wrong = await one<{ id: string; approach_state_id: string; occurred_at: Date }>(`
+        SELECT e.id, e.approach_state_id, e.occurred_at
+          FROM approach_events e
+         WHERE e.person_id = $1 AND e.season_id = $2
+           AND e.note = '応募管理表から取り込んだ'
+           AND NOT EXISTS (SELECT 1 FROM approach_events c WHERE c.corrects_event_id = e.id)
+         LIMIT 1`, [personId, season2Id])
+      if (wrong) {
+        await db.query(`
+          INSERT INTO approach_events
+            (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id,
+             is_correction, corrects_event_id, note)
+          VALUES ($1, $2, $3, now(), $4, true, $5, '期判定を訂正：FALSEではないため3期')`,
+        [personId, season2Id, wrong.approach_state_id, actor!.id, wrong.id])
+        await db.query(`
+          DELETE FROM candidate_numbers n
+           WHERE n.person_id = $1 AND n.season_id = $2
+             AND NOT EXISTS (SELECT 1 FROM applications a
+                              WHERE a.person_id = $1 AND a.season_id = $2)`,
+        [personId, season2Id])
+        cohortCorrections++
+      }
     }
 
     // 候補者番号。期ごとに1から、欠番は詰めない（C-79）。
@@ -253,6 +284,7 @@ try {
   console.log(`  取り込みメモ   ${noted} 件`)
   console.log(`  面談のメモ     ${interviewNotes} 件`)
   console.log(`  判断軸        ${axesAdded} 軸（3期「特別選考」）`)
+  console.log(`  期の訂正       ${cohortCorrections} 人（TRUE を2期→3期）`)
 } catch (e) {
   await db.exec('ROLLBACK')
   console.error('入れられなかった。**何も書いていない。**')

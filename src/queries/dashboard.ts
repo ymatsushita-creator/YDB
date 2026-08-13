@@ -46,7 +46,9 @@ export interface Season {
 export const listSeasons = (db: Db) =>
   all<Season>(db, `
     SELECT s.*, (jst_today() BETWEEN s.outreach_start_date AND s.selection_end_date) AS is_live
-      FROM seasons s ORDER BY s.is_demo, s.enrollment_year DESC`)
+      FROM seasons s
+     WHERE NOT s.is_demo
+     ORDER BY s.enrollment_year DESC`)
 
 /**
  * 期の指定が無いときに開く期。
@@ -86,7 +88,7 @@ export const getSeason = (db: Db, seasonId: string | string[] | undefined) => {
   if (!id || !UUID.test(id)) return Promise.resolve(null)
   return maybeOne<Season>(db, `
     SELECT s.*, (jst_today() BETWEEN s.outreach_start_date AND s.selection_end_date) AS is_live
-      FROM seasons s WHERE s.id = $1`, [id])
+      FROM seasons s WHERE s.id = $1 AND NOT s.is_demo`, [id])
 }
 
 // -------------------------------------------------------------
@@ -150,6 +152,43 @@ export const getFunnel = (db: Db, seasonId: string, windowDays = ACTIVE_WINDOW_D
       FROM f_funnel_daily($2)
      WHERE season_id = $1 AND as_of <= jst_today()
      ORDER BY as_of`, [seasonId, windowDays])
+
+export interface HomeTrendPoint {
+  as_of: Date
+  candidates: number
+  partners: number
+  regular_a: number
+  special: number
+}
+
+/** ホームで並べる4指標の日次累積。すべて同じ期・同じ暦日で数える。 */
+export const getHomeTrends = (db: Db, seasonId: string) =>
+  all<HomeTrendPoint>(db, `
+    WITH season AS (
+      SELECT *,
+             LEAST(outreach_start_date, jst_today() - 30) AS first_day,
+             LEAST(selection_end_date, jst_today()) AS last_day
+        FROM seasons WHERE id = $1
+    ), days AS (
+      SELECT generate_series(first_day, last_day, interval '1 day')::date AS as_of
+        FROM season
+    ), confidence AS (
+      SELECT sn.calculated_on, sn.person_id,
+             sn.total_points::numeric / NULLIF(mx.max_points, 0) AS ratio
+        FROM score_snapshots sn
+        JOIN v_scoring_rule_set_max mx ON mx.rule_set_id = sn.rule_set_id
+       WHERE sn.season_id = $1
+    )
+    SELECT d.as_of,
+      (SELECT count(*) FROM candidate_numbers n
+        WHERE n.season_id = $1 AND jst_date(n.assigned_at) <= d.as_of)::int AS candidates,
+      (SELECT count(DISTINCT pr.partner_id) FROM partner_reaches pr
+        WHERE pr.season_id = $1 AND pr.occurred_on <= d.as_of)::int AS partners,
+      (SELECT count(DISTINCT c.person_id) FROM confidence c
+        WHERE c.calculated_on <= d.as_of AND c.ratio >= .8)::int AS regular_a,
+      (SELECT count(DISTINCT ae.person_id) FROM v_effective_approach_events ae
+        WHERE ae.season_id = $1 AND jst_date(ae.occurred_at) <= d.as_of)::int AS special
+      FROM days d ORDER BY d.as_of`, [seasonId])
 
 export interface SeasonSummary {
   identified_person: number

@@ -241,6 +241,11 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
 .hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
 .hh-nav a:hover { text-decoration: none; }
+.hh-nav-slash {
+  height: 10px; overflow: hidden;
+  color: var(--color-on-dark-muted); text-align: center;
+  font-size: 18px; line-height: 10px;
+}
 /* 副文（`<em>`）の指定は消した ―― 出さなくなったため（実行⑪。依頼者の指示）。
    使わない見た目の指定を残すと、次に触る人が「まだあるもの」として扱う。 */
 .hh-nav-add {
@@ -1380,7 +1385,11 @@ html, body { height: 100%; overflow: hidden; }
   .hh-criteria-track { animation: none; }
   .hh-criteria-group[aria-hidden="true"] { display: none; }
 }
-.hh-criteria-scale {
-  flex: 0 0 auto;
-  color: var(--color-on-dark); font-size: 14px; font-variant-numeric: tabular-nums;
+.home-dashboard {
+  height: calc(100vh - var(--logo-h) - 112px);
+  min-height: 420px; overflow: hidden;
+  display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: var(--space-md);
 }
+.home-dashboard .section { margin: 0; min-height: 0; }
+.home-dashboard .panel-card { height: 100%; overflow: hidden; }
+.home-dashboard .pick-card { padding: var(--space-sm); }

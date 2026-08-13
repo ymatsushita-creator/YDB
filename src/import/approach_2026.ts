@@ -47,7 +47,7 @@ export const APPROACH = {
   confidence: 17,
   status: 18,
   statusAug: 19,
-  /** ★ この欄の**有無**が期を決める（依頼者の指示）。 */
+  /** ★ この欄が FALSE かどうかで期を決める（依頼者の指示）。 */
   interviewDone: 22,
 } as const
 
@@ -101,6 +101,8 @@ export interface ApproachPerson {
   kana: string | null
   /** 去年（2期）か、今年（3期）か。 */
   cohort: 2 | 3
+  /** 期判定に使った表の生値。再取り込み時の訂正にも使う。 */
+  interviewDone: string | null
   email: string | null
   /** 表の値のうち、この製品の語へ翻訳できないもの。**そのまま残す。** */
   facts: Array<{ label: string; value: string }>
@@ -137,9 +139,8 @@ export function planApproach(book: Workbook): ApproachPlan {
       continue
     }
 
-    // ★ 欄の**有無**で分ける。FALSE と「欄が無い」は違う。
+    // ★ FALSE だけが2期。それ以外（TRUE・空欄）は3期。
     const cell = clean(r[APPROACH.interviewDone])
-    const hasInterviewColumn = cell === 'TRUE' || cell === 'FALSE'
 
     const contact = clean(r[APPROACH.contact])
     const facts: Array<{ label: string; value: string }> = []
@@ -169,7 +170,8 @@ export function planApproach(book: Workbook): ApproachPlan {
       row: i + 1,
       fullName,
       kana: blank(r[APPROACH.kana]),
-      cohort: hasInterviewColumn ? 2 : 3,
+      cohort: cell === 'FALSE' ? 2 : 3,
+      interviewDone: cell || null,
       email: contact ? extractEmail(contact) : null,
       facts,
     })
