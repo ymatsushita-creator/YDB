@@ -56,42 +56,66 @@ export const constantTimeEqual = (a: string, b: string): boolean => {
   return diff === 0
 }
 
+/** 券が言っていること。**層だけでなく、誰かも言う**（0038）。 */
+export interface SessionClaims {
+  tier: Tier
+  /** 職員として入ったならその id。共有の合言葉で入ったなら null（＝誰か分からない）。 */
+  staffId: string | null
+}
+
+/** 職員が入っていない券の、その欄の書き方。uuid に現れない字を使う。 */
+const NO_STAFF = '-'
+
 /**
- * 引換券を作る。中身は「いつまで有効か」「どの層か」と、その署名だけ。
+ * 引換券を作る。中身は「いつまで有効か」「どの層か」「誰か」と、その署名だけ。
  *
- * ★ 署名は**期限と層の両方**を覆う。層を署名の外に置くと、
- *   `input` の券の層だけ `all` に書き換えたものが通る。
+ * ★ 署名は**3つ全部**を覆う。どれかを署名の外に置くと、そこだけ書き換えた券が通る
+ *   ―― 層を外せば `input` が `all` になり、**誰かを外せば他人になりすませる。**
  */
 export const issueSession = async (
-  secret: string, tier: Tier, nowMs: number,
+  secret: string, tier: Tier, nowMs: number, staffId: string | null = null,
 ): Promise<string> => {
   const exp = String(Math.floor(nowMs / 1000) + SESSION_MAX_AGE_SECONDS)
-  const payload = `${exp}.${tier}`
+  const payload = `${exp}.${tier}.${staffId ?? NO_STAFF}`
   return `${payload}.${await sign(secret, payload)}`
 }
 
 /**
- * 引換券を確かめ、**層を返す。** 通らなければ null。
+ * 引換券を確かめ、**層と誰かを返す。** 通らなければ null。
  *
- * ★ 真偽ではなく層を返す。真偽にすると、呼ぶ側が層をもう一度どこかから
+ * ★ 真偽ではなく中身を返す。真偽にすると、呼ぶ側が層や職員をもう一度どこかから
  *   取り直すことになり、その経路が署名の外側になる。
  *
  * ★ 署名を先に確かめてから期限を見る。順を逆にすると、
  *   **期限だけ書き換えた偽の券**を「期限切れ」として扱ってしまい、
  *   本物と偽物の区別が返り値から消える。
+ *
+ * ★ 3つの欄しか無い**古い券も通す**（0038 より前に配ったもの）。
+ *   誰かは分からないので `staffId` は null になる ――
+ *   **通さない選択もできたが、それは作業中の全員をその場で締め出す。**
+ *   古い券は期限（7日）で自然に消える。署名は当時から `exp.tier` を覆っている。
  */
 export const verifySession = async (
   secret: string, token: string | undefined, nowMs: number,
-): Promise<Tier | null> => {
+): Promise<SessionClaims | null> => {
   if (!token) return null
   const parts = token.split('.')
-  if (parts.length !== 3) return null
-  const [exp, tier, mac] = parts as [string, string, string]
+  if (parts.length !== 3 && parts.length !== 4) return null
+  const legacy = parts.length === 3
+  const exp = parts[0]!
+  const tier = parts[1]!
+  const staff = legacy ? NO_STAFF : parts[2]!
+  const mac = parts[legacy ? 2 : 3]!
   if (!/^\d+$/.test(exp)) return null
   if (!isTier(tier)) return null
-  if (!constantTimeEqual(mac, await sign(secret, `${exp}.${tier}`))) return null
-  return Number(exp) * 1000 > nowMs ? tier : null
+  if (!legacy && staff !== NO_STAFF && !UUID.test(staff)) return null
+  const payload = legacy ? `${exp}.${tier}` : `${exp}.${tier}.${staff}`
+  if (!constantTimeEqual(mac, await sign(secret, payload))) return null
+  if (Number(exp) * 1000 <= nowMs) return null
+  return { tier, staffId: staff === NO_STAFF ? null : staff }
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * 合言葉が合っているか。

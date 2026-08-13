@@ -22,11 +22,17 @@ export default async function LoginPage({
     <main className="login-frame">
       <form action={signInAction} className="login-card">
         <img className="login-logo" src="/brand/logo_gradient_720.png"
-             width={1283} height={305} alt="NEO ACADEMIA" />
+             width={720} height={171} alt="NEO ACADEMIA" />
 
         <input type="hidden" name="next" value={next} />
+        {/* ★ 名前は**打たせる。選択肢にしない**（0038）。一覧にすると、
+            入口を開いた誰にでも職員の氏名が並ぶ。
+            空のままでも入れる ―― 従来の共有の合言葉で入る道は残してある。 */}
+        <label className="login-label" htmlFor="displayName">名前</label>
+        <input id="displayName" name="displayName" type="text" autoFocus
+               autoComplete="username" className="login-input" />
         <label className="login-label" htmlFor="password">合言葉</label>
-        <input id="password" name="password" type="password" required autoFocus
+        <input id="password" name="password" type="password" required
                autoComplete="current-password" className="login-input" />
         <button className="button-primary login-button" type="submit">入る</button>
 

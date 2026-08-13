@@ -31,7 +31,11 @@ export default function proxy(req: NextRequest) {
   if (!secret) return toLogin(req, 'unconfigured')
 
   return verifySession(secret, req.cookies.get(SESSION_COOKIE)?.value, Date.now())
-    .then((tier) => {
+    .then((claims) => {
+      // ★ 券は層と職員の両方を言う（0038）。ここで見るのは層だけ ――
+      //   Edge には DB が無いので、職員の中身を確かめる術は無い。
+      //   誰かを使う判断はサーバ側（`currentStaffId`）で行う。
+      const tier = claims?.tier
       if (!tier) return toLogin(req, null)
       // ★ 入れているのに開けないだけなら、**合言葉は聞き直さない。**
       //   `/login` へ送ると、入れる→開けない→聞かれる→入れる…と輪になる。

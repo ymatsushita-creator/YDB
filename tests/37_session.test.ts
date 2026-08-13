@@ -36,16 +36,18 @@ describe('合言葉と引換券', () => {
   })
 
   test('引換券は、自分で発行したものだけを受け付ける', async () => {
+    // ★ 0038 で券が**層と誰か**を返すようになった（`{ tier, staffId }`）。
+    //   職員として入っていなければ `staffId` は null（＝誰か分からない）。
     const token = await issueSession(SECRET, 'all', NOW)
-    assert.equal(await verifySession(SECRET, token, NOW), 'all')
+    assert.deepEqual(await verifySession(SECRET, token, NOW), { tier: 'all', staffId: null })
     assert.equal(await verifySession('別の秘密鍵', token, NOW), null,
       '秘密鍵が違えば通らない')
   })
 
   test('★ 期限だけ書き換えた偽の券は通らない', async () => {
     const token = await issueSession(SECRET, 'all', NOW)
-    const [, , mac] = token.split('.')
-    const forged = `${Math.floor(NOW / 1000) + 999_999}.all.${mac}`
+    const [, , staff, mac] = token.split('.')
+    const forged = `${Math.floor(NOW / 1000) + 999_999}.all.${staff}.${mac}`
     assert.equal(await verifySession(SECRET, forged, NOW), null)
   })
 
@@ -53,23 +55,26 @@ describe('合言葉と引換券', () => {
     // 署名が期限しか覆っていないと、入力層の券の層名を書き換えるだけで
     // 全部が開く。**署名は期限と層の両方を覆う。**
     const token = await issueSession(SECRET, 'input', NOW)
-    const [exp, , mac] = token.split('.')
-    assert.equal(await verifySession(SECRET, `${exp}.all.${mac}`, NOW), null)
-    assert.equal(await verifySession(SECRET, `${exp}.personal.${mac}`, NOW), null)
+    const [exp, , staff, mac] = token.split('.')
+    assert.equal(await verifySession(SECRET, `${exp}.all.${staff}.${mac}`, NOW), null)
+    assert.equal(await verifySession(SECRET, `${exp}.personal.${staff}.${mac}`, NOW), null)
     // 元の券はそのまま通る（壊したのは偽物だけ）。
-    assert.equal(await verifySession(SECRET, token, NOW), 'input')
+    assert.deepEqual(await verifySession(SECRET, token, NOW), { tier: 'input', staffId: null })
   })
 
   test('期限が切れた券は通らない', async () => {
     const token = await issueSession(SECRET, 'personal', NOW)
     const later = NOW + (SESSION_MAX_AGE_SECONDS + 1) * 1000
     assert.equal(await verifySession(SECRET, token, later), null)
-    assert.equal(await verifySession(SECRET, token, NOW + 1000), 'personal')
+    assert.deepEqual(await verifySession(SECRET, token, NOW + 1000),
+      { tier: 'personal', staffId: null })
   })
 
   test('壊れた券・空の券は通らない', async () => {
     for (const bad of [undefined, '', '.', 'abc', 'abc.def', '.sig', '123',
-      '12x.sig', '123.sig', '123.nosuchtier.sig', '123.all.sig.extra']) {
+      '12x.sig', '123.sig', '123.nosuchtier.sig', '123.all.sig.extra',
+      // 0038 で欄が4つになった。**職員の欄が uuid でも `-` でもない券**は通さない。
+      '123.all.notauuid.sig', '123.all.-.sig.extra']) {
       assert.equal(await verifySession(SECRET, bad, NOW), null, String(bad))
     }
   })
@@ -77,8 +82,13 @@ describe('合言葉と引換券', () => {
   test('★ 券に合言葉そのものは入らない', async () => {
     const token = await issueSession(SECRET, 'all', NOW)
     assert.equal(token.includes(SECRET), false)
-    // 中身は「いつまで有効か」「どの層か」と署名だけ。
-    assert.match(token, /^\d+\.[a-z]+\.[A-Za-z0-9_-]+$/)
+    // 中身は「いつまで有効か」「どの層か」「誰か」と署名だけ（0038）。
+    assert.match(token, /^\d+\.[a-z]+\.[-0-9a-f]+\.[A-Za-z0-9_-]+$/)
+
+    // 職員として入った券も、合言葉を含まない。
+    const staffToken = await issueSession(
+      SECRET, 'all', NOW, '11111111-2222-3333-4444-555555555555')
+    assert.equal(staffToken.includes(SECRET), false)
   })
 
   test('突き合わせは、長さが違っても早く返らない', () => {

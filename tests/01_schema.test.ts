@@ -133,6 +133,8 @@ describe('マイグレーション', () => {
       'v_effective_partner_recommendation_events',
       // 0035: 団体×期の現在の推薦枠ステイタス。**期ごと**なので団体の列にしない
       'v_partner_recommendation_state',
+      // 0038: 職員ごとの最後の入場と回数。合言葉を持っているかも出す
+      'v_staff_last_sign_in',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

@@ -1,6 +1,6 @@
 import 'server-only'
 import { cookies } from 'next/headers'
-import { SESSION_COOKIE, verifySession } from './session.ts'
+import { SESSION_COOKIE, verifySession, type SessionClaims } from './session.ts'
 import type { Tier } from './tiers.ts'
 
 /**
@@ -13,9 +13,22 @@ import type { Tier } from './tiers.ts'
  * ★ ここは next/headers を使うのでサーバ専用。
  *   Edge の `proxy.ts` からは呼ばない（あちらは Cookie を直接持っている）。
  */
-export const currentTier = async (): Promise<Tier | null> => {
+const currentClaims = async (): Promise<SessionClaims | null> => {
   const secret = process.env.YOUTHDB_SESSION_SECRET
   if (!secret) return null
   const jar = await cookies()
   return verifySession(secret, jar.get(SESSION_COOKIE)?.value, Date.now())
 }
+
+export const currentTier = async (): Promise<Tier | null> =>
+  (await currentClaims())?.tier ?? null
+
+/**
+ * いま入っている職員（0038）。共有の合言葉で入っていれば null。
+ *
+ * ★ **null は「誰か分からない」であって「居ない」ではない。**
+ *   記録の「入力者」を自己申告からこれへ寄せるかは依頼者の判断で、
+ *   いまは**券が言えるようにしただけ**である。
+ */
+export const currentStaffId = async (): Promise<string | null> =>
+  (await currentClaims())?.staffId ?? null

@@ -324,8 +324,10 @@ describe('画面の切り替え（速さ）', () => {
     let checked = 0
     for (const f of files) {
       const src = await read(f)
-      // 記録を書くものだけを見る。合言葉の出入り（`app/login/actions.ts`）は
-      // **記録を変えない**ので、捨てる控えも無い。
+      // 記録を書くものだけを見る。
+      // ★ 入口（`app/login/actions.ts`）も 0038 から**記録を書く**
+      //   （入った記録）。しかもそこは**人が入れ替わる場所**なので、
+      //   控えを捨てないと前の人の画面が最大30秒出る ―― この見張りが捕まえた。
       if (!/src\/commands\//.test(src)) continue
       checked++
       assert.match(src, /revalidatePath\(/, `${f} が控えを捨てていない`)
