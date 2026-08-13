@@ -43,6 +43,9 @@ describe('ホーム', () => {
     assert.match(src, /<Shell active="home"/, 'ホームは共通シェルを被る')
     assert.match(src, /Card title="推移"/)
     assert.match(src, /Card title="ピックアップ候補者"/)
+    for (const title of ['候補者', '連携団体', '選考状況']) {
+      assert.match(src, new RegExp(`Card title="${title}"`))
+    }
     // 依頼者が選ばなかったものを勝手に足していないこと。
     assert.doesNotMatch(src, /いま止まっているもの/)
     // ★ 依頼者の指示は「**サマリーをビジュアライズ**」である。
