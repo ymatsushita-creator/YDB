@@ -298,10 +298,14 @@ describe('評価基準（横バー）', () => {
     assert.ok(criteria > main, '評価基準は左柱ではなく横バーのある主領域に描く')
   })
 
-  test('★ 見出しを出さず、基準は動かさずに全件を出す（依頼者の指示）', async () => {
+  test('★ 見出しを出さず、真ん中・大きめ・横送りで全件を出す（依頼者の指示）', async () => {
     // ★ 実行⑬で「流す」をやめた ―― 依頼者の指示は
     //   「評価軸は動かさなくていいので全部入るように」。
-    //   流れているものは狙って読めない。**全件を同時に出す。**
+    //   流れているものは狙って読めない。**勝手に流さない**のはいまも生きている。
+    // ★ 実行⑭で形が変わった ―― 依頼者の指示は
+    //   「真ん中配置、文字大きめ、横スクロールにして」。
+    //   折り返しをやめて1行に並べ、**送るのは利用者**にした。
+    //   （折り返していた頃は軸が15本になって**天端で1行目が切れていた**。C-65）
     const shell = await read('app/_components/shell.tsx')
     const ref = shell.slice(shell.indexOf('<div className="hh-criteria-ref"'), shell.indexOf('{children}'))
     assert.doesNotMatch(ref, />評価基準</)
@@ -316,7 +320,21 @@ describe('評価基準（横バー）', () => {
     // 動かさない ―― 動きの指定も、その残骸も残さない。
     assert.doesNotMatch(css, /criteria-marquee/, '流す指定を残さない')
     const group = /\.hh-criteria-group \{([^}]*)\}/.exec(css)
-    assert.match(group![1]!, /flex-wrap:\s*wrap/, '入らないぶんは折り返して全件出す')
+    assert.match(group![1]!, /flex-wrap:\s*nowrap/, '1行に並べる（折り返さない）')
+    const scroll = /\.hh-criteria-scroll \{([^}]*)\}/.exec(css)
+    assert.match(scroll![1]!, /overflow-x:\s*auto/, '入らないぶんは横へ送れる')
+    assert.match(scroll![1]!, /overflow-y:\s*hidden/, '縦へ溢れさせない（天端が切れる）')
+    assert.match(scroll![1]!, /align-items:\s*center/, '縦は真ん中に置く')
+    assert.match(scroll![1]!, /justify-content:\s*safe center/,
+      '収まるときは中央、溢れるときは先頭から（safe が無いと左端が掴めない）')
+    const axis = /\.hh-criteria-axis \{([^}]*)\}/.exec(css)
+    const size = /font-size:\s*(\d+)px/.exec(axis![1]!)
+    assert.ok(Number(size![1]) >= 13, `字が小さい（${size![1]}px）。依頼者の指示は「文字大きめ」`)
+
+    // ★ 画面が**通し番号を作らない**（実行⑭）。段をまたいで 1〜15 と振ると、
+    //   9番までが特別選考・10番からが最終面接なのに地続きに見える。
+    //   記録に無い番号を画面で作らない。
+    assert.doesNotMatch(ref, /\{i \+ 1\}/, '画面が通し番号を作っている')
   })
 
   test('★ 縦タブと横タブは同じ層（天端・厚みをそろえる。依頼者の指示）', async () => {

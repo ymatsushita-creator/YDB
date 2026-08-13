@@ -1382,30 +1382,49 @@ html, body { height: 100%; overflow: hidden; }
   overflow: hidden;
 }
 .hh-main:has(.hh-criteria-ref) .zoom-bar { padding-right: min(60%, 780px); }
+/* ★ 依頼者の指示（実行⑭）――「真ん中配置、文字大きめ、横スクロールにして」。
+   折り返しをやめて**1行に並べ、横へ送れるようにする。**
+   ★ **勝手には流さない**（実行⑬の指示は生きている）。送るのは利用者である。
+   ★ 天端で切れないよう、縦は中央に置いて1行に収める（C-65）。 */
 .hh-criteria-scroll {
   width: 100%; height: 100%; min-width: 0;
   display: flex; align-items: center;
-  /* 入りきらない期（軸が極端に多い）だけ、中で送れるようにする。切らない。 */
-  overflow-y: auto;
+  /* 入りきらないぶんは横へ送る。縦には溢れさせない（切れの原因だった）。 */
+  overflow-x: auto; overflow-y: hidden;
+  /* 収まるときは中央、溢れるときは先頭から ―― `safe` が無いと
+     中央寄せのままでは**左端が掴めなくなる**（送れない領域ができる）。 */
+  justify-content: center;
+  justify-content: safe center;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-on-dark) 34%, transparent) transparent;
 }
 .hh-criteria-track {
-  display: flex; align-items: center; width: 100%; min-width: 0;
+  display: flex; align-items: center; flex-wrap: nowrap;
+  gap: var(--space-sm);
+  min-width: 0; white-space: nowrap;
 }
+/* 段ごとの塊。**見出しは出さない**（依頼者の指示）ので、境目は区切り線で見せる。 */
 .hh-criteria-group {
-  display: flex; align-items: center; flex-wrap: wrap;
-  gap: 2px var(--space-sm);
-  width: 100%; min-width: 0;
+  display: flex; align-items: center; flex-wrap: nowrap;
+  gap: var(--space-sm);
+  white-space: nowrap;
+}
+.hh-criteria-group + .hh-criteria-group {
+  padding-left: var(--space-sm);
+  border-left: 1px solid color-mix(in srgb, var(--color-on-dark) 22%, transparent);
 }
 .hh-criteria-axis {
-  display: inline-flex; align-items: baseline; gap: 3px;
-  font-size: 11px; font-weight: 600; line-height: 1.25;
+  display: inline-flex; align-items: center; gap: 4px;
+  /* 依頼者の指示で大きくした（10px → 13px。実行⑭）。1行なので高さに余裕がある。 */
+  font-size: 13px; font-weight: 600; line-height: 1.2;
   color: var(--color-on-dark-muted);
 }
 /* 重み付けの札（必須／加点。実行⑬）。段分けを持つ軸だけに付く。 */
 .hh-criteria-tag {
-  align-self: center;
-  font-size: 10px; font-weight: 700; line-height: 1;
-  padding: 2px 5px; border-radius: 4px; letter-spacing: .04em;
+  align-self: center; flex: 0 0 auto;
+  /* ★ 高さを指定した枠には flex: 0 0 auto を添える（C-66 / C-113 / 実行⑬。**4度目**）。 */
+  font-size: 11px; font-weight: 700; line-height: 1;
+  padding: 3px 6px; border-radius: 4px; letter-spacing: .04em;
 }
 .hh-criteria-tag-req {
   color: var(--color-on-dark);

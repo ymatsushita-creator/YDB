@@ -210,16 +210,25 @@ export async function Shell({
           <div className="hh-criteria-ref" aria-label="評価基準">
             <div className="hh-criteria-scroll">
               <div className="hh-criteria-track">
-                <span className="hh-criteria-group">
-                  {criteria.map((c, i) => (
-                    <span key={`${c.step_name}-${c.sort_order}`} className="hh-criteria-axis" title={c.name}>
-                      {/* 重み付け（応募管理表の2段。実行⑬）。段分けを持つ軸だけ札を出す。 */}
-                      {c.kind === 'required' && <span className="hh-criteria-tag hh-criteria-tag-req">必須</span>}
-                      {c.kind === 'strong' && <span className="hh-criteria-tag hh-criteria-tag-str">加点</span>}
-                      {i + 1}. {c.name}
+                {/* ★ 段ごとに塊にする（実行⑭）。3期を2期にそろえて軸が15本になり、
+                    **通し番号 1〜15 が段をまたいで地続きに見えていた** ――
+                    9番までが特別選考、10番からが最終面接である。
+                    ★ 番号そのものをやめた ―― **記録に無い通し番号を画面が作っていた。**
+                      並びは記録の順（step_order, sort_order）のままで、
+                      境目は区切り線で見せる（**見出しは出さない。** 依頼者の指示）。 */}
+                {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).keys()]
+                  .map((step) => (
+                    <span key={step} className="hh-criteria-group">
+                      {criteria.filter((c) => c.step_name === step).map((c) => (
+                        <span key={c.sort_order} className="hh-criteria-axis" title={c.name}>
+                          {/* 重み付け（応募管理表の2段。実行⑬）。段分けを持つ軸だけ札を出す。 */}
+                          {c.kind === 'required' && <span className="hh-criteria-tag hh-criteria-tag-req">必須</span>}
+                          {c.kind === 'strong' && <span className="hh-criteria-tag hh-criteria-tag-str">加点</span>}
+                          {c.name}
+                        </span>
+                      ))}
                     </span>
                   ))}
-                </span>
               </div>
             </div>
           </div>
