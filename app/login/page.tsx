@@ -25,14 +25,11 @@ export default async function LoginPage({
              width={720} height={171} alt="NEO ACADEMIA" />
 
         <input type="hidden" name="next" value={next} />
-        {/* ★ 名前は**打たせる。選択肢にしない**（0038）。一覧にすると、
-            入口を開いた誰にでも職員の氏名が並ぶ。
-            空のままでも入れる ―― 従来の共有の合言葉で入る道は残してある。 */}
-        <label className="login-label" htmlFor="displayName">名前</label>
-        <input id="displayName" name="displayName" type="text" autoFocus
-               autoComplete="username" className="login-input" />
+        {/* ★ 欄は**合言葉1つだけ**（依頼者の判断。C-146）――
+            「経営層と平社員の2個あればいい」。名前を聞かない。
+            誰が入ったかは記録できない（C-84 の穴は開いたまま）。 */}
         <label className="login-label" htmlFor="password">合言葉</label>
-        <input id="password" name="password" type="password" required
+        <input id="password" name="password" type="password" required autoFocus
                autoComplete="current-password" className="login-input" />
         <button className="button-primary login-button" type="submit">入る</button>
 

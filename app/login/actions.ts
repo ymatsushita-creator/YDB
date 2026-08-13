@@ -6,9 +6,9 @@ import { redirect } from 'next/navigation'
 import {
   SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, issueSession, matchTier,
 } from '../../src/auth/session.ts'
-import { canOpen, TIER_HOME, type Tier } from '../../src/auth/tiers.ts'
+import { canOpen, TIER_HOME } from '../../src/auth/tiers.ts'
 import { getDb } from '../../src/db/server.ts'
-import { signInAsStaff, recordSignIn } from '../../src/commands/staff_auth.ts'
+import { recordSignIn } from '../../src/commands/staff_auth.ts'
 
 /**
  * 合言葉を確かめて、引換券を渡す。
@@ -21,49 +21,34 @@ import { signInAsStaff, recordSignIn } from '../../src/commands/staff_auth.ts'
  *   「あなたはどの層ですか」と聞くと、層の一覧が入る前に見える。
  *   打たれた合言葉がどの層のものかは、こちらで決める。
  *
- * ★★ 職員ごとの合言葉を足した（0038。依頼者の許可。実行⑮）。
- *   名前を打てば**その人として**入り、空なら従来の共有の合言葉で入る。
- *   どちらで入ったかは `sign_in_events` に残る ―― 共有なら
- *   **「誰か分からない」という記録**が残る（空欄で濁さない）。
+ * ★★ 職員ごとの合言葉は**外した**（C-146）。依頼者の判断 ――
+ *   「経営層と平社員の2個パスワードがあればいい」。
+ *   したがって入口は**合言葉1つ**で、名前を聞かない。
  *
- * ★ 名前は**打たせる。選択肢にしない。** 一覧にすると、入口を開いた誰にでも
- *   職員の氏名が並ぶ（共用の端末で開いたままにもなる）。
- *
- * ★ 失敗の扱いは職員でも共有でも**同じ**（同じ待ち・同じ文言）。
- *   分けると、名前が実在するか・層が設定済みかが外から分かる。
+ * ★ **誰が入ったかは記録できない**（C-84 の穴は開いたまま）。
+ *   入った記録（`sign_in_events`）には「共有で入った＝誰か分からない」が残る ――
+ *   **分からないことを、分からないと記録する。**
  */
 const SAFE_NEXT = /^\/[A-Za-z0-9\-._~/?&=%[\]]*$/
 
 export async function signInAction(formData: FormData): Promise<void> {
   const password = String(formData.get('password') ?? '')
-  const displayName = String(formData.get('displayName') ?? '')
   const raw = String(formData.get('next') ?? '')
   // 外部へ飛ばす踏み台にしない。**自分のパスだけ**を許す。
   const next = SAFE_NEXT.test(raw) && !raw.startsWith('//') ? raw : ''
 
   const secret = process.env.YOUTHDB_SESSION_SECRET
 
-  // ① 名前が打たれていれば、その職員として確かめる（0038）。
-  let tier: Tier | null = null
-  let staffId: string | null = null
-  if (displayName.trim() !== '') {
-    const db = await getDb()
-    const asStaff = await signInAsStaff(db, { displayName, passphrase: password })
-    if (asStaff.ok) {
-      tier = asStaff.tier
-      staffId = asStaff.staffId
-    }
-  } else {
-    // ② 名前が空なら、従来の共有の合言葉。
-    // 未設定の層は `checkPassword` が誰も通さない（既定値を持たない）。
-    // 普通の層は YOUTHDB_PASSWORD2 でも設定できる（依頼者が本番でこの名前を使った）。
-    // 明示された PASSWORD2 を優先する。
-    tier = matchTier({
-      all: process.env.YOUTHDB_PASSWORD,
-      personal: process.env.YOUTHDB_PASSWORD2 ?? process.env.YOUTHDB_PASSWORD_PERSONAL,
-      input: process.env.YOUTHDB_PASSWORD_INPUT,
-    }, password)
-  }
+  // 未設定の層は `checkPassword` が誰も通さない（既定値を持たない）。
+  // 普通の層は YOUTHDB_PASSWORD2 でも設定できる（依頼者が本番でこの名前を使った）。
+  // 明示された PASSWORD2 を優先する。
+  // ★ 配るのは2つでよい（依頼者の判断。C-146）―― 経営層と平社員。
+  //   入力層を設定しなければ、その層では誰も入れない（**既定で閉じている**）。
+  const tier = matchTier({
+    all: process.env.YOUTHDB_PASSWORD,
+    personal: process.env.YOUTHDB_PASSWORD2 ?? process.env.YOUTHDB_PASSWORD_PERSONAL,
+    input: process.env.YOUTHDB_PASSWORD_INPUT,
+  }, password)
 
   if (!secret || !tier) {
     // ★ 失敗のたびに少し待つ。合言葉は層ごとに1つで、総当たりが効く。
@@ -82,7 +67,8 @@ export async function signInAction(formData: FormData): Promise<void> {
   //   ここで落ちても入場は妨げない（記録の失敗で入口を閉じない）。
   try {
     const db = await getDb()
-    await recordSignIn(db, { tier, staffId })
+    // ★ 誰かは分からない。**分からないと記録する**（staff_id は NULL）。
+    await recordSignIn(db, { tier })
   } catch { /* 記録できなくても入れる。穴は帳簿ではなく入口である */ }
 
   // ★ **入れ替わったら控えを捨てる**（C-141 の30秒の控えに対して）。
@@ -92,7 +78,7 @@ export async function signInAction(formData: FormData): Promise<void> {
   revalidatePath('/', 'layout')
 
   const jar = await cookies()
-  jar.set(SESSION_COOKIE, await issueSession(secret, tier, Date.now(), staffId), {
+  jar.set(SESSION_COOKIE, await issueSession(secret, tier, Date.now()), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
