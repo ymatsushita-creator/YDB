@@ -3,11 +3,11 @@ import { getDb } from '../../src/db/server.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import {
   listHeadhunting, getApproachTotals, listConfidence, getConfidenceMeta,
-  listApplicantScores, getPersonPanel, listCriterionScores, listHeadhuntingTasks,
+  listApplicantScores, getPersonPanel, listCriterionScores,
 } from '../../src/queries/headhunting.ts'
 import { jstDay, num, ymd, filled, NotDerived } from '../_components/ui.tsx'
 import {
-  ApproachChip, RankMark, RankDelta, Stars, Confidence, taskSentence,
+  ApproachChip, RankMark, RankDelta, Stars, Confidence,
 } from '../_components/headhunting.tsx'
 import { Avatar } from '../_components/borderline.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
@@ -54,8 +54,10 @@ export default async function HeadhuntingPage({
     )
   }
 
-  const [tasks, scores, confidence, confidenceMeta, list, totals] = await Promise.all([
-    listHeadhuntingTasks(db, season.id),
+  // ★ 「最新やること」は**出さない**（依頼者の指示。実行⑬で受けたが、
+  //   外した先が通常選考だった ―― ここ特別選考に残っていた。C-136）。
+  //   出さないものは**問い合わせもしない。**
+  const [scores, confidence, confidenceMeta, list, totals] = await Promise.all([
     // 一覧は詰め込める分だけ出す。カードの中で送れるので、5件で切る理由が無い。
     listApplicantScores(db, season.id, LIST_LIMIT),
     listConfidence(db, season.id, LIST_LIMIT),
@@ -94,35 +96,6 @@ export default async function HeadhuntingPage({
 
       <div className="hh-grid">
         <div className="hh-col-main">
-          {/* --- C 最新やること --- */}
-          <section className="panel-card">
-            <header className="hh-head">
-              <h2>最新やること</h2>
-              <Link href="/borderline" className="hh-more">すべて見る ›</Link>
-            </header>
-            {tasks.length === 0 ? (
-              <p className="hh-empty">いま判断待ちのものは無い。</p>
-            ) : (
-              <ul className="hh-tasks">
-                {tasks.map((t) => (
-                  <li key={t.source_id} className="task-card">
-                    <span className={t.is_overdue ? 'chip-amber' : 'chip-blue'}>
-                      {t.is_overdue ? '期限超過' : '要対応'}
-                    </span>
-                    <p className="task-title">
-                      {taskSentence(t.kind, t.person_name, t.step_name)}
-                    </p>
-                    <p className="task-meta">
-                      {t.waiting_days} 日待ち
-                      {t.sla_days !== null && <> ・ 目安 {t.sla_days} 日</>}
-                      {t.owner ? <> ・ 担当 {t.owner}</> : <> ・ 担当未割当</>}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
           <div className="hh-rankings">
             {/* --- D 応募者成績ランキング --- */}
             <section className="panel-card">

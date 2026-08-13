@@ -266,11 +266,27 @@ describe('一覧', () => {
   })
 })
 
-describe('特別選考', () => {
-  test('やることの画面を出さず、問い合わせも行わない', async () => {
-    const page = await read('app/borderline/page.tsx')
-    assert.doesNotMatch(page, /<h2>やること<\/h2>/)
-    assert.doesNotMatch(page, /listManualTasks|listDerivedTasks/)
+describe('やることを出さない画面', () => {
+  /**
+   * 依頼者の指示（実行⑬）――「**特別選考の最新やること、はいらない**」。
+   *
+   * ★★ 実行⑬は**外す先を間違えた。** 特別選考は `/headhunting` で、
+   *   実際に外したのは `/borderline`（通常選考）だった。見張りまで
+   *   `borderline` を見ていたので、**間違いを見張りが追認していた**（C-136）。
+   *   タブの名前は `app/_components/shell.tsx` の `TABS` にある ――
+   *   画面のファイル名から日本語の呼び名を推測しない。
+   */
+  test('★ 特別選考（/headhunting）に「やること」が無い ―― 問い合わせもしない', async () => {
+    const page = await read('app/headhunting/page.tsx')
+    assert.doesNotMatch(page, /<h2>最新やること<\/h2>/, '特別選考にやることが戻っている')
+    assert.doesNotMatch(page, /listHeadhuntingTasks\(/, '出さないものを問い合わせている')
+    assert.doesNotMatch(page, /taskSentence/, 'やることの一文を組み立てている')
+  })
+
+  test('特別選考というタブが指すのは /headhunting である（名前と画面の対応）', async () => {
+    const shell = await read('app/_components/shell.tsx')
+    assert.match(shell, /href: '\/headhunting', label: '特別選考'/)
+    assert.match(shell, /href: '\/borderline', label: '通常選考'/)
   })
 })
 
