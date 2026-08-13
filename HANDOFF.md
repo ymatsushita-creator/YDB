@@ -25,6 +25,19 @@
 
 ★ **呼び名を受け取ってから足す。** こちらで名付けるとマスタとして固定化する。
 
+### ★★ 本番の場所を間違えない（C-123）
+
+```
+本番        https://youthdb.vercel.app   yuzy742's projects / youthdb
+            ―― CLI（vercel --prod）で流す。実行⑭のコードが Ready
+見ない場所   yujis / ydb                  ―― mirror（ymatsushita-creator/YDB）を見ている。
+            ミラーは d8a8454（3日前）で止まっており、⑫⑬⑭の約30コミットが届いていない。
+            **依頼者の判断でミラーへは push しない。** 古いまま残る
+```
+
+★ 接続先は `.vercel/project.json`（gitignore 済み）にあり、**リポジトリから見張れない。**
+`vercel link` で別プロジェクトへ繋ぎ替えると、デプロイが黙って別の場所へ行く。
+
 ### ★ 本番はデモモードのまま（C-94）
 
 ```
@@ -175,5 +188,5 @@ tests/52_season3_alignment.test.ts     **本番の形に 0006 を当てても収
 tests/10_decisions_references.test.ts  DECISIONS が実在しないテストを指していないか
 ```
 
-変更理由は `db/DECISIONS.md` に **C-123 から**追記し、
+変更理由は `db/DECISIONS.md` に **C-124 から**追記し、
 次の報告書は `REPORT-15.0.md` とする。
