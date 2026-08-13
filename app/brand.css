@@ -92,13 +92,13 @@
 
   /* ★ 波の1周期は**px で固定する。** % にすると、ロゴ（204px）と
        横バー（残り全部）で波長が変わり、**1本の線が2本に割れて見える。** */
-  --wave-len: 960px;
+  --wave-len: 1600px;
   --wave-shift: 0px;
   background-size: var(--wave-len) 100%;
   background-position-x: var(--wave-shift);
 
-  /* ゆっくり。1周 30 秒 ＝ 秒速 32px。目で追える速さにしない。 */
-  animation: brand-wave 30s linear infinite;
+  /* 波長を伸ばしても速さは変えない。1周 50 秒 ＝ 秒速 32px。 */
+  animation: brand-wave 50s linear infinite;
 }
 
 /* ★ 横バーはロゴの右端から続く。**位相をロゴの幅だけずらす。**

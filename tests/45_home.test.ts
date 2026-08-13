@@ -193,6 +193,12 @@ describe('横バー（現在地の帯）', () => {
     const shell = await read('app/_components/shell.tsx')
     assert.match(shell, /className="zoom-bar"/)
   })
+
+  test('虹色の波は長い周期で、速さを上げない', async () => {
+    const css = await read('app/brand.css')
+    assert.match(css, /--wave-len:\s*1600px/)
+    assert.match(css, /animation:\s*brand-wave 50s linear infinite/)
+  })
 })
 
 describe('一覧', () => {
