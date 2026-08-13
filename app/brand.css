@@ -97,9 +97,9 @@
   background-size: var(--wave-len) 100%;
   background-position-x: var(--wave-shift);
 
-  /* 依頼者の指定で、色の切り替え時間を従来の10.8倍にする。
-     1周 50秒 × 10.8 = 540秒。 */
-  animation: brand-wave 540s linear infinite;
+  /* 依頼者の指定で、最初の50秒を基準に0.8倍にする。
+     1周 50秒 × 0.8 = 40秒。 */
+  animation: brand-wave 40s linear infinite;
 }
 
 /* ★ 横バーはロゴの右端から続く。**位相をロゴの幅だけずらす。**

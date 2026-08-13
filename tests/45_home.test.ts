@@ -197,10 +197,10 @@ describe('横バー（現在地の帯）', () => {
     assert.match(shell, /className="zoom-bar"/)
   })
 
-  test('虹色の波は長い波長で、切り替え時間は従来の10.8倍', async () => {
+  test('虹色の波は長い波長で、切り替え時間は最初の0.8倍', async () => {
     const css = await read('app/brand.css')
     assert.match(css, /--wave-len:\s*1600px/)
-    assert.match(css, /animation:\s*brand-wave 540s linear infinite/)
+    assert.match(css, /animation:\s*brand-wave 40s linear infinite/)
   })
 })
 
