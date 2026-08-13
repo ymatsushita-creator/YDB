@@ -87,32 +87,45 @@ describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
     await db.close()
   })
 
-  test('選考は3本。受け取った語をそのまま置いてある', async () => {
-    // ★ 2期との違いを**黙って揃えていない。**
-    //   2期は4本で先頭に「応募受付」があり、1本目の呼び名も「書類選考」。
-    //   3期の指定は3本で「書類審査」から始まる。
-    //   同じものを指しているかは確認していないので、受け取った語で置く
-    //   （運営の言葉をこちらの語に翻訳しない。Pilot Rule）。
+  test('選考は5本。2期と同じ並び・同じ呼び名になっている（0006）', async () => {
+    // ★ C-55 では**受け取った語のまま**3本で置いていた（「書類審査」から始まる）。
+    //   2期との違いは2つ ―― 段が1本少ないこと、1本目の呼び名。
+    //   どちらも「同じものを指すか確認していない」ので揃えなかった。
+    //
+    // ★ 実行⑭で依頼者に確かめた（2026-08-13）――
+    //   「書類審査は書類選考と同じ関門。揃えろ」「応募受付も足せ」。
+    //   **確認したら直すのも規律である**（0006）。
     const db = await productionDb()
     const steps = await all<{ sort_order: number; name: string }>(db, `
       SELECT st.sort_order, st.name FROM selection_steps st
         JOIN seasons se ON se.id = st.season_id
        WHERE se.cohort_number = 3 ORDER BY st.sort_order`)
     assert.deepEqual(steps.map((x) => [x.sort_order, x.name]), [
-      [1, '書類審査'],
-      [2, 'グループ面接'],
-      [3, '最終面接'],
+      [1, '特別選考'],
+      [2, '応募受付'],
+      [3, '書類選考'],
+      [4, 'グループ面接'],
+      [5, '最終面接'],
     ])
     await db.close()
   })
 
-  test('3期の評価軸は入れていない（前期の6軸を写さない）', async () => {
+  test('3期の軸は2期と同じ顔ぶれ・同じ重み付けである（0006）', async () => {
+    // ★ C-55 は「3期の軸は未受領だから写さない」としていた。
+    //   その保留を依頼者が解いた（実行⑭。2026-08-13）。
+    //   **保留を解けるのは依頼者だけである。**
     const db = await productionDb()
-    assert.equal(await scalar<number>(db, `
-      SELECT count(*)::int FROM evaluation_criteria ec
-        JOIN selection_steps st ON st.id = ec.selection_step_id
-        JOIN seasons se ON se.id = st.season_id
-       WHERE se.cohort_number = 3`), 0)
+    const shape = async (cohort: number) => (await all<{ step: string; name: string; kind: string }>(
+      db, `
+      SELECT ss.name AS step, ec.name, ec.kind
+        FROM evaluation_criteria ec
+        JOIN selection_steps ss ON ss.id = ec.selection_step_id
+        JOIN seasons se ON se.id = ss.season_id
+       WHERE se.cohort_number = $1 ORDER BY ss.sort_order, ec.sort_order`, [cohort]))
+      .map((r) => [r.step, r.name, r.kind])
+
+    assert.deepEqual(await shape(3), await shape(2), '3期の軸が2期と食い違っている')
+    assert.equal((await shape(3)).length, 15, '特別選考9 ＋ 最終面接6')
     await db.close()
   })
 
@@ -204,14 +217,17 @@ describe('本番シードの選考ステップ', () => {
 })
 
 describe('本番シードの評価の観点', () => {
-  test('最終面接に6軸があり、運営の言葉のまま入っている', async () => {
+  test('最終面接に6軸があり、運営の言葉のまま入っている（期ごとに数える）', async () => {
     const db = await productionDb()
     const rows = await all<{ name: string; scale_max: number }>(
       db,
+      // ★ 0006 で3期にも同じ6軸が入った。**期で絞らないと2期分が混ざる。**
+      //   「1件しかない」を前提にしない（C-54 で22件落ちたのと同じ罠）。
       `SELECT c.name, c.scale_max
          FROM evaluation_criteria c
          JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = '最終面接'
+         JOIN seasons se ON se.id = s.season_id
+        WHERE s.name = '最終面接' AND se.cohort_number = 2
         ORDER BY c.sort_order`,
     )
 
@@ -233,7 +249,8 @@ describe('本番シードの評価の観点', () => {
       `SELECT sum(c.scale_max)::int
          FROM evaluation_criteria c
          JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = '最終面接'`,
+         JOIN seasons se ON se.id = s.season_id
+        WHERE s.name = '最終面接' AND se.cohort_number = 2`,
     )
 
     assert.equal(total, 24)
@@ -280,11 +297,11 @@ describe('シードは何度流しても増えない', () => {
     const db = await productionDb()
     await seed(db)
 
-    // 期は2つ。ステップは 2期の5本（特別選考を先頭に足した。0005）＋3期の3本＝8本。
-    // 軸は2期の 最終面接6 ＋ 特別選考9 ＝ 15。2回流しても増えない。
+    // 期は2つ。ステップは 2期5本＋3期5本＝10本（0006 で3期を2期にそろえた）。
+    // 軸は期ごとに 最終面接6 ＋ 特別選考9 ＝ 15、2期と3期で30。2回流しても増えない。
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 2)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 8)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 15)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 10)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 30)
     await db.close()
   })
 })

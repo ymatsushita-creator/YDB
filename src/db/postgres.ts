@@ -1,5 +1,21 @@
 import { Pool } from 'pg'
+import { basename } from 'node:path'
+import { hostname } from 'node:os'
 import type { Db, QueryResult } from './client.ts'
+
+/**
+ * この接続が名乗る名前。
+ *
+ * ★ 実行⑬の最後、本番へ 0033〜0035 が説明のつかないまま適用されていた。
+ *   `applied_at` と `xmin` から「同じ機械の同じコマンドが、別のプロセスで
+ *   走った」ことを突き止めるまで、記録の側に手掛かりが1つも無かった（C-121）。
+ *
+ * 何を入れるかは3つ ―― **どの道具・どのプロセス・どの機械**。
+ * pid が入っているので、同じコマンドでも実行が違えば名前が違う。
+ * `application_name` は 63 バイトで黙って切られるので、こちらで丸める。
+ */
+const actorName = (): string =>
+  `youthdb ${basename(process.argv[1] ?? 'node')}#${process.pid}@${hostname()}`.slice(0, 63)
 
 /**
  * 本番の PostgreSQL（マネージド Postgres）を Db として使う。
@@ -31,6 +47,9 @@ export async function openPostgres(connectionString: string): Promise<Db> {
     // 次のクエリに使い回すタイミングと競合し、
     // 「client.query() が実行中にまた呼ばれた」エラーになるため避ける。
     options: '-c TimeZone=Asia/Tokyo',
+    // 誰が繋いだかを接続そのものに名乗らせる。migrate() が
+    // schema_migrations.applied_by に写し取る（C-121）。
+    application_name: actorName(),
   })
 
   // 起動時に1回だけ接続確認する。ここで失敗すれば getDb() 側の

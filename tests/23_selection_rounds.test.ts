@@ -247,8 +247,10 @@ describe('評価の観点が0本の段（C-33）', () => {
     // ―― 「記録が実装より厳密に見える」を作らないため。
     const db = await freshDb({ seeds: 'production' })
     const w = await world(db)
-    // ★ 実行⑨で3期が入り、顔ぶれが増えた（3期は軸を1本も受け取っていない）。
-    //   期をまたぐので、どの期の段かまで書く。
+    // ★ 実行⑨で3期が入り、顔ぶれが増えた。
+    //   実行⑭で3期を2期にそろえたので（C-122）、**両期で同じ3段**が軸を持たない
+    //   ―― 書類選考とグループ面接の軸は応募管理表に呼び名が無く、
+    //   応募受付は関門であって採点しない。期をまたぐので、どの期の段かまで書く。
     const noCriteria = await all<{ cohort: number; name: string }>(db, `
       SELECT se.cohort_number AS cohort, ss.name
         FROM selection_steps ss
@@ -258,7 +260,7 @@ describe('評価の観点が0本の段（C-33）', () => {
        ORDER BY se.cohort_number, ss.sort_order`)
     assert.deepEqual(noCriteria.map((r) => [r.cohort, r.name]), [
       [2, '応募受付'], [2, '書類選考'], [2, 'グループ面接'],
-      [3, '書類審査'], [3, 'グループ面接'], [3, '最終面接'],
+      [3, '応募受付'], [3, '書類選考'], [3, 'グループ面接'],
     ], '軸が0本の段の顔ぶれが変わった。画面の分岐（C-33）も見直すこと')
 
     const appId = await newApplication(w, '軸なし')
