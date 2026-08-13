@@ -181,37 +181,6 @@ export async function Shell({
         </form>
         )}
 
-        {/* ★ 評価基準（依頼者の指示。実行⑫）――「期の項目の上に、
-            エクセルから評価基準を持ってきて、参考にできるように貼って」。
-
-            ★ 出しているのは**記録層の値**（`evaluation_criteria`）である。
-              応募管理表から取り込んだもの（C-105）で、画面に写し書きしていない
-              ―― 写すと、表を直しても画面が古いまま残る。
-
-            ★ 見るだけ。ここから採点はしない（採点は面接シートと採点用紙）。
-            ★ 縦に長いので**中で送る。** 潰して見出しだけにしない（C-57）。 */}
-        {criteria.length > 0 && (
-          <div className="hh-criteria-ref">
-            <span className="sidebar-section-label">評価基準</span>
-            <div className="hh-criteria-scroll">
-              {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).entries()]
-                .map(([step]) => (
-                  <div key={step} className="hh-criteria-step">
-                    <span className="hh-criteria-step-name">{step}</span>
-                    <ol className="hh-criteria-axes">
-                      {criteria.filter((c) => c.step_name === step).map((c) => (
-                        <li key={`${step}-${c.sort_order}`} title={c.name}>
-                          {c.name}
-                          <span className="hh-criteria-scale">{c.scale_max}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
         <div className="hh-sidebar-foot">
           {years}
           {/*
@@ -231,7 +200,30 @@ export async function Shell({
         </div>
       </aside>
 
-      <div className="hh-main">{children}</div>
+      <div className="hh-main">
+        {/* 評価基準は横バーの右側へ重ねる（依頼者の指示。実行⑬）。
+            値は引き続き記録層から読み、画面へ写し書きしない。 */}
+        {criteria.length > 0 && (
+          <div className="hh-criteria-ref" aria-label="評価基準">
+            <span className="hh-criteria-label">評価基準</span>
+            <div className="hh-criteria-scroll">
+              {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).entries()]
+                .map(([step]) => (
+                  <span key={step} className="hh-criteria-step">
+                    <span className="hh-criteria-step-name">{step}</span>
+                    {criteria.filter((c) => c.step_name === step).map((c) => (
+                      <span key={`${step}-${c.sort_order}`} className="hh-criteria-axis" title={c.name}>
+                        {c.sort_order}. {c.name}
+                        <span className="hh-criteria-scale">{c.scale_max}</span>
+                      </span>
+                    ))}
+                  </span>
+                ))}
+            </div>
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   )
 }

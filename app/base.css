@@ -1345,50 +1345,35 @@ html, body { height: 100%; overflow: hidden; }
 .pick-name { font-weight: 600; }
 .home-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-lg); align-items: center; }
 
-/* =============================================================
-   評価基準（実行⑫。依頼者の指示で「期の項目の上」に貼った）
-
-   ★ 見るだけの場所である。押せる形にしない ―― 押せそうに見えて
-     何も起きないものは、壊れて見える。
-   ★ 縦に長いので中で送る。**潰して見出しだけにしない**（C-57）。
-   ============================================================= */
+/* 評価基準（実行⑬）。横バー右側の1行に置き、横へ送って全件を読む。 */
 .hh-criteria-ref {
-  display: flex; flex-direction: column; gap: var(--space-xxs);
-  /* ★ **縮ませない。** 操作柱は縦の flex なので、既定（flex-shrink: 1）だと
-     枠が 0 まで潰れ、**見出しだけが残る**（C-66 で踏んだのと同じ形）。
-     余った高さを受け取り、足りなければ中で送る。 */
-  flex: 1 1 auto;
-  min-height: 96px;
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-sidebar-hairline);
+  position: absolute; z-index: 21;
+  top: 0; right: var(--space-sm);
+  width: min(58%, 760px); height: var(--logo-h);
+  display: flex; align-items: center; gap: var(--space-xs);
+  color: var(--color-on-dark);
+  pointer-events: none;
 }
+.hh-main:has(.hh-criteria-ref) .zoom-bar { padding-right: min(60%, 780px); }
+.hh-criteria-label { flex: 0 0 auto; font-size: 11px; font-weight: 700; }
 .hh-criteria-scroll {
-  flex: 1 1 auto;
-  min-height: 0; overflow-y: auto;
-  display: flex; flex-direction: column; gap: var(--space-sm);
+  min-width: 0; overflow-x: auto; overflow-y: hidden;
+  display: flex; align-items: center; gap: var(--space-md);
+  scrollbar-width: thin;
+  pointer-events: auto;
 }
+.hh-criteria-step { display: inline-flex; align-items: center; gap: var(--space-xs); white-space: nowrap; }
 .hh-criteria-step-name {
-  display: block;
+  flex: 0 0 auto;
   font-size: 11px; font-weight: 600; letter-spacing: .5px;
   color: var(--color-on-dark);
 }
-.hh-criteria-axes {
-  list-style: none; margin: 2px 0 0; padding: 0;
-  display: flex; flex-direction: column; gap: 2px;
-  counter-reset: axis;
-}
-.hh-criteria-axes li {
-  display: flex; align-items: baseline; gap: 4px;
-  font-size: 11px; line-height: 1.35;
+.hh-criteria-axis {
+  display: inline-flex; align-items: baseline; gap: 3px;
+  font-size: 11px; line-height: 1.2;
   color: var(--color-on-dark-muted);
-  counter-increment: axis;
 }
-.hh-criteria-axes li::before {
-  content: counter(axis) ".";
-  flex: 0 0 auto; color: var(--color-on-dark); font-variant-numeric: tabular-nums;
-}
-/* 満点。**数だけ**を右に添える（単位は書かない。C-62）。 */
 .hh-criteria-scale {
-  margin-left: auto; flex: 0 0 auto;
+  flex: 0 0 auto;
   color: var(--color-on-dark); font-variant-numeric: tabular-nums;
 }

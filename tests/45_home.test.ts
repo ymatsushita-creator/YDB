@@ -236,7 +236,7 @@ describe('一覧', () => {
   })
 })
 
-describe('評価基準（操作柱）', () => {
+describe('評価基準（横バー）', () => {
   /**
    * 依頼者の指示（実行⑫）――
    * 「期の項目の上に、エクセルから評価基準を持ってきて、参考にできるように貼って」。
@@ -253,24 +253,20 @@ describe('評価基準（操作柱）', () => {
       '軸の文字を画面に埋め込まない')
   })
 
-  test('期の項目より上に置く', async () => {
+  test('横バーと同じ主領域に置く', async () => {
     const shell = await read('app/_components/shell.tsx')
     const criteria = shell.indexOf('hh-criteria-ref')
-    const foot = shell.indexOf('hh-sidebar-foot')
-    assert.ok(criteria > 0 && foot > 0 && criteria < foot,
-      '評価基準は「期」（hh-sidebar-foot の中の years）より前に描く')
+    const main = shell.indexOf('<div className="hh-main">')
+    assert.ok(criteria > main, '評価基準は左柱ではなく横バーのある主領域に描く')
   })
 
-  test('★ 潰れないようにしてある（見出しだけにならない）', async () => {
-    // 操作柱は縦の flex。既定（flex-shrink: 1）だと枠が 0 まで潰れ、
-    // **見出しだけが残る**（C-66 で踏んだのと同じ形）。実際そうなった。
+  test('★ 1行のまま横へ送って全件を読める', async () => {
     const css = await read('app/base.css')
     const rule = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
     assert.ok(rule, '規則がある')
-    assert.match(rule![1]!, /flex:\s*1 1 auto/)
-    assert.match(rule![1]!, /min-height:\s*\d+px/)
-    // 足りないときは中で送る（切らない）。
+    assert.match(rule![1]!, /height:\s*var\(--logo-h\)/)
     const scroll = /\.hh-criteria-scroll \{([^}]*)\}/.exec(css)
-    assert.match(scroll![1]!, /overflow-y:\s*auto/)
+    assert.match(scroll![1]!, /overflow-x:\s*auto/)
+    assert.match(scroll![1]!, /overflow-y:\s*hidden/)
   })
 })
