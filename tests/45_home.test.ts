@@ -335,6 +335,26 @@ describe('評価基準（横バー）', () => {
     //   9番までが特別選考・10番からが最終面接なのに地続きに見える。
     //   記録に無い番号を画面で作らない。
     assert.doesNotMatch(ref, /\{i \+ 1\}/, '画面が通し番号を作っている')
+    assert.doesNotMatch(ref, /\{index \+ 1\}|\bmap\(\(c, i\)/,
+      '番号を作る形が別の書き方で戻っている')
+
+    // ★ 重み付けの札（必須／加点）は**出さない**（依頼者の指示。実行⑮。C-134）。
+    //   帯に出るのは**軸の名前だけ**である。
+    //   ★ 見るのは**コメントを落とした本文**である ―― 「出さない」と書いた
+    //     注記まで「出している」と数えると、理由を書くほど検査が落ちる。
+    const shellBody = await body('app/_components/shell.tsx')
+    const refBody = shellBody.slice(
+      shellBody.indexOf('<div className="hh-criteria-ref"'), shellBody.indexOf('{children}'))
+    assert.doesNotMatch(refBody, /必須|加点|hh-criteria-tag/, '帯に重み付けの札が戻っている')
+    assert.doesNotMatch(css, /hh-criteria-tag/,
+      '使わない規則を残さない（次に触る人が「まだあるもの」として扱う）')
+  })
+
+  test('★ 札を消しても、重み付けは記録層に残っている（消したのは画面だけ）', async () => {
+    // 画面から消したのは**出し方**であって、事実ではない。
+    // `evaluation_criteria.kind`（0033）と、それを読むクエリはそのまま効く。
+    const queries = await read('src/queries/dashboard.ts')
+    assert.match(queries, /ec\.kind/, '重み付けを読むのをやめてはいない')
   })
 
   test('★ 縦タブと横タブは同じ層（天端・厚みをそろえる。依頼者の指示）', async () => {

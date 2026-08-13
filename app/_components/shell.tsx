@@ -221,9 +221,11 @@ export async function Shell({
                     <span key={step} className="hh-criteria-group">
                       {criteria.filter((c) => c.step_name === step).map((c) => (
                         <span key={c.sort_order} className="hh-criteria-axis" title={c.name}>
-                          {/* 重み付け（応募管理表の2段。実行⑬）。段分けを持つ軸だけ札を出す。 */}
-                          {c.kind === 'required' && <span className="hh-criteria-tag hh-criteria-tag-req">必須</span>}
-                          {c.kind === 'strong' && <span className="hh-criteria-tag hh-criteria-tag-str">加点</span>}
+                          {/* ★ 重み付けの札（必須／加点）は**出さない**（依頼者の指示。実行⑮）――
+                              「かてんとかどうでもいいんだよ。消せよ」。
+                              ここに出るのは**軸の名前だけ**である。重み付けは記録層
+                              （`evaluation_criteria.kind`）に残っており、消したのは
+                              画面の札だけ ―― 集計も判定もそのまま効く（C-134）。 */}
                           {c.name}
                         </span>
                       ))}

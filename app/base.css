@@ -1443,21 +1443,9 @@ html, body { height: 100%; overflow: hidden; }
   font-size: 13px; font-weight: 600; line-height: 1.2;
   color: var(--color-on-dark-muted);
 }
-/* 重み付けの札（必須／加点。実行⑬）。段分けを持つ軸だけに付く。 */
-.hh-criteria-tag {
-  align-self: center; flex: 0 0 auto;
-  /* ★ 高さを指定した枠には flex: 0 0 auto を添える（C-66 / C-113 / 実行⑬。**4度目**）。 */
-  font-size: 11px; font-weight: 700; line-height: 1;
-  padding: 3px 6px; border-radius: 4px; letter-spacing: .04em;
-}
-.hh-criteria-tag-req {
-  color: var(--color-on-dark);
-  background: color-mix(in srgb, var(--color-on-dark) 26%, transparent);
-}
-.hh-criteria-tag-str {
-  color: var(--color-on-dark-muted);
-  background: color-mix(in srgb, var(--color-on-dark) 12%, transparent);
-}
+/* ★ 重み付けの札（必須／加点）は**消した**（依頼者の指示。実行⑮。C-134）。
+   規則も残さない ―― 使わない指定を置いておくと、次に触る人が
+   「まだあるもの」として扱う（実行⑭で流す指定を落としたときと同じ）。 */
 /* ★ `prefers-reduced-motion` の分岐は落とした ―― **動かすのをやめた**ので、
    減らす動きが無い。使わない指定を残すと、次に触る人が「まだあるもの」として扱う。 */
 .home-dashboard {
