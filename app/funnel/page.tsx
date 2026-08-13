@@ -57,7 +57,7 @@ export default async function FunnelPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '団体アプローチ', href: '/approach' },
+          { label: '連携団体', href: '/approach' },
           { label: 'ファネル' },
         ]}
       />

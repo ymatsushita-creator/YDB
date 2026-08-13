@@ -60,8 +60,8 @@ export default async function NewReachPage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '団体アプローチ', href: `/approach?season=${season.id}` },
-          { label: 'アプローチ追加' },
+          { label: '連携団体', href: `/approach?season=${season.id}` },
+          { label: '連携団体を追加' },
         ]}
       />
 
@@ -69,7 +69,7 @@ export default async function NewReachPage({
 
       <div className="page-head">
         <div>
-          <h1 className="page-title">アプローチ追加</h1>
+          <h1 className="page-title">連携団体を追加</h1>
           <p className="page-sub">{seasonLabel(season)}</p>
         </div>
       </div>
@@ -165,7 +165,7 @@ export default async function NewReachPage({
 
       <div className="section">
         <Link href={`/approach?season=${season.id}`} className="hh-more">
-          ‹ 流入元へ戻る
+          ‹ 連携団体へ戻る
         </Link>
       </div>
     </Shell>

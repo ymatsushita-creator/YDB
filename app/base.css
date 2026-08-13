@@ -108,22 +108,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.data td.num, table.data th.num { white-space: nowrap; }
 .kpi-value.alert { color: var(--color-semantic-error); }
 
-.today-section, .forest-section, .pipeline-section { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); padding: var(--space-lg); box-shadow: var(--shadow-1); }
-.task-row.is-selected { background: var(--color-card-tint-lavender); border-radius: var(--rounded-sm); border-top-color: transparent; }
-.task-row.is-overdue { box-shadow: inset 3px 0 0 var(--color-semantic-error); }
-.task-main > span:not(.badge-tag-blue):not(.badge-tag-purple):not(.badge-tag-gray):not(.badge-tag-orange) { color: var(--color-steel); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-owner, .task-wait { display: flex; flex-direction: column; font-size: 12px; color: var(--color-steel); }
-.task-owner strong, .task-wait strong { color: var(--color-ink); font-size: 13px; }
-.forest-focus-head .section-note { margin-left: auto; }
-.forest-card-note, .map-caption { color: var(--color-steel); font-size: 12px; margin-top: var(--space-sm); }
-.community-node.needs-attention { border-color: var(--color-semantic-warning); background: var(--color-card-tint-yellow); }
 
 @media (max-width: 980px) {
 }
 
 @media (max-width: 680px) {
   .page-title { font-size: 28px; }
-  .today-section, .forest-section, .pipeline-section { padding: var(--space-md); }
   .task-owner, .task-wait { display: none; }
 }
 
@@ -157,18 +147,6 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .badge-tag-purple { border-left-color: var(--color-brand-yellow); }
 .badge-tag-green  { border-left-color: var(--color-brand-green); }
 .badge-tag-gray   { color: var(--color-steel); }
-
-/* 選択中の行。淡い面ではなく黒い線で示す。期限超過（赤）とは
-   別の辺を使うので、両方立っても打ち消し合わない。 */
-.task-row.is-selected {
-  background: var(--color-surface-soft);
-  box-shadow: inset 3px 0 0 var(--color-ink-deep);
-  border-radius: 0;
-}
-.task-row.is-overdue { box-shadow: inset 3px 0 0 var(--color-semantic-error); }
-.task-row.is-selected.is-overdue {
-  box-shadow: inset 3px 0 0 var(--color-semantic-error), inset 0 -2px 0 var(--color-ink-deep);
-}
 
 /* 注意喚起も面で塗らない。左の線と文字色だけで出す。 */
 .callout { background: var(--color-canvas); border-left-width: 3px; }
@@ -352,9 +330,18 @@ table.data td.num, table.data th.num { white-space: nowrap; }
        角丸 … 外へ向いた側だけ。縦バーと同じ `--rounded-xl` にそろえる
 
      L字の内側の角（ロゴの右下）は四角のまま突き合わせる。 */
+/* ★ 横バーは**縦バーと同じ階層で、位置を固定する**（依頼者の指示。実行⑫）。
+     送っても動かない ―― いま何を開いているかは、画面のどこまで送っても
+     見えていなければならない。縦バーが `sticky` で残るのと同じ扱いにする。
+
+     `.hh-main` が送る器（一覧の画面）なので、その上端に貼り付く。
+     枠が2つの画面（`.hh-grid`）では器そのものが送らないので、元から動かない。
+     ★ 中身より前に描く（`z-index`）。**送った中身が帯の上を通ると、
+       固定した意味が消える。** */
 .zoom-bar {
   display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
   flex: 0 0 auto;
+  position: sticky; top: 0; z-index: 20;
   height: var(--logo-h);
   padding: var(--space-xs) var(--space-sm);
   background: var(--bar-face);
@@ -474,8 +461,6 @@ a.zoom-crumb:hover { text-decoration: none; }
 
 .rank-mark { display: inline-flex; align-items: center; gap: 4px; }
 .rank-crest { color: var(--color-crest-gold); font-size: 14px; }
-.rank-crest-2 { opacity: .72; }
-.rank-crest-3 { opacity: .5; }
 .rank-number { font-variant-numeric: tabular-nums; font-weight: 600; }
 .rank-delta { font-size: 12px; font-variant-numeric: tabular-nums; }
 .rank-delta-up { color: var(--color-rank-up); font-weight: 600; }
@@ -1274,3 +1259,85 @@ html, body { height: 100%; overflow: hidden; }
 
 /* デモ期。実在の期と同じ顔で並べない（0029）。 */
 .hh-year.is-demo { border-style: dashed; }
+
+/* =============================================================
+   ホームの図（実行⑫。依頼者の指示「サマリーをビジュアライズ」）
+
+   ★ 表をやめて絵で読ませる。ただし**数は必ず添える** ――
+     絵だけでは「だいたい多い」しか分からない。
+   ★ 色で意味を分けない（「色は線、面は黒」）。長さと位置で比べさせる。
+   ============================================================= */
+
+.bar-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.bar-list li {
+  display: grid;
+  grid-template-columns: minmax(88px, 26%) minmax(0, 1fr) auto;
+  align-items: center; gap: var(--space-sm);
+  font-size: 13px;
+}
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track {
+  height: 10px; border-radius: var(--rounded-full);
+  background: var(--color-hairline); overflow: hidden;
+}
+.bar-fill { display: block; height: 100%; background: var(--color-ink); }
+.bar-value { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.bar-note { font-weight: 400; color: var(--color-steel); font-size: 12px; }
+
+/* 内訳の帯。区切りは線で入れる（色分けしない）。 */
+.stack-bar {
+  display: flex; height: 28px; border-radius: var(--rounded-sm);
+  overflow: hidden; border: 1px solid var(--color-hairline-strong);
+}
+.stack-seg {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-ink); color: var(--color-canvas);
+  font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--color-canvas);
+}
+.stack-seg:last-child { border-right: 0; }
+.stack-seg:nth-child(2) { background: var(--color-steel); }
+.stack-seg:nth-child(3) { background: var(--color-hairline-strong); color: var(--color-ink); }
+.stack-seg-text { padding: 0 4px; }
+.stack-legend {
+  display: flex; flex-wrap: wrap; gap: var(--space-md);
+  margin-top: var(--space-sm); font-size: 12px; color: var(--color-steel);
+}
+.stack-legend li { display: flex; align-items: center; gap: 6px; }
+.stack-legend strong { color: var(--color-ink); font-variant-numeric: tabular-nums; }
+.stack-key {
+  width: 10px; height: 10px; border-radius: 2px;
+  background: var(--color-ink); display: inline-block;
+}
+.stack-legend li:nth-child(2) .stack-key { background: var(--color-steel); }
+.stack-legend li:nth-child(3) .stack-key { background: var(--color-hairline-strong); }
+
+/* 割合の輪。 */
+.ring { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ring svg { width: 108px; height: 108px; }
+.ring-track { fill: none; stroke: var(--color-hairline); stroke-width: 10; }
+.ring-fill {
+  fill: none; stroke: var(--color-ink); stroke-width: 10; stroke-linecap: round;
+}
+.ring-value {
+  fill: var(--color-ink); font-size: 22px; font-weight: 600;
+  text-anchor: middle; font-variant-numeric: tabular-nums;
+}
+.ring-label { font-size: 12px; font-weight: 600; }
+.ring-caption { font-size: 12px; color: var(--color-steel); }
+
+/* ピックアップの3人。**表ではなくカードで出す。** */
+.pick-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); }
+.pick-card {
+  display: flex; flex-direction: column; gap: var(--space-xs);
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline); border-radius: var(--rounded-md);
+  background: var(--color-canvas);
+}
+.pick-head { display: flex; align-items: center; gap: var(--space-sm); }
+.pick-rank {
+  font-size: 12px; font-weight: 600; color: var(--color-steel);
+  font-variant-numeric: tabular-nums;
+}
+.pick-name { font-weight: 600; }
+.home-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-lg); align-items: center; }

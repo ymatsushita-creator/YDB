@@ -41,6 +41,101 @@ function niceTicks(max: number, count = 4): number[] {
   return ticks
 }
 
+/**
+ * 横棒（ホームのサマリー。実行⑫。依頼者の指示「ビジュアライズ」）。
+ *
+ * ★ 表をやめて絵にするための最小の部品。**数は右端に出す** ――
+ *   絵だけにすると「だいたい多い」しか分からず、記録を読む道具として使えない。
+ *
+ * ★ 面は塗るが、色は使わない（「色は線、面は黒」。C-71）。
+ *   長さで比べさせる図なので、濃さも変えない ―― 変えると意味が2つになる。
+ */
+export function BarList({
+  items, max, unit,
+}: {
+  items: Array<{ label: string; value: number; note?: string }>
+  /** 目盛りの上端。省略すると一番大きい値。**0 のときは 1 にする。** */
+  max?: number
+  unit?: string
+}) {
+  const top = Math.max(1, max ?? Math.max(...items.map((i) => i.value), 0))
+  return (
+    <ul className="bar-list">
+      {items.map((i) => (
+        <li key={i.label}>
+          <span className="bar-label" title={i.label}>{i.label}</span>
+          <span className="bar-track">
+            <span className="bar-fill" style={{ width: `${(i.value / top) * 100}%` }} />
+          </span>
+          <span className="bar-value">
+            {i.value.toLocaleString('ja-JP')}{unit}
+            {i.note && <span className="bar-note"> {i.note}</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
+ * 内訳を1本の帯で出す（面接の判定など）。
+ *
+ * ★ 区切りは**線**で入れる。色分けしない ―― 凡例を読まないと分からない図に
+ *   なるからで、代わりに**各区画の中に語と数を書く**（入らない幅なら下に置く）。
+ */
+export function StackedBar({
+  parts,
+}: { parts: Array<{ label: string; value: number }> }) {
+  const total = parts.reduce((n, p) => n + p.value, 0)
+  if (total === 0) return <p className="hh-empty">まだ1件も無い。</p>
+  return (
+    <>
+      <div className="stack-bar">
+        {parts.filter((p) => p.value > 0).map((p) => (
+          <span key={p.label} className="stack-seg"
+                style={{ width: `${(p.value / total) * 100}%` }}>
+            <span className="stack-seg-text">{p.value}</span>
+          </span>
+        ))}
+      </div>
+      <ul className="stack-legend">
+        {parts.map((p) => (
+          <li key={p.label}>
+            <span className="stack-key" />{p.label}
+            <strong>{p.value}</strong>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+/**
+ * 割合の輪（記入済み・確度など）。
+ *
+ * ★ SVG をサーバで組み立てる（この製品の図はすべてそう）。
+ *   真ん中に数を置く ―― **輪だけでは読み取れない。**
+ */
+export function Ring({
+  ratio, label, caption,
+}: { ratio: number; label: string; caption?: string }) {
+  const r = 42
+  const c = 2 * Math.PI * r
+  const filled = Math.max(0, Math.min(1, ratio))
+  return (
+    <div className="ring">
+      <svg viewBox="0 0 100 100" role="img" aria-label={`${label} ${Math.round(filled * 100)}%`}>
+        <circle cx="50" cy="50" r={r} className="ring-track" />
+        <circle cx="50" cy="50" r={r} className="ring-fill"
+                strokeDasharray={`${c * filled} ${c}`} transform="rotate(-90 50 50)" />
+        <text x="50" y="52" className="ring-value">{Math.round(filled * 100)}%</text>
+      </svg>
+      <span className="ring-label">{label}</span>
+      {caption && <span className="ring-caption">{caption}</span>}
+    </div>
+  )
+}
+
 export function TimeSeries({
   points, series, height = H, valueLabel,
 }: { points: FunnelPoint[]; series: Series[]; height?: number; valueLabel: string }) {

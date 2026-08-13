@@ -47,6 +47,11 @@ describe('ホーム', () => {
     assert.match(src, /Card title="ピックアップ候補者"/)
     // 依頼者が選ばなかったものを勝手に足していないこと。
     assert.doesNotMatch(src, /いま止まっているもの/)
+    // ★ 依頼者の指示は「**サマリーをビジュアライズ**」である。
+    //   最初は表（`<table>`）と数字のカードで作って突き返された。
+    //   **ホームに表を置かない。** 図の部品で読ませる。
+    assert.doesNotMatch(src, /<table/, 'ホームに表を置かない')
+    assert.match(src, /FunnelStages|BarList|StackedBar|Ring/, '図の部品で出す')
   })
 
   test('② 全層がホームを開け、行き先もホームである', () => {
@@ -82,16 +87,21 @@ describe('ホーム', () => {
 })
 
 describe('タブの名称と構造', () => {
-  test('⑤ タブは5本。先頭がホームで、特別選考は表示名だけ', async () => {
+  test('⑤ タブは5本。名前は依頼者の語で、URL と識別子は据え置き', async () => {
     const src = await body('app/_components/shell.tsx')
     assert.match(src, /id: 'home', href: '\/', label: 'ホーム'/)
-    // ★ 画面の語は「特別選考」、URL と識別子は `headhunting` のまま。
+    // ★ 画面の語だけ変える。URL・識別子は `headhunting` / `borderline` / `approach` のまま。
     assert.match(src, /id: 'headhunting', href: '\/headhunting', label: '特別選考'/)
-    assert.doesNotMatch(src, /label: 'ヘッドハンティング'/)
+    assert.match(src, /id: 'borderline', href: '\/borderline', label: '通常選考'/)
+    assert.match(src, /id: 'approach', href: '\/approach', label: '連携団体'/)
   })
 
-  test('⑤ 画面に出る語から「ヘッドハンティング」が消えている', async () => {
+  test('⑤ 画面から旧い呼び名が消えている', async () => {
     // 依頼者の指示は「画面に出る語だけ変える」。**見出しとパンくずも画面である。**
+    //   ヘッドハンティング → 特別選考（実行⑫前半）
+    //   個人アプローチ     → 通常選考（実行⑫後半）
+    //   団体アプローチ     → アプローチ（実行⑫後半）
+    const OLD = /'(ヘッドハンティング|個人アプローチ|団体アプローチ)'|"(ヘッドハンティング|個人アプローチ|団体アプローチ)"|>(ヘッドハンティング|個人アプローチ|団体アプローチ)|(ヘッドハンティング|個人アプローチ|団体アプローチ)(リスト|へ)/
     const pages: string[] = []
     const walk = async (dir: string) => {
       for (const e of await readdir(join(ROOT, dir), { withFileTypes: true })) {
@@ -107,9 +117,7 @@ describe('タブの名称と構造', () => {
       // 文字列リテラルとして画面に出ているものだけを見る（コメントは履歴である）。
       for (const line of src.split('\n')) {
         if (line.trimStart().startsWith('*') || line.trimStart().startsWith('//')) continue
-        if (/'ヘッドハンティング'|"ヘッドハンティング"|>ヘッドハンティング|ヘッドハンティング[^ト]*リスト/.test(line)) {
-          found.push(`${p}: ${line.trim()}`)
-        }
+        if (OLD.test(line)) found.push(`${p}: ${line.trim()}`)
       }
     }
     assert.deepEqual(found, [], `画面の語が残っている:\n${found.join('\n')}`)
@@ -148,5 +156,82 @@ describe('表（スプシ形式）', () => {
     // 必須・形式・参照先の判定を画面に書いていないこと。
     assert.doesNotMatch(src, /必須です|@.*\\\.|SELECT |INSERT /)
     assert.match(src, /src\/commands\/sheet\.ts/, '結果の型はコマンド側から借りる')
+  })
+})
+
+describe('横バー（現在地の帯）', () => {
+  /**
+   * 依頼者の指示（実行⑫）――
+   * 「横バーは縦バーと同じ階層かつ位置固定で。スクロールで動かないように」
+   *
+   * ★★ **後ろの層が `position` を戻すと、固定が黙って消える。** ★★
+   *   `brand.css`（4枚目の層のひとつ前）がグラデーション線の土台として
+   *   `.zoom-bar { position: relative }` を持っており、`base.css` の
+   *   `sticky` を上書きしていた ―― 画面では「送ると帯が流れる」形で出た。
+   *   **層をまたいで同じ性質を2箇所で決めない。**
+   */
+  test('★ 帯は sticky で、後ろの層が position を戻していない', async () => {
+    const base = await read('app/base.css')
+    assert.match(base, /\.zoom-bar \{[^}]*position: sticky/,
+      'base.css で固定する')
+
+    // 後ろに読む層（白黒・ブランド・ガラス）が position を戻していないこと。
+    // ★ 見るのは**帯そのもの**の規則だけ。擬似要素（`::after`）は
+    //   グラデーション線で、`absolute` を持つのが正しい。
+    for (const layer of ['app/monochrome.css', 'app/brand.css', 'app/glass.css']) {
+      const css = await read(layer)
+      for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+        const selectors = rule[1]!.split(',').map((s) => s.trim())
+        const touchesBar = selectors.some((s) => /(^|\s)\.zoom-bar$/.test(s))
+        if (!touchesBar) continue
+        assert.doesNotMatch(rule[2]!, /position\s*:/,
+          `${layer} が帯の position を上書きしている: ${rule[1]!.trim()}`)
+      }
+    }
+  })
+
+  test('帯は全画面にある（いま何を開いているかが、どこでも見える）', async () => {
+    const shell = await read('app/_components/shell.tsx')
+    assert.match(shell, /className="zoom-bar"/)
+  })
+})
+
+describe('一覧', () => {
+  /**
+   * 依頼者の指摘（実行⑫）――「一覧できないと意味ねぇだろ」。
+   *
+   * 本番に 512 人入った日、**人を探すが 50 人しか出していなかった。**
+   * 一覧は全件出す（C-62）。上限は残すが、**それは暴走を止める数**であって
+   * 表示を切るための数ではない。切ったときは画面に言う。
+   */
+  test('★ 一覧を小さい数で黙って切っていない', async () => {
+    const pages = ['app/people/page.tsx', 'app/headhunting/page.tsx',
+      'app/borderline/page.tsx', 'app/operations/page.tsx']
+    for (const p of pages) {
+      const src = await body(p)
+      // 一覧を `slice(0, n).map(...)` で削っていないこと。
+      // ★ 見るのは**描画に渡す直前の slice** だけ ―― 日付を作る
+      //   `toISOString().slice(0, 10)` まで数えると、一覧と無関係な行で落ちる。
+      // ★ 「上位n件」の抜粋（ホームのピックアップなど。n ≦ 5）は別物なので通す。
+      const slices = [...src.matchAll(/\.slice\(0,\s*(\d+)\)\s*\.map\(/g)]
+        .map((m) => Number(m[1]!))
+      for (const n of slices) {
+        assert.ok(n <= 5 || n >= 1000,
+          `${p}: ${n} 件で切って描いている（一覧は全件出す。抜粋なら5件以下）`)
+      }
+      // 上限そのものが小さすぎないこと。
+      for (const m of src.matchAll(/const (LIMIT|LIST_LIMIT) = (\d+)/g)) {
+        assert.ok(Number(m[2]) >= 1000,
+          `${p}: ${m[1]} = ${m[2]} は小さすぎる（実データは数百人ある）`)
+      }
+    }
+  })
+
+  test('★ 切ったときは、切ったと画面に言う', async () => {
+    const src = await read('app/people/page.tsx')
+    assert.match(src, /truncated/, '上限に達したかを持っている')
+    assert.match(src, /まで出している/, '切ったことを画面に出す')
+    // 1件多く取って判定する（件数を別に数えると2つの答えがずれる）。
+    assert.match(src, /LIMIT \+ 1/)
   })
 })

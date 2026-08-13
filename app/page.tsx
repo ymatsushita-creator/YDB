@@ -9,8 +9,8 @@ import {
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
 import { listSeasonInterviews } from '../src/queries/interview.ts'
-import { Card, Kpi, Empty, num, NotDerived } from './_components/ui.tsx'
-import { FunnelStages } from './_components/charts.tsx'
+import { Card, Empty, num, NotDerived } from './_components/ui.tsx'
+import { FunnelStages, BarList, StackedBar, Ring } from './_components/charts.tsx'
 import { Confidence } from './_components/headhunting.tsx'
 import { Avatar } from './_components/borderline.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from './_components/shell.tsx'
@@ -129,44 +129,40 @@ export default async function Home(
         </div>
       </div>
 
-      {/* --- 母集団と歩留まり --- */}
+      {/* --- 母集団と歩留まり。**表をやめて図にした**（依頼者の指示。実行⑫）--- */}
       <div className="section">
         <Card title="母集団と歩留まり">
           {!summary ? <Empty>この期の集計はまだ出せない</Empty> : (
             <>
               <FunnelStages stages={[
                 { label: '接点継続中', value: summary.identified_person,
-                  color: 'var(--color-brand-purple)' },
+                  color: 'var(--color-ink)' },
                 // 人と応募は単位が違う。**割り算を出さない。**
                 { label: '応募', value: summary.applicant,
-                  color: 'var(--color-primary)', showRatio: false },
-                { label: '合格', value: summary.accepted, color: 'var(--color-brand-green)' },
+                  color: 'var(--color-ink)', showRatio: false },
+                { label: '合格', value: summary.accepted, color: 'var(--color-ink)' },
                 { label: '辞退控除後の合格', value: summary.net_accepted,
-                  color: 'var(--color-brand-teal)' },
+                  color: 'var(--color-ink)' },
               ]} />
-              <div className="grid grid-kpi" style={{ marginTop: 'var(--space-lg)' }}>
-                <Kpi label="選考中" value={num(summary.in_progress)} />
-                <Kpi label="不合格" value={num(summary.rejected)} />
-                <Kpi label="辞退" value={num(summary.withdrawn)} />
+
+              <div className="home-row" style={{ marginTop: 'var(--space-lg)' }}>
+                <StackedBar parts={[
+                  { label: '選考中', value: summary.in_progress },
+                  { label: '不合格', value: summary.rejected },
+                  { label: '辞退', value: summary.withdrawn },
+                ]} />
+                {steps.length > 0 && (
+                  <BarList
+                    items={steps.map((st) => ({
+                      label: st.name,
+                      value: st.reached,
+                      note: `通過 ${st.passed}`,
+                    }))}
+                    unit=" 到達"
+                  />
+                )}
               </div>
-              {steps.length > 0 && (
-                <div className="table-wrap" style={{ marginTop: 'var(--space-lg)' }}>
-                  <table className="data">
-                    <thead>
-                      <tr><th>段</th><th className="num">到達</th><th className="num">通過</th></tr>
-                    </thead>
-                    <tbody>
-                      {steps.map((s) => (
-                        <tr key={s.sort_order}>
-                          <td>{s.name}</td>
-                          <td className="num strong">{num(s.reached)}</td>
-                          <td className="num">{num(s.passed)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+
               {opens('/funnel') && (
                 <Link href={`/funnel?season=${season.id}`} className="hh-more">
                   ファネルへ ›
@@ -184,52 +180,36 @@ export default async function Home(
             <Empty>この期の集客の記録はまだ無い</Empty>
           ) : (
             <>
-              <div className="grid grid-2">
+              <div className="home-row">
                 <div>
-                  <h3 className="hh-sub">団体</h3>
+                  <h3 className="hh-sub">団体（識別できた人）</h3>
                   {reach.length === 0 ? <Empty>接触の記録が無い</Empty> : (
-                    <table className="data">
-                      <thead>
-                        <tr>
-                          <th>団体</th>
-                          <th className="num">接触</th>
-                          <th className="num">識別</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reach.slice(0, 5).map((r) => (
-                          <tr key={r.partner_id}>
-                            <td className="cell-name">{r.partner_name}</td>
-                            <td className="num">{num(r.contact_occasions)}</td>
-                            <td className="num strong">{num(r.identified_count)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <BarList
+                      items={reach.slice(0, 5).map((r) => ({
+                        label: r.partner_name,
+                        value: Number(r.identified_count),
+                        note: `接触 ${num(r.contact_occasions)}`,
+                      }))}
+                      unit=" 人"
+                    />
                   )}
                 </div>
                 <div>
-                  <h3 className="hh-sub">流入元</h3>
+                  <h3 className="hh-sub">流入元（初回接触）</h3>
                   {channels.length === 0 ? <Empty>接点の記録が無い</Empty> : (
-                    <table className="data">
-                      <thead>
-                        <tr><th>流入元</th><th className="num">人</th></tr>
-                      </thead>
-                      <tbody>
-                        {channels.slice(0, 5).map((c) => (
-                          <tr key={c.channel}>
-                            <td className="cell-name">{c.channel}</td>
-                            <td className="num strong">{num(c.first_touch_persons)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <BarList
+                      items={channels.slice(0, 5).map((c) => ({
+                        label: c.channel,
+                        value: Number(c.first_touch_persons),
+                      }))}
+                      unit=" 人"
+                    />
                   )}
                 </div>
               </div>
               {opens('/approach') && (
                 <Link href={`/approach?season=${season.id}`} className="hh-more">
-                  団体アプローチへ ›
+                  連携団体へ ›
                 </Link>
               )}
             </>
@@ -242,12 +222,20 @@ export default async function Home(
         <Card title="面接の進み具合">
           {interviews.length === 0 ? <Empty>この期の面接はまだ無い</Empty> : (
             <>
-              <div className="grid grid-kpi">
-                <Kpi label="シート記入済み"
-                     value={`${num(written)} / ${num(interviews.length)}`} />
-                <Kpi label="合格" value={num(verdicts.pass)} />
-                <Kpi label="ボーダー" value={num(verdicts.border)} />
-                <Kpi label="不合格" value={num(verdicts.fail)} />
+              <div className="home-row">
+                <Ring
+                  ratio={written / interviews.length}
+                  label="シート記入済み"
+                  caption={`${num(written)} / ${num(interviews.length)}`}
+                />
+                <div>
+                  <h3 className="hh-sub">面接官の所見</h3>
+                  <StackedBar parts={[
+                    { label: '合格', value: verdicts.pass },
+                    { label: 'ボーダー', value: verdicts.border },
+                    { label: '不合格', value: verdicts.fail },
+                  ]} />
+                </div>
               </div>
               {opens('/interviews') && (
                 <Link href={`/interviews?season=${season.id}`} className="hh-more">
@@ -266,32 +254,41 @@ export default async function Home(
             <Empty>確度がまだ算出されていない</Empty>
           ) : (
             <>
-              <ul className="hh-list">
+              <div className="pick-list">
                 {picks.map((p) => (
-                  <li key={p.person_id}>
-                    <Link href={`/people/${p.person_id}?season=${season.id}`}
-                          className="hh-list-name bl-person">
+                  <Link key={p.person_id} className="pick-card"
+                        href={`/people/${p.person_id}?season=${season.id}`}>
+                    <span className="pick-head">
                       <Avatar src={p.photo_data_url} name={p.person_name} />
-                      {p.person_name}
-                    </Link>
-                    <span className="hh-list-conf">
-                      {p.confidence_ratio === null
-                        ? <NotDerived />
-                        : <Confidence ratio={p.confidence_ratio} />}
+                      <span>
+                        <span className="pick-name">{p.person_name}</span>
+                        <span className="pick-rank" style={{ display: 'block' }}>
+                          {num(p.rank_in_season)} 位
+                        </span>
+                      </span>
                     </span>
-                    <span className="sheet-result">{num(p.rank_in_season)} 位</span>
-                  </li>
+                    {p.confidence_ratio === null ? <NotDerived /> : (
+                      <>
+                        <Confidence ratio={p.confidence_ratio} />
+                        <span className="bar-track">
+                          <span className="bar-fill"
+                                style={{ width: `${Math.round(Number(p.confidence_ratio) * 100)}%` }} />
+                        </span>
+                      </>
+                    )}
+                  </Link>
                 ))}
-              </ul>
+              </div>
               {opens('/borderline') && (
                 <Link href={`/borderline?season=${season.id}`} className="hh-more">
-                  個人アプローチへ ›
+                  通常選考へ ›
                 </Link>
               )}
             </>
           )}
         </Card>
       </div>
+
     </Shell>
   )
 }

@@ -16,7 +16,17 @@ const LEVELS = [
   { value: 'identified_person', label: '未応募・接点継続中' },
 ]
 
-const LIMIT = 50
+/**
+ * 一覧の上限。**表示を切るための数ではなく、暴走を止めるための数**である。
+ *
+ * ★ 50 で切っていた（実行⑩から）。本番に 512 人入った日に、
+ *   **人を探すが 50 人しか出さなくなった** ―― 依頼者の指摘
+ *   「一覧できないと意味ねぇだろ」。一覧は全件出す（C-62）。
+ *
+ * ★ それでも上限は残す。**切ったときは画面に言う**（下）――
+ *   黙って切ると、出ているものが全部だと読める。
+ */
+const LIMIT = 2000
 
 const control = { height: 40, fontSize: 14, padding: '0 var(--space-md)' }
 
@@ -36,13 +46,18 @@ export default async function PeoplePage(
   const level = params.level ?? ''
 
   const [people, breakdown, summary] = await Promise.all([
-    searchPersons(db, { q, seasonId: season.id, level, limit: LIMIT }),
+    // 1件多く取る。**返ってきた数が上限を超えていれば「切った」と分かる。**
+    // 件数を数える問い合わせを別に投げると、2つの答えがずれる瞬間ができる。
+    searchPersons(db, { q, seasonId: season.id, level, limit: LIMIT + 1 }),
     getSeasonLevelBreakdown(db, season.id),
     getSummary(db, season.id),
   ])
 
   // 応募到達状態を問わず窓の内側を数えると、年度サマリの接点継続中に一致する。
   // 画面でも並べておく。ずれたら、それは集計の定義が壊れた合図になる。
+  const truncated = people.length > LIMIT
+  const rows = truncated ? people.slice(0, LIMIT) : people
+
   const inWindow = breakdown.reduce((n, r) => n + Number(r.in_active_window), 0)
   const grove = Number(summary?.identified_person ?? 0)
   const total = breakdown.reduce((n, r) => n + Number(r.persons), 0)
@@ -134,7 +149,13 @@ export default async function PeoplePage(
         <Card
           title={q ? `「${q}」の検索結果` : '最近接点があった順'}
         >
-          {people.length === 0 ? <Empty>該当する人がいない</Empty> : (
+          {truncated && (
+            /* ★ 切ったことを言う。**黙って切ると全件に見える。** */
+            <p className="callout">
+              {num(LIMIT)} 人まで出している。これより多いので、絞り込んで探す。
+            </p>
+          )}
+          {rows.length === 0 ? <Empty>該当する人がいない</Empty> : (
             <div className="table-wrap">
               <table className="data">
                 <thead>
@@ -148,7 +169,7 @@ export default async function PeoplePage(
                   </tr>
                 </thead>
                 <tbody>
-                  {people.map((p) => (
+                  {rows.map((p) => (
                     <tr key={p.person_id}>
                       <td>
                         <Link href={`/people/${p.person_id}`}>

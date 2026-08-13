@@ -67,7 +67,13 @@
 
    ★ 面ではなく線。太さは 3px までに留める。
    ============================================================= */
-.hh-brand, .zoom-bar { position: relative; }
+/* ★ 帯の `position` は**触らない。**
+     グラデーション線（`::after`）の土台が要るだけなので、ロゴ枠にだけ
+     `relative` を置く。帯は `base.css` で `sticky`（送っても動かない。
+     依頼者の指示。実行⑫）にしてあり、**ここで `relative` に戻すと固定が消える。**
+     実際それで「送ると帯が流れる」状態になっていた ―― `sticky` も
+     位置指定の一種なので、`::after` の土台としては十分である。 */
+.hh-brand { position: relative; }
 .hh-brand::after, .zoom-bar::after {
   content: '';
   position: absolute;

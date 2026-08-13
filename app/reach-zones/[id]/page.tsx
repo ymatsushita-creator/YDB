@@ -51,7 +51,7 @@ export default async function ReachZonePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '団体アプローチ', href: '/approach' },
+          { label: '連携団体', href: '/approach' },
           { label: forest.name },
         ]}
       />

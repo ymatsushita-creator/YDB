@@ -38,7 +38,7 @@ export default async function OperationsPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '個人アプローチ', href: '/borderline' },
+          { label: '通常選考', href: '/borderline' },
           { label: '選考オペレーション' },
         ]}
       />
@@ -96,7 +96,9 @@ export default async function OperationsPage(
                   </tr>
                 </thead>
                 <tbody>
-                  {pending.slice(0, 40).map((p) => (
+                  {/* ★ 40 件で黙って切っていた（実行⑫で直した）。
+                      全件出す ―― カードの中で送れるので、切る理由が無い。 */}
+                  {pending.map((p) => (
                     <tr key={p.evaluation_id}>
                       <td>{p.applicant_name}</td>
                       <td className="nowrap">{p.step_order}. {p.step_name}</td>

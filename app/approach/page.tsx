@@ -85,7 +85,7 @@ export default async function ApproachPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '団体アプローチ', href: '/approach' },
+          { label: '連携団体', href: '/approach' },
         ]}
       />
 
@@ -119,7 +119,7 @@ export default async function ApproachPage(
 
       <div className="section">
         <Link href={`/approach/new?season=${season.id}`} className="hh-more">
-          アプローチを追加 ›
+          連携団体を追加 ›
         </Link>
       </div>
 
@@ -169,7 +169,7 @@ export default async function ApproachPage(
                 href: `/approach?season=${season.id}&view=edit&partner={id}`,
                 label: '接触を開く',
               }}
-              addLabel="行を追加（団体はアプローチ追加から）"
+              addLabel="行を追加（団体は「連携団体を追加」から）"
             />
           )}
         </Card>

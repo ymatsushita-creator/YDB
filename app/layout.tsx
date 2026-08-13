@@ -13,7 +13,7 @@ import { GlassPointer } from './_components/glass.tsx'
 
 export const metadata = {
   title: 'YouthDB — TALENT INTELLIGENCE',
-  description: '集客から選考までを、ヘッドハンティング・個人アプローチ・団体アプローチの3つに集約する',
+  description: '集客から選考までを、特別選考・通常選考・連携団体の3つに集約する',
   // ★ `/brand/` 配下を参照する。入口の proxy は `/favicon.png` を通さないため
   //   （許可は `/favicon` 完全一致と `/brand/`）、ここを `/favicon.png` にすると
   //   タブのアイコン要求が 307 でログインへ弾かれ、**アイコンが出ない。**

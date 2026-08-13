@@ -78,7 +78,7 @@ export default async function BorderlineScorePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '個人アプローチ', href: backHref },
+          { label: '通常選考', href: backHref },
           { label: panel.person_name },
         ]}
       />

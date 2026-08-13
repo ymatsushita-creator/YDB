@@ -82,7 +82,7 @@ export default async function PilotPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '個人アプローチ', href: '/borderline' },
+          { label: '通常選考', href: '/borderline' },
           { label: '試運転' },
         ]}
       />

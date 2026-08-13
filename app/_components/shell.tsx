@@ -65,8 +65,8 @@ export type Tab = 'home' | 'headhunting' | 'borderline' | 'approach' | 'intervie
 const TABS: Array<{ id: Tab; href: string; label: string }> = [
   { id: 'home', href: '/', label: 'ホーム' },
   { id: 'headhunting', href: '/headhunting', label: '特別選考' },
-  { id: 'borderline', href: '/borderline', label: '個人アプローチ' },
-  { id: 'approach', href: '/approach', label: '団体アプローチ' },
+  { id: 'borderline', href: '/borderline', label: '通常選考' },
+  { id: 'approach', href: '/approach', label: '連携団体' },
   // 面接は団体アプローチの下（依頼者の指示。実行⑩）。
   { id: 'interview', href: '/interviews', label: '面接' },
 ]

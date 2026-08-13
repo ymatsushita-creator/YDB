@@ -151,11 +151,3 @@ export const listCandidateNumbers = (db: Db, seasonId: string | undefined) => {
      WHERE n.season_id = $1
      ORDER BY n.number DESC`, [seasonId])
 }
-
-/** その人の候補者番号（期ごと）。 */
-export const getCandidateNumber = (db: Db, personId: string, seasonId: string) => {
-  if (!UUID.test(personId) || !UUID.test(seasonId)) return Promise.resolve(null)
-  return maybeOne<{ number: number }>(db, `
-    SELECT number FROM candidate_numbers
-     WHERE person_id = $1 AND season_id = $2`, [personId, seasonId])
-}

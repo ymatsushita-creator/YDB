@@ -33,7 +33,13 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/
  * 「確度順の候補者リスト」なのに**上位5人しか一覧できなかった。**
  * 表はカードの中で送れる（`.scroll-pane`）ので、ページに割る理由が無い。
  */
-const LIST_LIMIT = 500
+/**
+ * 一覧の上限。**表示を切るためではなく、暴走を止めるための数である。**
+ *
+ * ★ 500 だと、実データ（1期で 294 人）はまだ入るが、
+ *   期をまたいで積み上がれば黙って切れる。**切るなら言う**（下）。
+ */
+const LIST_LIMIT = 2000
 
 /**
  * ★ タブは画像の4つで固定する（依頼者の判断）。
@@ -206,7 +212,7 @@ export default async function BorderlinePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '個人アプローチ', href: `/borderline?season=${season.id}` },
+          { label: '通常選考', href: `/borderline?season=${season.id}` },
           ...(panel ? [{ label: panel.person_name }] : []),
         ]}
       />

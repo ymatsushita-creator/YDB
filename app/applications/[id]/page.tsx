@@ -194,7 +194,7 @@ export default async function ApplicationPage({
       <Breadcrumb
         root={seasonLabel(app)}
         crumbs={[
-          { label: '個人アプローチ', href: `/borderline?season=${app.season_id}` },
+          { label: '通常選考', href: `/borderline?season=${app.season_id}` },
           { label: app.applicant_name, href: `/borderline/${app.person_id}?season=${app.season_id}` },
           { label: '応募' },
         ]}
