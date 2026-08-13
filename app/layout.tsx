@@ -18,7 +18,10 @@ export const metadata = {
   //   （許可は `/favicon` 完全一致と `/brand/`）、ここを `/favicon.png` にすると
   //   タブのアイコン要求が 307 でログインへ弾かれ、**アイコンが出ない。**
   icons: {
-    icon: '/brand/logo_ydb.png',
+    // ★ タブのアイコンは 16〜32px で描かれる。512px の原版（202KB）を渡すのは、
+    //   **表示の 200 倍のバイト数を毎回配ること**である。64px 版（5KB）を渡す。
+    //   原版は `logo_ydb.png` のまま残す（意匠の資産はこちらで作り替えない）。
+    icon: '/brand/icon_64.png',
   },
 }
 

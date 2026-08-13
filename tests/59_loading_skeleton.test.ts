@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, readdir } from 'node:fs/promises'
+import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -80,5 +80,37 @@ describe('押した直後の骨組み（C-142）', () => {
     assert.ok(side, '柱の骨の規則がある')
     assert.match(side![1]!, /background:\s*var\(--bar-face\)/,
       '柱に面が無い（背景が透けて、器が崩れて見える）')
+  })
+})
+
+describe('配る重さ（C-143）', () => {
+  test('★ タブのアイコンは、表示の大きさに見合っている', async () => {
+    // ★ 512px の原版（202KB）をタブのアイコンに渡していた。
+    //   タブは 16〜32px で描くので、**表示の200倍のバイト数を毎回配っていた。**
+    const layout = await body('app/layout.tsx')
+    const icon = /icon:\s*'([^']+)'/.exec(layout)?.[1]
+    assert.ok(icon, 'アイコンの指定が読めない')
+    const { size } = await stat(join(ROOT, 'public', icon!.replace(/^\//, '')))
+    assert.ok(size < 20_000, `アイコンが ${Math.round(size / 1024)}KB ある（表示は16〜32px）`)
+  })
+
+  test('★ 画面のロゴは、表示の2倍までにする', async () => {
+    // 出るのは最大 360px 幅（ログインの札）。原版は 1283px で**4倍**あった。
+    for (const p of ['app/_components/shell.tsx', 'app/login/page.tsx']) {
+      const src = await body(p)
+      const m = /src="(\/brand\/[^"]+)"/.exec(src)
+      assert.ok(m, `${p} のロゴの指定が読めない`)
+      const { size } = await stat(join(ROOT, 'public', m![1]!.replace(/^\//, '')))
+      assert.ok(size < 50_000, `${p} のロゴが ${Math.round(size / 1024)}KB ある`)
+    }
+  })
+
+  test('意匠の原版は消していない（作り替えない・捨てない）', async () => {
+    // ★ 受け取った資産はこちらで作り替えない（`basic/` と同じ扱い）。
+    //   小さい版を**足した**だけで、原版はそのまま残す。
+    for (const p of ['public/brand/logo_gradient.png', 'public/brand/logo_ydb.png']) {
+      const { size } = await stat(join(ROOT, p))
+      assert.ok(size > 0, `${p} が無い`)
+    }
   })
 })

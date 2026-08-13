@@ -127,7 +127,7 @@ export async function Shell({
               高さは `--logo-h` に反映してある。 */}
           <img
             className="hh-brand-logo"
-            src="/brand/logo_gradient.png"
+            src="/brand/logo_gradient_720.png"
             width={1283} height={305}
             alt="NEO ACADEMIA"
           />

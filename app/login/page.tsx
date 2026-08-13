@@ -21,7 +21,7 @@ export default async function LoginPage({
   return (
     <main className="login-frame">
       <form action={signInAction} className="login-card">
-        <img className="login-logo" src="/brand/logo_gradient.png"
+        <img className="login-logo" src="/brand/logo_gradient_720.png"
              width={1283} height={305} alt="NEO ACADEMIA" />
 
         <input type="hidden" name="next" value={next} />
