@@ -140,6 +140,74 @@ export async function addPersonNote(
   return { ok: true, noteId: row!.id }
 }
 
+// -------------------------------------------------------------
+// メモの取り消し（実行⑮。C-131）
+// -------------------------------------------------------------
+
+export type UndoNoteFailure =
+  | AddNoteFailure
+  /** そのメモが無い。 */
+  | 'note_not_found'
+  /** すでに取り消されている（打ち消し行は1つまで）。 */
+  | 'already_undone'
+
+export type UndoNoteResult =
+  | { ok: true; noteId: string }
+  | { ok: false; reason: UndoNoteFailure }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** いまを JST の `YYYY-MM-DDTHH:mm` にする（`addPersonNote` が読む形）。 */
+const jstNow = (ms: number): string =>
+  new Date(ms + 9 * 3600_000).toISOString().slice(0, 16)
+
+/**
+ * メモを取り消す（実行⑮。C-131）。
+ *
+ * ★ **消さない。** 打ち消し行を1行足す。元の行は記録層に残り、
+ *   有効なメモ（`v_effective_person_notes`）から落ちるだけである。
+ *
+ * ★ 打ち消し行の本文は**取り消した理由**である。0027 の判定では
+ *   打ち消し行が元に取って代わるので、一覧には「なぜ取り消したか」が残る
+ *   ―― 行がまるごと消えて、あとから見た人が**そこに何かあったことすら
+ *   分からない**状態にしない。
+ *
+ * ★ 書いた人と理由は**記入必須**（元のメモと同じ規則。`addPersonNote` が見る）。
+ *   取り消しは記録を裏返す操作なので、名乗りと理由が要る。
+ *
+ * ★ 相手の人は**打ち消す行から引く。** 画面から渡された人を信じない ――
+ *   取り違えると別の人のメモを消すことになる（記録層も 0036 で拒む）。
+ *
+ * ★ 取り消しを取り消せば元が戻る（会計の逆仕訳）。画面はそれを
+ *   「取り消しの取り消し」として区別しない ―― どの有効な行も取り消せる。
+ */
+export async function undoPersonNote(
+  db: Db,
+  input: { noteId: string; authorName: string; reason: string },
+  nowMs: number = Date.now(),
+): Promise<UndoNoteResult> {
+  if (!UUID.test(input.noteId)) return { ok: false, reason: 'note_not_found' }
+
+  const target = await maybeOne<{ person_id: string; undone: boolean }>(db, `
+    SELECT n.person_id,
+           EXISTS (SELECT 1 FROM person_notes c WHERE c.corrects_note_id = n.id) AS undone
+      FROM person_notes n WHERE n.id = $1`, [input.noteId])
+  if (target === null) return { ok: false, reason: 'note_not_found' }
+  // 一意索引（`person_notes_corrects_key`）に当てて例外で気づくのではなく、
+  // **先に読んで理由で返す。** 画面に出せるのは理由のほうである。
+  if (target.undone) return { ok: false, reason: 'already_undone' }
+
+  return await addPersonNote(db, {
+    personId: target.person_id,
+    authorName: input.authorName,
+    // 取り消しの出来事は**いま**である。手入力させない ――
+    // 元のメモの日時を写すと、取り消した時点が記録から消える。
+    notedAt: jstNow(nowMs),
+    body: input.reason,
+    correctsNoteId: input.noteId,
+  }, nowMs)
+}
+
 /** 画面に出す言葉。**ここ1箇所**に置く（画面ごとに言い換えない）。 */
 export const ADD_NOTE_MESSAGE: Record<AddNoteFailure | 'saved', string> = {
   saved: 'メモを追加した。',
@@ -155,12 +223,28 @@ export const ADD_NOTE_MESSAGE: Record<AddNoteFailure | 'saved', string> = {
   involvement_too_long: `関わり方が長すぎる（${INVOLVEMENT_MAX} 文字まで）。`,
 }
 
-const CODES = new Set<string>([...Object.keys(ADD_NOTE_MESSAGE)])
+/**
+ * 取り消しの結果まで含めた言葉。**画面はこちらを読む。**
+ *
+ * ★ 足すのは取り消し固有の3語だけ。中身の検証は同じコマンドを通るので、
+ *   同じ失敗には同じ言葉が出る（画面ごとに言い換えない）。
+ */
+export const NOTE_MESSAGE:
+Record<AddNoteFailure | UndoNoteFailure | 'saved' | 'undone', string> = {
+  ...ADD_NOTE_MESSAGE,
+  undone: 'メモを取り消した。',
+  note_not_found: 'そのメモが見つからない。',
+  already_undone: 'そのメモはすでに取り消されている。',
+}
+
+export type NoteCode = keyof typeof NOTE_MESSAGE
+
+const CODES = new Set<string>([...Object.keys(NOTE_MESSAGE)])
 
 /** URL に載って戻ってくる結果コード。知らない値は「何も起きていない」。 */
 export const parseAddNoteCode = (
   v: string | string[] | undefined,
-): AddNoteFailure | 'saved' | null => {
+): NoteCode | null => {
   const one = Array.isArray(v) ? v[0] : v
-  return one && CODES.has(one) ? one as AddNoteFailure | 'saved' : null
+  return one && CODES.has(one) ? one as NoteCode : null
 }

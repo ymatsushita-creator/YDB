@@ -5,7 +5,9 @@ import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
 import { saveScore, type SaveScoreCode } from '../../src/commands/score.ts'
 import { submitEvaluation, type DecideCode } from '../../src/commands/decide.ts'
-import { addPersonNote, type AddNoteFailure } from '../../src/commands/note.ts'
+import {
+  addPersonNote, undoPersonNote, type AddNoteFailure, type NoteCode,
+} from '../../src/commands/note.ts'
 import {
   setEventAttendance, type SetAttendanceFailure,
 } from '../../src/commands/attend.ts'
@@ -127,6 +129,38 @@ export async function addNoteAction(formData: FormData): Promise<void> {
   revalidatePath('/borderline')
   revalidatePath(`/people/${personId}`)
   back('saved')
+}
+
+/**
+ * メモを取り消す（実行⑮。C-131）。
+ *
+ * 判定は `src/commands/note.ts` の `undoPersonNote`。ここは受け渡しだけ。
+ *
+ * ★ 取り消す相手は**メモの ID だけ**を渡す。人はコマンドが記録から引く ――
+ *   画面が渡した人を信じると、取り違えたときに**別の人のメモを消す。**
+ *
+ * ★ 戻り先は追加と同じ（ポップアップを開いたまま）。取り消した結果が
+ *   並んだところを見せる ―― 消えたのか失敗したのかが分からないまま
+ *   一覧へ放り出さない。
+ */
+export async function undoNoteAction(formData: FormData): Promise<void> {
+  const personId = String(formData.get('personId') ?? '')
+  const noteId = String(formData.get('noteId') ?? '')
+  const authorName = String(formData.get('undoAuthorName') ?? '')
+  const reason = String(formData.get('undoReason') ?? '')
+
+  const back = (code: NoteCode) => redirect(backTo(formData, {
+    note: code,
+    ...(UUID.test(personId) ? { memo: personId } : {}),
+  }))
+
+  const db = await getDb()
+  const result = await undoPersonNote(db, { noteId, authorName, reason })
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath('/borderline')
+  revalidatePath(`/people/${personId}`)
+  back('undone')
 }
 
 /**

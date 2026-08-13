@@ -252,6 +252,21 @@ export type SetRecommendationResult =
  * ★ 同じ状態をもう一度置いても**出来事を積まない。**
  *   積むと「その日に動きがあった」という意味が生まれる（0031 と同じ判断）。
  */
+/**
+ * 新しい出来事を、**同じ団体・同じ期の直前の出来事より必ず後ろに置く。**
+ *
+ * ★ 時計が刻めないほど速く2件入ると、`occurred_at` も `created_at` も
+ *   同じ値になり、現在の状態が **id（乱数）で決まる**（C-132 で測った）。
+ *   置いた順が現在に出ないのは、**あとから置いたほうが負ける**ということである。
+ *
+ * ★ `greatest` は NULL を無視するので、1件目は `now()` になる。
+ *   ずらす幅は1マイクロ秒 ―― 「いつ起きたか」を歪めない最小の幅である。
+ */
+const AFTER_LAST_RECOMMENDATION = `greatest(now(),
+    (SELECT max(occurred_at) + interval '1 microsecond'
+       FROM partner_recommendation_events
+      WHERE partner_id = $1 AND season_id = $2))`
+
 export async function setPartnerRecommendationState(
   db: Db,
   input: { partnerId: string; seasonId: string; stateId: string; staffId: string; note?: string },
@@ -285,7 +300,7 @@ export async function setPartnerRecommendationState(
   await db.query(`
     INSERT INTO partner_recommendation_events
       (partner_id, season_id, state_id, occurred_at, recorded_by_staff_id, note)
-    VALUES ($1, $2, $3, now(), $4, nullif(btrim($5, $6), ''))`,
+    VALUES ($1, $2, $3, ${AFTER_LAST_RECOMMENDATION}, $4, nullif(btrim($5, $6), ''))`,
   [input.partnerId, input.seasonId, input.stateId, input.staffId, input.note ?? null,
    BLANK_CHARS])
 
@@ -297,4 +312,77 @@ export const SET_RECOMMENDATION_MESSAGE: Record<SetRecommendationFailure, string
   season_not_found: 'その期が見つからない。',
   state_not_found: 'その推薦枠ステイタスは選べない。',
   staff_not_found: '入力者が選ばれていない。',
+}
+
+export type CorrectRecommendationFailure =
+  | SetRecommendationFailure
+  /** その団体・その期に、まだ何も置いていない。 */
+  | 'nothing_to_correct'
+
+export type CorrectRecommendationResult =
+  | { ok: true }
+  | { ok: false; reason: CorrectRecommendationFailure }
+
+/**
+ * 直近の推薦枠ステイタスを**訂正する**（実行⑮。C-131）。
+ *
+ * 置き直し（`setPartnerRecommendationState`）との違いは、
+ * **直前の記録を打ち消す**ことである ―― 0035 のテストが書いたとおり、
+ * 出来事を積むことには「**その日に動きがあった**」という意味がある。
+ * 打ち間違いを置き直しで直すと、動いていない日が動いたことになる。
+ *
+ * ★ 打ち消し行には**正しい状態を載せる**（`correctDecision` と同じ形）。
+ *
+ * ★ 「置いていない」へは戻せない。状態は NOT NULL で、**記録の無さを
+ *   表す行は作れない。** 誤って置いた団体は、正しい状態（多くは未連絡）
+ *   へ訂正する。これは記録層の形からくる制限なので、画面で誤魔化さない。
+ */
+export async function correctPartnerRecommendation(
+  db: Db,
+  input: { partnerId: string; seasonId: string; stateId: string; staffId: string; note?: string },
+): Promise<CorrectRecommendationResult> {
+  if (!UUID.test(input.partnerId)) return { ok: false, reason: 'partner_not_found' }
+  if (!UUID.test(input.seasonId)) return { ok: false, reason: 'season_not_found' }
+  if (!UUID.test(input.stateId)) return { ok: false, reason: 'state_not_found' }
+  if (!UUID.test(input.staffId)) return { ok: false, reason: 'staff_not_found' }
+
+  const found = await maybeOne<{
+    partner: boolean; season: boolean; state: boolean; staff: boolean
+  }>(db, `
+    SELECT EXISTS (SELECT 1 FROM partners WHERE id = $1)                       AS partner,
+           EXISTS (SELECT 1 FROM seasons  WHERE id = $2)                       AS season,
+           EXISTS (SELECT 1 FROM partner_recommendation_states
+                    WHERE id = $3 AND is_active)                               AS state,
+           EXISTS (SELECT 1 FROM staffs   WHERE id = $4 AND is_active)         AS staff`,
+  [input.partnerId, input.seasonId, input.stateId, input.staffId])
+  if (!found?.partner) return { ok: false, reason: 'partner_not_found' }
+  if (!found.season) return { ok: false, reason: 'season_not_found' }
+  if (!found.state) return { ok: false, reason: 'state_not_found' }
+  if (!found.staff) return { ok: false, reason: 'staff_not_found' }
+
+  // 直近の**有効な**出来事。並びはビュー（0035）と同じ順で決める。
+  const last = await maybeOne<{ id: string }>(db, `
+    SELECT id FROM v_effective_partner_recommendation_events
+     WHERE partner_id = $1 AND season_id = $2
+     ORDER BY occurred_at DESC, created_at DESC, id DESC
+     LIMIT 1`, [input.partnerId, input.seasonId])
+  if (last === null) return { ok: false, reason: 'nothing_to_correct' }
+
+  await db.query(`
+    INSERT INTO partner_recommendation_events
+      (partner_id, season_id, state_id, occurred_at, recorded_by_staff_id,
+       is_correction, corrects_event_id, note)
+    VALUES ($1, $2, $3, ${AFTER_LAST_RECOMMENDATION}, $4, true, $5,
+            nullif(btrim($6, $7), ''))`,
+  [input.partnerId, input.seasonId, input.stateId, input.staffId, last.id,
+   input.note ?? null, BLANK_CHARS])
+
+  return { ok: true }
+}
+
+export const CORRECT_RECOMMENDATION_MESSAGE:
+Record<CorrectRecommendationFailure | 'corrected', string> = {
+  ...SET_RECOMMENDATION_MESSAGE,
+  corrected: '推薦枠ステイタスを訂正した。',
+  nothing_to_correct: 'まだ何も置いていないので、訂正ではなくそのまま置く。',
 }

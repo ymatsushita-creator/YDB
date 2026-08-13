@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
 import {
-  updatePersonProfile, setPersonApproachState, type ProfileFailure,
+  updatePersonProfile, setPersonApproachState, correctApproachState,
+  type ProfileFailure,
 } from '../../src/commands/profile.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -82,4 +83,32 @@ export async function updateApproachAction(formData: FormData): Promise<void> {
   revalidatePath('/borderline')
   revalidatePath(`/people/${personId}/edit`)
   back(personId, seasonId, 'approach_saved')
+}
+
+/**
+ * 直前のアプローチ状態を訂正する（実行⑮。C-131）。
+ *
+ * 判定は `src/commands/profile.ts` の `correctApproachState`。
+ * 置き直しと**同じフォーム**から打つ ―― 出す欄は同じで、押すボタンだけが違う。
+ * 欄を2組に分けると、同じことを2箇所で書くことになる。
+ *
+ * ★ 見送り（終端の状態）を押し間違えると、置き直しでは
+ *   「その日に動きがあった」が積まれる。**訂正は打ち消して置く。**
+ */
+export async function correctApproachAction(formData: FormData): Promise<void> {
+  const personId = String(formData.get('personId') ?? '')
+  const seasonId = String(formData.get('seasonId') ?? '')
+  const db = await getDb()
+  const result = await correctApproachState(db, {
+    personId,
+    seasonId,
+    stateId: String(formData.get('stateId') ?? ''),
+    staffId: String(formData.get('staffId') ?? ''),
+    note: String(formData.get('approachNote') ?? ''),
+  })
+  if (!result.ok) back(personId, seasonId, result.reason)
+  revalidatePath('/headhunting')
+  revalidatePath('/borderline')
+  revalidatePath(`/people/${personId}/edit`)
+  back(personId, seasonId, 'approach_corrected')
 }

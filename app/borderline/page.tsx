@@ -10,7 +10,7 @@ import {
   parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
 } from '../../src/commands/score.ts'
 import { parseDecideCode, DECIDE_CODE_MESSAGE } from '../../src/commands/decide.ts'
-import { parseAddNoteCode, ADD_NOTE_MESSAGE } from '../../src/commands/note.ts'
+import { parseAddNoteCode, NOTE_MESSAGE } from '../../src/commands/note.ts'
 import { parseAttendanceCode, ATTENDANCE_MESSAGE } from '../../src/commands/attend.ts'
 import { ScoreSheet } from '../_components/scoring.tsx'
 import { jstDay, num, filled, NotDerived } from '../_components/ui.tsx'
@@ -441,8 +441,8 @@ export default async function BorderlinePage({
           personName={panel.person_name}
           notes={notes}
           closeHref={hereHref({ person: memoPersonId, open: memoPersonId })}
-          message={savedNote ? ADD_NOTE_MESSAGE[savedNote] : null}
-          ok={savedNote === 'saved'}
+          message={savedNote ? NOTE_MESSAGE[savedNote] : null}
+          ok={savedNote === 'saved' || savedNote === 'undone'}
           context={{
             personId: memoPersonId, seasonId: season.id, tab: tab.id, week: monday,
           }}

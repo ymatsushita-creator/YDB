@@ -537,6 +537,9 @@ a.zoom-crumb:hover { text-decoration: none; }
 .profile-edit-form small { color: var(--color-stone); font-weight: 400; }
 .profile-edit-form .inline-check { flex-direction: row; align-items: center; }
 .profile-edit-form .inline-check input { width: auto; }
+/* 記録と訂正を並べる（C-131）。高さを持つ枠は縮ませない（C-66 / C-113）。 */
+.form-buttons { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.form-buttons > button { flex: 0 0 auto; }
 
 .hh-list { display: flex; flex-direction: column; }
 .hh-list li {
@@ -1239,6 +1242,21 @@ html, body { height: 100%; overflow: hidden; }
 .memo-meta .dim { font-variant-numeric: tabular-nums; }
 /* 改行を残す。面談のメモは箇条書きで書かれる。 */
 .memo-body { margin-top: 2px; font-size: 13px; white-space: pre-wrap; }
+
+/* 取り消し（C-131）。畳んで置く ―― 読むつもりで押す事故を避ける。 */
+.memo-undo { margin-top: 4px; font-size: 12px; }
+.memo-undo > summary { color: var(--color-slate); cursor: pointer; width: fit-content; }
+.memo-undo-form {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--space-xs); margin-top: 6px;
+}
+.memo-undo-form input {
+  flex: 1 1 140px; min-width: 0;
+  font-family: inherit; font-size: 12px; padding: 5px 8px;
+  border-radius: var(--rounded-sm);
+}
+/* 高さを持つ枠は縮ませない（C-66 / C-113 / C-128 と同じ手当て）。 */
+.memo-undo-form button { flex: 0 0 auto; font-size: 12px; padding: 5px 10px; }
 
 /* 予定の参加者。チェックを入れると接点が1件積まれる。 */
 .attend-form { display: flex; flex-direction: column; gap: var(--space-sm); min-height: 0; }

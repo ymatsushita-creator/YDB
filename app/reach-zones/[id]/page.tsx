@@ -3,8 +3,12 @@ import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
 import {
-  getForest, getCommunities, getForestPersons, DORMANT_DAYS,
+  getForest, getCommunities, getForestPersons, getPartnerRecommendation, DORMANT_DAYS,
 } from '../../../src/queries/cockpit.ts'
+import { getIntakeOptions } from '../../../src/queries/intake.ts'
+import { CORRECT_RECOMMENDATION_MESSAGE } from '../../../src/commands/partner.ts'
+import { all } from '../../../src/db/client.ts'
+import { correctRecommendationAction } from './actions.ts'
 import { Card, Kpi, Empty, num, ymd } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
 import { Avatar } from '../../_components/borderline.tsx'
@@ -21,7 +25,7 @@ export default async function ReachZonePage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ season?: string }>
+  searchParams: Promise<{ season?: string; rec?: string }>
 }) {
   const db = await getDb()
   const { id } = await params
@@ -36,10 +40,24 @@ export default async function ReachZonePage({
     (await getSeason(db, (await searchParams).season)) ??
     defaultSeason(seasons)!
 
-  const [communities, persons] = await Promise.all([
+  const [communities, persons, recommendation, options] = await Promise.all([
     getCommunities(db, forest.forest_id),
     getForestPersons(db, forest.forest_id, season.id),
+    // 推薦枠ステイタス（0035）は**期ごと**。この頁が見ている期で読む。
+    getPartnerRecommendation(db, forest.forest_id, season.id),
+    getIntakeOptions(db),
   ])
+
+  // マスタは**非活性を選ばせない**（原則3）。表と同じ並びで出す。
+  const recommendationStates = await all<{ id: string; label: string }>(db, `
+    SELECT id, label FROM partner_recommendation_states
+     WHERE is_active ORDER BY sort_order`)
+
+  const recCode = (await searchParams).rec
+  const recMessage = recCode
+    ? CORRECT_RECOMMENDATION_MESSAGE[
+      recCode as keyof typeof CORRECT_RECOMMENDATION_MESSAGE] ?? null
+    : null
 
   const dormant = forest.days_since_touch !== null
     && Number(forest.days_since_touch) >= DORMANT_DAYS
@@ -101,6 +119,56 @@ export default async function ReachZonePage({
         ) : (
           <p className="callout ok">このアプローチ可能圏で止まっているものは無い。</p>
         )}
+      </div>
+
+      {/*
+        推薦枠ステイタス（0035）。**置くのは表、直すのはここ**（C-131）。
+        期ごとの値なので、この頁が見ている期のものだけを出す。
+      */}
+      <div className="section">
+        <Card title="推薦枠ステイタス">
+          {recMessage && (
+            <p className={`callout${recCode === 'corrected' ? ' ok' : ''}`}>{recMessage}</p>
+          )}
+          {recommendation === null ? (
+            <Empty>
+              この期の推薦枠ステイタスはまだ置いていない。連携団体の表から置く
+            </Empty>
+          ) : (
+            <>
+              <p className="page-sub">
+                {recommendation.state_label}
+                {` ・ ${ymd(recommendation.state_since)} から`}
+                {recommendation.last_note && ` ・ ${recommendation.last_note}`}
+              </p>
+              <form action={correctRecommendationAction}
+                    className="profile-edit-form editable-region">
+                <input type="hidden" name="partnerId" value={forest.forest_id} />
+                <input type="hidden" name="seasonId" value={season.id} />
+                <div className="edit-grid two">
+                  <label>正しいステイタス
+                    <select name="stateId" required defaultValue={recommendation.state_id}>
+                      {recommendationStates.map((o) => (
+                        <option key={o.id} value={o.id}>{o.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>記録担当者
+                    <select name="staffId" required>
+                      {options.staffs.map((o) => (
+                        <option key={o.id} value={o.id}>{o.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <label>訂正の理由<input name="recommendationNote" /></label>
+                {/* 直前の記録を打ち消して置き直す。積み直しではない ――
+                    積むと「その日に動きがあった」意味が生まれる（0035）。 */}
+                <button className="button-secondary" type="submit">直前を訂正</button>
+              </form>
+            </>
+          )}
+        </Card>
       </div>
 
       <div className="section">

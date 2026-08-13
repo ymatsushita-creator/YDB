@@ -131,8 +131,83 @@ export async function setPersonApproachState(
   await db.query(`
     INSERT INTO approach_events
       (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id, note)
-    VALUES ($1, $2, $3, now(), $4, $5)`, [
+    VALUES ($1, $2, $3, ${AFTER_LAST_APPROACH}, $4, $5)`, [
     input.personId, input.seasonId, input.stateId, input.staffId, blankToNull(input.note),
+  ])
+  return { ok: true }
+}
+
+/**
+ * 新しい出来事を、**同じ人・同じ期の直前の出来事より必ず後ろに置く。**
+ *
+ * ★ 時計が刻めないほど速く2件入ると、`occurred_at` も `created_at` も
+ *   同じ値になり、現在の状態が**id（乱数）で決まる**（C-132 で測った。
+ *   PGlite の時計はミリ秒刻みで、続けて打つと普通に同着する）。
+ *   置いた順が現在に出ないのは、**あとから置いたほうが負ける**ということである。
+ *
+ * ★ `greatest` は NULL を無視するので、1件目は `now()` になる。
+ *   ずらす幅は1マイクロ秒 ―― 「いつ起きたか」を歪めない最小の幅である。
+ */
+const AFTER_LAST_APPROACH = `greatest(now(),
+    (SELECT max(occurred_at) + interval '1 microsecond' FROM approach_events
+      WHERE person_id = $1 AND season_id = $2))`
+
+export type CorrectApproachFailure = ProfileFailure | 'nothing_to_correct'
+
+export type CorrectApproachResult =
+  | { ok: true }
+  | { ok: false; reason: CorrectApproachFailure }
+
+/**
+ * 直近のアプローチ状態を**訂正する**（実行⑮。C-131）。
+ *
+ * 置き直し（`setPersonApproachState`）との違いは2つ ――
+ *
+ *   ① 直前の記録を**打ち消す。** 誤った状態が履歴に残って
+ *      「その日に動きがあった」ことにならない（0035 の判断と同じ）
+ *   ② 見送り（`is_terminal`）を置いてしまっても**戻せる。**
+ *      終端の状態は「これ以上こちらから動かさない」なので、
+ *      押し間違いを直す道が無いと、その人は二度と一覧に戻らない
+ *
+ * ★ 打ち消し行には**正しい状態を載せる**（`correctDecision` と同じ形）。
+ *   打ち消し行が元に取って代わるので、これが現在の状態になる。
+ *
+ * ★ 打ち消す相手は**記録層から引く。** 画面が見ていた行を渡させない ――
+ *   渡させると、別の期・別の人の行を指す道ができる（0036 も拒む）。
+ */
+export async function correctApproachState(
+  db: Db,
+  input: { personId: string; seasonId: string; stateId: string; staffId: string; note: string },
+): Promise<CorrectApproachResult> {
+  if (![input.personId, input.seasonId, input.stateId, input.staffId].every((v) => UUID.test(v))) {
+    return { ok: false, reason: 'person_not_found' }
+  }
+  const target = await maybeOne<{ ok: boolean }>(db, `
+    SELECT EXISTS (
+      SELECT 1 FROM persons p, seasons s, approach_states a, staffs st
+       WHERE p.id = $1 AND p.deleted_at IS NULL AND s.id = $2
+         AND a.id = $3 AND a.is_active AND st.id = $4 AND st.is_active
+    ) AS ok`, [input.personId, input.seasonId, input.stateId, input.staffId])
+  if (!target?.ok) return { ok: false, reason: 'person_not_found' }
+
+  // 直近の**有効な**出来事。並びはビューと同じ順で決める
+  // ―― 順序が決まらないと、同じ問いに画面ごとに違う答えが出る。
+  const last = await maybeOne<{ id: string }>(db, `
+    SELECT id FROM v_effective_approach_events
+     WHERE person_id = $1 AND season_id = $2
+     ORDER BY occurred_at DESC, created_at DESC, id DESC
+     LIMIT 1`, [input.personId, input.seasonId])
+  // 何も置いていないものは訂正できない。**置くほうへ回す**
+  // （無い記録を打ち消した行を作ると、履歴が嘘になる）。
+  if (last === null) return { ok: false, reason: 'nothing_to_correct' }
+
+  await db.query(`
+    INSERT INTO approach_events
+      (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id,
+       is_correction, corrects_event_id, note)
+    VALUES ($1, $2, $3, ${AFTER_LAST_APPROACH}, $4, true, $5, $6)`, [
+    input.personId, input.seasonId, input.stateId, input.staffId, last.id,
+    blankToNull(input.note),
   ])
   return { ok: true }
 }

@@ -382,3 +382,32 @@ export const getForestPersons = (db: Db, forestId: string, seasonId: string) =>
               coalesce(tk.open_tasks, 0) DESC,
               tp.last_touch_on DESC
      LIMIT 60`, [forestId, seasonId])
+
+
+// -------------------------------------------------------------
+// 推薦枠ステイタス（0035）。団体の頁で訂正するために読む（実行⑮。C-131）
+// -------------------------------------------------------------
+
+export interface RecommendationNow {
+  state_id: string
+  state_label: string
+  state_since: Date
+  last_note: string | null
+}
+
+/**
+ * その団体・その期の、いまの推薦枠ステイタス。
+ *
+ * ★ 導出はビュー（`v_partner_recommendation_state`）が持つ。**画面で
+ *   最新の行を選び直さない** ―― 選び方が2つあると、表と頁で答えが割れる。
+ *
+ * 置いていなければ `null`。**0 でも「未連絡」でもない**（0017 と同じ作法で、
+ * 無いことを既定値に翻訳しない）。
+ */
+export const getPartnerRecommendation = (db: Db, partnerId: string, seasonId: string) => {
+  if (!UUID.test(partnerId) || !UUID.test(seasonId)) return Promise.resolve(null)
+  return maybeOne<RecommendationNow>(db, `
+    SELECT state_id, state_label, state_since, last_note
+      FROM v_partner_recommendation_state
+     WHERE partner_id = $1 AND season_id = $2`, [partnerId, seasonId])
+}

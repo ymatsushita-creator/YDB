@@ -4,7 +4,9 @@ import { getDb } from '../../../../src/db/server.ts'
 import { getPerson } from '../../../../src/queries/drilldown.ts'
 import { getPersonPanel, getProfileEditOptions } from '../../../../src/queries/headhunting.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../../../src/queries/dashboard.ts'
-import { updateProfileAction, updateApproachAction } from '../../../headhunting/actions.ts'
+import {
+  updateProfileAction, updateApproachAction, correctApproachAction,
+} from '../../../headhunting/actions.ts'
 import { ymd } from '../../../_components/ui.tsx'
 import { Shell, Breadcrumb, seasonLabel } from '../../../_components/shell.tsx'
 import { Avatar } from '../../../_components/borderline.tsx'
@@ -14,6 +16,8 @@ export const dynamic = 'force-dynamic'
 const MESSAGE: Record<string, string> = {
   saved: 'プロフィールを保存した。',
   approach_saved: 'アプローチ状態を記録した。',
+  approach_corrected: '直前のアプローチ状態を訂正した。',
+  nothing_to_correct: 'まだ記録が無いので、訂正ではなく「状態を記録」で置く。',
   person_not_found: 'その候補者は見つからなかった。',
   required: '姓・名・メールは空にできない。',
   bad_email: 'メールの形が違う。',
@@ -77,7 +81,8 @@ export default async function PersonEditPage({
       />
 
       {message && (
-        <p className={`callout${code === 'saved' || code === 'approach_saved' ? ' ok' : ''}`}>
+        <p className={`callout${
+          ['saved', 'approach_saved', 'approach_corrected'].includes(code ?? '') ? ' ok' : ''}`}>
           {message}
         </p>
       )}
@@ -169,7 +174,18 @@ export default async function PersonEditPage({
               </select>
             </label>
             <label>状態変更メモ<textarea name="approachNote" rows={3} /></label>
-            <button className="button-primary" type="submit">状態を記録</button>
+            {/*
+              押すボタンで意味が変わる（実行⑮。C-131）――
+                状態を記録   … 出来事を1つ積む（その日に動きがあった）
+                直前を訂正   … 直前の記録を打ち消して、正しい状態を置く
+              欄は同じなので分けない。見送り（終端）を押し間違えても
+              訂正で戻せる ―― 戻せないと、その人は一覧に二度と現れない。
+            */}
+            <div className="form-buttons">
+              <button className="button-primary" type="submit">状態を記録</button>
+              <button className="button-secondary" type="submit"
+                      formAction={correctApproachAction}>直前を訂正</button>
+            </div>
           </form>
         </section>
       </div>

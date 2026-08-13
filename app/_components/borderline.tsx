@@ -4,7 +4,7 @@ import type {
   Appointment, AppointmentDetail, AttendanceCandidate, PersonNote,
 } from '../../src/queries/borderline.ts'
 import { AUTHOR_MAX, BODY_MAX, INVOLVEMENT_MAX } from '../../src/commands/note.ts'
-import { addNoteAction, saveAttendanceAction } from '../borderline/actions.ts'
+import { addNoteAction, undoNoteAction, saveAttendanceAction } from '../borderline/actions.ts'
 import { filled } from './ui.tsx'
 
 /**
@@ -311,6 +311,30 @@ export function MemoPopup({
                 </p>
                 {/* 改行を残す。面談のメモは箇条書きで書かれる。 */}
                 <p className="memo-body">{n.body}</p>
+
+                {/*
+                  取り消し（実行⑮。C-131）。**消すのではなく打ち消す。**
+                  畳んで置く ―― 開いている必要が無いうえ、本文の隣に
+                  常時ボタンがあると、読むつもりで押す事故が起きる。
+                  `<details>` なので `'use client'` は増えない（C-95）。
+                */}
+                <details className="memo-undo">
+                  <summary>取り消す</summary>
+                  <form action={undoNoteAction} className="memo-undo-form">
+                    <input type="hidden" name="personId" value={context.personId} />
+                    <input type="hidden" name="seasonId" value={context.seasonId} />
+                    <input type="hidden" name="tab" value={context.tab} />
+                    <input type="hidden" name="week" value={context.week} />
+                    <input type="hidden" name="noteId" value={n.note_id} />
+                    {/* 名乗りと理由は必須。取り消しは記録を裏返す操作である。 */}
+                    <input name="undoAuthorName" type="text" required
+                           maxLength={AUTHOR_MAX} autoComplete="off"
+                           placeholder="取り消す人" />
+                    <input name="undoReason" type="text" required maxLength={BODY_MAX}
+                           autoComplete="off" placeholder="取り消す理由" />
+                    <button type="submit" className="button-secondary">取り消す</button>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>
