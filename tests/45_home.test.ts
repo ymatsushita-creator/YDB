@@ -290,6 +290,50 @@ describe('やることを出さない画面', () => {
   })
 })
 
+describe('画面の切り替え（速さ）', () => {
+  /**
+   * 依頼者の問い（実行⑮）――「**画面切り替えはなぜこんなに遅いの**」。
+   *
+   * 測った内訳（C-141）――
+   *   本番 /login の応答      0.39〜0.72 秒（DB に触らない画面でこれ）
+   *   デモDBの組み立て        1,244 ms（PGlite 621 / migrate 99 / 架空データ 522）
+   *   画面ごとの問い合わせ     10本ぜんぶ足して 219 ms ―― **SQL は遅くない**
+   *
+   * ★ ここで固定するのは、**読むだけの往復を減らす指定が消えないこと**である。
+   */
+  test('タブを押し直したとき、サーバへ聞き直さない（30秒の控え）', async () => {
+    const config = await read('next.config.ts')
+    assert.match(config, /staleTimes:\s*\{\s*dynamic:\s*30\s*\}/,
+      'ブラウザ側の控えが無いと、戻るたびに往復する')
+  })
+
+  test('★ 書き込みのあとは控えを捨てている（古い値を見せない）', async () => {
+    // 控えを効かせてよいのは、書いたら捨てているからである。
+    // 書き込みのアクションはすべて `revalidatePath` を呼ぶ。
+    const files: string[] = []
+    const walk = async (dir: string) => {
+      for (const e of await readdir(join(ROOT, dir), { withFileTypes: true })) {
+        if (e.isDirectory()) await walk(join(dir, e.name))
+        else if (e.name === 'actions.ts' || e.name === 'sheet-actions.ts') {
+          files.push(join(dir, e.name))
+        }
+      }
+    }
+    await walk('app')
+    assert.ok(files.length > 0, '書き込みのアクションが見つからない')
+    let checked = 0
+    for (const f of files) {
+      const src = await read(f)
+      // 記録を書くものだけを見る。合言葉の出入り（`app/login/actions.ts`）は
+      // **記録を変えない**ので、捨てる控えも無い。
+      if (!/src\/commands\//.test(src)) continue
+      checked++
+      assert.match(src, /revalidatePath\(/, `${f} が控えを捨てていない`)
+    }
+    assert.ok(checked >= 5, `記録を書くアクションが少なすぎる（${checked}）`)
+  })
+})
+
 describe('画面に出る語', () => {
   /**
    * 依頼者の指示（実行⑮）――「**応募者成績ランキングを欲しい人ランキングに戻して**」。
