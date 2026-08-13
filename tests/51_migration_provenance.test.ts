@@ -101,3 +101,39 @@ describe('schema_migrations は適用したプロセスを残す（C-121）', ()
     await db.close()
   })
 })
+
+describe('名乗りは呼び出し側が渡す（C-145）', () => {
+  test('★ 渡した名乗りが残る（接続の application_name に頼らない）', async () => {
+    // ★★ 本番で効いていなかった ―― Supabase のプーラ（Supavisor）が
+    //   `application_name` を**自分の名前へ上書きする。** 0036〜0038 の
+    //   applied_by は3件とも「Supavisor」で、道具の名前が残らなかった。
+    //   **経路の途中にあるものが書き換えられる値を、記録の当てにしない。**
+    const db = await openPglite()
+    await db.exec(`SET application_name = 'Supavisor'`)   // プーラの名乗りを真似る
+    await migrate(db, { actor: 'youthdb test#1@here' })
+
+    const by = await all<{ applied_by: string }>(
+      db, `SELECT DISTINCT applied_by FROM schema_migrations`)
+    assert.deepEqual(by.map((r) => r.applied_by), ['youthdb test#1@here'],
+      '接続の名乗り（Supavisor）が記録に入っている')
+    await db.close()
+  })
+
+  test('渡さなければ、接続の名乗りに落ちる（前からの経路を壊さない）', async () => {
+    const db = await openPglite()
+    await db.exec(`SET application_name = 'youthdb fallback#2@here'`)
+    await migrate(db)
+    const by = await all<{ applied_by: string }>(
+      db, `SELECT DISTINCT applied_by FROM schema_migrations`)
+    assert.deepEqual(by.map((r) => r.applied_by), ['youthdb fallback#2@here'])
+    await db.close()
+  })
+
+  test('本番へ流す道具は、名乗りを渡している', async () => {
+    const { readFile } = await import('node:fs/promises')
+    const { fileURLToPath } = await import('node:url')
+    const src = await readFile(
+      fileURLToPath(new URL('../scripts/db-migrate-production.ts', import.meta.url)), 'utf8')
+    assert.match(src, /actor: actorName\(\)/, '名乗りを渡していない')
+  })
+})

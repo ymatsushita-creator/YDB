@@ -121,7 +121,7 @@ export async function ledgerTail(db: Db): Promise<LedgerTail | null> {
 
 export async function migrate(
   db: Db,
-  opts: { verbose?: boolean; migrationsDir?: string } = {},
+  opts: { verbose?: boolean; migrationsDir?: string; actor?: string } = {},
 ): Promise<string[]> {
   // applied_by は「この接続が名乗った名前」（application_name）である。
   // ★ 帳簿そのものはマイグレーション番号で育てられない ―― 新しい DB では
@@ -190,10 +190,16 @@ export async function migrate(
       // PostgreSQL は複数文を1回で受け取ると暗黙のトランザクションで包むが、
       // それに頼らず BEGIN / COMMIT を明示する。ドライバが文を分割して
       // 送る実装に替わったときに、原子性だけが静かに失われるのを避けたい。
+      // ★ 名乗りは**呼び出し側から渡す**（C-145）。接続の `application_name` に
+      //   頼っていたが、**本番のプーラ（Supavisor）が上書きしていた** ――
+      //   道具の名前が残らず、記録は「Supavisor」だけを覚えていた。
+      //   経路の途中にあるものが書き換えられる値を、記録の当てにしない。
+      const by = opts.actor ?? ''
       await db.exec(
         `BEGIN;\n${m.sql}\n;\nINSERT INTO schema_migrations (name, checksum, applied_by) ` +
           `VALUES (${quote(m.name)}, ${quote(m.checksum)}, ` +
-          `coalesce(current_setting('application_name', true), ''));\nCOMMIT;`,
+          `coalesce(nullif(${quote(by)}, ''), ` +
+          `current_setting('application_name', true), ''));\nCOMMIT;`,
       )
     } catch (e) {
       // 明示 BEGIN の中で失敗すると、トランザクションは**中断状態のまま開いている**。

@@ -14,7 +14,7 @@ import type { Db, QueryResult } from './client.ts'
  * pid が入っているので、同じコマンドでも実行が違えば名前が違う。
  * `application_name` は 63 バイトで黙って切られるので、こちらで丸める。
  */
-const actorName = (): string =>
+export const actorName = (): string =>
   `youthdb ${basename(process.argv[1] ?? 'node')}#${process.pid}@${hostname()}`.slice(0, 63)
 
 /**

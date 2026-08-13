@@ -1,4 +1,4 @@
-import { openPostgres } from '../src/db/postgres.ts'
+import { openPostgres, actorName } from '../src/db/postgres.ts'
 import { migrate, seed, ledgerTail } from '../src/db/migrate.ts'
 import { saveSnapshot } from './backup-file.ts'
 import type { Db } from '../src/db/client.ts'
@@ -49,7 +49,8 @@ console.log(`控え ―― ${saved.dir}/（表 ${saved.tables} ・ 行 ${saved.r
 
 const t0 = performance.now()
 
-const applied = await migrate(db, { verbose: true })
+// ★ 名乗りは渡す。接続の application_name はプーラが上書きする（C-145）。
+const applied = await migrate(db, { verbose: true, actor: actorName() })
 console.log(`migrations applied: ${applied.length}`)
 
 const seeded = await seed(db, { verbose: true })
