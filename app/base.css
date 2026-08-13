@@ -1350,28 +1350,35 @@ html, body { height: 100%; overflow: hidden; }
   position: absolute; z-index: 21;
   top: 0; right: var(--space-sm);
   width: min(58%, 760px); height: var(--logo-h);
-  display: flex; align-items: center; gap: var(--space-xs);
+  display: flex; align-items: center;
   color: var(--color-on-dark);
-  pointer-events: none;
+  overflow: hidden;
 }
 .hh-main:has(.hh-criteria-ref) .zoom-bar { padding-right: min(60%, 780px); }
-.hh-criteria-label { flex: 0 0 auto; font-size: 11px; font-weight: 700; }
 .hh-criteria-scroll {
-  min-width: 0; overflow-x: auto; overflow-y: hidden;
-  display: flex; align-items: center; gap: var(--space-md);
-  scrollbar-width: thin;
-  pointer-events: auto;
+  width: 100%; min-width: 0; overflow: hidden;
 }
-.hh-criteria-step { display: inline-flex; align-items: center; gap: var(--space-xs); white-space: nowrap; }
-.hh-criteria-step-name {
-  flex: 0 0 auto;
-  font-size: 11px; font-weight: 600; letter-spacing: .5px;
-  color: var(--color-on-dark);
+.hh-criteria-track {
+  display: flex; width: max-content;
+  animation: criteria-marquee 48s linear infinite;
+}
+.hh-criteria-ref:hover .hh-criteria-track { animation-play-state: paused; }
+.hh-criteria-group {
+  display: inline-flex; align-items: center; gap: var(--space-md);
+  padding-right: var(--space-md); white-space: nowrap;
 }
 .hh-criteria-axis {
   display: inline-flex; align-items: baseline; gap: 3px;
   font-size: 11px; line-height: 1.2;
   color: var(--color-on-dark-muted);
+}
+@keyframes criteria-marquee {
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hh-criteria-scroll { overflow-x: auto; }
+  .hh-criteria-track { animation: none; }
+  .hh-criteria-group[aria-hidden="true"] { display: none; }
 }
 .hh-criteria-scale {
   flex: 0 0 auto;

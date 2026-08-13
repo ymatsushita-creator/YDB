@@ -205,20 +205,23 @@ export async function Shell({
             値は引き続き記録層から読み、画面へ写し書きしない。 */}
         {criteria.length > 0 && (
           <div className="hh-criteria-ref" aria-label="評価基準">
-            <span className="hh-criteria-label">評価基準</span>
             <div className="hh-criteria-scroll">
-              {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).entries()]
-                .map(([step]) => (
-                  <span key={step} className="hh-criteria-step">
-                    <span className="hh-criteria-step-name">{step}</span>
-                    {criteria.filter((c) => c.step_name === step).map((c) => (
-                      <span key={`${step}-${c.sort_order}`} className="hh-criteria-axis" title={c.name}>
-                        {c.sort_order}. {c.name}
+              <div className="hh-criteria-track">
+                {[false, true].map((duplicate) => (
+                  <span
+                    key={String(duplicate)}
+                    className="hh-criteria-group"
+                    aria-hidden={duplicate || undefined}
+                  >
+                    {criteria.map((c, i) => (
+                      <span key={`${c.step_name}-${c.sort_order}`} className="hh-criteria-axis" title={c.name}>
+                        {i + 1}. {c.name}
                         <span className="hh-criteria-scale">{c.scale_max}</span>
                       </span>
                     ))}
                   </span>
                 ))}
+              </div>
             </div>
           </div>
         )}

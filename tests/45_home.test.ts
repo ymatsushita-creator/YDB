@@ -260,13 +260,18 @@ describe('評価基準（横バー）', () => {
     assert.ok(criteria > main, '評価基準は左柱ではなく横バーのある主領域に描く')
   })
 
-  test('★ 1行のまま横へ送って全件を読める', async () => {
+  test('★ 見出しを出さず、基準だけを自動で横へ流す', async () => {
+    const shell = await read('app/_components/shell.tsx')
+    const ref = shell.slice(shell.indexOf('<div className="hh-criteria-ref"'), shell.indexOf('{children}'))
+    assert.doesNotMatch(ref, />評価基準</)
+    assert.doesNotMatch(ref, /hh-criteria-step-name/)
+
     const css = await read('app/base.css')
     const rule = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
     assert.ok(rule, '規則がある')
     assert.match(rule![1]!, /height:\s*var\(--logo-h\)/)
-    const scroll = /\.hh-criteria-scroll \{([^}]*)\}/.exec(css)
-    assert.match(scroll![1]!, /overflow-x:\s*auto/)
-    assert.match(scroll![1]!, /overflow-y:\s*hidden/)
+    const track = /\.hh-criteria-track \{([^}]*)\}/.exec(css)
+    assert.match(track![1]!, /animation:\s*criteria-marquee/)
+    assert.match(css, /prefers-reduced-motion:\s*reduce/)
   })
 })
