@@ -241,10 +241,10 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
 .hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
 .hh-nav a:hover { text-decoration: none; }
-.hh-nav-slash {
-  height: 10px; overflow: hidden;
-  color: var(--color-on-dark-muted); text-align: center;
-  font-size: 18px; line-height: 10px;
+.hh-nav-divider {
+  display: block; height: 1px;
+  margin: var(--space-xs) 0;
+  background: var(--color-sidebar-hairline);
 }
 /* 副文（`<em>`）の指定は消した ―― 出さなくなったため（実行⑪。依頼者の指示）。
    使わない見た目の指定を残すと、次に触る人が「まだあるもの」として扱う。 */

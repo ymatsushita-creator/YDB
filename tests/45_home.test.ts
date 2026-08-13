@@ -123,9 +123,12 @@ describe('タブの名称と構造', () => {
     assert.equal(canOpen('input', '/staff/new'), true)
   })
 
-  test('ホームと特別選考の間にスラッシュがある', async () => {
+  test('ホームと特別選考の間に横罫線がある', async () => {
     const src = await body('app/_components/shell.tsx')
-    assert.match(src, /t\.id === 'home'.*hh-nav-slash.*\//)
+    assert.match(src, /t\.id === 'home'.*hh-nav-divider/)
+    const css = await read('app/base.css')
+    const rule = /\.hh-nav-divider \{([^}]*)\}/.exec(css)
+    assert.match(rule![1]!, /height:\s*1px/)
   })
 })
 

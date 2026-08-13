@@ -143,7 +143,7 @@ export async function Shell({
               >
                 <span>{t.label}</span>
               </Link>
-              {t.id === 'home' && <span className="hh-nav-slash" aria-hidden>/</span>}
+              {t.id === 'home' && <span className="hh-nav-divider" aria-hidden />}
             </Fragment>
           ))}
           <div className="hh-nav-add" aria-label="追加">
