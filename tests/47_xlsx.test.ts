@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { parseSheet, columnIndex, serialToDate } from '../src/import/xlsx.ts'
 
 /**
@@ -49,6 +50,15 @@ describe('xlsx を読む', () => {
     // 判定に使うのはこの3つ。**空を FALSE に丸めない。**
     assert.equal(row[0] === 'TRUE' || row[0] === 'FALSE', true)
     assert.equal(row[2] === 'TRUE' || row[2] === 'FALSE', false, '欄が無い')
+  })
+
+  test('★ 過去の誤登録訂正も、TRUEだけでなくFALSE以外を3期へ移す', () => {
+    const source = readFileSync(new URL('../scripts/import-approach-2026.ts', import.meta.url), 'utf8')
+    assert.match(source, /p\.cohort === 3 && !needsSeason2\.has\(key\)/)
+    assert.match(source, /hasSeason2Application \? 2 : p\.cohort/,
+      '実応募がある期をチェック欄より優先する')
+    assert.doesNotMatch(source, /p\.interviewDone === 'TRUE'/,
+      '空欄を訂正対象から外す条件を再び入れない')
   })
 
   // -----------------------------------------------------------

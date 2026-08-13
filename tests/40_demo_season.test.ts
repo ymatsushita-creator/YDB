@@ -135,9 +135,9 @@ describe('デモ期の境界', () => {
   })
 
   // ④
-  test('★ デモ期は既定にならない。並びも最後', async () => {
+  test('★ デモ期は画面の期一覧に出ず、既定にもならない', async () => {
     const seasons = await listSeasons(db)
-    assert.equal(seasons.at(-1)?.is_demo, true, '一覧の最後')
+    assert.equal(seasons.some((s) => s.is_demo), false, '一覧に出さない')
     assert.equal(defaultSeason(seasons)?.id, realSeasonId)
     assert.equal(defaultSeason(seasons)?.is_demo, false)
   })

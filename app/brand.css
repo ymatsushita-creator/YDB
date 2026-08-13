@@ -97,8 +97,9 @@
   background-size: var(--wave-len) 100%;
   background-position-x: var(--wave-shift);
 
-  /* 波長を伸ばしても速さは変えない。1周 50 秒 ＝ 秒速 32px。 */
-  animation: brand-wave 50s linear infinite;
+  /* 依頼者の指定で、色の切り替え時間を従来の10.8倍にする。
+     1周 50秒 × 10.8 = 540秒。 */
+  animation: brand-wave 540s linear infinite;
 }
 
 /* ★ 横バーはロゴの右端から続く。**位相をロゴの幅だけずらす。**
