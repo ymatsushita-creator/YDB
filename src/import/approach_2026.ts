@@ -110,7 +110,7 @@ export interface ApproachPlan {
   people: ApproachPerson[]
   /** 期ごとの人数。 */
   byCohort: { 2: number; 3: number }
-  /** 氏名が空で、指す手段が無い行。**入れない。** */
+  /** 氏名以外に値があるのに氏名が空で、指す手段が無い行。**入れない。** */
   skipped: number
 }
 
@@ -131,7 +131,11 @@ export function planApproach(book: Workbook): ApproachPlan {
   for (let i = APPROACH.headerRow + 1; i < rows.length; i++) {
     const r = rows[i]!
     const fullName = clean(r[APPROACH.name])
-    if (!fullName) { skipped++; continue }
+    if (!fullName) {
+      // 書式だけ残った末尾行は「取り込めなかった応募者」ではない。
+      if (r.some((cell) => clean(cell))) skipped++
+      continue
+    }
 
     // ★ 欄の**有無**で分ける。FALSE と「欄が無い」は違う。
     const cell = clean(r[APPROACH.interviewDone])

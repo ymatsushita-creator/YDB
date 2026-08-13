@@ -13,6 +13,7 @@
     "db:backup": "node --env-file-if-exists=.env.local scripts/db-backup.ts",
     "db:restore": "node --env-file-if-exists=.env.local scripts/db-restore.ts",
     "import:legacy:2026": "node scripts/import-legacy-2026.ts",
+    "import:approach:2026": "node --env-file-if-exists=.env.local scripts/import-approach-2026.ts",
     "seed:demo-season": "node --env-file-if-exists=.env.local scripts/seed-demo-season.ts",
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",
     "tokens": "node scripts/build-tokens.ts",

@@ -44,7 +44,7 @@ const book = new Workbook(XLSX)
 const plan = planApproach(book)
 const interviews = planInterviews(book)
 
-console.log(`アプローチリスト  ${plan.people.length} 人（氏名が空で入れない行 ${plan.skipped}）`)
+console.log(`アプローチリスト  ${plan.people.length} 人（値はあるが氏名が空の行 ${plan.skipped}）`)
 console.log(`  去年（2期）  ${plan.byCohort[2]} 人 ―― 「面談実施」の欄がある`)
 console.log(`  今年（3期）  ${plan.byCohort[3]} 人 ―― 欄が無い`)
 console.log(`面談シート       ${interviews.length} 件`
@@ -124,12 +124,13 @@ try {
   //    **点そのものは取り込まない**（面談の所見は文章のままメモへ）。
   let axesAdded = 0
   for (const [i, axis] of JUDGEMENT_AXES.entries()) {
-    const r = await db.query(`
+    const r = await db.query<{ id: string }>(`
       INSERT INTO evaluation_criteria (selection_step_id, name, scale_max, sort_order)
       VALUES ($1, $2, 4, $3)
-      ON CONFLICT (selection_step_id, sort_order) DO NOTHING`,
+      ON CONFLICT (selection_step_id, sort_order) DO NOTHING
+      RETURNING id`,
     [stepId, axis.name, i + 1])
-    axesAdded += (r as { rows: unknown[] }).rows.length === 0 ? 0 : 1
+    axesAdded += r.rows.length
   }
 
   // ④ 人。**姓に氏名まるごと、名は空**（区切りが無い。C-74 と同じ）。
