@@ -1432,10 +1432,13 @@ html, body { height: 100%; overflow: hidden; }
 .hh-criteria-scroll {
   width: 100%; height: 100%; min-width: 0;
   display: flex; align-items: center;
-  /* 入りきらないぶんは横へ送る。縦には溢れさせない（切れの原因だった）。 */
-  overflow-x: auto; overflow-y: hidden;
+  /* ★ **自動で流す**（依頼者の指示。実行⑮。C-139）。流しているあいだは
+     こちらで位置を決めるので、送り帯は出さない（`overflow: hidden`）。
+     **動きを止める人のための道は下の `prefers-reduced-motion` に置く。** */
+  overflow: hidden;
   /* 収まるときは中央、溢れるときは先頭から ―― `safe` が無いと
-     中央寄せのままでは**左端が掴めなくなる**（送れない領域ができる）。 */
+     中央寄せのままでは**左端が掴めなくなる**（送れない領域ができる）。
+     流しが止まる（動きを減らす設定）ときに効く。 */
   justify-content: center;
   justify-content: safe center;
   scrollbar-width: thin;
@@ -1443,8 +1446,36 @@ html, body { height: 100%; overflow: hidden; }
 }
 .hh-criteria-track {
   display: flex; align-items: center; flex-wrap: nowrap;
-  gap: var(--space-sm);
   min-width: 0; white-space: nowrap;
+  /* 2組ぶんの幅を持たせ、半分ぶん流して先頭へ戻る ―― **切れ目が見えない。**
+     ★ 速さは**軸の長さで決めない。** 一定の速さ（linear）で 60 秒で1周する。
+       速さを中身に合わせると、期ごとに読める速さが変わる。 */
+  /* ★ 送り箱（flex）の中では、指定した幅も**縮められる。**
+     縮むと `translateX(-50%)` の半分が「2組ぶんの半分」でなくなり、
+     1周したところで**継ぎ目が飛ぶ。** 高さを持つ枠と同じ手当て
+     （C-66 / C-113 / C-128。**5度目**）。 */
+  flex: 0 0 auto; width: max-content;
+  animation: criteria-marquee 60s linear infinite;
+}
+/* 読みたいものに指を置いたら止まる。**読ませるために流している**ので、
+   読もうとした瞬間に逃げない。 */
+.hh-criteria-ref:hover .hh-criteria-track,
+.hh-criteria-ref:focus-within .hh-criteria-track { animation-play-state: paused; }
+/* 1組ぶん。2組を隙間なく並べるため、塊の間と同じ間隔を右に持たせる。 */
+.hh-criteria-run {
+  display: inline-flex; align-items: center; flex-wrap: nowrap;
+  gap: var(--space-sm); padding-right: var(--space-sm); white-space: nowrap;
+}
+@keyframes criteria-marquee {
+  to { transform: translateX(-50%); }
+}
+/* ★ 動きを減らす設定の人には**流さない。** 代わりに自分で送れるようにし、
+   写し（2組目）は消す ―― 止まったまま同じ並びが2度出ると、
+   「軸が30本ある」ように読める。 */
+@media (prefers-reduced-motion: reduce) {
+  .hh-criteria-scroll { overflow-x: auto; overflow-y: hidden; }
+  .hh-criteria-track { animation: none; width: auto; }
+  .hh-criteria-run[aria-hidden="true"] { display: none; }
 }
 /* 段ごとの塊。**見出しは出さない**（依頼者の指示）ので、境目は区切り線で見せる。 */
 .hh-criteria-group {

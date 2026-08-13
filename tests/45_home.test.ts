@@ -367,23 +367,36 @@ describe('評価基準（横バー）', () => {
     const ref = shell.slice(shell.indexOf('<div className="hh-criteria-ref"'), shell.indexOf('{children}'))
     assert.doesNotMatch(ref, />評価基準</)
     assert.doesNotMatch(ref, /hh-criteria-step-name/)
-    // 流していた頃は同じ並びを2組出してつないでいた。止めた以上、重複は出さない。
-    assert.doesNotMatch(ref, /\[false, true\]/, '止めたので並びは1組だけ')
+    // ★ **自動で流す**（依頼者の指示。実行⑮。C-139）。実行⑬でいったん止めたが、
+    //   依頼者の判断で戻した。流すには同じ並びを2組出して端をつなぐ。
+    assert.match(ref, /\[false, true\]/, '流すには同じ並びが2組要る（継ぎ目を隠す）')
+    assert.match(ref, /aria-hidden=\{copy \|\| undefined\}/,
+      '2組目は写しである。読み上げが二度読まないようにする')
 
     const css = await read('app/base.css')
     const rule = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
     assert.ok(rule, '規則がある')
     assert.match(rule![1]!, /height:\s*var\(--logo-h\)/)
-    // 動かさない ―― 動きの指定も、その残骸も残さない。
-    assert.doesNotMatch(css, /criteria-marquee/, '流す指定を残さない')
+    // ★ 自動で流す（C-139）。動きの指定と、止める人のための道が**両方**要る。
+    assert.match(css, /@keyframes criteria-marquee/, '流す指定が無い')
+    const track = /\.hh-criteria-track \{([^}]*)\}/.exec(css)
+    assert.match(track![1]!, /animation:\s*criteria-marquee/, '帯が流れていない')
+    // 送り箱の中では指定した幅も縮む。縮むと1周したところで継ぎ目が飛ぶ。
+    assert.match(track![1]!, /flex:\s*0 0 auto/, '流す帯を縮ませない（継ぎ目が飛ぶ）')
+    assert.match(track![1]!, /width:\s*max-content/)
+    assert.match(css, /animation-play-state:\s*paused/, '触れたら止まる（読ませるために流す）')
+    assert.match(css, /prefers-reduced-motion[\s\S]{0,400}animation:\s*none/,
+      '動きを減らす設定の人には流さない')
     const group = /\.hh-criteria-group \{([^}]*)\}/.exec(css)
     assert.match(group![1]!, /flex-wrap:\s*nowrap/, '1行に並べる（折り返さない）')
     const scroll = /\.hh-criteria-scroll \{([^}]*)\}/.exec(css)
-    assert.match(scroll![1]!, /overflow-x:\s*auto/, '入らないぶんは横へ送れる')
-    assert.match(scroll![1]!, /overflow-y:\s*hidden/, '縦へ溢れさせない（天端が切れる）')
+    assert.match(scroll![1]!, /overflow:\s*hidden/, '流しているあいだは送り帯を出さない')
     assert.match(scroll![1]!, /align-items:\s*center/, '縦は真ん中に置く')
     assert.match(scroll![1]!, /justify-content:\s*safe center/,
       '収まるときは中央、溢れるときは先頭から（safe が無いと左端が掴めない）')
+    // 流しを止めた人は、自分で送れる。
+    assert.match(css, /prefers-reduced-motion[\s\S]{0,400}overflow-x:\s*auto/,
+      '流さない人が自分で送れない')
     const axis = /\.hh-criteria-axis \{([^}]*)\}/.exec(css)
     const size = /font-size:\s*(\d+)px/.exec(axis![1]!)
     assert.ok(Number(size![1]) >= 13, `字が小さい（${size![1]}px）。依頼者の指示は「文字大きめ」`)

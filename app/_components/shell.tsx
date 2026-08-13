@@ -204,33 +204,40 @@ export async function Shell({
       <div className="hh-main">
         {/* 評価基準は横バーの右側へ重ねる（依頼者の指示。実行⑬）。
             値は引き続き記録層から読み、画面へ写し書きしない。
-            ★ **動かさない**（依頼者の指示）。流していた頃は同じ並びを2組出して
-              つないでいたが、止めた以上そのぶんは**重複でしかない。**1組だけ出す。 */}
+            ★ **自動で流す**（依頼者の指示。実行⑮。C-139）――「横スクロールは自動で」。
+              実行⑬でいったん止めたが、依頼者の判断で戻した。
+              流すには**同じ並びを2組**出して端をつなぐ（切れ目が見えないため）。
+              2組目は写しなので `aria-hidden` を付ける ―― 読み上げが二度読まない。 */}
         {criteria.length > 0 && (
           <div className="hh-criteria-ref" aria-label="評価基準">
             <div className="hh-criteria-scroll">
               <div className="hh-criteria-track">
-                {/* ★ 段ごとに塊にする（実行⑭）。3期を2期にそろえて軸が15本になり、
-                    **通し番号 1〜15 が段をまたいで地続きに見えていた** ――
-                    9番までが特別選考、10番からが最終面接である。
-                    ★ 番号そのものをやめた ―― **記録に無い通し番号を画面が作っていた。**
-                      並びは記録の順（step_order, sort_order）のままで、
-                      境目は区切り線で見せる（**見出しは出さない。** 依頼者の指示）。 */}
-                {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).keys()]
-                  .map((step) => (
-                    <span key={step} className="hh-criteria-group">
-                      {criteria.filter((c) => c.step_name === step).map((c) => (
-                        <span key={c.sort_order} className="hh-criteria-axis" title={c.name}>
-                          {/* ★ 重み付けの札（必須／加点）は**出さない**（依頼者の指示。実行⑮）――
-                              「かてんとかどうでもいいんだよ。消せよ」。
-                              ここに出るのは**軸の名前だけ**である。重み付けは記録層
-                              （`evaluation_criteria.kind`）に残っており、消したのは
-                              画面の札だけ ―― 集計も判定もそのまま効く（C-134）。 */}
-                          {c.name}
+                {[false, true].map((copy) => (
+                  <span key={String(copy)} className="hh-criteria-run"
+                        aria-hidden={copy || undefined}>
+                    {/* ★ 段ごとに塊にする（実行⑭）。3期を2期にそろえて軸が15本になり、
+                        **通し番号 1〜15 が段をまたいで地続きに見えていた** ――
+                        9番までが特別選考、10番からが最終面接である。
+                        ★ 番号そのものをやめた ―― **記録に無い通し番号を画面が作っていた。**
+                          並びは記録の順（step_order, sort_order）のままで、
+                          境目は区切り線で見せる（**見出しは出さない。** 依頼者の指示）。 */}
+                    {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).keys()]
+                      .map((step) => (
+                        <span key={step} className="hh-criteria-group">
+                          {criteria.filter((c) => c.step_name === step).map((c) => (
+                            <span key={c.sort_order} className="hh-criteria-axis" title={c.name}>
+                              {/* ★ 重み付けの札（必須／加点）は**出さない**（依頼者の指示。実行⑮）――
+                                  「かてんとかどうでもいいんだよ。消せよ」。
+                                  ここに出るのは**軸の名前だけ**である。重み付けは記録層
+                                  （`evaluation_criteria.kind`）に残っており、消したのは
+                                  画面の札だけ ―― 集計も判定もそのまま効く（C-134）。 */}
+                              {c.name}
+                            </span>
+                          ))}
                         </span>
                       ))}
-                    </span>
-                  ))}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
