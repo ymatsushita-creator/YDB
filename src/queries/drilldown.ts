@@ -455,6 +455,8 @@ export const getApplicationTimeline = (db: Db, applicationId: string | string[] 
 }
 
 export interface EvaluationScore {
+  /** 打ち直し（E4。C-133）に要る。名前で軸を指すと、同名の軸で取り違える。 */
+  criteria_id: string
   criteria_name: string
   score: number
   scale_max: number
@@ -541,8 +543,8 @@ export const getApplicationEvaluations = async (
   if (evaluations.length === 0) return []
 
   const scores = await all<EvaluationScore & { evaluation_id: string }>(db, `
-    SELECT es.evaluation_id, ec.name AS criteria_name, es.score, ec.scale_max,
-           es.rationale, ec.applies_to
+    SELECT es.evaluation_id, ec.id AS criteria_id, ec.name AS criteria_name,
+           es.score, ec.scale_max, es.rationale, ec.applies_to
       FROM evaluation_scores es
       JOIN evaluation_criteria ec ON ec.id = es.criteria_id
       JOIN evaluations e ON e.id = es.evaluation_id

@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
-import { saveScore, type SaveScoreCode } from '../../src/commands/score.ts'
+import { saveScore, correctScore, type SaveScoreCode } from '../../src/commands/score.ts'
 import { submitEvaluation, type DecideCode } from '../../src/commands/decide.ts'
 import {
   addPersonNote, undoPersonNote, type AddNoteFailure, type NoteCode,
@@ -78,6 +78,36 @@ export async function scoreOnBorderlineAction(formData: FormData): Promise<void>
   revalidatePath('/borderline')
   revalidatePath(`/applications/${String(formData.get('applicationId') ?? '')}`)
   back('saved')
+}
+
+/**
+ * 付いている点と根拠を打ち直す（E4。実行⑮。C-133）。
+ *
+ * 判定は `src/commands/score.ts` の `correctScore`。ここは受け渡しだけ。
+ *
+ * ★ 保存と**別の入口**にしてある。同じ入口が「無ければ入れる・あれば直す」を
+ *   兼ねると、二度押しが訂正として通り、版だけが積まれる。
+ *
+ * ★ 直した人は残らない。**認証が無いので、ここで名簿を選ばせても
+ *   自己申告でしかない**（C-84 / C-85）。誰が直したかを記録できる形は、
+ *   認証が入ってからにする。
+ */
+export async function correctScoreOnBorderlineAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const criteriaId = String(formData.get('criteriaId') ?? '')
+  const rationale = String(formData.get('rationale') ?? '')
+  const score = Number(formData.get('score'))
+
+  const back = (code: SaveScoreCode) => redirect(backTo(formData, { score: code }))
+
+  const db = await getDb()
+  const result = await correctScore(db, { evaluationId, criteriaId, score, rationale })
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath('/borderline')
+  revalidatePath(`/applications/${String(formData.get('applicationId') ?? '')}`)
+  revalidatePath(`/interviews/${evaluationId}`)
+  back('corrected')
 }
 
 /** 評価を確定する。全軸そろっているかは `submitEvaluation` が確かめる。 */

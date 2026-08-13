@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import type { ScoringSheet } from '../../src/queries/borderline.ts'
 import { num } from './ui.tsx'
-import { scoreOnBorderlineAction, submitOnBorderlineAction } from '../borderline/actions.ts'
+import {
+  scoreOnBorderlineAction, correctScoreOnBorderlineAction, submitOnBorderlineAction,
+} from '../borderline/actions.ts'
 
 /**
  * 採点シート（実行⑩。依頼者の指示 ――「そこで採点入力する」）。
@@ -73,9 +75,41 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
                 )}
               </span>
               {c.score !== null ? (
-                <span className="strong nowrap">
-                  {num(c.score)}
-                  <span className="section-note"> / {num(c.scale_max)}</span>
+                <span className="nowrap">
+                  <span className="strong">
+                    {num(c.score)}
+                    <span className="section-note"> / {num(c.scale_max)}</span>
+                  </span>
+                  {/*
+                    打ち直し（E4。実行⑮。C-133）。**確定前だけ出す** ――
+                    `can_score` は「担当が決まっていて、判断がまだ下りていない」
+                    と同じ門で、`correctScore` が見るものと一致する。
+                    畳んで置くのは、読むつもりで押す事故を避けるため。
+                  */}
+                  {sheet.can_score && (
+                    <details className="score-fix">
+                      <summary>直す</summary>
+                      <form action={correctScoreOnBorderlineAction}
+                            className="score-form editable-inline">
+                        {hidden}
+                        <input type="hidden" name="criteriaId" value={c.criteria_id} />
+                        <label className="visually-hidden" htmlFor={`bl-fix-${c.criteria_id}`}>
+                          直した点
+                        </label>
+                        <input id={`bl-fix-${c.criteria_id}`} name="score" type="number"
+                               min={0} max={c.scale_max} step={1} required
+                               defaultValue={c.score} className="score-input" />
+                        <label className="visually-hidden" htmlFor={`bl-fixwhy-${c.criteria_id}`}>
+                          直した根拠
+                        </label>
+                        <input id={`bl-fixwhy-${c.criteria_id}`} name="rationale" type="text"
+                               required defaultValue={c.rationale ?? ''}
+                               className="rationale-input"
+                               placeholder="何を見てその点にしたか（必須）" />
+                        <button type="submit" className="button-secondary">直す</button>
+                      </form>
+                    </details>
+                  )}
                 </span>
               ) : sheet.can_score ? (
                 <form action={scoreOnBorderlineAction} className="score-form editable-inline">

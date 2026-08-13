@@ -1243,6 +1243,12 @@ html, body { height: 100%; overflow: hidden; }
 /* 改行を残す。面談のメモは箇条書きで書かれる。 */
 .memo-body { margin-top: 2px; font-size: 13px; white-space: pre-wrap; }
 
+/* 点の打ち直し（C-133）。畳んで置く ―― 読むつもりで押す事故を避ける。
+   確定前だけ出る（判定は can_score で、コマンドが見る門と同じ）。 */
+.score-fix { display: block; margin-top: 4px; font-size: 12px; font-weight: 400; }
+.score-fix > summary { color: var(--color-slate); cursor: pointer; width: fit-content; }
+.score-fix .score-form { margin-top: 6px; flex-wrap: wrap; }
+
 /* 取り消し（C-131）。畳んで置く ―― 読むつもりで押す事故を避ける。 */
 .memo-undo { margin-top: 4px; font-size: 12px; }
 .memo-undo > summary { color: var(--color-slate); cursor: pointer; width: fit-content; }

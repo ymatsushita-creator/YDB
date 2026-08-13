@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../../src/db/server.ts'
-import { saveScore, type SaveScoreCode } from '../../../src/commands/score.ts'
+import { saveScore, correctScore, type SaveScoreCode } from '../../../src/commands/score.ts'
 import {
   submitEvaluation, decideStep, correctDecision, type DecideCode,
 } from '../../../src/commands/decide.ts'
@@ -47,6 +47,35 @@ export async function saveScoreAction(formData: FormData): Promise<void> {
   revalidatePath(`/applications/${applicationId}`)
   revalidatePath('/borderline')
   back('saved')
+}
+
+/**
+ * 付いている点と根拠を打ち直す（E4。実行⑮。C-133）。
+ *
+ * 判定は `src/commands/score.ts` の `correctScore`。ここは受け渡しだけ。
+ * ボーダーラインの同じ操作（`correctScoreOnBorderlineAction`）と**同じ
+ * コマンドを呼ぶ** ―― どちらから直しても同じ規則が効く。
+ */
+export async function correctScoreAction(formData: FormData): Promise<void> {
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const criteriaId = String(formData.get('criteriaId') ?? '')
+  const rationale = String(formData.get('rationale') ?? '')
+  const score = Number(formData.get('score'))
+
+  const back = (code: SaveScoreCode) => {
+    const id = /^[0-9a-f-]{36}$/i.test(applicationId) ? applicationId : ''
+    redirect(`/applications/${id}?score=${code}`)
+  }
+
+  const db = await getDb()
+  const result = await correctScore(db, { evaluationId, criteriaId, score, rationale })
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath(`/applications/${applicationId}`)
+  revalidatePath('/borderline')
+  revalidatePath(`/interviews/${evaluationId}`)
+  back('corrected')
 }
 
 /**
