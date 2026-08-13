@@ -355,6 +355,28 @@ describe('評価基準（横バー）', () => {
     assert.ok(criteria > main, '評価基準は左柱ではなく横バーのある主領域に描く')
   })
 
+  /**
+   * 依頼者の指示（実行⑮）――「**高さを真ん中に揃えて**」。
+   *
+   * ★★ 帯は `position: absolute` だが、**基準点を持つ祖先が無かった。**
+   *   `top: 0` は画面そのものの上端を指し、黒バーは `.hh-frame` の余白ぶん
+   *   下から始まるので、**文字は黒バーの中心より余白ぶん上**に出ていた。
+   *   （測定では 32px ずれていた。`--space-md` と同じ幅である。）
+   *
+   * ★ 再現の頁で気づけなかったのは、**基準点まで写していなかった**からである
+   *   ―― 確かめる頁は、本番と**同じ入れ子**で作る（C-140）。
+   */
+  test('★ 帯の基準点は黒バーと同じ箱にある（高さが真ん中に揃う）', async () => {
+    const css = await read('app/base.css')
+    const main = /\.hh-main \{([^}]*)\}/.exec(css)
+    assert.ok(main, '.hh-main の規則がある')
+    assert.match(main![1]!, /position:\s*relative/,
+      '基準点が無いと、帯は画面の上端を基準にして黒バーより上へずれる')
+    const ref = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
+    assert.match(ref![1]!, /position:\s*absolute/)
+    assert.match(ref![1]!, /top:\s*0/)
+  })
+
   test('★ 見出しを出さず、真ん中・大きめ・横送りで全件を出す（依頼者の指示）', async () => {
     // ★ 実行⑬で「流す」をやめた ―― 依頼者の指示は
     //   「評価軸は動かさなくていいので全部入るように」。

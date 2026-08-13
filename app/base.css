@@ -832,6 +832,12 @@ html, body { height: 100%; overflow: hidden; }
   display: flex; flex-direction: column; gap: var(--space-md);
   min-width: 0; height: 100%; min-height: 0; overflow: hidden;
   padding-left: var(--space-md);
+  /* ★ 評価基準の帯（`.hh-criteria-ref`）の**基準点**である（C-140）。
+     これが無いと `position: absolute` は画面そのものを基準にし、
+     `top: 0` が**枠の外枠（`.hh-frame` の余白）の上端**を指す ――
+     帯は黒バーより `--space-md` ぶん上で中央を取り、
+     画面では**文字が上へ寄って見えた。** 基準点を黒バーと同じ箱に置く。 */
+  position: relative;
 }
 
 /* 帯の下に残った高さを、そのまま中身の高さにする。 */
