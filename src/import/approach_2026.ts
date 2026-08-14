@@ -13,8 +13,10 @@ import { Workbook, serialToDate } from './xlsx.ts'
  *   「面談実施」と読み、2期153／3期329 に分けていた（C-149 で直した）。
  *   左端は FALSE 399・TRUE 59・空 24 で、**分かれ方がまるごと違う。**
  *
- *   ★ 空欄24人は**どちらにも寄せない。** 表が決めていないものを
- *     こちらで決めれば、それは記録ではなく創作になる。
+ *   ★ 空欄24人は、**表自身が持っている語で決める**（C-157）――
+ *     依頼者の「尾崎桃より上が3期」を表で確かめると、その固まりは
+ *     1行残らず「3期生候補」と書いてあった。行の位置では決めない。
+ *     どちらの語も無い1人は**決めないまま残す。**
  *
  * ★ 値を作らない。学年や所属を姓名へ切り分けたり、運営のステータスを
  *   この製品の語へ翻訳したりしない（`HANDOFF.md`「運営の言葉を翻訳して
@@ -49,7 +51,7 @@ export const APPROACH = {
   confidence: 17,
   status: 18,
   statusAug: 19,
-  /** ★ この欄が FALSE かどうかで期を決める（依頼者の指示）。 */
+  /** 期の判定には使わない（C-149 で左端へ移した）。値は記録として残す。 */
   interviewDone: 22,
 } as const
 
@@ -109,6 +111,15 @@ export interface ApproachPerson {
   cohort: 2 | 3 | null
   /** 期判定に使った表の生値（一番左の欄）。再取り込み時の訂正にも使う。 */
   referral: string | null
+  /** 期を何で決めたか。`referral` は左端、`status` はステータス欄、`none` は決まらない。 */
+  cohortSource: 'referral' | 'status' | 'none'
+  /**
+   * 表が書いている確度の格付け（`3期生候補（A）` の A）。無ければ null。
+   *
+   * ★ **依頼者が実行⑯で示した S/A/B/C は、表に既に付いていた**（C-158）。
+   *   こちらで判定し直さない ―― 運営が付けた格付けをそのまま写す。
+   */
+  grade: string | null
   /** 「面談実施」の生値。期の判定には**使わない**（C-149 で左端へ移した）。 */
   interviewDone: string | null
   email: string | null
@@ -126,6 +137,32 @@ export interface ApproachPlan {
 
 const clean = (v: string | undefined) => (v ?? '').trim()
 const blank = (v: string | undefined) => clean(v) || null
+
+/**
+ * 左端が空のときに、期を決める手掛かり（依頼者の指示。実行⑯。C-157）。
+ *
+ * 依頼者の言葉 ――「尾崎桃より上が3期」。表を見ると、その固まり（行7〜23）は
+ * **1行残らず「3期生候補」**と書いてある。行の位置ではなく、**表自身が
+ * 書いている語で決める** ―― 位置で決めると、並べ替えた瞬間に嘘になる。
+ *
+ * ★ 「合格」「不合格」は**2期の選考結果**である。2期の選考を受けた人が
+ *   左端を空のまま下の固まりに残っている。
+ * ★ どちらの語も無ければ**決めない。** 手掛かりが無いものを寄せない。
+ */
+export const cohortHint = (statusText: string): 2 | 3 | null => {
+  if (statusText.includes('3期生候補')) return 3
+  if (/合格|不合格/.test(statusText)) return 2
+  return null
+}
+
+/**
+ * 表が書いている確度の格付けを取り出す（C-158）。
+ *
+ * `3期生候補（A）` の全角丸括弧から S/A/B/C を読む。
+ * **半角括弧も受ける**（打ち方が混ざっても落とさない）。
+ */
+export const gradeOf = (statusText: string): string | null =>
+  /3期生候補\s*[（(]\s*([SABC])\s*[）)]/.exec(statusText)?.[1] ?? null
 
 /** 連絡手段の欄からメールだけを取り出す。**それ以外は連絡手段の記録として残す。** */
 export const extractEmail = (contact: string): string | null => {
@@ -148,8 +185,11 @@ export function planApproach(book: Workbook): ApproachPlan {
     }
 
     // ★ 期を決めるのは**一番左の欄**（依頼者の指示。C-149）。
-    //   FALSE が2期、TRUE が3期。**空欄はどちらでもない**ので決めない。
+    //   FALSE が2期、TRUE が3期。
+    //   空欄は、**表自身が持っている手掛かりで決める**（C-157）。
     const cell = clean(r[APPROACH.referral])
+    const statusText = `${clean(r[APPROACH.status])} ${clean(r[APPROACH.statusAug])}`
+    const hint = cohortHint(statusText)
 
     const contact = clean(r[APPROACH.contact])
     const facts: Array<{ label: string; value: string }> = []
@@ -179,8 +219,11 @@ export function planApproach(book: Workbook): ApproachPlan {
       row: i + 1,
       fullName,
       kana: blank(r[APPROACH.kana]),
-      cohort: cell === 'FALSE' ? 2 : cell === 'TRUE' ? 3 : null,
+      cohort: cell === 'FALSE' ? 2 : cell === 'TRUE' ? 3 : hint,
       referral: cell || null,
+      cohortSource: cell === 'FALSE' || cell === 'TRUE' ? 'referral'
+        : hint === null ? 'none' : 'status',
+      grade: gradeOf(statusText),
       interviewDone: clean(r[APPROACH.interviewDone]) || null,
       email: contact ? extractEmail(contact) : null,
       facts,

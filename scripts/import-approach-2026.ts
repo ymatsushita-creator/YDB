@@ -5,6 +5,7 @@ import {
   planApproach, planInterviews, nameKey, JUDGEMENT_AXES,
   IMPORT_ACTOR, IMPORT_INVOLVEMENT,
 } from '../src/import/approach_2026.ts'
+import { setConfidence } from '../src/commands/confidence.ts'
 import type { Db } from '../src/db/client.ts'
 
 /**
@@ -47,8 +48,12 @@ const interviews = planInterviews(book)
 console.log(`アプローチリスト  ${plan.people.length} 人（値はあるが氏名が空の行 ${plan.skipped}）`)
 console.log(`  去年（2期）  ${plan.byCohort[2]} 人 ―― 一番左の欄が FALSE`)
 console.log(`  今年（3期）  ${plan.byCohort[3]} 人 ―― 一番左の欄が TRUE`)
-console.log(`  ★ 決まらない ${plan.byCohort.unknown} 人 ―― 一番左の欄が空。`
-  + `**どちらにも寄せない**（期にぶら下がる行を書かない）`)
+console.log(`  ★ 決まらない ${plan.byCohort.unknown} 人 ―― 左端が空で、`
+  + `ステータス欄にも手掛かりが無い（期にぶら下がる行を書かない）`)
+console.log(`  うちステータス欄で決めた ${plan.people.filter((p) => p.cohortSource === 'status').length} 人`
+  + `（左端が空。表が「3期生候補」「合格/不合格」と書いている。C-157）`)
+console.log(`確度の格付け     ${plan.people.filter((p) => p.grade).length} 人`
+  + `（表の「3期生候補（S/A/B/C）」。**3期の確度として入れる**。C-158）`)
 console.log(`面談シート       ${interviews.length} 件`
   + `（面談日が読めた ${interviews.filter((i) => i.metOn).length} 件）`)
 console.log(`判断軸           ${JUDGEMENT_AXES.length} 軸`)
@@ -143,6 +148,9 @@ try {
   const notApproached = await one<{ id: string }>(
     `SELECT id FROM approach_states WHERE code = 'not_approached'`)
   if (!notApproached) throw new Error('未アプローチの状態が無い')
+  const notInSeason = await one<{ id: string }>(
+    `SELECT id FROM approach_states WHERE code = 'not_in_season'`)
+  if (!notInSeason) throw new Error('「この期の対象ではない」が無い（0041 が未適用）')
   const seasonOf = new Map<2 | 3, string>()
   for (const c of [2, 3] as const) {
     const s = await one<{ id: string }>(`SELECT id FROM seasons WHERE cohort_number = $1`, [c])
@@ -156,6 +164,9 @@ try {
   let numbered = 0
   let cohortCorrections = 0
   let undecided = 0
+  let graded = 0
+  let movedOut = 0
+  let restored = 0
   /**
    * 表がその氏名で主張している期。**同じ人が2行に出ることがある。**
    * 表が主張している側の取り込み記録は打ち消さない（打ち消し合いになる）。
@@ -214,17 +225,46 @@ try {
            AND NOT EXISTS (SELECT 1 FROM approach_events c WHERE c.corrects_event_id = e.id)
          LIMIT 1`, [personId, wrongSeasonId])
       if (wrong) {
+        // ★ 打ち消し行に**元の状態をコピーしない**（0041）。
+        //   コピーすると、打ち消したのに同じ期の一覧に残り続ける
+        //   ―― 実測で256人が残っていた。終端状態を載せて母集団から外す。
         await db.query(`
           INSERT INTO approach_events
             (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id,
              is_correction, corrects_event_id, note)
           VALUES ($1, $2, $3, now(), $4, true, $5, $6)`,
-        [personId, wrongSeasonId, wrong.approach_state_id, actor!.id, wrong.id,
+        [personId, wrongSeasonId, notInSeason.id, actor!.id, wrong.id,
           hasSeason2Application
             ? '期判定を訂正：2期応募記録があるため2期'
             : `期判定を訂正：一番左の欄が ${p.referral ?? '空'} のため${effectiveCohort}期`])
         cohortCorrections++
       }
+
+      // ★ 既に打ち消してあるのに、**一覧からは消えていない**人を直す。
+      //   実行⑯の前の訂正は元の状態をコピーしていたので、打ち消し行が
+      //   有効な出来事として同じ期に残り続けていた（実測256人）。
+      //   ここは打ち消しではなく**状態の追記**である ―― 打ち消し行はもう
+      //   1つしか置けない（一意制約）ので、状態を置き直して母集団から外す。
+      //
+      //   ★ 運営が手で置いた状態には触らない。取り込みが書いた記録
+      //     （下の3つの言い回し）が最後のときだけ直す。
+      const stale = await one<{ is_terminal: boolean; note: string | null }>(`
+        SELECT s.is_terminal, v.last_note AS note
+          FROM v_person_approach_state v
+          JOIN approach_states s ON s.id = v.approach_state_id
+         WHERE v.person_id = $1 AND v.season_id = $2`, [personId, wrongSeasonId])
+      if (stale && !stale.is_terminal
+        && (stale.note === '応募管理表から取り込んだ'
+          || (stale.note ?? '').startsWith('期判定を訂正'))) {
+        await db.query(`
+          INSERT INTO approach_events
+            (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id, note)
+          VALUES ($1, $2, $3, now(), $4, $5)`,
+        [personId, wrongSeasonId, notInSeason.id, actor!.id,
+          `取り込みが別の期に付けていたため外す（${effectiveCohort}期が正）`])
+        movedOut++
+      }
+
       await db.query(`
         DELETE FROM candidate_numbers n
          WHERE n.person_id = $1 AND n.season_id = $2
@@ -243,6 +283,30 @@ try {
         SELECT $1, $2, coalesce(max(number), 0) + 1
           FROM candidate_numbers WHERE season_id = $1`, [seasonId, personId])
       numbered++
+    }
+
+    // ★ 正しい期の側で終端になっている人を、表に従って戻す（実行⑯）。
+    //   8/13 に「依頼により3期候補から一旦解除」で見送りにされた70人が居た。
+    //   表は同じ人を「3期生候補」と書いている。**依頼者の最新の指示は
+    //   「エクセルの内容にすべて従い」**なので、表の側へ揃える。
+    //
+    //   ★ 戻すのは**その言い回しの見送りだけ。** 運営が別の理由で見送った人、
+    //     自分で「この期の対象ではない」と置いた人には触らない。
+    //   ★ 打ち消しではなく**追記**である。間違っていれば、もう1行で戻せる。
+    const parked = await one<{ label: string; note: string | null }>(`
+      SELECT st.label, v.last_note AS note
+        FROM v_person_approach_state v
+        JOIN approach_states st ON st.id = v.approach_state_id
+       WHERE v.person_id = $1 AND v.season_id = $2 AND st.is_terminal`,
+    [personId, seasonId])
+    if (parked && (parked.note ?? '').includes('一旦解除')) {
+      await db.query(`
+        INSERT INTO approach_events
+          (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id, note)
+        VALUES ($1, $2, $3, now(), $4, $5)`,
+      [personId, seasonId, notApproached.id, actor!.id,
+        '応募管理表が3期生候補と書いているため戻す（依頼者の指示。実行⑯）'])
+      restored++
     }
 
     // アプローチ状態。**運営のステータスを翻訳しない**ので、全員「未アプローチ」。
@@ -272,6 +336,28 @@ try {
       [personId, IMPORT_ACTOR, body.slice(0, 2000), IMPORT_INVOLVEMENT])
       noted++
     }
+  }
+
+  // ④' 確度（S/A/B/C）。**表が書いている格付けを、3期の確度として写す**（C-158）。
+  //     ★ こちらで判定し直さない。運営が付けた格付けをそのまま入れる。
+  //     ★ 既に誰かが画面から記入していたら**触らない** ―― 人が入れた見立てを
+  //       取り込みで上書きしない（人の判断のほうが新しい）。
+  for (const p of plan.people) {
+    if (!p.grade) continue
+    const personId = personOf.get(nameKey(p.fullName))
+    if (!personId) continue
+    const already = await one(
+      `SELECT 1 FROM v_person_confidence WHERE person_id = $1 AND season_id = $2`,
+      [personId, season3.id])
+    if (already) continue
+    const r = await setConfidence(db, {
+      personId,
+      seasonId: season3.id,
+      gradeCode: p.grade,
+      recordedBy: IMPORT_ACTOR,
+      note: '応募管理表の「2026年8月時点ステータス」から取り込んだ',
+    })
+    if (r.ok) graded++
   }
 
   // ⑤ 面談。**軸ごとの所見を、軸の名前とともに**残す。
@@ -321,7 +407,10 @@ try {
   console.log(`  判断軸        ${axesAdded} 軸（3期「特別選考」）`)
   console.log(`  期の訂正       ${cohortCorrections} 人（応募記録を優先し、`
     + `残りは一番左の欄 FALSE=2期 / TRUE=3期）`)
-  console.log(`  期を決めなかった ${undecided} 人（一番左の欄が空。期の行は書いていない）`)
+  console.log(`  期を決めなかった ${undecided} 人（手掛かりが無い。期の行は書いていない）`)
+  console.log(`  期へ戻した     ${restored} 人（表が候補と書いているのに見送りだった分）`)
+  console.log(`  期から外した   ${movedOut} 人（取り込みが別の期に付けていた分。0041）`)
+  console.log(`  確度の記入     ${graded} 人（表の格付けを3期の確度として。既にあれば飛ばす）`)
 } catch (e) {
   await db.exec('ROLLBACK')
   console.error('入れられなかった。**何も書いていない。**')

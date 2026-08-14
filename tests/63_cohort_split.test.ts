@@ -52,10 +52,11 @@ describe('期の分け方 ―― 一番左の列（C-149）', () => {
     assert.deepEqual(plan.byCohort, { 2: 1, 3: 1, unknown: 0 })
   })
 
-  test('★ 空欄はどちらにも寄せない（null のまま）', () => {
+  test('★ 空欄で、表に手掛かりも無ければ、どちらにも寄せない', () => {
+    // ★ C-157 で「表が書いている語があればそれで決める」に変えた。
+    //   語も無ければ、やはり決めない ―― 寄せれば表に無い値の創作になる。
     const plan = planApproach(bookOf([row('', '', '検査 三郎')]))
-    assert.equal(plan.people[0]!.cohort, null,
-      '空欄を片側へ寄せると、表に無い値を作ったことになる')
+    assert.equal(plan.people[0]!.cohort, null)
     assert.deepEqual(plan.byCohort, { 2: 0, 3: 0, unknown: 1 })
   })
 
@@ -82,5 +83,55 @@ describe('期の分け方 ―― 一番左の列（C-149）', () => {
     const plan = planApproach(bookOf([r]))
     assert.equal(plan.people.length, 0)
     assert.equal(plan.skipped, 1)
+  })
+})
+
+/**
+ * 空欄の期は、表自身が書いている語で決める（C-157。依頼者の指示）。
+ */
+describe('空欄の期は語で決める（C-157）', () => {
+  const withStatus = (referral: string, status: string, statusAug = '') => {
+    const r: string[] = []
+    r[APPROACH.referral] = referral
+    r[APPROACH.name] = '検査 太郎'
+    r[APPROACH.status] = status
+    r[APPROACH.statusAug] = statusAug
+    return r
+  }
+
+  test('★ 空欄＋「3期生候補」なら3期', () => {
+    const plan = planApproach(bookOf([withStatus('', '', '3期生候補（A）')]))
+    assert.equal(plan.people[0]!.cohort, 3)
+    assert.equal(plan.people[0]!.cohortSource, 'status')
+  })
+
+  test('★ 空欄＋「合格」「不合格」は2期の選考結果なので2期', () => {
+    for (const s of ['合格', '不合格']) {
+      const plan = planApproach(bookOf([withStatus('', s)]))
+      assert.equal(plan.people[0]!.cohort, 2, `${s} が2期になっていない`)
+    }
+  })
+
+  test('空欄＋手掛かり無しは、決めないまま', () => {
+    const plan = planApproach(bookOf([withStatus('', '')]))
+    assert.equal(plan.people[0]!.cohort, null)
+    assert.equal(plan.people[0]!.cohortSource, 'none')
+  })
+
+  test('★ 左端が入っていれば、そちらが勝つ（ステータスで上書きしない）', () => {
+    const plan = planApproach(bookOf([withStatus('FALSE', '', '3期生候補（A）')]))
+    assert.equal(plan.people[0]!.cohort, 2, '左端の指示をステータスが覆している')
+    assert.equal(plan.people[0]!.cohortSource, 'referral')
+  })
+
+  test('★ 確度の格付けを、表からそのまま読む（C-158）', () => {
+    const plan = planApproach(bookOf([
+      withStatus('FALSE', '', '3期生候補（S）'),
+      withStatus('FALSE', '', '3期生候補(C)'),
+      withStatus('FALSE', '', '対象外'),
+    ]))
+    assert.equal(plan.people[0]!.grade, 'S')
+    assert.equal(plan.people[1]!.grade, 'C', '半角括弧で落としている')
+    assert.equal(plan.people[2]!.grade, null, '無い格付けを作っている')
   })
 })
