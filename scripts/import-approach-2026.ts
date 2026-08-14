@@ -45,8 +45,10 @@ const plan = planApproach(book)
 const interviews = planInterviews(book)
 
 console.log(`アプローチリスト  ${plan.people.length} 人（値はあるが氏名が空の行 ${plan.skipped}）`)
-console.log(`  去年（2期）  ${plan.byCohort[2]} 人 ―― 「面談実施」が FALSE`)
-console.log(`  今年（3期）  ${plan.byCohort[3]} 人 ―― FALSE ではない`)
+console.log(`  去年（2期）  ${plan.byCohort[2]} 人 ―― 一番左の欄が FALSE`)
+console.log(`  今年（3期）  ${plan.byCohort[3]} 人 ―― 一番左の欄が TRUE`)
+console.log(`  ★ 決まらない ${plan.byCohort.unknown} 人 ―― 一番左の欄が空。`
+  + `**どちらにも寄せない**（期にぶら下がる行を書かない）`)
 console.log(`面談シート       ${interviews.length} 件`
   + `（面談日が読めた ${interviews.filter((i) => i.metOn).length} 件）`)
 console.log(`判断軸           ${JUDGEMENT_AXES.length} 軸`)
@@ -153,8 +155,18 @@ try {
   let noted = 0
   let numbered = 0
   let cohortCorrections = 0
-  const needsSeason2 = new Set(plan.people.filter((p) => p.cohort === 2)
-    .map((p) => nameKey(p.fullName)))
+  let undecided = 0
+  /**
+   * 表がその氏名で主張している期。**同じ人が2行に出ることがある。**
+   * 表が主張している側の取り込み記録は打ち消さない（打ち消し合いになる）。
+   */
+  const claimed = new Map<string, Set<2 | 3>>()
+  for (const p of plan.people) {
+    if (p.cohort === null) continue
+    const k = nameKey(p.fullName)
+    if (!claimed.has(k)) claimed.set(k, new Set())
+    claimed.get(k)!.add(p.cohort)
+  }
 
   for (const p of plan.people) {
     const key = nameKey(p.fullName)
@@ -179,13 +191,21 @@ try {
     const hasSeason2Application = Boolean(await one(
       `SELECT 1 FROM applications WHERE person_id = $1 AND season_id = $2`,
       [personId, season2Id]))
-    const effectiveCohort: 2 | 3 = hasSeason2Application ? 2 : p.cohort
+    const effectiveCohort: 2 | 3 | null = hasSeason2Application ? 2 : p.cohort
+
+    // ★ 一番左の欄が空で、2期の応募記録も無い人。**期を決めない。**
+    //   期にぶら下がる行（候補者番号・アプローチ状態）は1つも書かない。
+    //   人とメモは人にぶら下がるので、下で書く。
+    if (effectiveCohort === null) {
+      undecided++
+    } else {
     const seasonId = seasonOf.get(effectiveCohort)!
 
     // 誤った側の取り込みイベントを打ち消し、候補者番号も片側へ寄せる。
-    // 2期応募があれば2期、それ以外は「FALSEだけ2期」の判定を使う。
+    // 2期応募があれば2期、それ以外は**一番左の欄**の判定を使う（C-149）。
+    const wrongCohort: 2 | 3 = effectiveCohort === 3 ? 2 : 3
     const wrongSeasonId = effectiveCohort === 3 ? season2Id : season3Id
-    if ((p.cohort === 3 && !needsSeason2.has(key)) || hasSeason2Application) {
+    if (!claimed.get(key)?.has(wrongCohort) || hasSeason2Application) {
       const wrong = await one<{ id: string; approach_state_id: string; occurred_at: Date }>(`
         SELECT e.id, e.approach_state_id, e.occurred_at
           FROM approach_events e
@@ -202,7 +222,7 @@ try {
         [personId, wrongSeasonId, wrong.approach_state_id, actor!.id, wrong.id,
           hasSeason2Application
             ? '期判定を訂正：2期応募記録があるため2期'
-            : '期判定を訂正：FALSEではないため3期'])
+            : `期判定を訂正：一番左の欄が ${p.referral ?? '空'} のため${effectiveCohort}期`])
         cohortCorrections++
       }
       await db.query(`
@@ -237,8 +257,10 @@ try {
         VALUES ($1, $2, $3, now(), $4, $5)`,
       [personId, seasonId, notApproached.id, actor!.id, '応募管理表から取り込んだ'])
     }
+    }
 
     // 表の値は**そのままの語で**メモへ。翻訳できないものを捨てない。
+    // ★ ここは人にぶら下がる。期が決まらない人にも残す。
     const hasNote = await one(
       `SELECT 1 FROM person_notes WHERE person_id = $1 AND involvement = $2`,
       [personId, IMPORT_INVOLVEMENT])
@@ -297,7 +319,9 @@ try {
   console.log(`  取り込みメモ   ${noted} 件`)
   console.log(`  面談のメモ     ${interviewNotes} 件`)
   console.log(`  判断軸        ${axesAdded} 軸（3期「特別選考」）`)
-  console.log(`  期の訂正       ${cohortCorrections} 人（応募記録を優先し、残りはFALSEだけ2期）`)
+  console.log(`  期の訂正       ${cohortCorrections} 人（応募記録を優先し、`
+    + `残りは一番左の欄 FALSE=2期 / TRUE=3期）`)
+  console.log(`  期を決めなかった ${undecided} 人（一番左の欄が空。期の行は書いていない）`)
 } catch (e) {
   await db.exec('ROLLBACK')
   console.error('入れられなかった。**何も書いていない。**')

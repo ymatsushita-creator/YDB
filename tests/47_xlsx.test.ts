@@ -40,7 +40,8 @@ describe('xlsx を読む', () => {
   // ② チェックボックスの3つの状態
   // -----------------------------------------------------------
   test('★ TRUE・FALSE・未設定の3つを区別する', () => {
-    // FALSEだけが2期。TRUEと未設定は3期（依頼者の訂正）。
+    // 一番左の欄が FALSE なら2期、TRUE なら3期、**未設定はどちらでもない**
+    // （依頼者の指示。C-149）。3つを3つのまま読めることがここの前提になる。
     const xml = `<sheetData>
       <row r="1"><c r="A1" t="b"><v>1</v></c><c r="B1" t="b"><v>0</v></c><c r="C1"/>
                  <c r="D1" t="s"><v>0</v></c></row>
@@ -52,13 +53,24 @@ describe('xlsx を読む', () => {
     assert.equal(row[2] === 'TRUE' || row[2] === 'FALSE', false, '欄が無い')
   })
 
-  test('★ 過去の誤登録訂正も、TRUEだけでなくFALSE以外を3期へ移す', () => {
+  /**
+   * ★ この検査は C-149 で書き換えた。
+   *
+   * 旧: 「FALSE 以外を3期へ移す」（22列目「面談実施」で期を決めていた頃）
+   * 新: **期を決めるのは一番左の欄**で、空欄はどちらへも移さない。
+   *
+   * 旧条文は併記しない（CLAUDE.md）。分かれ方の実測は `db/DECISIONS.md` C-149。
+   */
+  test('★ 訂正は「表が主張していない側」だけを打ち消す', () => {
     const source = readFileSync(new URL('../scripts/import-approach-2026.ts', import.meta.url), 'utf8')
-    assert.match(source, /p\.cohort === 3 && !needsSeason2\.has\(key\)/)
+    assert.match(source, /!claimed\.get\(key\)\?\.has\(wrongCohort\)/,
+      '表が同じ氏名で主張している期を打ち消すと、打ち消し合いになる')
     assert.match(source, /hasSeason2Application \? 2 : p\.cohort/,
       '実応募がある期をチェック欄より優先する')
-    assert.doesNotMatch(source, /p\.interviewDone === 'TRUE'/,
-      '空欄を訂正対象から外す条件を再び入れない')
+    assert.match(source, /effectiveCohort === null/,
+      '期が決まらない人を、期にぶら下がる行から外す')
+    assert.doesNotMatch(source, /needsSeason2/,
+      '「FALSE 以外は3期」の判定を再び入れない')
   })
 
   // -----------------------------------------------------------

@@ -6,13 +6,15 @@ import { Workbook, serialToDate } from './xlsx.ts'
  * ★ **DB に触らない。** 何が入るかを決めるだけで、書き込みは
  *   `scripts/import-approach-2026.ts` が行う（C-61 と同じ分け方）。
  *
- * ★ 依頼者の指示 ――
- *   「false となっている人は去年。なっていない人は今年のアプローチ」
+ * ★ 依頼者の指示（実行⑯）――
+ *   「アプローチリストの一番左の列が false なのが2期、true が3期だ」
  *
- *   実データで裏を取った。**「面談実施」の欄がある人だけが FALSE/TRUE を持ち**、
- *   欄が無い人は 296 人。欄がある 186 人に合格 32・辞退 2・応募完了 1 が
- *   集中しており、欄が無い 296 人は「対応不要 147・未接触 35」だった。
- *   → **欄あり＝去年（2期）、欄なし＝今年（3期）。**
+ *   **一番左（見出し「リファラル」）である。** 実行⑫はこれを22列目
+ *   「面談実施」と読み、2期153／3期329 に分けていた（C-149 で直した）。
+ *   左端は FALSE 399・TRUE 59・空 24 で、**分かれ方がまるごと違う。**
+ *
+ *   ★ 空欄24人は**どちらにも寄せない。** 表が決めていないものを
+ *     こちらで決めれば、それは記録ではなく創作になる。
  *
  * ★ 値を作らない。学年や所属を姓名へ切り分けたり、運営のステータスを
  *   この製品の語へ翻訳したりしない（`HANDOFF.md`「運営の言葉を翻訳して
@@ -99,9 +101,15 @@ export interface ApproachPerson {
   /** 氏名。**姓と名に切らない**（区切りが無い。C-74 と同じ判断）。 */
   fullName: string
   kana: string | null
-  /** 去年（2期）か、今年（3期）か。 */
-  cohort: 2 | 3
-  /** 期判定に使った表の生値。再取り込み時の訂正にも使う。 */
+  /**
+   * 去年（2期）か、今年（3期）か。**null は「表が決めていない」。**
+   *
+   * ★ 空欄を片側へ寄せない。寄せた瞬間、それは表に無い値の創作になる。
+   */
+  cohort: 2 | 3 | null
+  /** 期判定に使った表の生値（一番左の欄）。再取り込み時の訂正にも使う。 */
+  referral: string | null
+  /** 「面談実施」の生値。期の判定には**使わない**（C-149 で左端へ移した）。 */
   interviewDone: string | null
   email: string | null
   /** 表の値のうち、この製品の語へ翻訳できないもの。**そのまま残す。** */
@@ -110,8 +118,8 @@ export interface ApproachPerson {
 
 export interface ApproachPlan {
   people: ApproachPerson[]
-  /** 期ごとの人数。 */
-  byCohort: { 2: number; 3: number }
+  /** 期ごとの人数。`unknown` は一番左の欄が空で、表が期を決めていない人。 */
+  byCohort: { 2: number; 3: number; unknown: number }
   /** 氏名以外に値があるのに氏名が空で、指す手段が無い行。**入れない。** */
   skipped: number
 }
@@ -139,8 +147,9 @@ export function planApproach(book: Workbook): ApproachPlan {
       continue
     }
 
-    // ★ FALSE だけが2期。それ以外（TRUE・空欄）は3期。
-    const cell = clean(r[APPROACH.interviewDone])
+    // ★ 期を決めるのは**一番左の欄**（依頼者の指示。C-149）。
+    //   FALSE が2期、TRUE が3期。**空欄はどちらでもない**ので決めない。
+    const cell = clean(r[APPROACH.referral])
 
     const contact = clean(r[APPROACH.contact])
     const facts: Array<{ label: string; value: string }> = []
@@ -170,8 +179,9 @@ export function planApproach(book: Workbook): ApproachPlan {
       row: i + 1,
       fullName,
       kana: blank(r[APPROACH.kana]),
-      cohort: cell === 'FALSE' ? 2 : 3,
-      interviewDone: cell || null,
+      cohort: cell === 'FALSE' ? 2 : cell === 'TRUE' ? 3 : null,
+      referral: cell || null,
+      interviewDone: clean(r[APPROACH.interviewDone]) || null,
       email: contact ? extractEmail(contact) : null,
       facts,
     })
@@ -182,6 +192,7 @@ export function planApproach(book: Workbook): ApproachPlan {
     byCohort: {
       2: people.filter((p) => p.cohort === 2).length,
       3: people.filter((p) => p.cohort === 3).length,
+      unknown: people.filter((p) => p.cohort === null).length,
     },
     skipped,
   }
