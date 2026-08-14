@@ -34,6 +34,21 @@ export type SetConfidenceFailure =
 export const RECORDED_BY_MAX = 60
 export const NOTE_MAX = 2000
 
+/**
+ * 新しい記入を、**同じ人・同じ期の直前の記入より必ず後ろに置く。**
+ *
+ * ★ C-132 で測った穴と同じ ―― 時計が刻めないほど速く2件入ると
+ *   `occurred_at` も `created_at` も同着し、現在の確度が **id（乱数）で決まる。**
+ *   書き直したのに前の段階が現在値として出る、が起きる（実際に落ちた）。
+ *
+ * ★ `greatest` は NULL を無視するので、1件目は `now()` になる。
+ *   ずらす幅は1マイクロ秒 ―― 「いつ記入したか」を歪めない最小の幅である。
+ */
+const AFTER_LAST = `greatest(now(),
+    (SELECT max(occurred_at) + interval '1 microsecond'
+       FROM person_confidence_events
+      WHERE person_id = $1 AND season_id = $2))`
+
 export interface ConfidenceGrade {
   id: string
   code: string
@@ -87,21 +102,21 @@ export async function setConfidence(
      ORDER BY e.occurred_at DESC, e.created_at DESC, e.id DESC
      LIMIT 1`, [input.personId, input.seasonId])
 
-  if (current) {
-    await db.query(`
-      INSERT INTO person_confidence_events
-        (person_id, season_id, grade_id, occurred_at, recorded_by,
-         is_correction, corrects_event_id, note)
-      VALUES ($1, $2, $3, now(), $4, true, $5, $6)`,
-    [input.personId, input.seasonId, current.grade_id, recordedBy, current.id,
-      '確度を書き直したため打ち消す'])
-  }
-
-  const inserted = await maybeOne<{ id: string }>(db, `
-    INSERT INTO person_confidence_events
-      (person_id, season_id, grade_id, occurred_at, recorded_by, note)
-    VALUES ($1, $2, $3, now(), $4, $5) RETURNING id`,
-  [input.personId, input.seasonId, grade.id, recordedBy, note])
+  // ★ 訂正行は**新しい段階を載せて元に取って代わる**（0035 の correctX と同じ形）。
+  //   打ち消しと新規を2行に分けると、有効な行が2つ並び、
+  //   「取り消した見立て」と「いまの見立て」が同じ重さで残る。
+  const inserted = current
+    ? await maybeOne<{ id: string }>(db, `
+        INSERT INTO person_confidence_events
+          (person_id, season_id, grade_id, occurred_at, recorded_by,
+           is_correction, corrects_event_id, note)
+        VALUES ($1, $2, $3, ${AFTER_LAST}, $4, true, $5, $6) RETURNING id`,
+    [input.personId, input.seasonId, grade.id, recordedBy, current.id, note])
+    : await maybeOne<{ id: string }>(db, `
+        INSERT INTO person_confidence_events
+          (person_id, season_id, grade_id, occurred_at, recorded_by, note)
+        VALUES ($1, $2, $3, ${AFTER_LAST}, $4, $5) RETURNING id`,
+    [input.personId, input.seasonId, grade.id, recordedBy, note])
 
   return { ok: true, eventId: inserted!.id, previousEventId: current?.id ?? null }
 }

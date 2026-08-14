@@ -90,10 +90,10 @@ describe('確度の記入（C-151）', () => {
     assert.equal(now?.grade_code, 'S')
     assert.equal(now?.grade_note, '説明会に来た')
 
-    // 行は減らない。**増える**（打ち消し1行＋新しい記入1行）。
+    // 行は減らない。**増える**（訂正行が1行。新しい段階を載せて元に取って代わる）。
     const after = Number(await scalar(db,
       `SELECT count(*) FROM person_confidence_events WHERE person_id = $1`, [personId]))
-    assert.equal(after, before + 2)
+    assert.equal(after, before + 1)
 
     // 最初に入れた B の行も、記録層にはそのまま残っている。
     const kept = Number(await scalar(db, `
