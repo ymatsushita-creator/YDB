@@ -1638,3 +1638,17 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
 /* 右列は上下2枚（パネルと特別選考リスト）。**どちらも大きくする**ので
    比率は等分に寄せる（0.85/1.15 は日程カレンダーが下にあった頃の割り付け）。 */
 .hh-col-side { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* 評価軸の「何を見るか」（0042。C-160）。
+   点を付ける場所に、運営の基準表の文面をそのまま出す。
+   ★ 畳まない ―― 開く操作を挟むと読まれず、名前だけで点が付く。 */
+.criteria-guide {
+  display: block;
+  margin-top: 4px;
+  padding-left: var(--space-sm);
+  border-left: 2px solid var(--color-hairline-soft);
+  color: var(--color-steel);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-line;
+}

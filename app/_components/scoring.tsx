@@ -67,6 +67,12 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
                   {' '}{num(c.scale_max)} 点満点
                   {c.applies_to === 'reapplicant_only' && ' ・ 再応募者のみ'}
                 </span>
+                {/* ★ 何を見る軸なのかを、点を付ける場所に出す（0042。C-160）。
+                    名前だけでは「何に対して4点なのか」が人によって変わる。
+                    文面は運営の基準表そのままで、こちらで要約していない。 */}
+                {c.criteria_description && (
+                  <span className="criteria-guide">{c.criteria_description}</span>
+                )}
                 {/* 付いた点は根拠ごと残す。点だけ出すと後から誰も説明できない。 */}
                 {c.score !== null && (
                   <span className="section-note" style={{ display: 'block' }}>

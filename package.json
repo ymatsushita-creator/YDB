@@ -17,6 +17,7 @@
     "import:approach:2026": "node --env-file-if-exists=.env.local scripts/import-approach-2026.ts",
     "import:partners": "node --env-file-if-exists=.env.local scripts/import-partners-2026.ts",
     "import:forms": "node --env-file-if-exists=.env.local scripts/import-application-forms.ts",
+    "import:selection": "node --env-file-if-exists=.env.local scripts/import-selection-2026.ts",
     "seed:demo-season": "node --env-file-if-exists=.env.local scripts/seed-demo-season.ts",
     "demo:remove": "node --env-file-if-exists=.env.local scripts/remove-demo-data.ts",
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",

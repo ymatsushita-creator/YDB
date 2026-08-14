@@ -267,6 +267,8 @@ export const listCandidatesByStep = (db: Db, seasonId: string, stepId: string) =
 export interface ScoringCriterion {
   criteria_id: string
   criteria_name: string
+  /** 何を見る軸なのか（0042）。表の基準表の文面。未登録なら null。 */
+  criteria_description: string | null
   scale_max: number
   applies_to: string
   /** まだ付いていなければ null。 */
@@ -339,7 +341,8 @@ export const getScoringSheet = async (
   // 適用の規則（applies_to と再応募）はトリガ evaluation_scores_applicability
   // と同じもので、tests/19 が両者の一致を固定している。
   const criteria = await all<ScoringCriterion>(db, `
-    SELECT ec.id AS criteria_id, ec.name AS criteria_name, ec.scale_max, ec.applies_to,
+    SELECT ec.id AS criteria_id, ec.name AS criteria_name,
+           ec.description AS criteria_description, ec.scale_max, ec.applies_to,
            es.score, es.rationale
       FROM evaluations e
       JOIN applications a ON a.id = e.application_id
