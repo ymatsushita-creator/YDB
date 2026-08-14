@@ -1505,13 +1505,46 @@ html, body { height: 100%; overflow: hidden; }
    「まだあるもの」として扱う（実行⑭で流す指定を落としたときと同じ）。 */
 /* ★ `prefers-reduced-motion` の分岐は落とした ―― **動かすのをやめた**ので、
    減らす動きが無い。使わない指定を残すと、次に触る人が「まだあるもの」として扱う。 */
+/* ★ ホームは**残りの高さを全部使う**（依頼者の指示。実行⑯。C-161）。
+
+   前は `calc(100vh - ロゴ - 108px)` で高さを当てていた。**108 は当て推量**で、
+   パンくずと見出しの実寸とは合わない ―― 合わない分だけ下に灰色が残り、
+   足りなければ器ごと送れてしまう（画面が縦にずれる）。
+
+   高さを数えるのをやめ、**残りを受け取る**形にする（`.hh-grid` と同じ作法）。
+   器は送らない。送るのは、入りきらないカードの中だけ。 */
+.hh-main:has(> .home-dashboard) { overflow: hidden; }
 .home-dashboard {
-  height: calc(100vh - var(--logo-h) - 108px);
-  min-height: 420px; overflow: hidden;
-  display: grid; grid-template-rows: 104px minmax(0, 1fr); gap: var(--space-md);
+  flex: 1 1 0%;
+  min-height: 0; overflow: hidden;
+  display: grid;
+  /* 上は数字の帯（高さを決め打ちする ―― 中身なりにすると、
+     余りがこちらへ流れて数字だけが間延びする）。下が残り全部。 */
+  grid-template-rows: 104px minmax(0, 1fr); gap: var(--space-md);
 }
-.home-dashboard .section { margin: 0; min-height: 0; }
-.home-dashboard .panel-card { height: 100%; overflow: hidden; }
+/* ★ 下の段は**左右とも天井まで伸ばす。** 伸ばさないと、
+   中身の少ないカード（ピックアップ）だけが途中で切れて、
+   その下に灰色の帯が残る ―― 画面の右下だけが欠けて見える。 */
+.home-dashboard > .home-detail-grid { min-height: 0; align-items: stretch; }
+/* ★ カードは `.card-base` である（`.panel-card` ではない）。
+   前の指定は `.panel-card` を狙っていて、**1つも当たっていなかった** ――
+   だから中身の少ないカードが伸びず、下に灰色が残っていた。 */
+.home-dashboard .section {
+  margin: 0; min-height: 0; height: 100%;
+  display: flex; flex-direction: column;
+}
+.home-dashboard .section > .card-base {
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.home-dashboard .section > .card-base > .section-title { flex: 0 0 auto; }
+/* 見出しの下の中身が残りを取り、入りきらなければ**その中だけ**が送る。 */
+.home-dashboard .section > .card-base > :not(.section-title) {
+  min-height: 0; overflow-y: auto;
+}
+/* 図は器いっぱいまで伸ばす。SVG は viewBox を持つので、
+   高さを渡せば縦横比のまま収まる（数字を書き足さない）。 */
+.home-dashboard .section > .card-base > svg { flex: 1 1 auto; height: auto; }
 .home-dashboard .pick-card { padding: var(--space-sm); }
 .home-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
 .home-detail-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, .75fr); gap: var(--space-md); min-height: 0; }

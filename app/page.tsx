@@ -156,7 +156,9 @@ export default async function Home(
           <Card title="推移" titleHref={to('/funnel')}>
             {trends.length < 2 ? <Empty>推移を描ける記録がまだ無い</Empty> : (
               <>
-                <TimeSeries points={trends} series={series} height={300} valueLabel="候補者と選考" />
+                {/* ★ 高さは器が決める（C-161）。300 は当て推量で、
+                    画面が高いと図の下に灰色が残っていた。 */}
+                <TimeSeries points={trends} series={series} height={360} valueLabel="候補者と選考" />
                 <Legend series={series} />
               </>
             )}
