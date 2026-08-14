@@ -13,6 +13,7 @@ import {
 import {
   addStaff, renameStaff, ADD_STAFF_MESSAGE, RENAME_STAFF_MESSAGE,
 } from './staff.ts'
+import { addEvent, ADD_EVENT_MESSAGE } from './event.ts'
 
 /**
  * 表（スプシ形式）のまとめて保存（依頼者の指示。実行⑫）。
@@ -513,4 +514,70 @@ export async function saveStaffSheet(
   }
 
   return { created, updated, failed, rows }
+}
+
+
+export interface EventRowInput {
+  /** 既存行なら予定の ID。空なら新規行。**いまは新規だけを受ける。** */
+  appointmentId: string
+  title: string
+  day: string
+  startsAt: string
+  endsAt: string
+  ownerStaffId: string
+  place: string
+  url: string
+  note: string
+}
+
+/**
+ * イベントの表を保存する（依頼者の指示。実行⑯。C-155）。
+ *
+ * 判定は `src/commands/event.ts` の `addEvent` を行ごとに呼ぶだけ。
+ * 表のために規則を書き直さない（他の表と同じ扱い）。
+ *
+ * ★ **既存行は直せない。** 予定の書き換えは変更履歴（0019 の
+ *   `appointment_revisions`）を伴う別の道で、そこを表から呼ぶと
+ *   版番号の付け方が2箇所に散る。表は**足すだけ**にする。
+ *   直す道が無いことは画面に書く（黙って効かない列を出さない）。
+ */
+export async function saveEventSheet(
+  db: Db, input: { seasonId: string; rows: EventRowInput[] },
+): Promise<SheetSaveResult> {
+  const rows: RowResult[] = []
+  let created = 0
+  let failed = 0
+
+  for (const [index, row] of input.rows.entries()) {
+    const empty = [row.title, row.day, row.startsAt, row.endsAt,
+      row.ownerStaffId, row.place, row.url, row.note].every((v) => t(v) === '')
+    if (empty) continue
+
+    // 既に保存した行は、もう一度送られても作り直さない（二重登録を防ぐ）。
+    if (t(row.appointmentId) !== '') {
+      rows.push({ index, ok: true, id: t(row.appointmentId), created: false, changed: false })
+      continue
+    }
+
+    const result = await addEvent(db, {
+      seasonId: input.seasonId,
+      title: row.title,
+      day: row.day,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt,
+      ownerStaffId: row.ownerStaffId,
+      place: row.place,
+      url: row.url,
+      note: row.note,
+    })
+    if (!result.ok) {
+      rows.push({ index, ok: false, message: ADD_EVENT_MESSAGE[result.reason] })
+      failed++
+      continue
+    }
+    rows.push({ index, ok: true, id: result.appointmentId, created: true, changed: true })
+    created++
+  }
+
+  return { created, updated: 0, failed, rows }
 }

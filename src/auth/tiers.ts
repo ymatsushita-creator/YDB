@@ -53,7 +53,7 @@ export const TIER_HOME: Record<Tier, string> = {
  * ★ 「入力者を追加」は実行⑫で足した。表の「記録した人」の選択肢を
  *   増やす道が取り込みしか無かった（C-75）。
  */
-const INPUT_PATHS = ['/people/new', '/approach/new', '/staff/new']
+const INPUT_PATHS = ['/people/new', '/approach/new', '/staff/new', '/events/new']
 
 /** ヘッドハンティングだけが `all` の持ち物。ここが3層を分ける唯一の線。 */
 const ALL_ONLY_PATHS = ['/headhunting']
