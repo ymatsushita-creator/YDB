@@ -16,6 +16,7 @@
     "import:legacy:2026": "node scripts/import-legacy-2026.ts",
     "import:approach:2026": "node --env-file-if-exists=.env.local scripts/import-approach-2026.ts",
     "seed:demo-season": "node --env-file-if-exists=.env.local scripts/seed-demo-season.ts",
+    "demo:remove": "node --env-file-if-exists=.env.local scripts/remove-demo-data.ts",
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",
     "tokens": "node scripts/build-tokens.ts",
     "dev": "next dev",
