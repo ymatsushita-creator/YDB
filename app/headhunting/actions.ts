@@ -7,6 +7,7 @@ import {
   updatePersonProfile, setPersonApproachState, correctApproachState,
   type ProfileFailure,
 } from '../../src/commands/profile.ts'
+import { setConfidence, type SetConfidenceFailure } from '../../src/commands/confidence.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -111,4 +112,54 @@ export async function correctApproachAction(formData: FormData): Promise<void> {
   revalidatePath('/borderline')
   revalidatePath(`/people/${personId}/edit`)
   back(personId, seasonId, 'approach_corrected')
+}
+
+/**
+ * 確度（S/A/B/C）を記入する（依頼者の指示。実行⑯。C-151）。
+ *
+ * 判定は `src/commands/confidence.ts` にある。ここは受け渡しと、
+ * **見ていた場所へ戻すこと**だけをする。
+ *
+ * ★ 上の3つと違い、**戻す先は特別選考の画面**である ――
+ *   確度は一覧を見ながら付けるもので、書いた直後に一覧へ反映される。
+ *
+ * ★ URL に載せるのは ID と結果コードだけ。氏名も記入者名も載せない（CLAUDE.md）。
+ */
+const CONFIDENCE_CODE: Record<SetConfidenceFailure, string> = {
+  person_not_found: 'nf',
+  person_deleted: 'del',
+  season_not_found: 'nf',
+  grade_not_found: 'grade',
+  recorded_by_required: 'who',
+  recorded_by_too_long: 'wholong',
+  note_too_long: 'notelong',
+}
+
+export async function setConfidenceAction(formData: FormData): Promise<void> {
+  const personId = String(formData.get('personId') ?? '')
+  const seasonId = String(formData.get('seasonId') ?? '')
+
+  const backToList = (result: Record<string, string>): never => {
+    const params = new URLSearchParams()
+    if (UUID.test(seasonId)) params.set('season', seasonId)
+    if (UUID.test(personId)) params.set('person', personId)
+    for (const [k, v] of Object.entries(result)) params.set(k, v)
+    redirect(`/headhunting?${params}`)
+  }
+
+  if (!UUID.test(personId) || !UUID.test(seasonId)) backToList({ e: 'nf' })
+
+  const db = await getDb()
+  const result = await setConfidence(db, {
+    personId,
+    seasonId,
+    gradeCode: String(formData.get('grade') ?? ''),
+    recordedBy: String(formData.get('recordedBy') ?? ''),
+    note: String(formData.get('note') ?? ''),
+  })
+  if (!result.ok) backToList({ e: CONFIDENCE_CODE[result.reason] })
+
+  revalidatePath('/headhunting')
+  revalidatePath(`/people/${personId}`)
+  backToList({ ok: 'conf' })
 }

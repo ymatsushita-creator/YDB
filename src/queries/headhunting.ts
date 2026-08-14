@@ -32,6 +32,13 @@ export interface HeadhuntingRow {
   /** 確度。規則が未登録なら null（0 ではない）。 */
   confidence_ratio: number | null
   rank_in_season: number | null
+  /**
+   * 記入された確度（S/A/B/C）。**まだ誰も記入していなければ null。**
+   *
+   * ★ 上の `confidence_ratio`（0017 の導出値）とは別物である。C-151 以降、
+   *   画面が見るのはこちら ―― 人が判断して記入した段階のほう。
+   */
+  grade_code: string | null
 }
 
 /**
@@ -46,13 +53,18 @@ export const listHeadhunting = (db: Db, seasonId: string, limit = 12) =>
            p.family_name || ' ' || p.given_name AS person_name,
            p.photo_data_url,
            h.approach_code, h.approach_label, h.state_since,
-           c.confidence_ratio, c.rank_in_season
+           c.confidence_ratio, c.rank_in_season,
+           g.grade_code
       FROM v_headhunting_list h
       JOIN persons p ON p.id = h.person_id
       LEFT JOIN v_candidate_confidence_latest c
              ON c.person_id = h.person_id AND c.season_id = h.season_id
+      LEFT JOIN v_person_confidence g
+             ON g.person_id = h.person_id AND g.season_id = h.season_id
      WHERE h.season_id = $1
-     ORDER BY c.rank_in_season NULLS LAST, h.state_since DESC, p.id
+     -- 記入された確度が先（S→C）。**未記入は最後**（0 ではなく「まだ無い」）。
+     ORDER BY g.grade_order NULLS LAST, c.rank_in_season NULLS LAST,
+              h.state_since DESC, p.id
      LIMIT $2`, [seasonId, limit])
 
 export interface ApproachTotals {
@@ -231,6 +243,14 @@ export interface PersonPanel {
   confidence_ratio: number | null
   rank_in_season: number | null
   score_100: number | null
+  /** 記入された確度（S/A/B/C）。未記入なら null。 */
+  grade_code: string | null
+  /** その段階の基準の原文。記入者が見て選ぶ文（0039）。 */
+  grade_definition: string | null
+  graded_at: Date | null
+  /** 記入した人。**自己申告**である。 */
+  graded_by: string | null
+  grade_note: string | null
 }
 
 export const getPersonPanel = (db: Db, personId: string, seasonId: string) =>
@@ -247,6 +267,7 @@ export const getPersonPanel = (db: Db, personId: string, seasonId: string) =>
              WHERE t.person_id = p.id AND t.season_id = $2) AS last_touchpoint_on,
            a.approach_label, a.approach_code,
            c.confidence_ratio, c.rank_in_season,
+           g.grade_code, g.grade_definition, g.graded_at, g.graded_by, g.grade_note,
            (SELECT round(sum(es.score)::numeric / sum(ec.scale_max) * 100, 1)
               FROM v_countable_applications ap
               JOIN evaluations e ON e.application_id = ap.id AND e.state = 'submitted'
@@ -259,6 +280,8 @@ export const getPersonPanel = (db: Db, personId: string, seasonId: string) =>
              ON a.person_id = p.id AND a.season_id = $2
       LEFT JOIN v_candidate_confidence_latest c
              ON c.person_id = p.id AND c.season_id = $2
+      LEFT JOIN v_person_confidence g
+             ON g.person_id = p.id AND g.season_id = $2
      WHERE p.id = $1
        AND p.deleted_at IS NULL`, [personId, seasonId])
 

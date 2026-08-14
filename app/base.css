@@ -1567,3 +1567,74 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
   color: var(--color-steel);
   font-size: 13px;
 }
+
+
+/* =============================================================
+   詳細ボタンと、確度の記入（実行⑯。依頼者の指示。C-150 / C-151）
+
+   ★ 一覧の名前を押しても**人の画面へは飛ばない。** 右のパネルに出す。
+     人の画面へは「詳細」から行く ―― 押し間違えて画面が変わると、
+     一覧のどこを見ていたかが毎回消える。
+   ★ `›` だけの的をやめて**語を出す**。何が起きるか読めない印を残さない。
+   ============================================================= */
+.row-detail-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 3px 10px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-sm);
+  color: var(--color-steel); font-size: 12px; font-weight: 500;
+  text-decoration: none; white-space: nowrap;
+}
+.row-detail-button:hover {
+  background: var(--color-surface); color: var(--color-ink); text-decoration: none;
+}
+
+/* 確度の記入。**選ぶのは段階、読むのは基準の原文。** */
+.conf-form { display: flex; flex-direction: column; gap: var(--space-sm); }
+.conf-grades { display: flex; flex-direction: column; gap: 4px; }
+.conf-grade {
+  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline; gap: var(--space-sm);
+  padding: 6px 8px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-sm);
+  cursor: pointer;
+}
+.conf-grade:hover { background: var(--color-card-tint-cream); }
+.conf-grade.is-on { border-color: var(--color-ink); }
+.conf-grade > input { grid-row: 1; margin: 0; }
+.conf-grade-code { font-weight: 700; font-size: 13px; }
+/* 基準は畳まない。**選ぶ前に読めないと、記入は当てずっぽうになる。** */
+.conf-grade-def { color: var(--color-steel); font-size: 11px; line-height: 1.5; }
+.conf-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+.conf-row > .text-input { flex: 1 1 120px; min-width: 0; height: 32px; font-size: 12px; }
+.conf-row > .button-primary { height: 32px; padding: 0 var(--space-md); font-size: 12px; }
+.conf-current { color: var(--color-steel); font-size: 11px; }
+
+/* 一覧に出す確度の印。**未記入は 0 ではない**ので、そう書く。 */
+.conf-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; padding: 1px 6px;
+  border-radius: var(--rounded-sm);
+  font-size: 11px; font-weight: 700;
+}
+.conf-S { background: var(--color-ink); color: var(--color-on-dark); }
+.conf-A { background: var(--color-card-tint-cream); color: var(--color-ink); }
+.conf-B { background: var(--color-surface); color: var(--color-slate); }
+.conf-C { background: var(--color-surface); color: var(--color-steel); }
+.conf-none { color: var(--color-steel); font-weight: 500; }
+
+/* =============================================================
+   面積の配り直し（依頼者の指示。実行⑯。C-150）
+
+   「候補者確度ランキング」を外した分と、右列の幅を、
+   **欲しい人ランキング・候補者パネル・特別選考リスト**へ渡す。
+   340px は12項目の基本情報と確度の記入欄には狭い。
+   ============================================================= */
+.hh-grid { grid-template-columns: minmax(0, 1fr) 420px; }
+@media (max-width: 1180px) {
+  .hh-grid { grid-template-columns: minmax(0, 1fr) 360px; }
+}
+/* 右列は上下2枚（パネルと特別選考リスト）。**どちらも大きくする**ので
+   比率は等分に寄せる（0.85/1.15 は日程カレンダーが下にあった頃の割り付け）。 */
+.hh-col-side { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }

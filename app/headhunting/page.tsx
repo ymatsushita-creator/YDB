@@ -2,13 +2,12 @@ import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import {
-  listHeadhunting, getApproachTotals, listConfidence, getConfidenceMeta,
-  listApplicantScores, getPersonPanel, listCriterionScores,
+  listHeadhunting, listApplicantScores, getPersonPanel, listCriterionScores,
 } from '../../src/queries/headhunting.ts'
-import { jstDay, num, ymd, filled, NotDerived } from '../_components/ui.tsx'
-import {
-  ApproachChip, RankMark, RankDelta, Stars, Confidence,
-} from '../_components/headhunting.tsx'
+import { jstDay, ymd, filled, NotDerived } from '../_components/ui.tsx'
+import { ApproachChip, RankMark, Stars } from '../_components/headhunting.tsx'
+import { listConfidenceGrades } from '../../src/commands/confidence.ts'
+import { setConfidenceAction } from './actions.ts'
 import { Avatar } from '../_components/borderline.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 
@@ -57,14 +56,26 @@ export default async function HeadhuntingPage({
   // ★ 「最新やること」は**出さない**（依頼者の指示。実行⑬で受けたが、
   //   外した先が通常選考だった ―― ここ特別選考に残っていた。C-136）。
   //   出さないものは**問い合わせもしない。**
-  const [scores, confidence, confidenceMeta, list, totals] = await Promise.all([
+  // ★ 「候補者確度ランキング」は**出さない**（依頼者の指示。実行⑯。C-150）。
+  //   出さないものは**問い合わせもしない** ―― 確度の順位も算出規則の有無も
+  //   聞かなくなったので、この画面の往復は5本から3本に減る。
+  const [scores, list, grades] = await Promise.all([
     // 一覧は詰め込める分だけ出す。カードの中で送れるので、5件で切る理由が無い。
     listApplicantScores(db, season.id, LIST_LIMIT),
-    listConfidence(db, season.id, LIST_LIMIT),
-    getConfidenceMeta(db, season.id),
     listHeadhunting(db, season.id, LIST_LIMIT),
-    getApproachTotals(db, season.id),
+    listConfidenceGrades(db),
   ])
+
+  // 記入の結果。**理由ごとに文言を分ける**（何が悪かったのか分からない画面にしない）。
+  const CONF_ERROR: Record<string, string> = {
+    nf: '相手か年度が見つからない。',
+    del: '削除済みの候補者には記入できない。',
+    grade: '段階が選ばれていない。',
+    who: '記入者を入れる。',
+    wholong: '記入者が長すぎる（60文字まで）。',
+    notelong: '補足が長すぎる（2000文字まで）。',
+  }
+  const confError = CONF_ERROR[one(sp.e) ?? ''] ?? null
 
   // 右のパネルに映す1人。指定が無ければ確度の1位。
   // 一覧が空なら誰も映らない。**空を埋めるために別の年度から連れてこない。**
@@ -116,15 +127,18 @@ export default async function HeadhuntingPage({
                         <th className="num">100点換算</th>
                         <th className="num">素点</th>
                         <th className="num">軸</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
                       {scores.map((r) => (
                         <tr key={r.application_id}>
                           <td><RankMark rank={Number(r.rank_in_season)} /></td>
+                          {/* ★ 名前は**この画面の右へ出す**（依頼者の指示。実行⑯。C-150）。
+                              押すたびに人の画面へ飛ぶと、一覧へ戻る操作が要る。
+                              人の画面へは**「詳細」から行く。** */}
                           <td>
-                            <Link href={`/people/${r.person_id}?season=${season.id}`}
-                                  className="bl-person">
+                            <Link href={href({ person: r.person_id })} className="bl-person">
                               <Avatar src={r.photo_data_url} name={r.person_name} />
                               {r.person_name}
                             </Link>
@@ -132,6 +146,10 @@ export default async function HeadhuntingPage({
                           <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
                           <td className="num dim">{r.earned} / {r.possible}</td>
                           <td className="num dim">{r.scored_criteria}</td>
+                          <td>
+                            <Link href={`/people/${r.person_id}?season=${season.id}`}
+                                  className="row-detail-button">詳細</Link>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -140,40 +158,9 @@ export default async function HeadhuntingPage({
               )}
             </section>
 
-            {/* --- E 候補者確度ランキング --- */}
-            <section className="panel-card">
-              <header className="hh-head">
-                <h2>候補者確度ランキング</h2>
-              </header>
-              {confidence.length === 0 ? (
-                <p className="hh-empty">確度の算出規則が未登録。</p>
-              ) : (
-                <div className="scroll-pane">
-                  <table className="hh-table">
-                    <thead>
-                      <tr><th>順位</th><th>名前</th><th className="num">確度</th><th>前回比</th></tr>
-                    </thead>
-                    <tbody>
-                      {confidence.map((r) => (
-                        <tr key={r.person_id}>
-                          <td><RankMark rank={Number(r.rank_in_season)} /></td>
-                          <td>
-                            <Link href={href({ person: r.person_id })} className="bl-person">
-                              <Avatar src={r.photo_data_url} name={r.person_name} />
-                              {r.person_name}
-                            </Link>
-                          </td>
-                          <td className="num strong"><Confidence ratio={r.confidence_ratio} /></td>
-                          <td>
-                            <RankDelta delta={r.rank_delta} hasPrevious={r.has_previous_run} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
+            {/* ★ ここに「候補者確度ランキング」があった。外した（C-150）。
+                外した分の高さは、上のランキングがそのまま受け取る
+                （`.hh-rankings` は枚数で割り付けが変わる。C-137）。 */}
           </div>
         </div>
 
@@ -231,12 +218,47 @@ export default async function HeadhuntingPage({
                 <dl className="hh-facts hh-facts-tight">
                   <dt>成績（100点換算）</dt>
                   <dd>{panel.score_100 ?? <NotDerived>評価がまだ無い</NotDerived>}</dd>
-                  <dt>確度</dt>
-                  <dd>
-                    <Confidence ratio={panel.confidence_ratio} />
-                    {panel.rank_in_season !== null && <> ・ {panel.rank_in_season} 位</>}
-                  </dd>
                 </dl>
+
+                {/* --- 確度（S/A/B/C）――**記入するもの**（C-151）---
+                     計算値ではないので、いつでも書き直せる。書き直しは
+                     打ち消し行＋新しい記入で残る（0039）。 */}
+                <h3 className="hh-sub">確度</h3>
+                <form action={setConfidenceAction} className="conf-form editable-region">
+                  <input type="hidden" name="personId" value={panel.person_id} />
+                  <input type="hidden" name="seasonId" value={season.id} />
+                  <div className="conf-grades">
+                    {grades.map((g) => (
+                      <label key={g.code}
+                             className={`conf-grade${panel.grade_code === g.code ? ' is-on' : ''}`}>
+                        <input type="radio" name="grade" value={g.code}
+                               defaultChecked={panel.grade_code === g.code} required />
+                        <span className="conf-grade-code">{g.code}</span>
+                        {/* 基準は**依頼者の文面のまま**。選ぶ人がこれを見て決める。 */}
+                        <span className="conf-grade-def">{g.definition}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="conf-row">
+                    <input className="text-input" name="recordedBy" required
+                           maxLength={60} placeholder="記入者"
+                           defaultValue={panel.graded_by ?? ''} />
+                    <input className="text-input" name="note" maxLength={2000}
+                           placeholder="補足（任意）" />
+                    <button className="button-primary" type="submit">記入する</button>
+                  </div>
+                  {panel.grade_code ? (
+                    <p className="conf-current">
+                      いまは <strong>{panel.grade_code}</strong>
+                      {panel.graded_by && <> ・ {panel.graded_by}</>}
+                      {panel.graded_at && <> ・ {jstDay(panel.graded_at)}</>}
+                      {panel.grade_note && <> ・ {panel.grade_note}</>}
+                    </p>
+                  ) : (
+                    <p className="conf-current">まだ記入されていない。</p>
+                  )}
+                  {confError && <p className="login-error">{confError}</p>}
+                </form>
 
                 {panel.note && (
                   <>
@@ -280,8 +302,12 @@ export default async function HeadhuntingPage({
                       {r.person_name}
                     </Link>
                     <Link href={`/people/${r.person_id}?season=${season.id}`}
-                          className="row-detail" aria-label={`${r.person_name} の詳細`}>›</Link>
-                    <span className="hh-list-conf"><Confidence ratio={r.confidence_ratio} /></span>
+                          className="row-detail-button">詳細</Link>
+                    <span className="hh-list-conf">
+                      {r.grade_code
+                        ? <span className={`conf-mark conf-${r.grade_code}`}>{r.grade_code}</span>
+                        : <span className="conf-mark conf-none">未記入</span>}
+                    </span>
                     <ApproachChip code={r.approach_code} label={r.approach_label} />
                   </li>
                 ))}

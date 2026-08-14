@@ -74,6 +74,14 @@ const CORRECTABLE = [
     scope: 'partner_id',
     command: 'correctPartnerRecommendation',
   },
+  /**
+   * 確度の記入（0039。C-151）。
+   *
+   * ★ **専用の「訂正する」ボタンは無い。** 書き直すこと自体が訂正なので、
+   *   `setConfidence` が前の記入を打ち消してから新しい記入を足す。
+   *   道が1本しかないぶん、繋ぎ忘れが起きない。
+   */
+  { table: 'person_confidence_events', scope: 'person_id', command: 'setConfidence' },
 ] as const
 
 describe('打ち消しの道（C-129）', () => {

@@ -135,6 +135,10 @@ describe('マイグレーション', () => {
       'v_partner_recommendation_state',
       // 0038: 職員ごとの最後の入場と回数。合言葉を持っているかも出す
       'v_staff_last_sign_in',
+      // 0039: 確度の記入の訂正チェーンを解決したもの（深さ偶数が有効）
+      'v_effective_person_confidence_events',
+      // 0039: 人 × 期の現在の確度（S/A/B/C）。**導出値ではなく記入値**
+      'v_person_confidence',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

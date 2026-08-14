@@ -122,3 +122,70 @@ describe('0006 を本番の形に当てる（C-122）', () => {
     await db.close()
   })
 })
+
+/**
+ * 0007 取りこぼした値を引き継ぐ（C-152。依頼者の指示）。
+ *
+ * 依頼者の言葉（実行⑯）――「選考基準や募集要項、特別選考の基準等
+ * 変わらないので引き継げ。勝手に取りこぼしてんじゃねぇよ」。
+ *
+ * ★ 0006 は段と軸を写したが、**目標応募数だけ null のまま残っていた。**
+ *   応募管理表 `001_使い方` の目標 KR には最初から書いてある
+ *   （「100名の応募完了と36名の選出」）。定員36は入り、隣の100だけが落ちていた。
+ */
+describe('0007 目標応募数を引き継ぐ（C-152）', () => {
+  /**
+   * ★ 変更履歴には職員が要る（`changed_by_staff_id` は NOT NULL）。
+   *   本番シードは職員を1人も作らない（個人を含まない）ので、
+   *   **職員を入れてから流す** ―― 本番には20人居る。
+   *   誰が変えたか名乗れないうちは、この引き継ぎは走らない（それでよい）。
+   */
+  const withStaff = async () => {
+    const db = await freshDb({ seeds: 'production' })
+    await db.query(
+      `INSERT INTO staffs (display_name) VALUES ('検査 運営')`)
+    await seed(db)
+    return db
+  }
+
+  test('職員が居ないうちは走らない（空欄で濁さない）', async () => {
+    const db = await freshDb({ seeds: 'production' })
+    const y2027 = await all<{ target_application_count: number | null }>(db,
+      `SELECT target_application_count FROM seasons WHERE enrollment_year = 2027`)
+    assert.equal(y2027[0]?.target_application_count ?? null, null)
+    await db.close()
+  })
+
+  test('★ 3期の目標応募数が、2期と同じになる', async () => {
+    const db = await withStaff()
+    const rows = await all<{ enrollment_year: number; target_application_count: number | null }>(
+      db, `SELECT enrollment_year, target_application_count FROM seasons
+            WHERE NOT is_demo ORDER BY enrollment_year`)
+    const y2026 = rows.find((r) => r.enrollment_year === 2026)
+    const y2027 = rows.find((r) => r.enrollment_year === 2027)
+    assert.ok(y2026?.target_application_count, '2期の目標応募数が空。写す元が無い')
+    assert.equal(y2027?.target_application_count, y2026?.target_application_count,
+      '3期の目標応募数が引き継がれていない')
+    await db.close()
+  })
+
+  test('変えた事実が変更履歴に残る（現在値だけ動かさない）', async () => {
+    const db = await withStaff()
+    const rev = await all<{ changed_field: string; new_value: string }>(db, `
+      SELECT r.changed_field, r.new_value
+        FROM season_revisions r JOIN seasons s ON s.id = r.season_id
+       WHERE s.enrollment_year = 2027 AND r.changed_field = 'target_application_count'`)
+    assert.equal(rev.length, 1, '目標応募数を変えた履歴が無い')
+    await db.close()
+  })
+
+  test('★ 2度流しても、履歴は1件のまま（冪等）', async () => {
+    const db = await withStaff()
+    await seed(db)
+    const n = await all<{ id: string }>(db, `
+      SELECT r.id FROM season_revisions r JOIN seasons s ON s.id = r.season_id
+       WHERE s.enrollment_year = 2027 AND r.changed_field = 'target_application_count'`)
+    assert.equal(n.length, 1, '流すたびに履歴が積まれている')
+    await db.close()
+  })
+})
