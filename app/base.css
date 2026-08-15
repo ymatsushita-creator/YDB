@@ -1546,7 +1546,19 @@ html, body { height: 100%; overflow: hidden; }
    高さを渡せば縦横比のまま収まる（数字を書き足さない）。 */
 .home-dashboard .section > .card-base > svg { flex: 1 1 auto; height: auto; }
 .home-dashboard .pick-card { padding: var(--space-sm); }
-.home-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
+/* ★「Aスペース」―― 依頼者が呼ぶ名（実行⑯）。ホーム上段のKPI帯。
+   後で「Aスペースを直せ」と言われたら、まずこの帯（.home-kpi）を疑う。
+   ★ 枚数は4枚固定ではない ―― 目標が受領済みの期は「応募（目標比）」が
+     5枚目として増える（C-162）。auto-fit で枚数に合わせて幅を割る。 */
+.home-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-sm);
+}
+/* 目標との比較（meta）。値の下に小さく添える。 */
+.home-kpi-meta {
+  display: block; margin-top: 2px;
+  color: var(--color-steel); font-size: 12px; font-weight: 500;
+}
 .home-detail-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, .75fr); gap: var(--space-md); min-height: 0; }
 .home-kpi {
   position: relative; overflow: hidden;

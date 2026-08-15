@@ -4,7 +4,7 @@ import { getDb } from '../src/db/server.ts'
 import { currentTier } from '../src/auth/current.ts'
 import { canOpen, type Tier } from '../src/auth/tiers.ts'
 import {
-  listSeasons, defaultSeason, getSeason, getHomeTrends, hasScoringRules,
+  listSeasons, defaultSeason, getSeason, getHomeTrends, hasScoringRules, getSummary,
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
 import { Card, Empty, num, NotDerived } from './_components/ui.tsx'
@@ -16,8 +16,8 @@ import { Shell, Breadcrumb, YearSwitch, seasonLabel } from './_components/shell.
 export const dynamic = 'force-dynamic'
 
 function HomeKpi(
-  { label, value, href, derived = true }:
-  { label: string; value: number; href?: string; derived?: boolean },
+  { label, value, href, derived = true, meta }:
+  { label: string; value: number; href?: string; derived?: boolean; meta?: string },
 ) {
   const body = (
     <>
@@ -27,6 +27,9 @@ function HomeKpi(
       {derived
         ? <strong className="home-kpi-value">{num(value)}</strong>
         : <strong className="home-kpi-value"><NotDerived /></strong>}
+      {/* ★「Aスペース」に目標との比較を出す（依頼者の指示。実行⑯。C-162）。
+          目標が無いカードには出さない ―― 無い目標を0と書かない（C-127と同じ形）。 */}
+      {meta && <span className="home-kpi-meta">{meta}</span>}
     </>
   )
   // ★ 開ける層にだけリンクにする。開けない層では素のタイルのまま
@@ -100,11 +103,20 @@ export default async function Home(
     )
   }
 
-  const [trends, picks, hasRules] = await Promise.all([
+  const [trends, picks, hasRules, summary] = await Promise.all([
     getHomeTrends(db, season.id),
     listConfidence(db, season.id, 3),
     hasScoringRules(db),
+    getSummary(db, season.id),
   ])
+
+  // ★ 応募の目標との比較（実行⑯。依頼者の指示。C-152 で引き継いだ値を使う）。
+  //   目標が無い期（未受領）では出さない ―― 無い目標を出さない（C-127 と同じ形）。
+  const applicantTarget = season.target_application_count
+  const applicantActual = summary?.applicant ?? 0
+  const applicantMeta = applicantTarget
+    ? `目標 ${num(applicantTarget)} ・ ${Math.round((applicantActual / applicantTarget) * 100)}%`
+    : undefined
   // ★ 確度の系列は、算出規則があるときだけ出す（C-127）。
   //   規則が0件なら確度は誰にも付かないので、常に0の線になる ――
   //   それは「無いことを0と書く」ことである（0017）。
@@ -149,6 +161,14 @@ export default async function Home(
           <HomeKpi label="確度の高い候補者" value={latest.high_confidence}
                    href={to('/borderline')} derived={hasRules} />
           <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
+          {/* ★「Aスペース」に5枚目（実行⑯。依頼者の指示。C-162）――
+              「応募」は「候補者」（識別できた人の累計）とは母集団が違う
+              （C-62：単位の違う値を並べない）。既存カードへ相乗りさせず、
+              別枠にする。目標が無い期では出さない（無い目標を0と書かない）。 */}
+          {applicantMeta && (
+            <HomeKpi label="応募（目標比）" value={applicantActual}
+                     href={to('/funnel')} meta={applicantMeta} />
+          )}
         </div>
 
         <div className="home-detail-grid">
