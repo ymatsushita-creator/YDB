@@ -75,13 +75,18 @@ describe('0005 2期の特別選考9軸', () => {
     await db.close()
   })
 
-  test('書類選考・グループ面接には軸を足していない（呼び名が表に無い）', async () => {
+  /**
+   * ★ グループ面接は 0008 で入った（依頼者「最終と同じでいいから」。実行⑯）。
+   *   **書類選考はまだ空** ―― 軸の呼び名を受け取っていない。
+   *   受け取らないうちに、こちらで名付けない（原則3）。
+   */
+  test('書類選考にはまだ軸を足していない（呼び名を受け取っていない）', async () => {
     const db = await freshDb({ seeds: 'production' })
     const n = await scalar<number>(db, `
       SELECT count(*)::int FROM evaluation_criteria ec
         JOIN selection_steps ss ON ss.id = ec.selection_step_id
         JOIN seasons se ON se.id = ss.season_id
-       WHERE se.cohort_number = 2 AND ss.name IN ('書類選考', 'グループ面接')`)
+       WHERE se.cohort_number = 2 AND ss.name = '書類選考'`)
     assert.equal(n, 0)
     await db.close()
   })
@@ -96,7 +101,10 @@ describe('0005 2期の特別選考9軸', () => {
     const standard = criteria.filter((c) => c.kind === 'standard')
     assert.equal(required.length, 3, '必須はA〜Cの3つ')
     assert.equal(strong.length, 6, '加点はD〜Iの6つ')
-    assert.equal(standard.length, 6, '最終面接の6軸は段分けを持たない')
+    // ★ 0008 でグループ面接にも同じ6軸を入れた（実行⑯）。
+    //   段が違えば別の軸なので、段分けを持たない軸は 6 → 12 になる。
+    assert.equal(standard.length, 12,
+      '最終面接とグループ面接の各6軸は、どちらも段分けを持たない')
     await db.close()
   })
 })

@@ -125,7 +125,8 @@ describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
       .map((r) => [r.step, r.name, r.kind])
 
     assert.deepEqual(await shape(3), await shape(2), '3期の軸が2期と食い違っている')
-    assert.equal((await shape(3)).length, 15, '特別選考9 ＋ 最終面接6')
+    // 特別選考9 ＋ 最終面接6 ＋ グループ面接6（0008 で最終面接から写した）
+    assert.equal((await shape(3)).length, 21, '特別選考9 ＋ 最終面接6 ＋ グループ面接6')
     await db.close()
   })
 
@@ -277,17 +278,29 @@ describe('本番シードの評価の観点', () => {
     await db.close()
   })
 
-  test('グループ面接の軸も入れていない（旧データに点が無い）', async () => {
+  /**
+   * ★ 0008 で入れた（依頼者の指示。実行⑯）。
+   *
+   *   長らく空だった ―― 旧データに点が無かったため（`sec2_group` は
+   *   A〜E の組分けで、評価ではない）。**軸の呼び名を受け取っていなかった。**
+   *   依頼者が「二次選考の軸はこれだ」「最終と同じでいいから」と示したので入れた。
+   *
+   * ★ 最終面接から**読んで**入れる（名前をシードに書き写さない）ので、
+   *   本数と満点は最終面接と必ず一致する。ずれたら写し方が壊れている。
+   */
+  test('グループ面接の軸は、最終面接と同じ（0008）', async () => {
     const db = await productionDb()
-    const n = await scalar<number>(
-      db,
-      `SELECT count(*)::int
-         FROM evaluation_criteria c
-         JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = 'グループ面接'`,
-    )
-
-    assert.equal(n, 0, 'sec2_group は A〜E の組分けであって評価ではない')
+    const rows = await all<{ step: string; n: number; total: number }>(db, `
+      SELECT s.name AS step, count(*)::int AS n, sum(c.scale_max)::int AS total
+        FROM evaluation_criteria c
+        JOIN selection_steps s ON s.id = c.selection_step_id
+       WHERE s.name IN ('グループ面接', '最終面接')
+       GROUP BY s.name`)
+    const grp = rows.filter((r) => r.step === 'グループ面接')
+    const fin = rows.filter((r) => r.step === '最終面接')
+    assert.ok(grp.length > 0, 'グループ面接に軸が入っていない')
+    assert.deepEqual(grp.map((r) => [r.n, r.total]), fin.map((r) => [r.n, r.total]),
+      '最終面接と本数・満点が一致しない（写し方が壊れている）')
     await db.close()
   })
 })
@@ -298,10 +311,11 @@ describe('シードは何度流しても増えない', () => {
     await seed(db)
 
     // 期は2つ。ステップは 2期5本＋3期5本＝10本（0006 で3期を2期にそろえた）。
-    // 軸は期ごとに 最終面接6 ＋ 特別選考9 ＝ 15、2期と3期で30。2回流しても増えない。
+    // 軸は期ごとに 最終面接6 ＋ 特別選考9 ＋ グループ面接6（0008）＝ 21、
+    // 2期と3期で42。2回流しても増えない。
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 2)
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 10)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 30)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 42)
     await db.close()
   })
 })
