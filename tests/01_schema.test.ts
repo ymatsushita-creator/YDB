@@ -139,6 +139,9 @@ describe('マイグレーション', () => {
       'v_effective_person_confidence_events',
       // 0039: 人 × 期の現在の確度（S/A/B/C）。**導出値ではなく記入値**
       'v_person_confidence',
+      // 0044: AI分析の事前ステータス。**成績（evaluation_scores）とは別の層**
+      'v_effective_ai_pre_assessments',
+      'v_ai_pre_assessment',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

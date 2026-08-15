@@ -82,6 +82,17 @@ const CORRECTABLE = [
    *   道が1本しかないぶん、繋ぎ忘れが起きない。
    */
   { table: 'person_confidence_events', scope: 'person_id', command: 'setConfidence' },
+  /**
+   * AI分析の事前ステータス（0044。C-164。依頼者の指示）。
+   *
+   * ★ **専用の「訂正する」ボタンは無い。** 付け直すこと自体が訂正なので、
+   *   `recordAiPreAssessment` が前の分析を打ち消してから新しい分析を足す。
+   * ★ これは**成績ではない。** 点も順位も持たない（`evaluation_scores` の外）。
+   */
+  {
+    table: 'ai_pre_assessments', scope: 'person_id',
+    command: 'recordAiPreAssessment', via: 'script' as const,
+  },
 ] as const
 
 describe('打ち消しの道（C-129）', () => {
@@ -107,11 +118,23 @@ describe('打ち消しの道（C-129）', () => {
       if (typeof f !== 'string' || !/\.tsx?$/.test(f)) continue
       screens.push(await read(join('app', f)))
     }
+    const tools = await Promise.all(
+      (await readdir(join(ROOT, 'scripts')))
+        .filter((f) => /\.ts$/.test(f))
+        .map(async (f) => read(join('scripts', f))))
     for (const c of CORRECTABLE) {
       assert.ok(commands.some((s) => s.includes(`export async function ${c.command}`)),
         `${c.table} を打ち消すコマンド（${c.command}）が無い`)
-      assert.ok(screens.some((s) => s.includes(c.command)),
-        `${c.command} が画面から呼ばれていない（SQL でしか打ち消せない）`)
+      /**
+       * ★ 呼び口は画面とは限らない（C-164）。
+       *   AI分析は**人が付けるものではない**ので画面に記入欄が無い。
+       *   代わりに道具（`scripts/`）が呼ぶ。**守りたいのは
+       *   「SQLを直に叩く以外の道があること」**であって、
+       *   その道が画面であることではない。
+       */
+      const via = 'via' in c && c.via === 'script' ? tools : screens
+      assert.ok(via.some((s) => s.includes(c.command)),
+        `${c.command} が${via === tools ? '道具' : '画面'}から呼ばれていない（SQL でしか打ち消せない）`)
     }
   })
 })

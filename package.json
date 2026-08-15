@@ -19,6 +19,8 @@
     "import:forms": "node --env-file-if-exists=.env.local scripts/import-application-forms.ts",
     "import:selection": "node --env-file-if-exists=.env.local scripts/import-selection-2026.ts",
     "import:recruitment-plan": "node --env-file-if-exists=.env.local scripts/import-recruitment-plan-2026.ts",
+    "ingest": "node --env-file-if-exists=.env.local scripts/ingest-sheet.ts",
+    "ai:pre-assess": "node --env-file-if-exists=.env.local scripts/ai-pre-assess.ts",
     "seed:demo-season": "node --env-file-if-exists=.env.local scripts/seed-demo-season.ts",
     "demo:remove": "node --env-file-if-exists=.env.local scripts/remove-demo-data.ts",
     "test": "node --test --experimental-test-isolation=none tests/**/*.test.ts",
@@ -29,6 +31,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "@electric-sql/pglite": "^0.5.4",
     "next": "^16.3.0",
     "pg": "^8.22.0",
