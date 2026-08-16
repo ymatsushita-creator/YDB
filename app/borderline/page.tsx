@@ -6,6 +6,7 @@ import {
   listCandidatesByStep, listAppointments, getBorderlinePanel, getScoringSheet,
   listPersonNotes, getAppointmentDetail, listAttendanceCandidates,
 } from '../../src/queries/borderline.ts'
+import { APPLY_AI_LOGIC_MESSAGE } from '../../src/commands/ai_pre_assessment.ts'
 import {
   parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE,
 } from '../../src/commands/score.ts'
@@ -389,6 +390,13 @@ export default async function BorderlinePage({
                         {savedScore && (
                           <p className={`callout${savedScore === 'saved' ? ' ok' : ''}`}>
                             {SAVE_SCORE_CODE_MESSAGE[savedScore]}
+                          </p>
+                        )}
+                        {/* ★ AIの点を入れた結果（C-211）。文言は
+                            `APPLY_AI_LOGIC_MESSAGE` の1箇所だけにある。 */}
+                        {typeof sp.ai === 'string' && APPLY_AI_LOGIC_MESSAGE[sp.ai] && (
+                          <p className={`callout${sp.ai === 'applied' ? ' ok' : ''}`}>
+                            {APPLY_AI_LOGIC_MESSAGE[sp.ai]}
                           </p>
                         )}
                         {savedDecide && (

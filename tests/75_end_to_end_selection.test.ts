@@ -5,7 +5,11 @@ import { all, maybeOne, scalar, type Db } from '../src/db/client.ts'
 import { baseFixture, makeSeason, makePerson, makeApplication } from './support/fixtures.ts'
 import { assignInterviewer } from '../src/commands/assign.ts'
 import { saveScore } from '../src/commands/score.ts'
-import { submitEvaluation, decideStep, startSelection } from '../src/commands/decide.ts'
+import {
+  submitEvaluation, decideStep, startSelection, correctDecision, getCorrectableDecision,
+} from '../src/commands/decide.ts'
+import { holdEvaluation } from '../src/commands/hold.ts'
+import { unholdEvaluation } from '../src/commands/unhold.ts'
 
 /**
  * 書類選考から最終選考まで、**このDBの中だけで完結するか**
@@ -165,5 +169,107 @@ describe('書類選考 → 最終選考が1本で通る（C-210）', () => {
     await assignInterviewer(db, { evaluationId: ev1.id, staffId })
     const s = await submitEvaluation(db, { evaluationId: ev1.id })
     assert.equal(s.ok, false, '点が1つも無いのに提出できてしまう')
+  })
+
+  /** 応募を1件作って、選考を始める。 */
+  const freshApplication = async (name: string) => {
+    const p = await makePerson(db, schoolId, { familyName: '架空', givenName: name })
+    const a = await makeApplication(db, p, seasonId, '2026-11-04T10:00:00+09:00')
+    assert.equal((await startSelection(db, a)).ok, true)
+    return a
+  }
+
+  /** その応募の、いま開いている評価。 */
+  const openEvaluation = (applicationId: string) =>
+    maybeOne<{ id: string; state: string }>(db, `
+      SELECT id, state FROM evaluations
+       WHERE application_id = $1 AND state <> 'submitted'
+       ORDER BY assigned_at DESC LIMIT 1`, [applicationId])
+
+  test('★ 保留すると確定できず、解除すると進める', async () => {
+    const a = await freshApplication('保留')
+    const ev = (await openEvaluation(a))!
+    await assignInterviewer(db, { evaluationId: ev.id, staffId })
+
+    const h = await holdEvaluation(db, { evaluationId: ev.id, reason: '本人と連絡がつかない' })
+    assert.equal(h.ok, true, '保留にできない')
+
+    const blocked = await submitEvaluation(db, { evaluationId: ev.id })
+    assert.equal(blocked.ok, false, '保留のまま提出できてしまう')
+
+    const u = await unholdEvaluation(db, { evaluationId: ev.id })
+    assert.equal(u.ok, true, '保留を解けない')
+    assert.equal((await submitEvaluation(db, { evaluationId: ev.id })).ok, true)
+    assert.equal(
+      (await decideStep(db, { applicationId: a, decision: 'advance', staffId })).ok, true)
+  })
+
+  test('★ 保留には理由が要る（理由なしでは止められない）', async () => {
+    const a = await freshApplication('理由なし')
+    const ev = (await openEvaluation(a))!
+    await assignInterviewer(db, { evaluationId: ev.id, staffId })
+    const r = await holdEvaluation(db, { evaluationId: ev.id, reason: '   ' })
+    assert.equal(r.ok, false)
+  })
+
+  test('★ 判断を訂正すると、その段からやり直せる', async () => {
+    const a = await freshApplication('訂正')
+    const ev = (await openEvaluation(a))!
+    await assignInterviewer(db, { evaluationId: ev.id, staffId })
+    await submitEvaluation(db, { evaluationId: ev.id })
+    await decideStep(db, { applicationId: a, decision: 'reject', staffId })
+
+    const outcome1 = await maybeOne<{ outcome: string }>(db,
+      `SELECT outcome FROM v_application_outcome WHERE application_id = $1`, [a])
+    assert.equal(outcome1?.outcome, 'rejected')
+
+    const target = await getCorrectableDecision(db, a)
+    assert.ok(target, '訂正できる判定が見つからない')
+    const c = await correctDecision(db, {
+      applicationId: a, historyId: target.history_id, staffId,
+      note: '通しの検査で取り消した',
+    })
+    assert.equal(c.ok, true, '判断を訂正できない')
+
+    // 取り消したので、その段はもう一度確定できる状態に戻る。
+    const outcome2 = await maybeOne<{ outcome: string }>(db,
+      `SELECT outcome FROM v_application_outcome WHERE application_id = $1`, [a])
+    assert.notEqual(outcome2?.outcome, 'rejected', '取り消したのに不合格のまま')
+  })
+
+  test('★ AIの論理力が、書類選考の「論理力」軸へ流れる（依頼者の指示）', async () => {
+    const a = await freshApplication('AI連携')
+    const app = await maybeOne<{ person_id: string }>(db,
+      `SELECT person_id FROM applications WHERE id = $1`, [a])
+    const doc = steps.find((s) => s.name === '書類選考')!
+
+    // AIが論理力3点を出した、という記録を先に置く。
+    const { recordAiPreAssessment } = await import('../src/commands/ai_pre_assessment.ts')
+    const r = await recordAiPreAssessment(db, {
+      personId: app!.person_id, seasonId, selectionStepId: doc.id,
+      labelCode: '標準', rationale: '筋は通っている。', model: 'claude-opus-5',
+      source: 'test', viewpoints: [{ viewpoint: '論理性', score: 3, finding: '根拠がある。' }],
+    })
+    assert.equal(r.ok, true)
+
+    // 応募受付を通して、書類選考の評価行を作る。
+    const ev0 = (await openEvaluation(a))!
+    await assignInterviewer(db, { evaluationId: ev0.id, staffId })
+    await submitEvaluation(db, { evaluationId: ev0.id })
+    await decideStep(db, { applicationId: a, decision: 'advance', staffId })
+
+    const { applyAiLogicScore } = await import('../src/commands/ai_pre_assessment.ts')
+    const applied = await applyAiLogicScore(db, { applicationId: a })
+    assert.equal(applied.ok, true, 'AIの点を書類選考へ流せない')
+
+    const score = await maybeOne<{ score: number; rationale: string }>(db, `
+      SELECT s.score, s.rationale
+        FROM evaluation_scores s
+        JOIN evaluations e ON e.id = s.evaluation_id
+        JOIN evaluation_criteria c ON c.id = s.criteria_id
+       WHERE e.application_id = $1 AND c.name = '論理力'`, [a])
+    assert.ok(score, '論理力の点が入っていない')
+    assert.equal(Number(score.score), 3, 'AIが出した点と違う')
+    assert.match(score.rationale, /AI/, '誰が付けた点かが根拠に残っていない')
   })
 })

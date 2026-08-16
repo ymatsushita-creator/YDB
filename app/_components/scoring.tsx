@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ScoringSheet } from '../../src/queries/borderline.ts'
 import { num } from './ui.tsx'
 import { shownRationale } from '../../src/records/placeholder.ts'
+import { applyAiLogicScoreAction } from '../borderline/actions.ts'
 import {
   scoreOnBorderlineAction, correctScoreOnBorderlineAction, submitOnBorderlineAction,
 } from '../borderline/actions.ts'
@@ -178,6 +179,18 @@ export function ScoreSheet({ sheet, context, showAi = false }: {
             className="hh-more">
             AI分析 ›
           </Link>
+          {/* ★ AIが出した論理力を、この段の「論理力」軸へ入れる（C-211）。
+              ★ 押した時点で最新の分析を1件だけ写す ―― 応募の時点で
+                勝手に入れると、分析より前の応募に点が入らない。
+              ★ 人が既に付けていれば上書きしない（コマンド側で見る）。 */}
+          {' 　'}
+          {/* ★ 戻り先に要る値は `hidden` がまとめて持っている ――
+              自分で並べると、期やタブが欠けて**打った場所へ戻れない**
+              （実画面でホームへ飛ばされて気づいた。C-211）。 */}
+          <form action={applyAiLogicScoreAction} className="editable-inline">
+            {hidden}
+            <button className="button-secondary" type="submit">AIの論理力を入れる</button>
+          </form>
         </>
       )}
     </>
