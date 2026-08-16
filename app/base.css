@@ -706,6 +706,8 @@ table.data.sheet select {
   color: var(--color-steel); font-size: 12px; font-weight: 600;
   text-transform: none; letter-spacing: 0;
 }
+.sheet-photo { width: 48px; min-width: 48px; text-align: center; }
+.sheet-photo .avatar { width: 32px; height: 32px; margin: 0 auto; }
 /* 触らせない列。入力に見せない。 */
 .sheet-fixed { display: block; padding: 4px 6px; font-size: 13px; color: var(--color-steel); }
 /* 落ちた行。**線で示す**（面を塗らない）。 */
@@ -743,6 +745,14 @@ table.data.sheet select {
 
 .bl-table td { vertical-align: middle; }
 .bl-table tr.is-current { background: var(--color-card-tint-lavender); }
+.candidate-photo-cell { min-width: 48px; text-align: center; }
+.candidate-photo-cell .avatar { width: 32px; height: 32px; margin: 0 auto; }
+.candidate-row-actions { white-space: nowrap; }
+.candidate-unified-table { width: max-content; min-width: 100%; }
+.candidate-unified-table th { white-space: nowrap; }
+.candidate-unified-table td { min-width: 72px; }
+.candidate-unified-table td:nth-child(12),
+.candidate-unified-table td:nth-child(18) { min-width: 180px; }
 .bl-person { display: inline-flex; align-items: center; gap: var(--space-xs); font-weight: 500; }
 .bl-person:hover { text-decoration: none; }
 

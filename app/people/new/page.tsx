@@ -123,6 +123,8 @@ export default async function NewCandidatePage({
     ...rows.map((r) => ({
       id: r.person_id,
       lead: r.number === null ? '' : String(r.number),
+      photoSrc: r.has_photo ? `/people/new/photo/${r.person_id}` : undefined,
+      photoAlt: `${r.family_name} ${r.given_name}さんの顔写真`,
       values: {
         familyName: r.family_name,
         givenName: r.given_name,
@@ -177,6 +179,7 @@ export default async function NewCandidatePage({
             action={saveCandidateSheetAction}
             hidden={{ seasonId: season.id }}
             leadLabel="番号"
+            photoColumn
             detail={{ href: `/people/{id}/edit?season=${season.id}`, label: '写真・詳細' }}
           />
         </Card>

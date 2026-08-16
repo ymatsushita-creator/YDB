@@ -123,8 +123,9 @@ describe('掘っていっても行き着かない画面が無い（実行⑭）'
   })
 
   test('③ 途中の段が無いルートには、その段へのリンクが1本も無い', async () => {
-    // ★ いま途中が無いのは4本 ―― `/applications/[id]` ・ `/reach-zones/[id]` ・
-    //   `/staff/new` ・ `/events/new`（C-155）。
+    // ★ いま途中が無い画面は4本 ―― `/applications/[id]` ・ `/reach-zones/[id]` ・
+    //   `/staff/new` ・ `/events/new`（C-155）。加えて `/people/new/photo/[id]` は
+    //   顔写真を1枚返すだけの非表示経路で、途中の画面を持たない（C-193）。
     //   **一覧の画面を持たないのは形の判断**（依頼者が決める）で、
     //   こちらで勝手に作らない。**押せる形で出さない**ことだけを見張る。
     //   イベントの一覧は「イベントを追加」の下段に置いてある（同じ画面の中）。
@@ -139,7 +140,7 @@ describe('掘っていっても行き着かない画面が無い（実行⑭）'
       }
     }
     assert.deepEqual([...new Set(missing)].sort(),
-      ['/applications', '/events', '/reach-zones', '/staff'],
+      ['/applications', '/events', '/people/new/photo', '/reach-zones', '/staff'],
       '途中の段が無いルートの顔ぶれが変わった。押せる形になっていないか見直すこと')
 
     // ★ 押せる形＝`href` である。`revalidatePath('/reach-zones', 'layout')` は

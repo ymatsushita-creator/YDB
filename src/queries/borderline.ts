@@ -106,11 +106,23 @@ export interface TaskTotals {
 
 export interface CandidateRow {
   person_id: string
+  number: number | null
+  family_name: string
+  given_name: string
+  family_name_kana: string | null
+  given_name_kana: string | null
+  birth_date: string | null
   person_name: string
   person_kana: string | null
-  photo_data_url: string | null
+  has_photo: boolean
   school: string
   faculty: string | null
+  email: string | null
+  phone: string | null
+  line_user_id: string | null
+  note: string | null
+  first_channel_name: string | null
+  first_contacted_on: string | null
   /** 確度。規則が未登録なら null（0 ではない）。 */
   confidence_ratio: number | null
   rank_in_season: number | null
@@ -140,23 +152,37 @@ export async function listCandidatesByConfidence(
   db: Db, seasonId: string, opts: { limit: number; offset: number },
 ): Promise<CandidatePage> {
   const rows = await all<CandidateRow>(db, `
-    SELECT h.person_id,
+    SELECT h.person_id, n.number,
+           p.family_name, p.given_name, p.family_name_kana, p.given_name_kana,
+           to_char(p.birth_date, 'YYYY-MM-DD') AS birth_date,
            p.family_name || ' ' || p.given_name AS person_name,
            nullif(btrim(coalesce(p.family_name_kana, '') || ' '
                         || coalesce(p.given_name_kana, '')), '') AS person_kana,
-           p.photo_data_url,
-           sc.name AS school, p.faculty,
+           (p.photo_data_url IS NOT NULL) AS has_photo,
+           sc.name AS school, p.faculty, p.email, p.phone, p.line_user_id, p.note,
            c.confidence_ratio, c.rank_in_season, c.rank_delta,
            coalesce(c.has_previous_run, false) AS has_previous_run,
            (SELECT max(jst_date(t.occurred_at)) FROM v_touchpoint_season t
              WHERE t.person_id = h.person_id AND t.season_id = h.season_id)
              AS last_touchpoint_on,
+           first_touch.channel_name AS first_channel_name,
+           to_char(first_touch.occurred_on, 'YYYY-MM-DD') AS first_contacted_on,
            h.approach_code, h.approach_label
       FROM v_headhunting_list h
       JOIN persons p ON p.id = h.person_id
       JOIN schools sc ON sc.id = p.school_id
+      LEFT JOIN candidate_numbers n
+             ON n.person_id = h.person_id AND n.season_id = h.season_id
       LEFT JOIN v_candidate_confidence_latest c
              ON c.person_id = h.person_id AND c.season_id = h.season_id
+      LEFT JOIN LATERAL (
+        SELECT ch.name AS channel_name, jst_date(t.occurred_at) AS occurred_on
+          FROM touchpoints t
+          JOIN channels ch ON ch.id = t.channel_id
+         WHERE t.person_id = h.person_id
+         ORDER BY t.occurred_at, t.id
+         LIMIT 1
+      ) first_touch ON true
      WHERE h.season_id = $1
      ORDER BY c.rank_in_season NULLS LAST, h.state_since DESC, p.id
      LIMIT $2 OFFSET $3`, [seasonId, opts.limit, opts.offset])

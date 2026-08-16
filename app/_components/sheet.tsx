@@ -42,6 +42,9 @@ export interface SheetRowData {
   values: Record<string, string>
   /** 行の先頭に読み取りで添える文字（候補者番号・期・版数など）。 */
   lead?: string
+  /** 顔写真は表の行データへ埋め込まず、必要な行だけ別経路で読む。 */
+  photoSrc?: string
+  photoAlt?: string
   /**
    * 列にはしないが、その行と一緒に送るもの（フォーム回答の接合など）。
    * **画面に出さない値を、画面の外に持たせない** ―― 行と一緒に運ぶ。
@@ -65,6 +68,7 @@ const emptyValues = (columns: SheetColumn[]): Record<string, string> =>
 
 export function Sheet({
   columns, rows, action, hidden, leadLabel, addLabel = '行を追加', detail,
+  photoColumn = false,
 }: {
   columns: SheetColumn[]
   rows: SheetRowData[]
@@ -74,9 +78,11 @@ export function Sheet({
   /** 行の先頭の列の見出し（番号・期など）。 */
   leadLabel?: string
   addLabel?: string
+  /** 候補者表だけ、読み取り専用の顔写真列を先頭に置く。 */
+  photoColumn?: boolean
   /**
    * 行から開く先。`{id}` を行の ID で置き換える。
-   * 表から外したもの（顔写真・団体の写真・変更ログ）はここから入れる。
+   * 表で編集しないもの（写真の差し替え・変更ログ）はここから入れる。
    * ★ 関数は境界を越えられないので、**型ではなく文字列**で渡す。
    */
   detail?: { href: string; label: string }
@@ -203,6 +209,7 @@ export function Sheet({
         <table className="data sheet">
           <thead>
             <tr>
+              {photoColumn && <th className="sheet-photo">顔写真</th>}
               <th className="sheet-lead">{leadLabel ?? ''}</th>
               {columns.map((c) => <th key={c.key}>{c.label}</th>)}
               <th>結果</th>
@@ -212,6 +219,14 @@ export function Sheet({
             {data.map((row, rowIndex) => (
               <tr key={`${row.id}-${rowIndex}`}
                   className={errors.has(rowIndex) ? 'sheet-row-bad' : ''}>
+                {photoColumn && (
+                  <td className="sheet-photo">
+                    {row.photoSrc
+                      ? <img className="avatar" src={row.photoSrc} alt={row.photoAlt ?? ''}
+                             width={32} height={32} loading="lazy" />
+                      : <span className="avatar avatar-fallback" aria-hidden>—</span>}
+                  </td>
+                )}
                 <th scope="row" className="sheet-lead">
                   {/* ★ 新規行は色で分ける（依頼者の指示。C-185）。 */}
                   {row.id === ''

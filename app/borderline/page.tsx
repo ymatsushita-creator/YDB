@@ -212,32 +212,62 @@ export default async function BorderlinePage({
                 <p className="hh-empty">この年度の対象者がまだ1人も登録されていない。</p>
               ) : (
                 <div className="scroll-pane">
-                  <table className="hh-table bl-table">
+                  <table className="hh-table bl-table candidate-unified-table">
                     <thead>
                       <tr>
-                        <th className="num">確度</th><th>順位</th><th>名前</th>
-                        <th>学校・学部</th><th>最終接触日</th><th>次のアクション</th>
+                        <th>顔写真</th><th>番号</th><th className="num">確度</th><th>順位</th>
+                        <th>姓</th><th>名</th><th>姓（かな）</th><th>名（かな）</th>
+                        <th>生年月日</th><th>学校</th><th>学部・学科</th>
+                        <th>メール</th><th>電話番号</th><th>LINE ID</th>
+                        <th>流入元</th><th>接点の日</th><th>アプローチ状態</th>
+                        <th>担当者メモ</th><th>操作</th>
                       </tr>
                     </thead>
                     <tbody>
                       {candidates.rows.map((r) => (
                         <tr key={r.person_id}
                           className={`row-link${r.person_id === personId ? ' is-current' : ''}`}>
+                          <td className="candidate-photo-cell">
+                            {r.has_photo
+                              ? <img className="avatar" src={`/people/new/photo/${r.person_id}`}
+                                     alt={`${r.person_name}さんの顔写真`}
+                                     width={32} height={32} loading="lazy" />
+                              : <Avatar src={null} name={r.person_name} />}
+                          </td>
+                          <td className="num dim">{r.number ?? '—'}</td>
                           <td className="num strong">
                             <Confidence ratio={r.confidence_ratio} />
                             <RankDelta delta={r.rank_delta} hasPrevious={r.has_previous_run} />
                           </td>
                           <td><Rank rank={r.rank_in_season} /></td>
                           <td>
-                            {/* 氏名を押すと、その行に「メモ」と「採点」が出る
+                            {/* 姓を押すと、その行に「メモ」と「採点」が出る
                                 （実行⑪。依頼者の指示）。押しただけでは何も起きず、
                                 行き先は出てきたボタンが決める。
                                 右の「›」はその人の記録。 */}
                             <Link href={hereHref({ person: r.person_id, open: r.person_id })}
                                   className="bl-person">
-                              <Avatar src={r.photo_data_url} name={r.person_name} />
-                              {r.person_name}
+                              {r.family_name}
                             </Link>
+                          </td>
+                          <td>{r.given_name}</td>
+                          <td className="dim">{r.family_name_kana ?? '—'}</td>
+                          <td className="dim">{r.given_name_kana ?? '—'}</td>
+                          <td className="nowrap dim">{r.birth_date ?? '—'}</td>
+                          <td>{r.school}</td>
+                          <td className="dim">{r.faculty ?? '—'}</td>
+                          <td>{r.email ?? '—'}</td>
+                          <td className="nowrap">{r.phone ?? '—'}</td>
+                          <td>{r.line_user_id ?? '—'}</td>
+                          <td>{r.first_channel_name ?? '—'}</td>
+                          <td className="nowrap dim">{r.first_contacted_on ?? '—'}</td>
+                          <td>
+                            {r.approach_code && r.approach_label
+                              ? <ApproachChip code={r.approach_code} label={r.approach_label} />
+                              : <span className="muted-note">未登録</span>}
+                          </td>
+                          <td>{r.note ?? '—'}</td>
+                          <td className="candidate-row-actions">
                             <Link href={`/people/${r.person_id}?season=${season.id}`}
                                   className="row-detail"
                                   aria-label={`${r.person_name} の記録を開く`}>›</Link>
@@ -252,15 +282,6 @@ export default async function BorderlinePage({
                                       href={scoreHref(r.person_id)}>採点</Link>
                               </span>
                             )}
-                          </td>
-                          <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
-                          <td className="dim">
-                            {r.last_touchpoint_on ? jstDay(r.last_touchpoint_on) : 'この年度は接点なし'}
-                          </td>
-                          <td>
-                            {r.approach_code && r.approach_label
-                              ? <ApproachChip code={r.approach_code} label={r.approach_label} />
-                              : <span className="muted-note">未登録</span>}
                           </td>
                         </tr>
                       ))}
