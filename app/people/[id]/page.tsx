@@ -7,6 +7,7 @@ import {
   OUTCOME_LABEL,
 } from '../../../src/queries/drilldown.ts'
 import { listPersonInterviews } from '../../../src/queries/interview.ts'
+import { listNoteHistory } from '../../../src/queries/intake.ts'
 import { RECOMMENDATION_LABEL } from '../../../src/commands/interview.ts'
 import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime, filled,
@@ -24,13 +25,15 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   // 削除済みだけ別の応答にすると、その差が「その人は存在した」を漏らす。
   if (!person) notFound()
 
-  const [states, applications, touchpoints, interviews] = await Promise.all([
+  const [states, applications, touchpoints, interviews, noteHistory] = await Promise.all([
     getPersonSeasonStates(db, person.person_id),
     getPersonApplications(db, person.person_id),
     getPersonTouchpoints(db, person.person_id),
     // 詳細画面から面接画面へ行くための入口（依頼者の指示。実行⑩）。
     // 期で絞らない ―― 再応募した人の前年度の面接も、ここから開ける。
     listPersonInterviews(db, person.person_id),
+    // 担当者メモの履歴（C-177。依頼者の指示）。記録層は前から持っていた。
+    listNoteHistory(db, person.person_id),
   ])
 
   const kana = [person.family_name_kana, person.given_name_kana].filter(Boolean).join(' ')
@@ -113,6 +116,27 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             </tbody>
           </table>
           {person.note && <p className="unit-note">{person.note}</p>}
+
+          {/* ★ 担当者メモの履歴（依頼者の指示。実行⑰。C-177）――
+              「このメモは蓄積していって、過去のものまで見れるように」。
+              いちばん上が現在のメモなので、**2件目から**を過去として出す。
+              1件しか無い（＝一度も書き換えていない）ときは何も出さない。 */}
+          {noteHistory.length > 1 && (
+            <details className="note-history">
+              <summary>担当者メモの履歴（{num(noteHistory.length - 1)} 件）</summary>
+              <ul className="note-history-list">
+                {noteHistory.slice(1).map((h) => (
+                  <li key={h.revision_number}>
+                    <span className="section-note">{jstDay(h.changed_at)}</span>
+                    {/* 消したことも履歴である。空欄を「無かった」ことにしない。 */}
+                    <span className={h.note ? '' : 'section-note'}>
+                      {h.note ?? '（メモを消した）'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </Card>
 
         <Card title="年度ごとの現在地">

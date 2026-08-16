@@ -8,6 +8,7 @@ import {
 } from '../src/commands/ai_pre_assessment.ts'
 import { parseCsv } from '../src/import/csv.ts'
 import { TARGETS } from '../src/ai/ingest_plan.ts'
+import { REQUIRED_VIEWPOINT } from '../src/ai/pre_assessment.ts'
 
 /**
  * AI分析は事前ステータスであって、成績ではない（0044。C-164。依頼者の指示）。
@@ -54,6 +55,7 @@ describe('AI分析の事前ステータス（C-164）', () => {
       personId, seasonId, selectionStepId: stepId, labelCode: '標準',
       rationale: '4観点いずれも記述はあるが、際立った点は無い。',
       model: 'claude-opus-5', source: 'application_answers',
+      viewpoints: [{ viewpoint: REQUIRED_VIEWPOINT, score: 3, finding: '根拠が主張につながっている。' }],
     })
     assert.equal(r.ok, true)
     const now = await maybeOne<{ label: string; model: string }>(db, `
@@ -69,6 +71,7 @@ describe('AI分析の事前ステータス（C-164）', () => {
       personId, seasonId, selectionStepId: stepId, labelCode: '注目',
       rationale: 'やり遂げた実績の記述が具体的である。',
       model: 'claude-opus-5', source: 'application_answers',
+      viewpoints: [{ viewpoint: REQUIRED_VIEWPOINT, score: 3, finding: '根拠が主張につながっている。' }],
     })
     assert.equal(r.ok, true)
     assert.notEqual(r.ok && r.previousId, null, '打ち消し先が記録されていない')
@@ -89,20 +92,88 @@ describe('AI分析の事前ステータス（C-164）', () => {
   })
 
   test('★★ AI分析は成績（evaluation_scores）へ入っていない', async () => {
+    // ★ AIは点を出す（0045）。**が、成績の層には1件も入らない。**
     const scores = Number(await scalar(db, `SELECT count(*) FROM evaluation_scores`))
-    assert.equal(scores, 0, 'AI分析が点として混ざっている')
-    // 記録層にも軸への道が無い。
+    assert.equal(scores, 0, 'AI分析が成績として混ざっている')
+    // 評価軸への道も無い。あれば集計に混ざる。
     const fk = Number(await scalar(db, `
       SELECT count(*) FROM information_schema.columns
-       WHERE table_name = 'ai_pre_assessments'
-         AND column_name IN ('criterion_id', 'score', 'points')`))
-    assert.equal(fk, 0, 'AI分析の表が点や軸を持ってしまっている')
+       WHERE table_name IN ('ai_pre_assessments', 'ai_pre_viewpoints')
+         AND column_name IN ('criterion_id', 'evaluation_id', 'evaluation_criteria_id')`))
+    assert.equal(fk, 0, 'AI分析の表が評価軸に紐づいてしまっている')
+    // 観点の呼び名も軸マスタには入っていない（依頼者が退けた点）。
+    const asCriteria = Number(await scalar(db, `
+      SELECT count(*) FROM evaluation_criteria
+       WHERE name IN (SELECT viewpoint FROM ai_pre_viewpoints)`))
+    assert.equal(asCriteria, 0, 'AIの観点が評価軸として登録されている')
+  })
+
+  test('★ 点は観点ごとに残り、合計はビューが足す（別に持たない）', async () => {
+    const vp = await all<{ viewpoint: string; score: number }>(db, `
+      SELECT viewpoint, score FROM v_ai_pre_viewpoints
+       WHERE person_id = $1 AND season_id = $2 AND selection_step_id = $3
+       ORDER BY sort_order`, [personId, seasonId, stepId])
+    assert.equal(vp.length, 1, '観点は論理性の1つだけ')
+    assert.equal(vp[0]!.viewpoint, REQUIRED_VIEWPOINT)
+    assert.equal(Number(vp[0]!.score), 3)
+
+    const t = await maybeOne<{ score: number; scale_max: number }>(db, `
+      SELECT score, scale_max FROM v_ai_pre_total
+       WHERE person_id = $1 AND season_id = $2 AND selection_step_id = $3`,
+    [personId, seasonId, stepId])
+    assert.equal(Number(t?.score), 3, '合計が内訳と合っていない')
+    assert.equal(Number(t?.scale_max), 4, '満点が1軸あたりの4点になっていない')
+  })
+
+  test('満点を超える点・負の点は入らない', async () => {
+    for (const score of [5, -1, 1.5]) {
+      const r = await recordAiPreAssessment(db, {
+        personId, seasonId, selectionStepId: stepId, labelCode: '標準',
+        rationale: 'x', model: 'claude-opus-5', source: 'application_answers',
+        viewpoints: [{ viewpoint: '論理性', score, finding: 'a' }],
+      })
+      assert.equal(!r.ok && r.reason, 'score_out_of_range', `${score} が通った`)
+    }
+  })
+
+  test('★ 観点が空の分析は受け付けない（点の無い採点を残さない）', async () => {
+    const r = await recordAiPreAssessment(db, {
+      personId, seasonId, selectionStepId: stepId, labelCode: '標準',
+      rationale: 'x', model: 'claude-opus-5', source: 'application_answers',
+      viewpoints: [],
+    })
+    assert.equal(!r.ok && r.reason, 'viewpoints_required')
+  })
+
+  test('★ 論理性の観点が無い分析は受け付けない（依頼者の指示）', async () => {
+    const r = await recordAiPreAssessment(db, {
+      personId, seasonId, selectionStepId: stepId, labelCode: '標準',
+      rationale: 'x', model: 'claude-opus-5', source: 'application_answers',
+      viewpoints: [
+        { viewpoint: 'NEOとの相性', score: 2, finding: 'a' },
+        { viewpoint: '実績', score: 3, finding: 'b' },
+      ],
+    })
+    assert.equal(!r.ok && r.reason, 'logic_viewpoint_required')
+  })
+
+  test('同じ観点は2度出せない', async () => {
+    const r = await recordAiPreAssessment(db, {
+      personId, seasonId, selectionStepId: stepId, labelCode: '標準',
+      rationale: 'x', model: 'claude-opus-5', source: 'application_answers',
+      viewpoints: [
+        { viewpoint: REQUIRED_VIEWPOINT, score: 2, finding: 'a' },
+        { viewpoint: REQUIRED_VIEWPOINT, score: 3, finding: 'b' },
+      ],
+    })
+    assert.equal(!r.ok && r.reason, 'bad_viewpoint')
   })
 
   test('別の期の段には付けられない', async () => {
     const r = await recordAiPreAssessment(db, {
       personId, seasonId, selectionStepId: otherStepId, labelCode: '標準',
       rationale: 'x', model: 'claude-opus-5', source: 'application_answers',
+      viewpoints: [{ viewpoint: REQUIRED_VIEWPOINT, score: 3, finding: '根拠が主張につながっている。' }],
     })
     assert.equal(r.ok, false)
     assert.equal(!r.ok && r.reason, 'step_not_found')
@@ -117,6 +188,7 @@ describe('AI分析の事前ステータス（C-164）', () => {
       const r = await recordAiPreAssessment(db, {
         personId, seasonId, selectionStepId: stepId, labelCode: '標準',
         rationale: 'x', model: 'claude-opus-5', source: 'application_answers',
+        viewpoints: [{ viewpoint: REQUIRED_VIEWPOINT, score: 3, finding: '根拠が主張につながっている。' }],
         ...patch,
       })
       assert.equal(!r.ok && r.reason, reason)

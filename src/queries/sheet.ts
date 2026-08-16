@@ -110,6 +110,11 @@ export interface PartnerSheetRow {
   contact_department: string | null
   /** NEO 側の受け持ち（0034）。 */
   internal_owner: string | null
+  /** 応募管理表 011 から（0046）。空は「聞いていない」、0 は「枠が無い」。 */
+  recommendation_seats: number | null
+  partnered_on: string | null
+  best_contact_period: string | null
+  location: string | null
   /** NEO としてどう関わるか（0031）。自由入力の1行。 */
   engagement: string | null
   /** その期の推薦枠ステイタス（0035）。**期ごと**なので団体の列ではない。 */
@@ -132,6 +137,7 @@ export const listPartnerSheetRows = (db: Db, seasonId?: string) =>
   all<PartnerSheetRow>(db, `
     SELECT p.id AS partner_id, p.name, p.category, p.contact_name, p.contact_email,
            p.contact_department, p.internal_owner, p.engagement,
+           p.recommendation_seats, p.partnered_on, p.best_contact_period, p.location,
            (p.photo_data_url IS NOT NULL) AS has_photo,
            (SELECT count(*)::int FROM partner_engagement_revisions r
              WHERE r.partner_id = p.id) AS engagement_revisions,

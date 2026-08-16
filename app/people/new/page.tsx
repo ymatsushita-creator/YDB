@@ -77,12 +77,13 @@ export default async function NewCandidatePage({
     { key: 'email', label: 'メール', type: 'email', width: 180 },
     { key: 'phone', label: '電話番号', type: 'text', width: 130 },
     { key: 'lineUserId', label: 'LINE ID', type: 'text' },
-    // 接点は新規行だけ。既存行では読み取り（書き換えの置き場所が無い）。
+    // ★ 接点は既存行でも入れられる（依頼者の指示。実行⑰。C-183）。
+    //   **書き換えではなく、接点を1件積む。** 2つ揃って初めて足す。
     {
       key: 'channelId', label: '流入元', type: 'select', width: 130,
-      options: options.channels.map((c) => ({ id: c.id, label: c.label })), newOnly: true,
+      options: options.channels.map((c) => ({ id: c.id, label: c.label })),
     },
-    { key: 'contactedOn', label: '接点の日', type: 'date', newOnly: true },
+    { key: 'contactedOn', label: '接点の日', type: 'date' },
     // アプローチ状態は既存行だけ。新規行は登録時に「未アプローチ」が入る。
     {
       key: 'approachStateId', label: 'アプローチ状態', type: 'select',
@@ -91,6 +92,14 @@ export default async function NewCandidatePage({
     { key: 'note', label: '担当者メモ', type: 'text', width: 220 },
     // 入力者は行ごと（依頼者の指示）。名簿は「入力者を追加」から増やす。
     { key: 'staffId', label: '入力者', type: 'select', options: options.staffs, width: 130 },
+    // ★ アーカイブ（依頼者の指示。実行⑰。C-184）。**一番右**に置く。
+    //   ★ 記録は消えない ―― 一覧から外れるだけで、応募も面接も点も残る。
+    //   ★ 新規行では選ばせない（作る前にしまうものが無い）。
+    {
+      key: 'archive', label: 'アーカイブ', type: 'select', width: 120,
+      existingOnly: true,
+      options: [{ id: 'archive', label: 'アーカイブする' }],
+    },
   ]
 
   const sheetRows: SheetRowData[] = [
@@ -105,6 +114,7 @@ export default async function NewCandidatePage({
           email: from.respondent_email ?? '',
           phone: '', lineUserId: from.respondent_line ?? '',
           channelId: '', contactedOn: '', approachStateId: '', note: '', staffId: '',
+          archive: '',
         },
         // 列にはしないが、この行と一緒に送る。保存で回答が結び付く。
         extra: { formResponseId: from.form_response_id },
@@ -124,11 +134,16 @@ export default async function NewCandidatePage({
         email: r.email ?? '',
         phone: r.phone ?? '',
         lineUserId: r.line_user_id ?? '',
-        channelId: r.first_channel_name ?? '',
-        contactedOn: r.first_contacted_on ?? '',
+        // ★ 既存行は**空で出す**（C-183）。ここは「最初の流入元」を映す欄では
+        //   なくなり、**接点を1件足す欄**になった。前の値を置くと、
+        //   保存のたび同じ接点を足そうとしているように読める。
+        //   （最初の流入元は詳細画面の接点の一覧で読む。）
+        channelId: '',
+        contactedOn: '',
         approachStateId: r.approach_state_id ?? '',
         note: r.note ?? '',
         staffId: '',
+        archive: '',
       },
     })),
   ]

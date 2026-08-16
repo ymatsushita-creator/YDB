@@ -7,6 +7,7 @@ import {
   listSeasons, defaultSeason, getSeason, getHomeTrends, hasScoringRules, getSummary,
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
+import { listKpis } from '../src/queries/kpi.ts'
 import { Card, Empty, num, NotDerived } from './_components/ui.tsx'
 import { TimeSeries, Legend } from './_components/charts.tsx'
 import { Confidence } from './_components/headhunting.tsx'
@@ -79,12 +80,12 @@ export default async function Home(
             <ul className="stack">
               <li>
                 <Link href={season ? `/people/new?season=${season.id}` : '/people/new'}>
-                  候補者を追加 ›
+                  候補者を編集 ›
                 </Link>
               </li>
               <li>
                 <Link href={season ? `/approach/new?season=${season.id}` : '/approach/new'}>
-                  連携団体を追加 ›
+                  連携団体を編集 ›
                 </Link>
               </li>
               <li><Link href="/staff/new">入力者を追加 ›</Link></li>
@@ -103,11 +104,12 @@ export default async function Home(
     )
   }
 
-  const [trends, picks, hasRules, summary] = await Promise.all([
+  const [trends, picks, hasRules, summary, kpis] = await Promise.all([
     getHomeTrends(db, season.id),
     listConfidence(db, season.id, 3),
     hasScoringRules(db),
     getSummary(db, season.id),
+    listKpis(db, season.id),
   ])
 
   // ★ 応募の目標との比較（実行⑯。依頼者の指示。C-152 で引き継いだ値を使う）。
@@ -178,9 +180,26 @@ export default async function Home(
               <>
                 {/* ★ 高さは器が決める（C-161）。300 は当て推量で、
                     画面が高いと図の下に灰色が残っていた。 */}
-                <TimeSeries points={trends} series={series} height={360} valueLabel="候補者と選考" />
+                <TimeSeries points={trends} series={series} height={220} valueLabel="候補者と選考" />
                 <Legend series={series} />
               </>
+            )}
+          </Card>
+        </div>
+
+        <div className="section">
+          <Card title="KPI" titleHref={to('/kpis')}>
+            {kpis.length === 0 ? <Empty>KPIはまだ登録されていない</Empty> : (
+              <div className="home-kpi-results">
+                {kpis.map((kpi) => (
+                  <article className="kpi-result-card" key={kpi.id}>
+                    <span>{kpi.title}</span>
+                    <strong>{num(kpi.value)}</strong>
+                    <small>{kpi.variable}</small>
+                    {kpi.memo && <p>{kpi.memo}</p>}
+                  </article>
+                ))}
+              </div>
             )}
           </Card>
         </div>

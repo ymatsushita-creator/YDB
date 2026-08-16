@@ -288,7 +288,7 @@ export default async function HeadhuntingPage({
             <header className="hh-head">
               <h2>特別選考リスト</h2>
               <Link href={`/people/new?season=${season.id}`} className="hh-more">
-                候補者を追加 ›
+                候補者を編集 ›
               </Link>
             </header>
             {list.length === 0 ? (

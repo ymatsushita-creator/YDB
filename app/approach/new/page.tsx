@@ -61,7 +61,7 @@ export default async function NewReachPage({
         root={seasonLabel(season)}
         crumbs={[
           { label: '連携団体', href: `/approach?season=${season.id}` },
-          { label: '連携団体を追加' },
+          { label: '連携団体を編集' },
         ]}
       />
 
@@ -69,7 +69,7 @@ export default async function NewReachPage({
 
       <div className="page-head">
         <div>
-          <h1 className="page-title">連携団体を追加</h1>
+          <h1 className="page-title">連携団体を編集</h1>
           <p className="page-sub">{seasonLabel(season)}</p>
         </div>
       </div>

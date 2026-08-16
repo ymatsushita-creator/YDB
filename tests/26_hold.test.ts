@@ -131,8 +131,8 @@ describe('保留にする（C-35）', () => {
   test('動いていない応募の評価は保留にできない', async () => {
     const db = await freshDb({ seeds: 'production' })
     const w = await world(db)
-    const { appId, evalId } = await pendingEvaluation(w, '不合格ずみ', 1)
-    // 書類選考は軸が0本なので、点を付けずに確定できる（C-33）。
+    // ★ 書類選考には 0010 で4軸が入った（C-187）。軸が0本なのは応募受付。
+    const { appId, evalId } = await pendingEvaluation(w, '不合格ずみ', 0)
     assert.ok((await submitEvaluation(db, { evaluationId: evalId })).ok)
     assert.ok((await decideStep(db, {
       applicationId: appId, decision: 'reject', staffId: w.staff[0]!,

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ScoringSheet } from '../../src/queries/borderline.ts'
 import { num } from './ui.tsx'
+import { shownRationale } from '../../src/records/placeholder.ts'
 import {
   scoreOnBorderlineAction, correctScoreOnBorderlineAction, submitOnBorderlineAction,
 } from '../borderline/actions.ts'
@@ -73,10 +74,11 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
                 {c.criteria_description && (
                   <span className="criteria-guide">{c.criteria_description}</span>
                 )}
-                {/* 付いた点は根拠ごと残す。点だけ出すと後から誰も説明できない。 */}
-                {c.score !== null && (
+                {/* 付いた点は根拠ごと出す。点だけ出すと後から誰も説明できない。
+                    ★ ただし取り込みの埋め草は出さない（C-166。依頼者の指示）。 */}
+                {shownRationale(c.rationale) && (
                   <span className="section-note" style={{ display: 'block' }}>
-                    {c.rationale}
+                    {shownRationale(c.rationale)}
                   </span>
                 )}
               </span>

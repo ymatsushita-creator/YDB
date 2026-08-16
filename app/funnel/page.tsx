@@ -2,6 +2,7 @@ import { getDb } from '../../src/db/server.ts'
 import {
   listSeasons, defaultSeason, getSeason, getFunnel, getSummary, getStepFlow,
   getChannelPerformance, getWithdrawReasons, getReachConversion, ACTIVE_WINDOW_DAYS,
+  listCourseTargets,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, pct, ymd } from '../_components/ui.tsx'
 import { TimeSeries, Legend, FunnelStages } from '../_components/charts.tsx'
@@ -35,13 +36,15 @@ export default async function FunnelPage(
     (await getSeason(db, (await searchParams).season)) ??
     defaultSeason(seasons)!
 
-  const [summary, funnel, steps, channels, withdrawals, reach] = await Promise.all([
+  const [summary, funnel, steps, channels, withdrawals, reach, targets] = await Promise.all([
     getSummary(db, season.id),
     getFunnel(db, season.id),
     getStepFlow(db, season.id),
     getChannelPerformance(db, season.id),
     getWithdrawReasons(db, season.id),
     getReachConversion(db, season.id),
+    // KPI目標（0043。C-179）。取り込んであったのに読んでいなかった。
+    listCourseTargets(db, season.id),
   ])
 
   const s = summary ?? {
@@ -133,6 +136,41 @@ export default async function FunnelPage(
           )}
         </Card>
       </div>
+
+      {/* ★ KPI目標（0043。C-179。依頼者の指示）。
+          応募管理表から取り込んだ目標を、初めて画面に出す。
+          ★ 実績の列は**作らない** ―― 目標の区分（コース別・施策別）に
+            対応する区分が記録の側に無い。当てると違う母集団の割り算になる。 */}
+      {targets.length > 0 && (
+        <div className="section">
+          <Card title={`募集の目標（${num(targets.length)} 束）`}>
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>区分</th><th>コース／施策</th><th>対象</th>
+                    <th className="num">合格</th><th className="num">応募</th>
+                    <th className="num">説明会</th><th className="num">リーチ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {targets.map((t, i) => (
+                    <tr key={`${t.category}-${t.course_label}-${i}`}>
+                      <td>{t.category}</td>
+                      <th scope="row">{t.course_label}</th>
+                      <td>{t.segment_label ?? <span className="section-note">全体</span>}</td>
+                      <td className="num">{t.target_accepted ?? '—'}</td>
+                      <td className="num">{t.target_applicants ?? '—'}</td>
+                      <td className="num">{t.target_briefing ?? '—'}</td>
+                      <td className="num">{t.target_reach ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="section">
         <Card

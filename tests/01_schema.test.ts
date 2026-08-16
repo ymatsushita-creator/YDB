@@ -142,6 +142,8 @@ describe('マイグレーション', () => {
       // 0044: AI分析の事前ステータス。**成績（evaluation_scores）とは別の層**
       'v_effective_ai_pre_assessments',
       'v_ai_pre_assessment',
+      'v_ai_pre_total',
+      'v_ai_pre_viewpoints',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

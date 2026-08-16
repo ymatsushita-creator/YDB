@@ -89,13 +89,13 @@ export default async function NewEventPage({
         root={seasonLabel(season)}
         crumbs={[
           { label: '連携団体', href: `/approach?season=${season.id}` },
-          { label: 'イベントを追加' },
+          { label: 'イベントを編集' },
         ]}
       />
 
       <div className="page-head">
         <div>
-          <h1 className="page-title">イベントを追加</h1>
+          <h1 className="page-title">イベントを編集</h1>
           <p className="page-sub">{seasonLabel(season)}</p>
         </div>
       </div>

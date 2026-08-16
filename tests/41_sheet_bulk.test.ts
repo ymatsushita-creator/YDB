@@ -29,6 +29,7 @@ const EMPTY_ROW = {
   personId: '', familyName: '', givenName: '', familyNameKana: '', givenNameKana: '',
   birthDate: '', schoolId: '', faculty: '', email: '', phone: '', lineUserId: '',
   note: '', channelId: '', contactedOn: '', approachStateId: '', staffId: '',
+  archive: '',
 }
 
 describe('表のまとめて保存', () => {
@@ -57,6 +58,7 @@ describe('表のまとめて保存', () => {
   })
 
   after(async () => { await db.close() })
+
 
   // -----------------------------------------------------------
   // ①② 部分失敗と空行
@@ -242,6 +244,67 @@ describe('表のまとめて保存', () => {
   })
 
   // -----------------------------------------------------------
+  // 既存の人にも接点を積める（C-183。依頼者の指示）
+  // -----------------------------------------------------------
+  test('★ 既存行に流入元と日を入れると、接点が1件積まれる（上書きしない）', async () => {
+    const first = await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, familyName: '架空接', givenName: '点', schoolId,
+        channelId, contactedOn: '2026-01-10', staffId }],
+    })
+    const r0 = first.rows[0]!
+    const personId = r0.ok ? (r0.id ?? '') : ''
+    assert.notEqual(personId, '')
+    const count = () => scalar<string>(db,
+      `SELECT count(*) FROM touchpoints WHERE person_id = $1`, [personId]).then(Number)
+    assert.equal(await count(), 1)
+
+    // 既存行として、別の日で積む。**前の接点は消えない。**
+    const again = await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, personId, familyName: '架空接', givenName: '点',
+        schoolId, channelId, contactedOn: '2026-02-20', staffId }],
+    })
+    assert.equal(again.rows[0]!.ok, true)
+    assert.equal(await count(), 2, '接点が積まれていない（上書きしている）')
+
+    // 同じチャネル・同じ日は二度積まない。
+    await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, personId, familyName: '架空接', givenName: '点',
+        schoolId, channelId, contactedOn: '2026-02-20', staffId }],
+    })
+    assert.equal(await count(), 2, '同じ接点を二度積んでいる')
+  })
+
+  test('★ アーカイブを選ぶと一覧から外れるが、記録は消えない（C-184）', async () => {
+    const made = await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, familyName: '架空棚', givenName: '入', schoolId,
+        channelId, staffId }],
+    })
+    const m0 = made.rows[0]!
+    const personId = m0.ok ? (m0.id ?? '') : ''
+    assert.notEqual(personId, '')
+
+    const r = await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, personId, familyName: '架空棚', givenName: '入',
+        schoolId, archive: 'archive', staffId }],
+    })
+    assert.equal(r.rows[0]!.ok, true)
+
+    // 行は残っている。消えたのではなく、しまわれた。
+    const alive = await scalar<string>(db,
+      `SELECT count(*) FROM persons WHERE id = $1`, [personId]).then(Number)
+    assert.equal(alive, 1, '行ごと消している')
+    const archived = await scalar<string>(db,
+      `SELECT count(*) FROM persons WHERE id = $1 AND deleted_at IS NOT NULL`,
+      [personId]).then(Number)
+    assert.equal(archived, 1, 'アーカイブされていない')
+  })
+
+  // -----------------------------------------------------------
   // ⑧ 団体と接触の表
   // -----------------------------------------------------------
   test('団体の表：関わり方は履歴を積み、窓口のメールの形は見る', async () => {
@@ -252,7 +315,8 @@ describe('表のまとめて保存', () => {
       rows: [{
         partnerId, category: '大学', contactName: '窓口 太郎',
         contactEmail: 'メールではない', contactDepartment: '', internalOwner: '',
-        engagement: '共催先', recommendationStateId: '', staffId,
+        engagement: '共催先', recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '',
+      recommendationStateId: '', staffId,
       }],
     })
     assert.equal(bad.failed, 1, '窓口のメールが読めない行は保存しない')
@@ -263,7 +327,8 @@ describe('表のまとめて保存', () => {
         contactEmail: 'mado@example.test',
         // 0034（応募管理表 011 にあってDBに無かった2列）。
         contactDepartment: '企画部社会共創課', internalOwner: '架空 職員',
-        engagement: '共催先', recommendationStateId: '', staffId,
+        engagement: '共催先', recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '',
+      recommendationStateId: '', staffId,
       }],
     })
     assert.equal(good.updated, 1)
@@ -284,7 +349,8 @@ describe('表のまとめて保存', () => {
     const r = await savePartnerSheet(db, {
       rows: [{
         partnerId, category: '', contactName: '', contactEmail: '',
-        contactDepartment: 'QREC', internalOwner: '', engagement: '', recommendationStateId: '', staffId,
+        contactDepartment: 'QREC', internalOwner: '', engagement: '', recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '',
+      recommendationStateId: '', staffId,
       }],
     })
     assert.equal(r.updated, 1)
@@ -294,7 +360,8 @@ describe('表のまとめて保存', () => {
     const blank = await savePartnerSheet(db, {
       rows: [{
         partnerId, category: '', contactName: '', contactEmail: '',
-        contactDepartment: '　', internalOwner: '', engagement: '', recommendationStateId: '', staffId,
+        contactDepartment: '　', internalOwner: '', engagement: '', recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '',
+      recommendationStateId: '', staffId,
       }],
     })
     assert.equal(blank.failed, 0)
@@ -393,4 +460,6 @@ describe('入力者の表', () => {
 
     await db.close()
   })
+
+
 })

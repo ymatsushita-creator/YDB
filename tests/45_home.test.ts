@@ -42,6 +42,7 @@ describe('ホーム', () => {
     const src = await body('app/page.tsx')
     assert.match(src, /<Shell active="home"/, 'ホームは共通シェルを被る')
     assert.match(src, /Card title="推移"/)
+    assert.match(src, /Card title="KPI" titleHref=\{to\('\/kpis'\)\}/)
     assert.match(src, /Card title="ピックアップ候補者"/)
     // ★ C-162 で5枚目（応募・目標比）を足した。目標が無い期では出ない
     //   （条件付き JSX の1本）ので、書かれている `<HomeKpi` は5箇所。

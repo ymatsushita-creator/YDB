@@ -258,15 +258,15 @@ describe('評価の観点が0本の段（C-33）', () => {
        WHERE NOT EXISTS (SELECT 1 FROM evaluation_criteria ec
                           WHERE ec.selection_step_id = ss.id)
        ORDER BY se.cohort_number, ss.sort_order`)
-    // ★ グループ面接は 0008 で軸が入った（依頼者「最終と同じでいいから」）。
-    //   残るは応募受付（関門で採点しない）と書類選考（呼び名が未受領）。
+    // ★ グループ面接は 0008、書類選考は 0010 で軸が入った（C-187）。
+    //   残るは応募受付だけ ―― 関門であって採点しない。
     assert.deepEqual(noCriteria.map((r) => [r.cohort, r.name]), [
-      [2, '応募受付'], [2, '書類選考'],
-      [3, '応募受付'], [3, '書類選考'],
+      [2, '応募受付'],
+      [3, '応募受付'],
     ], '軸が0本の段の顔ぶれが変わった。画面の分岐（C-33）も見直すこと')
 
     const appId = await newApplication(w, '軸なし')
-    const step = w.steps[1]!                          // 書類選考
+    const step = w.steps[0]!                          // 応募受付（軸が0本）
     await work(w, appId, step, 0, false)              // 採点は0件のまま確定まで行く
     assert.equal(
       await scalar<number>(db, `SELECT count(*)::int FROM evaluation_scores`), 0,
@@ -285,7 +285,7 @@ describe('評価の観点が0本の段（C-33）', () => {
     const appId = await newApplication(w, '軸の総数')
     await db.query(`
       INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id, assigned_at)
-      VALUES ($1, $2, $3, now())`, [appId, w.steps[1]!.id, w.staff[0]])
+      VALUES ($1, $2, $3, now())`, [appId, w.steps[0]!.id, w.staff[0]])
     // criteria_total はビューではなく getOpenTasks が組み立てている。
     const tasks = await getOpenTasks(db, w.seasonId)
     const t = tasks.find((x) => x.application_id === appId)

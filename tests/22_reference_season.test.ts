@@ -126,7 +126,8 @@ describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
 
     assert.deepEqual(await shape(3), await shape(2), '3期の軸が2期と食い違っている')
     // 特別選考9 ＋ 最終面接6 ＋ グループ面接6（0008 で最終面接から写した）
-    assert.equal((await shape(3)).length, 21, '特別選考9 ＋ 最終面接6 ＋ グループ面接6')
+    assert.equal((await shape(3)).length, 25,
+      '特別選考9 ＋ 最終面接6 ＋ グループ面接6 ＋ 書類選考4（C-187）')
     await db.close()
   })
 
@@ -258,23 +259,23 @@ describe('本番シードの評価の観点', () => {
     await db.close()
   })
 
-  test('書類選考の軸は入れていない（満点16は確定。呼び名が未確認）', async () => {
+  test('★ 書類選考は4軸16点（C-187。依頼者が呼び名を決めた）', async () => {
     const db = await productionDb()
-    // 実測の最大が満点ではない、の実例がここにある。
-    // doc_score は実測13・満点16だった。実測から満点を推定していたら間違えていた。
-    const n = await scalar<number>(
-      db,
-      `SELECT count(*)::int
-         FROM evaluation_criteria c
-         JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = '書類選考'`,
-    )
-
-    assert.equal(
-      n,
-      0,
-      '軸を足すときは呼び名を確認してから。名付けるとマスタとして固定化する（原則3）',
-    )
+    const rows = await all<{ name: string; scale_max: number; sort_order: number }>(db, `
+      SELECT c.name, c.scale_max, c.sort_order
+        FROM evaluation_criteria c
+        JOIN selection_steps s ON s.id = c.selection_step_id
+        JOIN seasons se ON se.id = s.season_id AND NOT se.is_demo
+       WHERE s.name = '書類選考' AND se.cohort_number = 2
+       ORDER BY c.sort_order`)
+    assert.deepEqual(rows.map((r) => r.name),
+      ['論理力', 'NEOとの親和性', 'やり遂げた実績', 'コミットする意志'],
+      '軸の呼び名は依頼者が決めたもの。こちらで言い換えない')
+    assert.deepEqual(rows.map((r) => Number(r.scale_max)), [4, 4, 4, 4])
+    // ★ 満点16は応募管理表で確かめた値。4軸×4点で一致する。
+    assert.equal(rows.reduce((n, r) => n + Number(r.scale_max), 0), 16)
+    // ★ 1本目が論理力（AIが付け、この順で並べる）。
+    assert.equal(rows[0]!.name, '論理力', '並べ替えの基準が1本目に来ていない')
     await db.close()
   })
 
@@ -315,7 +316,7 @@ describe('シードは何度流しても増えない', () => {
     // 2期と3期で42。2回流しても増えない。
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 2)
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 10)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 42)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 50)
     await db.close()
   })
 })

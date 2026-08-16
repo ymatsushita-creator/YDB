@@ -1,6 +1,6 @@
 import { openPostgres } from '../src/db/postgres.ts'
 import { all, maybeOne } from '../src/db/client.ts'
-import { assessApplication } from '../src/ai/pre_assessment.ts'
+import { assessApplication, SCALE_MAX } from '../src/ai/pre_assessment.ts'
 import { recordAiPreAssessment, listAiPreLabels } from '../src/commands/ai_pre_assessment.ts'
 
 /**
@@ -48,17 +48,29 @@ if (!step) { console.error('書類選考の段が無い'); process.exit(1) }
 const labels = await listAiPreLabels(db)
 if (labels.length === 0) { console.error('札が無い（seed 0009 未適用）'); process.exit(1) }
 
-// 回答が結び付いていて、まだ分析していない人。
-const targets = await all<{ person_id: string; raw: Record<string, unknown> }>(db, `
-  SELECT f.person_id, f.raw
-    FROM form_responses f
-    JOIN persons p ON p.id = f.person_id AND p.deleted_at IS NULL
-   WHERE f.person_id IS NOT NULL
+/**
+ * ★ 回答の置き場所は `form_responses` **ではない**（本番の帳簿で確かめた）。
+ *   2期の応募フォームは `person_notes` に入っている ――
+ *   `involvement` が「2期の応募フォーム（1/2）」のような語で、
+ *   長い回答は分割されて複数行になっている（`import-application-forms.ts`）。
+ *   だから**その人の分をまとめてから**渡す。
+ *
+ * ★ その期に応募がある人だけを対象にする。応募していない人の回答を
+ *   その期の書類選考の下読みに使うと、母集団が画面と食い違う。
+ */
+const targets = await all<{ person_id: string; body: string }>(db, `
+  SELECT n.person_id,
+         string_agg(n.body, E'\\n\\n' ORDER BY n.involvement) AS body
+    FROM person_notes n
+    JOIN persons p ON p.id = n.person_id AND p.deleted_at IS NULL
+    JOIN applications a ON a.person_id = n.person_id AND a.season_id = $1
+                       AND a.voided_at IS NULL AND a.deleted_at IS NULL
+   WHERE n.involvement LIKE '%応募フォーム%'
      ${again ? '' : `AND NOT EXISTS (
-           SELECT 1 FROM v_ai_pre_assessment a
-            WHERE a.person_id = f.person_id AND a.season_id = $1
-              AND a.selection_step_id = $2)`}
-   ORDER BY f.submitted_at`, [season.id, step.id])
+           SELECT 1 FROM v_ai_pre_assessment x
+            WHERE x.person_id = n.person_id AND x.season_id = $1
+              AND x.selection_step_id = $2)`}
+   GROUP BY n.person_id`, [season.id, step.id])
 
 const queue = limit > 0 ? targets.slice(0, limit) : targets
 console.log(`対象: ${queue.length}件${limit > 0 ? `（全${targets.length}件のうち）` : ''}`)
@@ -69,36 +81,38 @@ if (!apply) {
   process.exit(0)
 }
 
-/** 氏名・連絡先にあたる設問はAPIへ送らない。 */
-const IDENTITY = /氏名|名前|ふりがな|フリガナ|メール|mail|電話|tel|line|住所/i
-
 let done = 0
+let total = 0
 const counts = new Map<string, number>()
 const failed: string[] = []
 for (const t of queue) {
-  const answers = Object.entries(t.raw ?? {})
-    .filter(([q]) => !IDENTITY.test(q))
-    .map(([q, a]) => ({ question: q, answer: String(a ?? '') }))
-    .filter((a) => a.answer.trim() !== '')
-  if (answers.length === 0) continue
+  // ★ 設問と回答が1本の文章に混ざっている。**こちらで切り分けない** ――
+  //   区切り方を推測すると、推測が外れた分だけ回答が欠ける。丸ごと渡す。
+  const answers = [{ question: '応募フォームの回答', answer: t.body ?? '' }]
+  if (answers[0]!.answer.trim() === '') continue
 
   try {
     const got = await assessApplication({ labels, answers })
     const r = await recordAiPreAssessment(db, {
       personId: t.person_id, seasonId: season.id, selectionStepId: step.id,
       labelCode: got.label, rationale: got.rationale, model: got.model,
-      source: 'form_responses.raw',
+      source: 'person_notes（応募フォーム）',
+      viewpoints: got.viewpoints.map((v) => ({ ...v, scaleMax: SCALE_MAX })),
     })
     if (r.ok) {
       done += 1
       counts.set(got.label, (counts.get(got.label) ?? 0) + 1)
+      total += got.viewpoints.reduce((s, v) => s + v.score, 0)
     } else failed.push(r.reason)
   } catch (e) {
-    failed.push(e instanceof Error ? e.name : 'unknown')
+    failed.push(e instanceof Error ? `${e.name}: ${e.message}` : 'unknown')
   }
 }
 
 console.log(`\n付けた: ${done}件`)
+if (done > 0) {
+  console.log(`  論理性の平均: ${(total / done).toFixed(1)} / ${SCALE_MAX}点`)
+}
 for (const [label, n] of counts) console.log(`  ${label}: ${n}件`)
 if (failed.length > 0) {
   const by = new Map<string, number>()

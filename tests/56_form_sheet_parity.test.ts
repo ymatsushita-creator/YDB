@@ -57,7 +57,7 @@ describe('フォームと表は同じ打ち方で打てる（C-126）', () => {
       familyNameKana: '', givenNameKana: '', birthDate: '', schoolId: school,
       faculty: pad('架空科'), email: pad('sheet@example.test'), phone: '',
       lineUserId: '', note: '', channelId, contactedOn: '2026-03-01',
-      approachStateId: '', staffId,
+      approachStateId: '', archive: '', staffId,
     }] })
     const bySheet = await one<{ family_name: string; given_name: string; email: string | null }>(
       db, `SELECT family_name, given_name, email FROM persons WHERE family_name LIKE '%表田%'`)
@@ -97,7 +97,7 @@ describe('フォームと表は同じ打ち方で打てる（C-126）', () => {
       familyNameKana: '', givenNameKana: '',
       birthDate: '', schoolId: school, faculty: '', email: '', phone: '',
       lineUserId: '', note: '', channelId, contactedOn: '2026-03-01',
-      approachStateId: '', staffId,
+      approachStateId: '', archive: '', staffId,
     }] })
     const personId = await scalar<string>(
       db, `SELECT id FROM persons WHERE family_name = '履歴田'`)
@@ -138,7 +138,7 @@ describe('フォームと表は同じ打ち方で打てる（C-126）', () => {
       partnerId: made.partnerId, category: pad('高校'), contactName: pad('別窓口'),
       contactEmail: pad('b@example.test'), contactDepartment: pad('部署'),
       internalOwner: pad('担当'), engagement: pad('関わり'),
-      recommendationStateId: '', staffId,
+      recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '', recommendationStateId: '', staffId,
     }] })
     const bySheet = await one<Record<string, string | null>>(db, `
       SELECT category, contact_name, contact_email, contact_department,

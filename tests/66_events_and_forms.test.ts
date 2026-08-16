@@ -106,7 +106,9 @@ describe('イベントを追加（C-155）', () => {
   test('★ 追加タブは、開ける層が決まっている（押せるのに入れない、を作らない）', async () => {
     const tiers = await read('src/auth/tiers.ts')
     const shell = await read('app/_components/shell.tsx')
-    const links = [...shell.matchAll(/\{ href: '(\/[a-z/-]+)', label: '[^']*追加' \}/g)]
+    // ★ 呼び名は「追加」から「編集」になった（C-168。依頼者の指示）。
+    //   語で数えると、名前を変えるたびに見張りが黙る ―― **行き先で数える。**
+    const links = [...shell.matchAll(/\{ href: '(\/[a-z/-]+\/new)', label: '[^']*' \}/g)]
       .map((m) => m[1]!)
     assert.ok(links.length >= 3, '追加タブが数えられていない')
     for (const href of links) {

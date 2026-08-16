@@ -49,6 +49,11 @@ export async function savePartnerSheetAction(
       contactDepartment: text(v.contactDepartment),
       contactEmail: text(v.contactEmail),
       internalOwner: text(v.internalOwner),
+      // 0046（C-180）。応募管理表 011 にあってDBに無かった枠。
+      recommendationSeats: text(v.recommendationSeats),
+      partneredOn: text(v.partneredOn),
+      bestContactPeriod: text(v.bestContactPeriod),
+      location: text(v.location),
       engagement: text(v.engagement),
       recommendationStateId: text(v.recommendationStateId),
       staffId: text(v.staffId),

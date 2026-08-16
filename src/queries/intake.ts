@@ -151,3 +151,39 @@ export const listCandidateNumbers = (db: Db, seasonId: string | undefined) => {
      WHERE n.season_id = $1
      ORDER BY n.number DESC`, [seasonId])
 }
+
+/**
+ * 担当者メモの履歴（依頼者の指示。実行⑰。C-177）。
+ *
+ * 依頼者の言葉 ――「このメモは蓄積していって、過去のものまで見れるように」。
+ *
+ * ★ **記録層は既に持っていた**（`person_profile_revisions`。0001）。
+ *   直すたびに1版が積まれる作りで、消えてはいない。
+ *   足りなかったのは**読む口と画面**だけである。
+ *
+ * ★ 変わった版だけを返す。同じ文が並ぶと、何が起きたのか読めない
+ *   ―― メモ以外（電話番号など）を直しただけの版も1件に数えてしまう。
+ *   `lag()` で1つ前と比べ、**メモが動いた版だけ**を残す。
+ *
+ * ★ 空にした（消した）ことも1件として残す。「消した」も履歴である。
+ */
+export interface NoteHistoryRow {
+  revision_number: number
+  note: string | null
+  changed_at: Date
+}
+
+export const listNoteHistory = (
+  db: Db, personId: string,
+): Promise<NoteHistoryRow[]> =>
+  all<NoteHistoryRow>(db, `
+    WITH v AS (
+      SELECT revision_number, note, changed_at,
+             lag(note) OVER (ORDER BY revision_number) AS prev
+        FROM person_profile_revisions
+       WHERE person_id = $1
+    )
+    SELECT revision_number, note, changed_at
+      FROM v
+     WHERE note IS DISTINCT FROM prev
+     ORDER BY revision_number DESC`, [personId])

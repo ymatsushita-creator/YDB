@@ -76,18 +76,21 @@ describe('0005 2期の特別選考9軸', () => {
   })
 
   /**
-   * ★ グループ面接は 0008 で入った（依頼者「最終と同じでいいから」。実行⑯）。
-   *   **書類選考はまだ空** ―― 軸の呼び名を受け取っていない。
-   *   受け取らないうちに、こちらで名付けない（原則3）。
+   * ★ 書類選考の4軸は 0010 で入った（C-187。依頼者が呼び名を決めた。実行⑰）。
+   *   1本目の論理力はAIが付け、**この順で並べて上から人に見せる。**
    */
-  test('書類選考にはまだ軸を足していない（呼び名を受け取っていない）', async () => {
+  test('★ 書類選考は4軸16点（C-187。依頼者が呼び名を決めた）', async () => {
     const db = await freshDb({ seeds: 'production' })
-    const n = await scalar<number>(db, `
-      SELECT count(*)::int FROM evaluation_criteria ec
-        JOIN selection_steps ss ON ss.id = ec.selection_step_id
+    const rows = await all<{ name: string; scale_max: number }>(db, `
+      SELECT c.name, c.scale_max
+        FROM evaluation_criteria c
+        JOIN selection_steps ss ON ss.id = c.selection_step_id
         JOIN seasons se ON se.id = ss.season_id
-       WHERE se.cohort_number = 2 AND ss.name = '書類選考'`)
-    assert.equal(n, 0)
+       WHERE se.cohort_number = 2 AND ss.name = '書類選考'
+       ORDER BY c.sort_order`)
+    assert.equal(rows.length, 4)
+    assert.equal(rows.reduce((n, r) => n + Number(r.scale_max), 0), 16)
+    assert.equal(rows[0]!.name, '論理力')
     await db.close()
   })
 
@@ -103,7 +106,7 @@ describe('0005 2期の特別選考9軸', () => {
     assert.equal(strong.length, 6, '加点はD〜Iの6つ')
     // ★ 0008 でグループ面接にも同じ6軸を入れた（実行⑯）。
     //   段が違えば別の軸なので、段分けを持たない軸は 6 → 12 になる。
-    assert.equal(standard.length, 12,
+    assert.equal(standard.length, 16,
       '最終面接とグループ面接の各6軸は、どちらも段分けを持たない')
     await db.close()
   })

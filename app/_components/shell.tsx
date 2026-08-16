@@ -76,12 +76,18 @@ const TABS: Array<{ id: Tab; href: string; label: string }> = [
  *   表の「記録した人」は職員を選ばせるのに、**選択肢を増やす画面が無かった**
  *   ―― 取り込みが唯一の経路だった（C-75）。
  */
+/*
+ * ★ 呼び名を「追加」から「編集」へ（依頼者の指示。実行⑰。C-168）。
+ *   この画面は前から**一覧して直せる表**で、追加はその一部でしかなかった。
+ *   「追加」と書いてあると、既にある行を直しに来る道が名前から見えない。
+ *   ★ 行き先は変えない ―― 貼られたURLを切らない。
+ */
 const ADD_LINKS = [
-  { href: '/people/new', label: '候補者を追加' },
-  { href: '/approach/new', label: '連携団体を追加' },
+  { href: '/people/new', label: '候補者を編集' },
+  { href: '/approach/new', label: '連携団体を編集' },
   // ★ 依頼者の指示（実行⑯）――「連携団体を追加タブの下に、イベントを追加タブ」。
   //   並びは指示のとおり、連携団体の**すぐ下**に置く。
-  { href: '/events/new', label: 'イベントを追加' },
+  { href: '/events/new', label: 'イベントを編集' },
 ]
 
 export async function Shell({
@@ -123,8 +129,30 @@ export async function Shell({
 
   return (
     <div className="hh-frame">
+      {/*
+        ★ 収納の切り替え（依頼者の指示。実行⑰。C-170）――
+        「ロゴの下を押したら縦バーを収納、右端を押したら横バーを収納、
+          もう一度押したら復活」。
+
+        ★ `'use client'` を増やさない（CLAUDE.md：表と追従光の2つだけ）。
+          チェックボックスを隠して置き、`:has()` で枠の形を変える。
+          JS が無くても動く。**状態は画面が持ち、記録層には触らない。**
+
+        ★ 開閉の札は枠の**直下**に置く。中に入れると、収納した側と一緒に
+          隠れてしまい、**戻す手段が消える。**
+      */}
+      {/* ★ 札は1つだけ（依頼者の指示。実行⑰。C-181）――
+          「端を押して収納するアクションは消せ。タブを押して縦横同時収縮、
+            ロゴは残して、もう一度押したら戻る」。
+          縦と横で別々の札を持たせていたのが間違いだった ―― 片方だけ畳んだ
+          中途半端な状態が作れてしまい、戻し方も2箇所になっていた。 */}
+      <input type="checkbox" id="rail-collapse" className="collapse-flag" />
+
       <aside className="sidebar-region hh-sidebar">
-        <div className="hh-brand">
+        {/* ★ ロゴ全体がボタン（依頼者の指示。実行⑰。C-188）。
+            帯を別に置くのをやめ、ロゴの面そのもので開閉する。 */}
+        <label htmlFor="rail-collapse" className="hh-brand collapse-grip"
+               title="タブをしまう / 出す">
           {/* グラデーション版（依頼者の指示。実行⑩）。
               **ロゴを変形・着色・装飾しない。** 比は 1283:305 で固定し、
               高さは `--logo-h` に反映してある。 */}
@@ -134,7 +162,8 @@ export async function Shell({
             width={1283} height={305}
             alt="NEO ACADEMIA"
           />
-        </div>
+          <span className="visually-hidden">タブをしまう、または出す</span>
+        </label>
 
         <nav className="hh-nav" aria-label="主なナビゲーション">
           {tabs.map((t) => (
@@ -346,24 +375,29 @@ export function YearSwitch({
   return (
     <div className="hh-years">
       <span className="sidebar-section-label">期</span>
-      <div className="hh-years-row">
-        {seasons.map((s) => (
-          <Link
-            key={s.id}
-            href={`${basePath}?season=${s.id}`}
-            className={[
-              'hh-year',
-              s.id === currentId ? 'is-on' : '',
-              // デモ期は実在の期と同じ顔で並べない（0029）。
-              s.is_demo ? 'is-demo' : '',
-            ].filter(Boolean).join(' ')}
-            aria-current={s.id === currentId ? 'page' : undefined}
-          >
-            {/* 募集中の点（`is_live`）は出さない。依頼者の指示で外した。 */}
-            {seasonLabel(s)}
-          </Link>
-        ))}
-      </div>
+      {/*
+        ★ 札を横に並べるのをやめ、**選択にする**（依頼者の指示。実行⑰。C-169）――
+        「3,4、5期と作っていくことを考えれば、ボタンはこの形式ではなく選択に」。
+        期が増えるほど札は横に伸び、狭い画面から溢れる。選択なら増えても幅が変わらない。
+
+        ★ `'use client'` を増やさない（CLAUDE.md：表と追従光の2つだけ）。
+        だから onChange で飛ばさず、**GETフォーム**にする。
+        JS が無くても動き、`?season=` の形も今までと同じ。
+      */}
+      <form action={basePath} method="get" className="hh-years-row">
+        <label className="visually-hidden" htmlFor="season-switch">期を選ぶ</label>
+        <select id="season-switch" name="season" defaultValue={currentId}
+                className="hh-year-select">
+          {seasons.map((s) => (
+            <option key={s.id} value={s.id}>
+              {/* デモ期は実在の期と同じ顔で並べない（0029）。
+                  色を付けられないので、語で分ける。 */}
+              {seasonLabel(s)}{s.is_demo ? '（デモ）' : ''}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="btn-physical hh-year-go">切替</button>
+      </form>
     </div>
   )
 }

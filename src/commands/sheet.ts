@@ -52,6 +52,8 @@ export interface CandidateRowInput {
   note: string
   /** どこで知ったか。**新規行だけ**が使う（接点は積む記録なので直せない）。 */
   channelId: string
+  /** アーカイブする（0001 の `deleted_at`）。'archive' のときだけ効く。C-184。 */
+  archive: string
   /** 接点の日。空なら今日（`addCandidate` の規則）。 */
   contactedOn: string
   /** アプローチ状態。**既存行だけ**が使う。変えた行だけ新しい状態を積む。 */
@@ -168,6 +170,26 @@ export async function saveCandidateSheet(
 
     let changed = false
 
+    /**
+     * ★ アーカイブ（依頼者の指示。実行⑰。C-184）――「一番右にアーカイブボタン」。
+     *
+     * ★ **行は消さない。** `deleted_at` を立てるだけで、記録も接点も評価も残る。
+     *   本当に消すと、その人に紐づく応募・面接・点が宙に浮く。
+     * ★ アーカイブした行は**それ以上直さない**（CLAUDE.md：削除済みは編集できない）。
+     *   同じ保存の中で名前も変えようとしていたら、アーカイブだけを行う。
+     * ★ 二度押しても増えない（既にアーカイブ済みなら何もしない）。
+     */
+    if (t(row.archive) === 'archive') {
+      // 一覧に居る＝まだアーカイブされていない（`listCandidateSheetRows` が外す）。
+      // `WHERE deleted_at IS NULL` を付けているので、二度押しでも二重にならない。
+      await db.query(
+        `UPDATE persons SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`,
+        [personId])
+      rows.push({ index, ok: true, id: personId, created: false, changed: true })
+      updated++
+      continue
+    }
+
     if (profileChanged(row, now)) {
       const result = await updatePersonProfile(db, {
         personId,
@@ -194,6 +216,45 @@ export async function saveCandidateSheet(
         continue
       }
       changed = true
+    }
+
+    /**
+     * ★ 既存の人にも接点を足せるようにする（依頼者の指示。実行⑰。C-183）――
+     *   「流入先、接点の日は、既存の人でも編集できるように」。
+     *
+     * ★ **上書きではなく、接点として積む。**
+     *   `touchpoints` は「いつ・どのチャネルで当たったか」を1件ずつ持つ表で、
+     *   書き換えると去年の流入元が今年の値に化け、チャネル別の集計が
+     *   **過去にさかのぼって変わる。**
+     *
+     * ★ 同じチャネル・同じ日の接点が既にあれば足さない（二度押しで重ねない）。
+     * ★ 日だけ・チャネルだけでは足さない ―― どちらが欠けても
+     *   「いつの接点か」「どこからの接点か」が決まらない。
+     */
+    const wantChannel = t(row.channelId)
+    const wantOn = t(row.contactedOn)
+    if (wantChannel !== '' && wantOn !== '') {
+      const dup = await maybeOne<{ id: string }>(db, `
+        SELECT id FROM touchpoints
+         WHERE person_id = $1 AND channel_id = $2 AND jst_date(occurred_at) = $3::date`,
+      [personId, wantChannel, wantOn])
+      if (!dup) {
+        const ok = await maybeOne<{ id: string }>(db,
+          `SELECT id FROM channels WHERE id = $1`, [wantChannel])
+        if (!ok) {
+          rows.push({ index, ok: false, message: 'その流入元は名簿に無い。' })
+          failed++
+          continue
+        }
+        await db.query(`
+          INSERT INTO touchpoints (person_id, channel_id, occurred_at)
+          VALUES ($1, $2, $3::date)`, [personId, wantChannel, wantOn])
+        changed = true
+      }
+    } else if (wantChannel !== '' || wantOn !== '') {
+      rows.push({ index, ok: false, message: '流入元と接点の日は両方いる。' })
+      failed++
+      continue
     }
 
     const stateId = t(row.approachStateId)
@@ -251,6 +312,14 @@ export interface PartnerRowInput {
   contactDepartment: string
   /** NEO 側の受け持ち（0034。応募管理表 011 の「社内担当」）。 */
   internalOwner: string
+  /** 推薦可能人数（0046）。空は「聞いていない」、0 は「枠が無い」。 */
+  recommendationSeats: string
+  /** 提携した日（0046）。 */
+  partneredOn: string
+  /** 最適連絡時期（0046）。自由記述。 */
+  bestContactPeriod: string
+  /** 所在地（0046）。 */
+  location: string
   /** NEO としてどう関わるか（0031）。 */
   engagement: string
   /** その期の推薦枠ステイタス（0035）。空なら触らない。 */
@@ -285,9 +354,12 @@ export async function savePartnerSheet(
       category: string | null; contact_name: string | null
       contact_email: string | null; engagement: string | null
       contact_department: string | null; internal_owner: string | null
+      recommendation_seats: number | null; partnered_on: string | null
+      best_contact_period: string | null; location: string | null
     }>(db, `
       SELECT category, contact_name, contact_email, engagement,
-             contact_department, internal_owner
+             contact_department, internal_owner, recommendation_seats,
+             partnered_on, best_contact_period, location
         FROM partners WHERE id = $1`, [partnerId])
     if (!now) {
       rows.push({ index, ok: false, message: SET_ENGAGEMENT_MESSAGE.partner_not_found })
@@ -314,6 +386,12 @@ export async function savePartnerSheet(
       || !same(row.contactEmail, now.contact_email)
       || !same(row.contactDepartment, now.contact_department)
       || !same(row.internalOwner, now.internal_owner)
+      || !same(row.recommendationSeats, now.recommendation_seats === null
+            ? '' : String(now.recommendation_seats))
+      || !same(row.partneredOn, now.partnered_on === null
+            ? '' : String(now.partnered_on).slice(0, 10))
+      || !same(row.bestContactPeriod, now.best_contact_period)
+      || !same(row.location, now.location)
     if (attrsChanged) {
       const email = t(row.contactEmail)
       if (email !== '' && !/^\S+@\S+\.\S+$/.test(email)) {
@@ -325,16 +403,28 @@ export async function savePartnerSheet(
       //   半角スペースだけなので、全角スペースだけの値が「空ではない」ものとして
       //   残り、`*_not_blank` に弾かれて**行ごと保存できなくなる。**
       //   （制約を持たない列では、代わりに「見えない値」が静かに溜まる。）
+      // 人数は整数だけ受ける。**0 と空は別物**なので、空を 0 に丸めない。
+      const seats = t(row.recommendationSeats)
+      if (seats !== '' && !/^\d+$/.test(seats)) {
+        rows.push({ index, ok: false, message: '推薦可能人数は0以上の整数で入れる。' })
+        failed++
+        continue
+      }
       await db.query(`
         UPDATE partners
-           SET category = nullif(btrim($2, $7), ''),
-               contact_name = nullif(btrim($3, $7), ''),
-               contact_email = nullif(btrim($4, $7), ''),
-               contact_department = nullif(btrim($5, $7), ''),
-               internal_owner = nullif(btrim($6, $7), '')
+           SET category = nullif(btrim($2, $11), ''),
+               contact_name = nullif(btrim($3, $11), ''),
+               contact_email = nullif(btrim($4, $11), ''),
+               contact_department = nullif(btrim($5, $11), ''),
+               internal_owner = nullif(btrim($6, $11), ''),
+               recommendation_seats = nullif(btrim($7, $11), '')::integer,
+               partnered_on = nullif(btrim($8, $11), '')::date,
+               best_contact_period = nullif(btrim($9, $11), ''),
+               location = nullif(btrim($10, $11), '')
          WHERE id = $1`,
       [partnerId, row.category, row.contactName, row.contactEmail,
-        row.contactDepartment, row.internalOwner, BLANK_CHARS])
+        row.contactDepartment, row.internalOwner, row.recommendationSeats,
+        row.partneredOn, row.bestContactPeriod, row.location, BLANK_CHARS])
       changed = true
     }
 

@@ -82,15 +82,36 @@ export function Sheet({
   detail?: { href: string; label: string }
 }) {
   const [state, formAction, pending] = useActionState(action, SHEET_INITIAL)
+  /**
+   * ★ **空行は先頭に置く**（依頼者の指示。実行⑰。C-168）――
+   *   「新規を入力するまで下にスクロールしないといけないのはめんどい」。
+   *   既存が数百行あると、1件足すたびに表の底まで送ることになる。
+   *
+   * ★ 添字は `state.results` の `index` と一致していなければならない。
+   *   並べ替えではなく**最初からこの順で組む**ので、送信順もこの順になる
+   *   （入力欄は `data` の順で並び、サーバは受け取った順に返す）。
+   */
   const [data, setData] = useState<SheetRowData[]>(() => [
-    ...rows,
     ...Array.from({ length: BLANK_ROWS }, () => ({ id: '', values: emptyValues(columns) })),
+    ...rows,
   ])
+
+  /**
+   * ★ 前回の保存結果と、いまの行の並びのずれ（C-168）。
+   *
+   *   結果（`state.results`）は**送った時の並び**の添字で返る。
+   *   保存したあとに先頭へ行を足すと、既存の行が1つずつ後ろへ動くので、
+   *   ずらさずに引くと**別の行に「保存できた」「失敗」が付く。**
+   *   足した数だけ引いて読む。次に送った時点で並びは一致するので0に戻す。
+   */
+  const [shift, setShift] = useState(0)
 
   // 保存できた新規行に ID を貼る。**貼らないと二重に作る。**
   // 先頭の読み取り列（候補者番号）も、保存で初めて決まるので貼り直す。
   useEffect(() => {
     if (state.results.length === 0) return
+    // 送った時点の並びで返ってきているので、ずれは無くなる。
+    setShift(0)
     setData((prev) => {
       const next = [...prev]
       for (const r of state.results) {
@@ -103,16 +124,22 @@ export function Sheet({
   }, [state])
 
   const errors = new Map<number, string>(
-    state.results.filter((r) => !r.ok).map((r) => [r.index, (r as { message: string }).message]))
-  const savedRows = new Set<number>(state.results.filter((r) => r.ok).map((r) => r.index))
+    state.results.filter((r) => !r.ok)
+      .map((r) => [r.index + shift, (r as { message: string }).message]))
+  const savedRows = new Set<number>(
+    state.results.filter((r) => r.ok).map((r) => r.index + shift))
 
   const setCell = (rowIndex: number, key: string, value: string) => {
     setData((prev) => prev.map((row, i) =>
       (i === rowIndex ? { ...row, values: { ...row.values, [key]: value } } : row)))
   }
 
-  const addRow = () =>
-    setData((prev) => [...prev, { id: '', values: emptyValues(columns) }])
+  // ★ 足す行も**先頭に**。押した行が画面の外に出ないようにする。
+  //   ずれる分は `shift` が引き受ける。
+  const addRow = () => {
+    setData((prev) => [{ id: '', values: emptyValues(columns) }, ...prev])
+    setShift((n) => n + 1)
+  }
 
   const editable = (row: SheetRowData, col: SheetColumn) =>
     !(row.id === '' ? col.existingOnly : col.newOnly)
@@ -186,7 +213,10 @@ export function Sheet({
               <tr key={`${row.id}-${rowIndex}`}
                   className={errors.has(rowIndex) ? 'sheet-row-bad' : ''}>
                 <th scope="row" className="sheet-lead">
-                  {row.lead ?? (row.id === '' ? '新規' : '')}
+                  {/* ★ 新規行は色で分ける（依頼者の指示。C-185）。 */}
+                  {row.id === ''
+                    ? <span className="sheet-lead-new">{row.lead ?? '新規'}</span>
+                    : (row.lead ?? '')}
                 </th>
                 {columns.map((c, colIndex) => (
                   <td key={c.key} style={c.width ? { minWidth: c.width } : undefined}>

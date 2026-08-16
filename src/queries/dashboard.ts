@@ -735,3 +735,37 @@ export const getUnassignedSummary = (db: Db, seasonId: string) =>
       JOIN v_active_applications a ON a.id = e.application_id
      WHERE ss.season_id = $1 AND e.interviewer_staff_id IS NULL AND e.state = 'pending'`,
     [seasonId])
+
+/**
+ * KPI目標と実績（依頼者の指示。実行⑯〜⑰。C-179）。
+ *
+ * 依頼者の言葉 ――「要項やペルソナやKPIを持ってきて新規DBにも実装して」
+ * 「AスペースにKPIとかのリザルトが見れたら」。
+ *
+ * ★ 目標は 0043 に入っている（`recruitment_course_targets`。14件）。
+ *   **取り込んだのに、どの画面からも読んでいなかった。**
+ *
+ * ★ 実績は**まだ結びつけない。** 目標の側は「コース別」「施策別」の呼び名で、
+ *   記録の側にその区分が無い ―― `channels` とも `courses` とも一致しない。
+ *   無理に当てると、**違う母集団の割り算**になる（CLAUDE.md の禁止）。
+ *   ここでは目標だけを返し、実績の欄は空で出す。
+ */
+export interface CourseTargetRow {
+  category: string
+  course_label: string
+  segment_label: string | null
+  target_accepted: number | null
+  target_applicants: number | null
+  target_briefing: number | null
+  target_reach: number | null
+}
+
+export const listCourseTargets = (
+  db: Db, seasonId: string,
+): Promise<CourseTargetRow[]> =>
+  all<CourseTargetRow>(db, `
+    SELECT category, course_label, segment_label,
+           target_accepted, target_applicants, target_briefing, target_reach
+      FROM recruitment_course_targets
+     WHERE season_id = $1
+     ORDER BY sort_order`, [seasonId])

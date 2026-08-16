@@ -40,6 +40,7 @@ const toRows = (raw: unknown): CandidateRowInput[] => {
       lineUserId: text(v.lineUserId),
       note: text(v.note),
       channelId: text(v.channelId),
+      archive: text(v.archive),
       contactedOn: text(v.contactedOn),
       approachStateId: text(v.approachStateId),
       staffId: text(v.staffId),

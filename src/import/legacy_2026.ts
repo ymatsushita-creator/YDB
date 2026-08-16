@@ -340,4 +340,4 @@ export const toRecommendation = (overall: string | null): string => {
  *   （`evaluation_scores_rationale_not_blank`）ので、
  *   **無いことをそのまま書く。** 評価の文言を作らない。
  */
-export const NO_RATIONALE = '旧システムから移した（軸ごとの根拠は記録が無い）'
+export { NO_RATIONALE } from '../records/placeholder.ts'

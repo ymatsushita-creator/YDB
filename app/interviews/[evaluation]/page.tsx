@@ -12,6 +12,7 @@ import {
 import { parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE } from '../../../src/commands/score.ts'
 import { saveInterviewAction, saveInterviewScoreAction } from './actions.ts'
 import { jstDay, num, jstDateTime } from '../../_components/ui.tsx'
+import { shownRationale } from '../../../src/records/placeholder.ts'
 import { Shell, Breadcrumb, seasonLabel } from '../../_components/shell.tsx'
 import { Avatar } from '../../_components/borderline.tsx'
 
@@ -125,9 +126,12 @@ export default async function InterviewPage({
                       {' '}1〜{num(c.scale_max)}
                       {c.applies_to === 'reapplicant_only' && ' ・ 再応募者のみ'}
                     </span>
-                    {c.score !== null && (
+                    {/* ★ 取り込みの埋め草は出さない（C-166。依頼者の指示）。
+                        記録には残るが、6軸すべてに同じ文が並ぶと
+                        中身のある根拠の場所を潰す。 */}
+                    {shownRationale(c.rationale) && (
                       <span className="section-note" style={{ display: 'block' }}>
-                        {c.rationale}
+                        {shownRationale(c.rationale)}
                       </span>
                     )}
                   </span>

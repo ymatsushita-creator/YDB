@@ -1,4 +1,5 @@
 import { maybeOne, all, type Db } from '../db/client.ts'
+import { REQUIRED_VIEWPOINT } from '../ai/pre_assessment.ts'
 
 /**
  * AI分析の事前ステータスを記録する（0044。C-164）。
@@ -24,6 +25,14 @@ export type RecordAiPreAssessmentFailure =
   | 'rationale_too_long'
   | 'model_required'
   | 'source_required'
+  /** 観点が1つも無い。点だけあって内訳が無い状態を作らない。 */
+  | 'viewpoints_required'
+  /** 観点の名前が空、または同じ観点が2度出た。 */
+  | 'bad_viewpoint'
+  /** ★ 論理性の観点が無い（依頼者の指示：「少なくとも論理性だけは」）。 */
+  | 'logic_viewpoint_required'
+  /** 点が整数でない、負、または満点超え。 */
+  | 'score_out_of_range'
 
 export const RATIONALE_MAX = 2000
 
@@ -40,6 +49,13 @@ export const listAiPreLabels = (db: Db): Promise<AiPreLabel[]> =>
     SELECT id, code, definition FROM ai_pre_labels
      WHERE is_active ORDER BY sort_order`)
 
+export interface ViewpointInput {
+  viewpoint: string
+  score: number
+  finding: string
+  scaleMax?: number
+}
+
 export async function recordAiPreAssessment(
   db: Db,
   input: {
@@ -50,6 +66,8 @@ export async function recordAiPreAssessment(
     rationale: string
     model: string
     source: string
+    /** 観点ごとの点と所見（0045）。**空では受け付けない。** */
+    viewpoints: ViewpointInput[]
   },
 ): Promise<RecordAiPreAssessmentResult> {
   const rationale = (input.rationale ?? '').trim()
@@ -59,6 +77,28 @@ export async function recordAiPreAssessment(
   if (!model) return { ok: false, reason: 'model_required' }
   const source = (input.source ?? '').trim()
   if (!source) return { ok: false, reason: 'source_required' }
+
+  // ★ 観点は**親を入れる前に**すべて検証する。
+  //   途中で弾かれると、点の無い分析だけが台帳に残る ―― 追記専用なので消せない。
+  const viewpoints = input.viewpoints ?? []
+  if (viewpoints.length === 0) return { ok: false, reason: 'viewpoints_required' }
+  const seen = new Set<string>()
+  for (const v of viewpoints) {
+    const name = (v.viewpoint ?? '').trim()
+    if (!name || seen.has(name)) return { ok: false, reason: 'bad_viewpoint' }
+    seen.add(name)
+    if (!(v.finding ?? '').trim()) return { ok: false, reason: 'bad_viewpoint' }
+    const max = v.scaleMax ?? 4
+    if (!Number.isInteger(max) || max <= 0) return { ok: false, reason: 'score_out_of_range' }
+    if (!Number.isInteger(v.score) || v.score < 0 || v.score > max) {
+      return { ok: false, reason: 'score_out_of_range' }
+    }
+  }
+  // ★ 論理性は必ず要る。AI側でも見ているが、**記録層の手前でもう一度見る**
+  //   （CLAUDE.md：必須値をコマンド側で再検証する）。
+  if (!seen.has(REQUIRED_VIEWPOINT)) {
+    return { ok: false, reason: 'logic_viewpoint_required' }
+  }
 
   const person = await maybeOne<{ deleted_at: Date | null }>(db,
     `SELECT deleted_at FROM persons WHERE id = $1`, [input.personId])
@@ -101,6 +141,16 @@ export async function recordAiPreAssessment(
         VALUES ($1, $2, $3, $4, $5, $6, $7, ${AFTER_LAST}) RETURNING id`,
     [input.personId, input.seasonId, input.selectionStepId, label.id,
       rationale, model, source])
+
+  // 観点の内訳。**検証済みなので、ここで弾かれる余地は無い。**
+  for (const [i, v] of viewpoints.entries()) {
+    await db.query(`
+      INSERT INTO ai_pre_viewpoints
+        (assessment_id, viewpoint, score, scale_max, finding, sort_order)
+      VALUES ($1, $2, $3, $4, $5, $6)`,
+    [inserted!.id, v.viewpoint.trim(), v.score, v.scaleMax ?? 4,
+      v.finding.trim(), i + 1])
+  }
 
   return { ok: true, assessmentId: inserted!.id, previousId: current?.id ?? null }
 }

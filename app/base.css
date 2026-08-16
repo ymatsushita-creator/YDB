@@ -440,7 +440,24 @@ a.zoom-crumb:hover { text-decoration: none; }
   padding-bottom: var(--space-xs);
   border-bottom: 1px solid var(--color-sidebar-hairline);
 }
-.hh-years-row { display: flex; gap: 4px; }
+.hh-years-row { display: flex; gap: 4px; align-items: center; }
+
+/* 期の切り替え（C-169）。札を並べるのをやめて選択にした ――
+   期が増えても幅が変わらない。器は暗い帯なので、選択も暗いまま置く。 */
+.hh-year-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-on-dark);
+  font: inherit;
+  font-size: 12px;
+}
+/* 一覧の中は器の色を継がないので、読める組み合わせを明示する。 */
+.hh-year-select option { color: var(--color-ink); background: var(--color-paper); }
+.hh-year-go { padding: 4px 8px; font-size: 12px; flex: 0 0 auto; }
 .hh-year {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 10px; border-radius: var(--rounded-sm);
@@ -1559,7 +1576,7 @@ html, body { height: 100%; overflow: hidden; }
   display: block; margin-top: 2px;
   color: var(--color-steel); font-size: 12px; font-weight: 500;
 }
-.home-detail-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, .75fr); gap: var(--space-md); min-height: 0; }
+.home-detail-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(220px, .85fr) minmax(220px, .7fr); gap: var(--space-md); min-height: 0; }
 .home-kpi {
   position: relative; overflow: hidden;
   display: flex; flex-direction: column; justify-content: space-between;
@@ -1578,6 +1595,28 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
 .section-title-link { color: inherit; text-decoration: none; }
 .section-title-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .section-title-go { color: var(--color-steel); font-weight: 600; }
+
+/* KPIは変数の異なる数を同じ軸へ載せない。値を大きく読ませるカードで可視化する。 */
+.home-kpi-results { display: grid; gap: var(--space-sm); align-content: start; }
+.kpi-result-card {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-sm);
+  padding: var(--space-sm); border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-lg); background: var(--color-canvas);
+}
+.kpi-result-card > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; }
+.kpi-result-card > strong { grid-row: span 2; font-size: clamp(24px, 2.5vw, 38px); line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi-result-card > small { color: var(--color-steel); }
+.kpi-result-card > p { grid-column: 1 / -1; margin: var(--space-xs) 0 0; color: var(--color-steel); white-space: pre-wrap; }
+.kpi-edit-form { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(140px, .8fr) minmax(100px, .5fr) minmax(220px, 1.5fr) auto; gap: var(--space-sm); align-items: end; }
+.kpi-edit-form label { display: grid; gap: 4px; color: var(--color-steel); font-size: 12px; font-weight: 650; }
+.kpi-edit-form input, .kpi-edit-form textarea { width: 100%; }
+.kpi-manage-list { display: grid; gap: var(--space-md); }
+.kpi-manage-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-sm); align-items: end; padding-bottom: var(--space-md); border-bottom: 1px solid var(--color-hairline-soft); }
+@media (max-width: 1100px) {
+  .home-detail-grid { grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr); }
+  .home-detail-grid > .section:nth-child(3) { grid-column: 1 / -1; }
+  .kpi-edit-form { grid-template-columns: 1fr 1fr; }
+}
 
 /* =============================================================
    押した直後の骨組み（C-142）
@@ -1676,9 +1715,21 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
    **欲しい人ランキング・候補者パネル・特別選考リスト**へ渡す。
    340px は12項目の基本情報と確度の記入欄には狭い。
    ============================================================= */
-.hh-grid { grid-template-columns: minmax(0, 1fr) 420px; }
-@media (max-width: 1180px) {
-  .hh-grid { grid-template-columns: minmax(0, 1fr) 360px; }
+/* ★ さらに 130%（依頼者の指示。実行⑰。C-167）――
+   420px → 546px。左列は残り全部なので、その分だけ縮む。
+   個人パネルは12項目の基本情報＋確度の記入欄、特別選考リストは
+   氏名・詳細・確度・接点の4列を1行に載せる。どちらも横が要る。 */
+@media (min-width: 1181px) {
+  .hh-grid { grid-template-columns: minmax(0, 1fr) 546px; }
+}
+/* ★ 下限を 1101px で切る。**切らないと縦積みが効かない** ――
+   この規則は 567行目の「1100px 以下は1列」より後ろにあるので、
+   範囲を閉じないと狭い画面でも2列のまま残り、横にはみ出す
+   （元からあった穴。546px にして初めて実害が出る）。 */
+@media (min-width: 1101px) and (max-width: 1180px) {
+  /* ★ ここも 130%（360 → 468px）。ただし**左を潰さない** ――
+     左が 320px を切ると欲しい人ランキングの氏名が折り返し始める。 */
+  .hh-grid { grid-template-columns: minmax(320px, 1fr) 468px; }
 }
 /* 右列は上下2枚（パネルと特別選考リスト）。**どちらも大きくする**ので
    比率は等分に寄せる（0.85/1.15 は日程カレンダーが下にあった頃の割り付け）。 */
@@ -1696,4 +1747,216 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
   font-size: 11px;
   line-height: 1.6;
   white-space: pre-line;
+}
+
+/* =============================================================
+   しまう／出す（依頼者の指示。実行⑰。C-170）
+
+   「ロゴの下を押したら縦バーを収納、右端を押したら横バーを収納、
+     もう一度押したら復活。ここのモーションは滑らかに」
+
+   ★ `'use client'` を増やさない（CLAUDE.md）。隠したチェックボックスと
+     `:has()` だけで組む。JS が無くても動く。
+   ★ `display: none` で消さない ―― 消すと動きが付かず、パッと切り替わる。
+     **幅と高さを送る。**
+   ============================================================= */
+.collapse-flag { position: absolute; opacity: 0; pointer-events: none; }
+
+.collapse-grip {
+  cursor: pointer;
+  display: block;
+  border-radius: var(--radius-sm);
+  transition: background-color 160ms ease;
+}
+.collapse-grip:hover { background: var(--color-hairline-soft); }
+.collapse-grip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* ロゴの下の帯。掴みどころが見えるように細い線を1本置く。 */
+/* ★ ロゴ全体がボタン（C-188）。別置きの帯はやめた。 */
+
+/* ---- 縦バーをしまう ---- */
+/* ★ **潰し切らない**（依頼者の指示。実行⑰。C-175）――
+   「収納と言っても、ロゴをタップで戻せる程度には残せ」。
+   幅を 0 にすると、戻す手がかりが画面から消える。
+   ロゴ1枚分（--rail-stub）だけ残し、**そのロゴを押すと戻る。** */
+:root { --rail-stub: 56px; }
+
+.hh-frame { transition: grid-template-columns 260ms cubic-bezier(.4, 0, .2, 1); }
+.hh-frame:has(#rail-collapse:checked) {
+  grid-template-columns: var(--rail-stub) minmax(0, 1fr);
+}
+
+/* 中身（タブ・検索・期）は送って消す。ロゴだけ残す。 */
+.hh-nav, .hh-sidebar-foot, .hh-years, .hh-search {
+  transition: opacity 180ms ease, transform 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.hh-frame:has(#rail-collapse:checked) .hh-nav,
+.hh-frame:has(#rail-collapse:checked) .hh-sidebar-foot,
+.hh-frame:has(#rail-collapse:checked) .hh-years,
+.hh-frame:has(#rail-collapse:checked) .hh-search {
+  opacity: 0; transform: translateX(-10px); pointer-events: none;
+}
+
+/* ロゴは残す。幅にあわせて縮め、**押せる面**にする。 */
+.hh-brand, .hh-brand-logo {
+  transition: width 260ms cubic-bezier(.4, 0, .2, 1),
+              padding 260ms cubic-bezier(.4, 0, .2, 1);
+}
+/* ★ ロゴは器ごと縮める。**器（.hh-brand）に固定の高さがある**ので、
+   絵だけ細くしても帯の高さが残り、縮んでいないように見えていた。 */
+.hh-frame:has(#rail-collapse:checked) .hh-brand {
+  height: auto; padding: 0;
+}
+.hh-frame:has(#rail-collapse:checked) .hh-brand-logo {
+  width: 100%; height: auto;
+}
+/* 縦バーの内側の余白も詰める ―― 残さないとロゴが 56px に収まらない。 */
+.hh-frame:has(#rail-collapse:checked) .hh-sidebar {
+  padding-left: 4px; padding-right: 4px; overflow: hidden;
+}
+/* ★ 縮んだときの器（C-191。依頼者の指摘「幅あってねぇだろうが」）。
+   `.hh-brand` は天端を横バーに合わせるため、**負のマージン＋固定高さ**で
+   置いてある。縮めるときにそれを解かないと、白い器だけが 56px の列から
+   はみ出し、絵と器の幅が食い違う。 */
+/* ★★ **高さは横バーと同じ（--logo-h）のまま。** ★★
+   `height: auto` にしたら縦が合わなくなった（依頼者の指摘）――
+   ロゴの器は横バーと天端も**厚みも**そろえる約束で置いてある（C-66 / C-128）。
+   縮めるのは**中のロゴだけ**。器は高さを保ったまま、幅だけ列に合わせる。 */
+.hh-frame:has(#rail-collapse:checked) .hh-brand {
+  height: var(--logo-h);
+  margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
+  padding: 4px;
+  border-radius: var(--rounded-xl) 0 0 0;
+  width: calc(var(--rail-stub) + var(--space-md));
+  box-sizing: border-box;
+  /* 縮んだロゴを器の中央に置く（上に張り付かせない）。 */
+  display: flex; align-items: center; justify-content: center;
+}
+.hh-frame:has(#rail-collapse:checked) .hh-brand-logo { width: 100%; height: auto; }
+
+/* ---- 横バーをしまう ---- */
+/* ★ こちらも潰し切らない。**掴みの分だけ帯を残す** ――
+   高さ 0 にすると、右端の掴みごと消えて戻せなくなる。 */
+.hh-criteria-ref {
+  overflow: hidden;
+  transition: max-height 260ms cubic-bezier(.4, 0, .2, 1), opacity 200ms ease;
+  max-height: 120px;
+}
+.hh-frame:has(#rail-collapse:checked) .hh-criteria-ref {
+  max-height: 12px; opacity: .35;
+}
+/* ★ 戻すのは**ロゴだけ**。端の掴みは消した（C-181。依頼者の指示）。 */
+
+/* ★ 動きを減らす設定を尊重する。切り替わりは残し、滑走だけ止める。 */
+@media (prefers-reduced-motion: reduce) {
+  .hh-frame, .hh-sidebar, .hh-criteria-ref, .collapse-grip { transition: none; }
+}
+
+/* =============================================================
+   題名をしまう（依頼者の指示。実行⑰。C-172）
+
+   「これ、題名みたいなやつ消していいよ」
+
+   ★ **消さずに、画面から外す。** `<h1>` を取ると見出しの段が無くなり、
+     読み上げで「いまどの画面か」が分からなくなる。
+     文字は残したまま、目に見えないところへ置く。
+   ★ 下の一行（件数・次の番号など）は**残す** ―― あれは題名ではなく、
+     その画面の実数である。
+   ============================================================= */
+.page-title {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* ★ 帯ごと消す（依頼者の指示。実行⑰。C-176）――
+   「この謎スペース残してんじゃねぇよ」「Aスペースは消せ」。
+   題名を隠しただけでは、器（`.page-head`）の余白と下の一行が残り、
+   **中身の無い帯**が画面の上に居座っていた。器ごと畳む。
+   ★ 読み上げ用の見出しは上の規則で残っている（消していない）。 */
+.page-head, .cockpit-head {
+  /* `display: none` にはしない ―― 見出しが読み上げの構造からも消える。
+     場所を取らないところへ畳む（`.page-title` と同じ手）。 */
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* =============================================================
+   右へ送っても、誰の行か分かるようにする（C-173 / C-182 / C-186）
+
+   ★★ **貼り付けるのは番号の列だけにした。** ★★
+     姓・名・結果も貼ろうとして、**3回とも字が重なった**
+     （「名（かな）」「電話結果」）。原因は、貼り付けた列に幅を固定すると
+     見出しの語が枠から溢れ、隣の列の上に描かれることである。
+     列の幅は中身（入力欄・見出しの語）で決まるので、
+     `left` を手で足し算する作りは**幅が変わるたびに壊れる。**
+
+   ★ 番号だけなら幅が一定（数字か「新規」）なので、ずれない。
+   ★ 氏名を右でも見たい件は、貼り付けではなく
+     **行を開いて見る**か、列の並びを変える形で改めて出す。
+   ============================================================= */
+:root { --sheet-lead-w: 56px; }
+
+table.data.sheet th.sheet-lead,
+table.data.sheet td.sheet-lead {
+  position: sticky; left: 0; z-index: 2;
+  width: var(--sheet-lead-w);
+  background-color: var(--color-paper);
+  box-shadow: 1px 0 0 0 var(--color-hairline);
+}
+table.data.sheet thead th.sheet-lead {
+  z-index: 3; background-color: var(--color-surface);
+}
+
+/* ★ 新規行は色で分ける（依頼者の指示。C-185）。
+   面は濃く塗らない ―― 記録の状態ではなく「まだ保存していない」印である。 */
+.sheet-lead-new { color: var(--color-accent); font-weight: 700; }
+tr:has(.sheet-lead-new) td { background-color: var(--color-accent-wash, #f2f7ff); }
+tr:has(.sheet-lead-new) td.sheet-lead { background-color: var(--color-accent-wash, #f2f7ff); }
+
+/* 担当者メモの履歴（C-177）。畳んで置く ―― 現在のメモの邪魔をしない。 */
+.note-history { margin-top: var(--space-sm); font-size: 13px; }
+.note-history > summary { cursor: pointer; color: var(--color-steel); font-size: 12px; }
+.note-history-list {
+  list-style: none; margin: var(--space-sm) 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--space-sm);
+  border-left: 2px solid var(--color-hairline-soft); padding-left: var(--space-sm);
+}
+.note-history-list li { display: flex; flex-direction: column; gap: 2px; }
+
+/* ★ 縦バーのボタンを詰める（依頼者の指示。実行⑰。C-189）。
+   ★ 2度目の指示で**さらに削った** ―― 厚みと間隔だけを削り、
+     字の大きさは変えない（比率を触ると読みにくくなる）。 */
+.sidebar-item, .sidebar-item-active {
+  padding-top: 3px; padding-bottom: 3px;
+  min-height: 0; line-height: 1.5; font-size: 13px;
+}
+.hh-nav { gap: 2px; }
+.hh-sidebar { gap: var(--space-sm); }
+
+/* =============================================================
+   欲しい人ランキングを広げる（依頼者の指示。実行⑰。C-190）
+
+   「欲しい人ランキングの横幅を80％にして、右の要素をその分で隠して」
+
+   ★ 左を画面の80%まで広げ、**右列はその下に潜る**。
+     右を消さない ―― 隠れているだけで、タブを畳めば戻る。
+   ★ 重ねるのではなく、左が右の上に乗る形にする（字が重ならない）。
+   ============================================================= */
+@media (min-width: 1181px) {
+  .hh-grid:has(.hh-col-main) { position: relative; }
+  .hh-col-main {
+    width: 80%;
+    position: relative;
+    z-index: 2;
+    background: var(--color-shell);
+  }
+  /* 右列は残りの20%に押し込む。中身は消さない。 */
+  .hh-col-side { min-width: 0; overflow: hidden; }
 }
