@@ -212,6 +212,8 @@ describe('AI分析の事前ステータス（C-164）', () => {
     const queue = await listAiPreAssessmentTargets(db, seasonId)
     assert.equal(queue.find((r) => r.person_id === target)?.body, '応募回答の本文')
     assert.ok(!('family_name' in (queue[0] ?? {})), '氏名をAPI用の待ち行列へ混ぜない')
+    assert.deepEqual(await listAiPreAssessmentTargets(db, seasonId, false, ''), queue,
+      '採点対象を指定しない入口で空文字をUUIDとしてDBへ渡さない')
 
     await recordAiPreAssessment(db, {
       personId: target, seasonId, selectionStepId: stepId, labelCode: '標準',

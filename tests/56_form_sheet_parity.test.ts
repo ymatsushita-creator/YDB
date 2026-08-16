@@ -135,7 +135,7 @@ describe('フォームと表は同じ打ち方で打てる（C-126）', () => {
 
     // 表経路（同じ団体を直す）
     await savePartnerSheet(db, { seasonId: undefined, rows: [{
-      partnerId: made.partnerId, category: pad('高校'), contactName: pad('別窓口'),
+      partnerId: made.partnerId, name: '架空団体A', category: pad('高校'), contactName: pad('別窓口'),
       contactEmail: pad('b@example.test'), contactDepartment: pad('部署'),
       internalOwner: pad('担当'), engagement: pad('関わり'),
       recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '', recommendationStateId: '', staffId,

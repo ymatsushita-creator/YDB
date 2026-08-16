@@ -29,5 +29,5 @@ export const listAiPreAssessmentTargets = (
           WHERE x.person_id = n.person_id AND x.season_id = $1
             AND x.selection_step_id = s.id)`}
      GROUP BY n.person_id, s.id
-     ORDER BY n.person_id`, [seasonId, personId ?? null])
+     ORDER BY n.person_id`, [seasonId, personId || null])
 }

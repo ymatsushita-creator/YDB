@@ -205,6 +205,14 @@ export default async function BorderlinePage({
               ))}
             </div>
 
+            {/* 書類選考の中の採点からAI分析へ進む。左の操作柱には置かない。 */}
+            {tab.id === 'step1' && showAi && (
+              <p className="pilot-entry">
+                採点 ›{' '}
+                <Link href={`/ai?season=${season.id}`} className="hh-more">AI分析 ›</Link>
+              </p>
+            )}
+
             {tab.stepOrder !== null && !step && (
               <p className="hh-empty">この期にこの選考は無い。</p>
             )}
