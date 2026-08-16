@@ -8,6 +8,7 @@ import {
 } from '../../../src/queries/drilldown.ts'
 import { listPersonInterviews } from '../../../src/queries/interview.ts'
 import { listNoteHistory } from '../../../src/queries/intake.ts'
+import { startSelectionAction } from './actions.ts'
 import { RECOMMENDATION_LABEL } from '../../../src/commands/interview.ts'
 import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime, filled,
@@ -196,7 +197,21 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                           <span className="badge-tag-purple" style={{ marginLeft: 6 }}>再応募</span>
                         )}
                       </td>
-                      <td className="nowrap">{jstDateTime(a.submitted_at)}</td>
+                      <td className="nowrap">
+                        {jstDateTime(a.submitted_at)}
+                        {/* ★ 選考が始まっていない応募は、ここから始める（C-210）。
+                            応募を入れただけでは1段目の評価行が作られず、
+                            書類選考から先へ**一歩も進めなかった。** */}
+                        {/* ★ 件数は文字列で返る（count は bigint）。**厳密等価では当たらない**
+                            ―― 実画面でボタンが出ずに気づいた（C-210）。 */}
+                        {Number(a.evaluation_count) === 0 && (
+                          <form action={startSelectionAction} className="editable-inline">
+                            <input type="hidden" name="personId" value={person.person_id} />
+                            <input type="hidden" name="applicationId" value={a.application_id} />
+                            <button className="button-secondary" type="submit">選考を始める</button>
+                          </form>
+                        )}
+                      </td>
                       <td>
                         {/* 結末の定義は v_application_outcome。応募の画面と同じ値を出す。
                             画面ごとにラダーを書くと、同じ応募の結末が食い違う（A-14）。 */}

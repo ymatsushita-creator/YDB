@@ -60,6 +60,23 @@ const COUNTERS: Record<string, string> = {
   partners: `SELECT count(*)::int AS n FROM partners WHERE $1::uuid IS NOT NULL`,
   special: `
     SELECT count(*)::int AS n FROM v_headhunting_list WHERE season_id = $1`,
+  // ★ 確度別（0050。依頼者の指示）。**段階の順で数える** ――
+  //   記号を列挙すると、段階が増えたとき黙って取りこぼす。
+  confidence_s: `
+    SELECT count(*)::int AS n
+      FROM v_person_confidence v
+      JOIN confidence_grades g ON g.code = v.grade_code
+     WHERE v.season_id = $1 AND g.sort_order = 1`,
+  confidence_a: `
+    SELECT count(*)::int AS n
+      FROM v_person_confidence v
+      JOIN confidence_grades g ON g.code = v.grade_code
+     WHERE v.season_id = $1 AND g.sort_order <= 2`,
+  confidence_b: `
+    SELECT count(*)::int AS n
+      FROM v_person_confidence v
+      JOIN confidence_grades g ON g.code = v.grade_code
+     WHERE v.season_id = $1 AND g.sort_order <= 3`,
 }
 
 /** その変数の実績。数えられない語なら null（**0 と書かない**）。 */

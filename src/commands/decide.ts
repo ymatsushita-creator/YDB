@@ -400,3 +400,52 @@ export async function correctDecision(
     accepted: flipped === 'advance' && current.next_step_id === null,
   }
 }
+
+/**
+ * 応募を受け付けて、**選考を始める**（依頼者の指示。実行⑰。C-210）。
+ *
+ * ★★ **ここが無かった。** ★★
+ *   応募（`applications`）を入れても、最初の段の評価行は誰も作っていなかった。
+ *   `decideStep` は「次の段」を作るが、**1段目は誰の担当でもなかった** ――
+ *   だから書類選考から最終選考までの道が、入口で切れていた
+ *   （通しの検査で見つけた）。
+ *
+ * ★ 作るのは**1段目だけ**。先の段は、その段を通したときに `decideStep` が作る。
+ * ★ 冪等 ―― 既に評価行があれば何もしない（二度押しで2行にしない）。
+ * ★ 担当は付けない（`pending`）。誰が見るかは後で決める。
+ */
+export type StartSelectionResult =
+  | { ok: true; evaluationId: string | null }
+  | { ok: false; reason: 'application_not_found' | 'no_steps' }
+
+export async function startSelection(
+  db: Db, applicationId: string,
+): Promise<StartSelectionResult> {
+  if (!UUID.test(applicationId)) return { ok: false, reason: 'application_not_found' }
+
+  const app = await maybeOne<{ season_id: string }>(db, `
+    SELECT season_id FROM applications
+     WHERE id = $1 AND voided_at IS NULL AND deleted_at IS NULL`, [applicationId])
+  if (!app) return { ok: false, reason: 'application_not_found' }
+
+  // 既に始まっていれば何もしない。
+  const started = await maybeOne<{ id: string }>(db,
+    `SELECT id FROM evaluations WHERE application_id = $1 LIMIT 1`, [applicationId])
+  if (started) return { ok: true, evaluationId: null }
+
+  /**
+   * ★ 1段目は**特別選考を飛ばす**（0005）。
+   *   特別選考は通常の応募が通る道ではなく、別の入口である。
+   *   通常の応募が最初に当たるのは「応募受付」。
+   */
+  const first = await maybeOne<{ id: string }>(db, `
+    SELECT id FROM selection_steps
+     WHERE season_id = $1 AND name <> '特別選考'
+     ORDER BY sort_order LIMIT 1`, [app.season_id])
+  if (!first) return { ok: false, reason: 'no_steps' }
+
+  const row = await maybeOne<{ id: string }>(db, `
+    INSERT INTO evaluations (application_id, selection_step_id, state, assigned_at)
+    VALUES ($1, $2, 'pending', now()) RETURNING id`, [applicationId, first.id])
+  return { ok: true, evaluationId: row?.id ?? null }
+}
