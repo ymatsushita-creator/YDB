@@ -21,7 +21,11 @@ import {
  *
  * 素の `<form action={...}>` である。`'use client'` は増やしていない。
  */
-export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: Record<string, string> }) {
+export function ScoreSheet({ sheet, context, showAi = false }: {
+  sheet: ScoringSheet
+  context: Record<string, string>
+  showAi?: boolean
+}) {
   const hidden = (
     <>
       {Object.entries(context).map(([k, v]) => (
@@ -164,7 +168,18 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
       <Link href={`/applications/${sheet.application_id}`} className="hh-more">
         応募の経緯 ›
       </Link>
+      {showAi && sheet.step_name === '書類選考' && (
+        <>
+          {' 　'}
+          <Link
+            href={`/ai?${new URLSearchParams({
+              season: context.seasonId ?? '', person: sheet.person_id,
+            })}`}
+            className="hh-more">
+            AI分析 ›
+          </Link>
+        </>
+      )}
     </>
   )
 }
-

@@ -10,6 +10,7 @@ import { parseDecideCode, DECIDE_CODE_MESSAGE } from '../../../src/commands/deci
 import { jstDay, num, filled, NotDerived } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
 import { Avatar } from '../../_components/borderline.tsx'
+import { currentTier } from '../../../src/auth/current.ts'
 import { Confidence, ApproachChip } from '../../_components/headhunting.tsx'
 import { ScoreSheet } from '../../_components/scoring.tsx'
 
@@ -46,6 +47,7 @@ export default async function BorderlineScorePage({
   if (!UUID.test(person)) notFound()
 
   const db = await getDb()
+  const showAi = await currentTier() === 'all'
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
     ?? defaultSeason(seasons)
@@ -134,6 +136,7 @@ export default async function BorderlineScorePage({
             <section className="card-base">
               <ScoreSheet
                 sheet={sheet}
+                showAi={showAi}
                 context={{
                   seasonId: season.id,
                   tab: tab ?? '',

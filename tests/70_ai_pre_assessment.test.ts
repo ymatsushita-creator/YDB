@@ -11,6 +11,9 @@ import { TARGETS } from '../src/ai/ingest_plan.ts'
 import { REQUIRED_VIEWPOINT } from '../src/ai/pre_assessment.ts'
 import { listAiPreAssessmentTargets } from '../src/queries/ai_pre_assessment.ts'
 import { readFile } from 'node:fs/promises'
+import {
+  hasAnthropicApiKey, loadAnthropicApiKey, saveAnthropicApiKey,
+} from '../src/secrets/anthropic.ts'
 
 /**
  * AI分析は事前ステータスであって、成績ではない（0044。C-164。依頼者の指示）。
@@ -223,13 +226,34 @@ describe('AI分析の事前ステータス（C-164）', () => {
 })
 
 describe('APIキー入力画面', () => {
-  test('キーは伏字入力で、保存先やURLへ渡さない', async () => {
+  test('キーは伏字入力で、保存後は自動利用する', async () => {
     const page = await readFile(new URL('../app/ai/page.tsx', import.meta.url), 'utf8')
     const action = await readFile(new URL('../app/ai/actions.ts', import.meta.url), 'utf8')
+    const shell = await readFile(new URL('../app/_components/shell.tsx', import.meta.url), 'utf8')
+    const scoring = await readFile(new URL('../app/_components/scoring.tsx', import.meta.url), 'utf8')
     assert.match(page, /name="apiKey" type="password"/)
     assert.match(page, /autoComplete="off"/)
+    assert.match(page, /一度登録すれば以後も自動使用/)
+    assert.match(action, /loadAnthropicApiKey/)
+    assert.doesNotMatch(shell, /href: '\/ai'/, '左サイドバーへAI分析を追加しない')
+    assert.match(scoring, /sheet\.step_name === '書類選考'/)
+    assert.match(page, /label: '通常選考'[\s\S]*label: '書類選考'[\s\S]*label: '採点'[\s\S]*label: 'AI分析'/)
     assert.doesNotMatch(action, /cookies\(|localStorage|sessionStorage/)
     assert.doesNotMatch(action, /p\.set\(['"]apiKey|console\.(log|error).*apiKey/)
+  })
+
+  test('APIキーは暗号文で永続化し、同じサーバ秘密でだけ復号できる', async () => {
+    const db = await freshDb()
+    const apiKey = 'sk-ant-test-persistent-secret'
+    assert.equal((await saveAnthropicApiKey(db, apiKey, 'server-secret')).ok, true)
+    assert.equal(await hasAnthropicApiKey(db), true)
+    const stored = await maybeOne<{ ciphertext: string }>(db,
+      `SELECT ciphertext FROM app_secrets WHERE name = 'anthropic_api_key'`)
+    assert.notEqual(stored?.ciphertext, apiKey)
+    assert.ok(!stored?.ciphertext.includes(apiKey), '平文APIキーがDBに残っている')
+    assert.equal(await loadAnthropicApiKey(db, 'server-secret'), apiKey)
+    assert.equal(await loadAnthropicApiKey(db, 'wrong-secret'), null)
+    await db.close()
   })
 })
 

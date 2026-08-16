@@ -19,6 +19,7 @@ import { ApproachChip, Confidence, RankDelta } from '../_components/headhunting.
 import {
   WeekCalendar, mondayOf, addDays, Rank, Avatar, MemoPopup, AttendancePopup,
 } from '../_components/borderline.tsx'
+import { currentTier } from '../../src/auth/current.ts'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,6 +61,7 @@ export default async function BorderlinePage({
 }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams
   const db = await getDb()
+  const showAi = await currentTier() === 'all'
 
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
@@ -390,6 +392,7 @@ export default async function BorderlinePage({
                     )}
                     <ScoreSheet
                       sheet={sheet}
+                      showAi={showAi}
                       context={{
                         seasonId: season.id,
                         tab: tab.id,

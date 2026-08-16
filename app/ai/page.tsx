@@ -4,6 +4,8 @@ import { listAiPreAssessmentTargets } from '../../src/queries/ai_pre_assessment.
 import { Card, Empty, num } from '../_components/ui.tsx'
 import { Breadcrumb, Shell, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 import { runAiPreAssessmentAction } from './actions.ts'
+import { saveAnthropicApiKeyAction } from './actions.ts'
+import { hasAnthropicApiKey } from '../../src/secrets/anthropic.ts'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -12,6 +14,8 @@ const messages: Record<string, string> = {
   saved: '1件をAI分析し、事前ステータスとして記録した。',
   empty: '分析を待っている応募回答は無い。',
   key_required: 'APIキーを貼り付ける。',
+  key_saved: 'APIキーを暗号化して保存した。以後のAI分析で自動的に使います。',
+  encryption_secret_missing: '暗号化に必要なサーバ設定が無いため保存できなかった。',
   bad_key: 'APIキーが認証されなかった。キーを確かめる。',
   api_failed: 'AI分析を完了できなかった。時間を置いてもう一度試す。',
   record_failed: '分析結果を記録できなかった。',
@@ -19,7 +23,7 @@ const messages: Record<string, string> = {
 }
 
 export default async function AiPage({ searchParams }: {
-  searchParams: Promise<{ season?: string; result?: string; again?: string }>
+  searchParams: Promise<{ season?: string; person?: string; result?: string; again?: string }>
 }) {
   const sp = await searchParams
   const db = await getDb()
@@ -27,13 +31,20 @@ export default async function AiPage({ searchParams }: {
   const season = (await getSeason(db, sp.season)) ?? defaultSeason(seasons)
   if (!season) return <Shell active="headhunting"><Empty>期が登録されていない。</Empty></Shell>
   const again = sp.again === '1'
-  const targets = await listAiPreAssessmentTargets(db, season.id, again)
+  const personId = sp.person ?? ''
+  const targets = await listAiPreAssessmentTargets(db, season.id, again, personId)
+  const keyConfigured = await hasAnthropicApiKey(db)
 
   return (
-    <Shell active="headhunting" seasonId={season.id}
+    <Shell active="borderline" seasonId={season.id}
       years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/ai" />}>
       <Breadcrumb root={seasonLabel(season)} crumbs={[
-        { label: '特別選考', href: `/headhunting?season=${season.id}` },
+        { label: '通常選考', href: `/borderline?season=${season.id}` },
+        { label: '書類選考', href: `/borderline?season=${season.id}&tab=step1` },
+        ...(personId ? [{
+          label: '採点',
+          href: `/borderline/${personId}?season=${season.id}&tab=step1`,
+        }] : [{ label: '採点', href: `/borderline?season=${season.id}&tab=step1` }]),
         { label: 'AI分析' },
       ]} />
       <div className="page-head"><div>
@@ -43,21 +54,32 @@ export default async function AiPage({ searchParams }: {
       {sp.result && messages[sp.result] && (
         <p className={`callout${sp.result === 'saved' ? ' ok' : ''}`}>{messages[sp.result]}</p>
       )}
-      <div className="section"><Card title="次の1件を分析">
-        <form action={runAiPreAssessmentAction} className="editable-region">
+      <div className="section"><Card title="Anthropic API設定">
+        <form action={saveAnthropicApiKeyAction} className="editable-region">
           <input type="hidden" name="seasonId" value={season.id} />
+          <input type="hidden" name="personId" value={personId} />
           <label className="iv-field">Anthropic APIキー
             <input name="apiKey" type="password" required autoComplete="off"
               placeholder="sk-ant-…" spellCheck={false} />
-            <small>キーはDB・Cookie・URL・Gitへ保存せず、この1回の実行だけに使います。</small>
+            <small>一度登録すれば以後も自動使用します。暗号化してDBへ保存し、画面には戻しません。</small>
           </label>
+          <p>{keyConfigured ? '登録済み。ここから新しいキーへ差し替えられます。' : '未登録です。'}</p>
+          <button className="button-primary" type="submit">
+            {keyConfigured ? 'APIキーを差し替える' : 'APIキーを登録する'}
+          </button>
+        </form>
+      </Card></div>
+      <div className="section"><Card title="次の1件を分析">
+        <form action={runAiPreAssessmentAction} className="editable-region">
+          <input type="hidden" name="seasonId" value={season.id} />
+          <input type="hidden" name="personId" value={personId} />
           <label>
             <input type="checkbox" name="again" value="1" defaultChecked={again} />
             分析済みもやり直す（前の分析は消さず、訂正として積む）
           </label>
           <p>実行すると、氏名・メール・電話を除いた応募フォーム本文をAnthropicへ送ります。</p>
           <button className="button-primary" type="submit">
-            次の1件を分析する
+            {keyConfigured ? '次の1件を分析する' : '先にAPIキーを登録する'}
           </button>
         </form>
       </Card></div>
