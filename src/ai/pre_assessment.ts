@@ -95,12 +95,12 @@ const SYSTEM = `あなたは選考担当の下読みを手伝う。合否は判�
 export async function assessApplication(input: {
   labels: { code: string; definition: string }[]
   answers: AnswerInput[]
-}): Promise<PreAssessment> {
+}, options?: { apiKey?: string }): Promise<PreAssessment> {
   if (input.labels.length === 0) throw new Error('札が1つも無い（0044 未適用）')
   const answers = input.answers.filter((a) => a.answer.trim() !== '')
   if (answers.length === 0) throw new Error('回答が1つも無い')
 
-  const message = await aiClient().messages.create({
+  const message = await aiClient(options?.apiKey).messages.create({
     model: AI_MODEL,
     max_tokens: 4000,
     thinking: { type: 'adaptive' },

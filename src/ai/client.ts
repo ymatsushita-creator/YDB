@@ -13,9 +13,8 @@ import Anthropic from '@anthropic-ai/sdk'
  *
  *   **点は付けない。** `evaluation_scores` へ書く道はこの階層に置かない。
  *
- * ★ 画面からは呼ばない。`src/commands/` でも `src/queries/` でもなく
- *   `src/ai/` に置き、**道具（scripts/）からだけ呼ぶ。**
- *   画面の応答時間に外部サービスをぶら下げると、外が遅い日に画面が止まる。
+ * ★ 画面から渡された鍵は、その1回のクライアントにだけ使い、キャッシュしない。
+ *   DB・Cookie・URL・ログへは置かない。環境変数の鍵だけを道具用にキャッシュする。
  *
  * ★ 鍵は `ANTHROPIC_API_KEY`。無ければここで**止める** ――
  *   鍵の無いまま黙って空の結果を返すと、分析していないのに
@@ -34,7 +33,9 @@ export class MissingApiKey extends Error {
 
 let cached: Anthropic | null = null
 
-export function aiClient(): Anthropic {
+export function aiClient(apiKey?: string): Anthropic {
+  const transient = apiKey?.trim()
+  if (transient) return new Anthropic({ apiKey: transient })
   if (cached) return cached
   if (!process.env.ANTHROPIC_API_KEY) throw new MissingApiKey()
   cached = new Anthropic()

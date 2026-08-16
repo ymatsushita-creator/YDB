@@ -44,6 +44,7 @@ export async function savePartnerSheetAction(
     const v = (r?.values ?? {}) as Record<string, unknown>
     return {
       partnerId: text(r?.id),
+      name: text(v.name),
       category: text(v.category),
       contactName: text(v.contactName),
       contactDepartment: text(v.contactDepartment),
@@ -65,7 +66,10 @@ export async function savePartnerSheetAction(
 
   const db = await getDb()
   const result = await savePartnerSheet(db, { rows, seasonId })
-  if (result.updated > 0) revalidatePath('/approach')
+  if (result.created > 0 || result.updated > 0) {
+    revalidatePath('/approach')
+    revalidatePath('/approach/new')
+  }
 
   return { message: summary(result), ok: result.failed === 0, results: result.rows }
 }

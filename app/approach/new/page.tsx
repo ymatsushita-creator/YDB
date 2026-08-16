@@ -1,173 +1,84 @@
-import Link from 'next/link'
 import { getDb } from '../../../src/db/server.ts'
+import { all } from '../../../src/db/client.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
-import { getIntakeOptions, listChannelResponses } from '../../../src/queries/intake.ts'
-import { ADD_REACH_MESSAGE } from '../../../src/commands/intake.ts'
-import { addReachAction } from './actions.ts'
-import { Card, Empty, num } from '../../_components/ui.tsx'
+import { getIntakeOptions } from '../../../src/queries/intake.ts'
+import { listPartnerSheetRows } from '../../../src/queries/sheet.ts'
+import { savePartnerSheetAction } from '../sheet-actions.ts'
+import { Card, Empty } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
+import { Sheet, type SheetColumn, type SheetRowData } from '../../_components/sheet.tsx'
 
 export const dynamic = 'force-dynamic'
 
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
-
-/**
- * アプローチ追加（依頼者の指示。実行⑩）。
- *
- * ★ 記録するのは「団体へ、いつ、どうやって接触したか」1件である。
- *   団体そのものは、無ければこの場で作る（名前が一意）。
- *
- * ★ 推定リーチは**空のままにできる。** 分からないものを 0 にすると
- *   「届かなかった」という別の事実になる。
- *
- * ★ 年度は接触した日から決まる。**近い期へ寄せない** ――
- *   どの期の期間にも入らない接触は、どの期にも紐づかないまま残る。
- */
-export default async function NewReachPage({
-  searchParams,
-}: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+/** 候補者編集と同じく、新規と既存の連携団体を1枚の表で扱う（実行⑱）。 */
+export default async function NewPartnerPage({ searchParams }: {
+  searchParams: Promise<{ season?: string }>
+}) {
   const sp = await searchParams
   const db = await getDb()
-
   const seasons = await listSeasons(db)
-  const season = (await getSeason(db, sp.season))
-    ?? defaultSeason(seasons)
+  const season = (await getSeason(db, sp.season)) ?? defaultSeason(seasons)
+  if (!season) return <Shell active="approach"><Empty>年度が登録されていない。</Empty></Shell>
 
-  if (!season) {
-    return (
-      <Shell active="approach">
-        <p className="hh-empty-shell">年度が1件も登録されていない。</p>
-      </Shell>
-    )
-  }
-
-  const [options, channels] = await Promise.all([
+  const [rows, options, recommendationStates] = await Promise.all([
+    listPartnerSheetRows(db, season.id),
     getIntakeOptions(db),
-    listChannelResponses(db, season.id),
+    all<{ id: string; label: string }>(db, `
+      SELECT id, label FROM partner_recommendation_states
+       WHERE is_active ORDER BY sort_order`),
   ])
 
-  const code = one(sp.add)
-  const message = code
-    ? ADD_REACH_MESSAGE[code as keyof typeof ADD_REACH_MESSAGE] ?? '記録できなかった。'
-    : null
+  const columns: SheetColumn[] = [
+    // 団体名は同一性なので、新規行だけ入力でき、既存行では読み取り専用。
+    { key: 'name', label: '団体名', type: 'text', newOnly: true, width: 180 },
+    { key: 'category', label: '分類', type: 'text', width: 120 },
+    { key: 'contactName', label: '窓口', type: 'text', width: 120 },
+    { key: 'contactDepartment', label: '担当部署', type: 'text', width: 180 },
+    { key: 'contactEmail', label: '窓口のメール', type: 'email', width: 190 },
+    { key: 'internalOwner', label: '社内担当', type: 'text', width: 110 },
+    { key: 'recommendationSeats', label: '推薦可能人数', type: 'number', width: 110 },
+    { key: 'partneredOn', label: '提携期日', type: 'date', width: 130 },
+    { key: 'bestContactPeriod', label: '最適連絡時期', type: 'text', width: 150 },
+    { key: 'location', label: '所在地', type: 'text', width: 140 },
+    { key: 'engagement', label: 'NEO としての関わり', type: 'text', width: 220 },
+    { key: 'recommendationStateId', label: '推薦枠', type: 'select', width: 150,
+      options: recommendationStates },
+    { key: 'staffId', label: '入力者', type: 'select', options: options.staffs, width: 130 },
+  ]
+
+  const sheetRows: SheetRowData[] = rows.map((p) => ({
+    id: p.partner_id,
+    lead: '',
+    values: {
+      name: p.name,
+      category: p.category ?? '', contactName: p.contact_name ?? '',
+      contactDepartment: p.contact_department ?? '', contactEmail: p.contact_email ?? '',
+      internalOwner: p.internal_owner ?? '',
+      recommendationSeats: p.recommendation_seats === null ? '' : String(p.recommendation_seats),
+      partneredOn: p.partnered_on === null ? '' : String(p.partnered_on).slice(0, 10),
+      bestContactPeriod: p.best_contact_period ?? '', location: p.location ?? '',
+      engagement: p.engagement ?? '', recommendationStateId: p.recommendation_state_id ?? '',
+      staffId: '',
+    },
+  }))
 
   return (
-    <Shell
-      active="approach"
-      seasonId={season.id}
-      years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/approach/new" />}
-    >
-      <Breadcrumb
-        root={seasonLabel(season)}
-        crumbs={[
-          { label: '連携団体', href: `/approach?season=${season.id}` },
-          { label: '連携団体を編集' },
-        ]}
-      />
-
-      {message && <p className={`callout${code === 'saved' ? ' ok' : ''}`}>{message}</p>}
-
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">連携団体を編集</h1>
-          <p className="page-sub">{seasonLabel(season)}</p>
-        </div>
-      </div>
-
-      <form action={addReachAction} className="editable-region">
-        <input type="hidden" name="seasonId" value={season.id} />
-
-        <div className="section">
-          <Card title="どの団体へ">
-            <div className="iv-grid">
-              <label className="iv-field">既にある団体
-                <select name="partnerId" defaultValue="">
-                  <option value="">（新しく作る）</option>
-                  {options.partners.map((o) => (
-                    <option key={o.id} value={o.id}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="iv-field">新しい団体の名前
-                <input name="partnerName" />
-              </label>
-              <label className="iv-field">分類<input name="category" /></label>
-              <label className="iv-field">窓口<input name="contactName" /></label>
-              <label className="iv-field">窓口のメール
-                <input name="contactEmail" type="email" />
-              </label>
-              <label className="iv-field">団体の写真
-                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
-                <small>JPEG / PNG / WebP、2MB以下</small>
-              </label>
-            </div>
-          </Card>
-        </div>
-
-        <div className="section">
-          <Card title="いつ、どうやって">
-            <div className="iv-grid">
-              <label className="iv-field">接触した日
-                <input name="occurredOn" type="date" required />
-              </label>
-              <label className="iv-field">やり方<input name="method" /></label>
-              <label className="iv-field">推定リーチ
-                {/* 分からなければ空のまま。0 は「届かなかった」である。 */}
-                <input name="estimatedReach" type="number" min={0} step={1} />
-              </label>
-            </div>
-            <label className="iv-field iv-field-wide">記録
-              <textarea name="note" rows={3} />
-            </label>
-            <button className="button-primary" type="submit">記録する</button>
-          </Card>
-        </div>
-      </form>
-
-      {/* --- SNS の土台。フォーム回答をチャネル別に数えたもの --- */}
-      <div className="section">
-        <Card title="フォーム回答のチャネル別">
-          {channels.length === 0 ? (
-            <Empty>この期に届いたフォーム回答はまだ無い</Empty>
-          ) : (
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>チャネル</th>
-                    <th className="num">回答</th>
-                    <th className="num">結び付いた回答</th>
-                    <th className="num">人</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {channels.map((c, i) => (
-                    <tr key={`${c.channel_name ?? c.channel_answer ?? 'none'}-${i}`}>
-                      <td className="cell-name">
-                        {c.channel_name ?? (
-                          <span className="section-note">{c.channel_answer ?? '未回答'}</span>
-                        )}
-                        {c.channel_category === 'sns' && (
-                          <span className="badge-tag-blue" style={{ marginLeft: 6 }}>SNS</span>
-                        )}
-                      </td>
-                      <td className="num strong">{num(c.responses)}</td>
-                      <td className="num">{num(c.matched)}</td>
-                      <td className="num">{num(c.persons)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <div className="section">
-        <Link href={`/approach?season=${season.id}`} className="hh-more">
-          ‹ 連携団体へ戻る
-        </Link>
-      </div>
+    <Shell active="approach" seasonId={season.id}
+      years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/approach/new" />}>
+      <Breadcrumb root={seasonLabel(season)} crumbs={[
+        { label: '連携団体', href: `/approach?season=${season.id}` },
+        { label: '連携団体を編集' },
+      ]} />
+      <div className="page-head"><div>
+        <h1 className="page-title">連携団体を編集</h1>
+        <p className="page-sub">{seasonLabel(season)} ・ 新規と既存を同じ表で編集</p>
+      </div></div>
+      <div className="section"><Card title="連携団体">
+        <Sheet columns={columns} rows={sheetRows} action={savePartnerSheetAction}
+          hidden={{ seasonId: season.id }} leadLabel=""
+          detail={{ href: `/approach?season=${season.id}&view=edit&partner={id}`, label: '接触を開く' }}
+          addLabel="新しい団体の行を追加" />
+      </Card></div>
     </Shell>
   )
 }

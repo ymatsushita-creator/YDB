@@ -56,7 +56,7 @@ export const TIER_HOME: Record<Tier, string> = {
 const INPUT_PATHS = ['/people/new', '/approach/new', '/staff/new', '/events/new']
 
 /** ヘッドハンティングだけが `all` の持ち物。ここが3層を分ける唯一の線。 */
-const ALL_ONLY_PATHS = ['/headhunting']
+const ALL_ONLY_PATHS = ['/headhunting', '/ai']
 
 const under = (pathname: string, prefix: string) =>
   pathname === prefix || pathname.startsWith(`${prefix}/`)

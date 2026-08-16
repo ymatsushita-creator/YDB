@@ -1,7 +1,8 @@
 import { openPostgres } from '../src/db/postgres.ts'
-import { all, maybeOne } from '../src/db/client.ts'
+import { maybeOne } from '../src/db/client.ts'
 import { assessApplication, SCALE_MAX } from '../src/ai/pre_assessment.ts'
 import { recordAiPreAssessment, listAiPreLabels } from '../src/commands/ai_pre_assessment.ts'
+import { listAiPreAssessmentTargets } from '../src/queries/ai_pre_assessment.ts'
 
 /**
  * 応募回答をAIで下読みし、**事前ステータス**を付ける（依頼者の指示。実行⑯。C-164）。
@@ -40,11 +41,6 @@ const season = await maybeOne<{ id: string }>(db,
   `SELECT id FROM seasons WHERE enrollment_year = $1 AND NOT is_demo`, [year])
 if (!season) { console.error(`${year}年度の期が無い`); process.exit(1) }
 
-// 書類選考の段。AI分析はここの前さばきである。
-const step = await maybeOne<{ id: string }>(db,
-  `SELECT id FROM selection_steps WHERE season_id = $1 AND name = '書類選考'`, [season.id])
-if (!step) { console.error('書類選考の段が無い'); process.exit(1) }
-
 const labels = await listAiPreLabels(db)
 if (labels.length === 0) { console.error('札が無い（seed 0009 未適用）'); process.exit(1) }
 
@@ -58,19 +54,7 @@ if (labels.length === 0) { console.error('札が無い（seed 0009 未適用）'
  * ★ その期に応募がある人だけを対象にする。応募していない人の回答を
  *   その期の書類選考の下読みに使うと、母集団が画面と食い違う。
  */
-const targets = await all<{ person_id: string; body: string }>(db, `
-  SELECT n.person_id,
-         string_agg(n.body, E'\\n\\n' ORDER BY n.involvement) AS body
-    FROM person_notes n
-    JOIN persons p ON p.id = n.person_id AND p.deleted_at IS NULL
-    JOIN applications a ON a.person_id = n.person_id AND a.season_id = $1
-                       AND a.voided_at IS NULL AND a.deleted_at IS NULL
-   WHERE n.involvement LIKE '%応募フォーム%'
-     ${again ? '' : `AND NOT EXISTS (
-           SELECT 1 FROM v_ai_pre_assessment x
-            WHERE x.person_id = n.person_id AND x.season_id = $1
-              AND x.selection_step_id = $2)`}
-   GROUP BY n.person_id`, [season.id, step.id])
+const targets = await listAiPreAssessmentTargets(db, season.id, again)
 
 const queue = limit > 0 ? targets.slice(0, limit) : targets
 console.log(`対象: ${queue.length}件${limit > 0 ? `（全${targets.length}件のうち）` : ''}`)
@@ -94,7 +78,7 @@ for (const t of queue) {
   try {
     const got = await assessApplication({ labels, answers })
     const r = await recordAiPreAssessment(db, {
-      personId: t.person_id, seasonId: season.id, selectionStepId: step.id,
+      personId: t.person_id, seasonId: season.id, selectionStepId: t.selection_step_id,
       labelCode: got.label, rationale: got.rationale, model: got.model,
       source: 'person_notes（応募フォーム）',
       viewpoints: got.viewpoints.map((v) => ({ ...v, scaleMax: SCALE_MAX })),

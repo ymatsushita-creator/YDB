@@ -2,13 +2,15 @@ import { test, describe, before } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
 import { scalar, all, maybeOne, type Db } from '../src/db/client.ts'
-import { baseFixture, makeSeason, makePerson } from './support/fixtures.ts'
+import { baseFixture, makeSeason, makePerson, makeApplication } from './support/fixtures.ts'
 import {
   recordAiPreAssessment, listAiPreLabels,
 } from '../src/commands/ai_pre_assessment.ts'
 import { parseCsv } from '../src/import/csv.ts'
 import { TARGETS } from '../src/ai/ingest_plan.ts'
 import { REQUIRED_VIEWPOINT } from '../src/ai/pre_assessment.ts'
+import { listAiPreAssessmentTargets } from '../src/queries/ai_pre_assessment.ts'
+import { readFile } from 'node:fs/promises'
 
 /**
  * AI分析は事前ステータスであって、成績ではない（0044。C-164。依頼者の指示）。
@@ -193,6 +195,41 @@ describe('AI分析の事前ステータス（C-164）', () => {
       })
       assert.equal(!r.ok && r.reason, reason)
     }
+  })
+
+  test('画面の待ち行列は応募フォーム本文だけを返し、分析済みを除く', async () => {
+    await db.query(`UPDATE selection_steps SET name = '書類選考' WHERE id = $1`, [stepId])
+    const target = await makePerson(db, await scalar<string>(db, `SELECT id FROM schools LIMIT 1`),
+      { familyName: '架空', givenName: '待ち行列' })
+    await makeApplication(db, target, seasonId, '2026-02-01T00:00:00Z')
+    await db.query(`
+      INSERT INTO person_notes (person_id, author_name, noted_at, body, involvement)
+      VALUES ($1, '取込', now(), '応募回答の本文', '2期の応募フォーム（1/1）')`, [target])
+
+    const queue = await listAiPreAssessmentTargets(db, seasonId)
+    assert.equal(queue.find((r) => r.person_id === target)?.body, '応募回答の本文')
+    assert.ok(!('family_name' in (queue[0] ?? {})), '氏名をAPI用の待ち行列へ混ぜない')
+
+    await recordAiPreAssessment(db, {
+      personId: target, seasonId, selectionStepId: stepId, labelCode: '標準',
+      rationale: 'x', model: 'claude-opus-5', source: 'test',
+      viewpoints: [{ viewpoint: REQUIRED_VIEWPOINT, score: 2, finding: '筋が通っている' }],
+    })
+    assert.equal((await listAiPreAssessmentTargets(db, seasonId))
+      .some((r) => r.person_id === target), false)
+    assert.equal((await listAiPreAssessmentTargets(db, seasonId, true))
+      .some((r) => r.person_id === target), true)
+  })
+})
+
+describe('APIキー入力画面', () => {
+  test('キーは伏字入力で、保存先やURLへ渡さない', async () => {
+    const page = await readFile(new URL('../app/ai/page.tsx', import.meta.url), 'utf8')
+    const action = await readFile(new URL('../app/ai/actions.ts', import.meta.url), 'utf8')
+    assert.match(page, /name="apiKey" type="password"/)
+    assert.match(page, /autoComplete="off"/)
+    assert.doesNotMatch(action, /cookies\(|localStorage|sessionStorage/)
+    assert.doesNotMatch(action, /p\.set\(['"]apiKey|console\.(log|error).*apiKey/)
   })
 })
 

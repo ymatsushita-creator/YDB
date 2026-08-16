@@ -8,7 +8,7 @@ import type { NewReachFailure } from './intake.ts'
 import { listCandidateSheetRows, type CandidateSheetRow } from '../queries/sheet.ts'
 import {
   setPartnerEngagement, updatePartnerReach, setPartnerRecommendationState,
-  SET_ENGAGEMENT_MESSAGE, UPDATE_REACH_MESSAGE, SET_RECOMMENDATION_MESSAGE,
+  SET_ENGAGEMENT_MESSAGE, UPDATE_REACH_MESSAGE, SET_RECOMMENDATION_MESSAGE, ENGAGEMENT_MAX,
 } from './partner.ts'
 import {
   addStaff, renameStaff, ADD_STAFF_MESSAGE, RENAME_STAFF_MESSAGE,
@@ -305,6 +305,8 @@ export const PROFILE_MESSAGE: Record<ProfileFailure, string> = {
 
 export interface PartnerRowInput {
   partnerId: string
+  /** 新規行の団体名。既存行では同一性を変えないため読み取り専用。 */
+  name: string
   category: string
   contactName: string
   contactEmail: string
@@ -344,11 +346,126 @@ export async function savePartnerSheet(
 ): Promise<SheetSaveResult> {
   const rows: RowResult[] = []
   let updated = 0
+  let created = 0
   let failed = 0
 
   for (const [index, row] of input.rows.entries()) {
     const partnerId = t(row.partnerId)
-    if (partnerId === '') continue
+    if (partnerId === '') {
+      const fields = [row.name, row.category, row.contactName, row.contactEmail,
+        row.contactDepartment, row.internalOwner, row.recommendationSeats,
+        row.partneredOn, row.bestContactPeriod, row.location, row.engagement,
+        row.recommendationStateId, row.staffId]
+      if (fields.every((v) => t(v) === '')) continue
+
+      const name = t(row.name)
+      if (name === '') {
+        rows.push({ index, ok: false, message: '団体名は空にできない。' })
+        failed++
+        continue
+      }
+      const email = t(row.contactEmail)
+      if (email !== '' && !/^\S+@\S+\.\S+$/.test(email)) {
+        rows.push({ index, ok: false, message: '窓口のメールの形が違う。' })
+        failed++
+        continue
+      }
+      const seats = t(row.recommendationSeats)
+      if (seats !== '' && !/^\d+$/.test(seats)) {
+        rows.push({ index, ok: false, message: '推薦可能人数は0以上の整数で入れる。' })
+        failed++
+        continue
+      }
+      const date = t(row.partneredOn)
+      const parsedDate = date === '' ? null : new Date(`${date}T00:00:00Z`)
+      if (date !== '' && (!/^\d{4}-\d{2}-\d{2}$/.test(date)
+          || Number.isNaN(parsedDate!.getTime())
+          || parsedDate!.toISOString().slice(0, 10) !== date)) {
+        rows.push({ index, ok: false, message: '提携期日は日付で入れる。' })
+        failed++
+        continue
+      }
+      if (t(row.engagement).length > ENGAGEMENT_MAX) {
+        rows.push({ index, ok: false, message: SET_ENGAGEMENT_MESSAGE.engagement_too_long })
+        failed++
+        continue
+      }
+      // 新規団体を先に作ってから参照不備で落ちると、失敗行なのに団体だけ残る。
+      // 推薦枠に必要な参照は INSERT より前にまとめて確かめる。
+      if (t(row.recommendationStateId) !== '') {
+        const refs = await maybeOne<{ season: boolean; state: boolean; staff: boolean }>(db, `
+          SELECT EXISTS (SELECT 1 FROM seasons WHERE id = $1) AS season,
+                 EXISTS (SELECT 1 FROM partner_recommendation_states
+                          WHERE id = $2 AND is_active) AS state,
+                 EXISTS (SELECT 1 FROM staffs WHERE id = $3 AND is_active) AS staff`,
+        [input.seasonId ?? '', row.recommendationStateId, row.staffId])
+        const message = !refs?.season ? SET_RECOMMENDATION_MESSAGE.season_not_found
+          : !refs.state ? SET_RECOMMENDATION_MESSAGE.state_not_found
+          : !refs.staff ? SET_RECOMMENDATION_MESSAGE.staff_not_found : null
+        if (message) {
+          rows.push({ index, ok: false, message })
+          failed++
+          continue
+        }
+      } else if (t(row.staffId) !== ''
+          && !await maybeOne(db, `SELECT 1 FROM staffs WHERE id = $1`, [row.staffId])) {
+        rows.push({ index, ok: false, message: SET_ENGAGEMENT_MESSAGE.staff_not_found })
+        failed++
+        continue
+      }
+      if (await maybeOne(db, `SELECT 1 FROM partners WHERE name = $1`, [name])) {
+        rows.push({ index, ok: false, message: '同じ名前の団体が既にある。' })
+        failed++
+        continue
+      }
+
+      const made = await maybeOne<{ id: string }>(db, `
+        INSERT INTO partners
+          (name, category, contact_name, contact_email, contact_department,
+           internal_owner, recommendation_seats, partnered_on,
+           best_contact_period, location)
+        VALUES
+          ($1, nullif(btrim($2, $11), ''), nullif(btrim($3, $11), ''),
+           nullif(btrim($4, $11), ''), nullif(btrim($5, $11), ''),
+           nullif(btrim($6, $11), ''), nullif(btrim($7, $11), '')::integer,
+           nullif(btrim($8, $11), '')::date, nullif(btrim($9, $11), ''),
+           nullif(btrim($10, $11), ''))
+        RETURNING id`,
+      [name, row.category, row.contactName, row.contactEmail,
+        row.contactDepartment, row.internalOwner, row.recommendationSeats,
+        row.partneredOn, row.bestContactPeriod, row.location, BLANK_CHARS])
+      if (!made) {
+        rows.push({ index, ok: false, message: '団体を追加できなかった。' })
+        failed++
+        continue
+      }
+
+      // 現在値だけでなく変更履歴・期別イベントも既存コマンドで積む。
+      if (t(row.engagement) !== '') {
+        const result = await setPartnerEngagement(db, {
+          partnerId: made.id, engagement: row.engagement, staffId: row.staffId,
+        })
+        if (!result.ok) {
+          rows.push({ index, ok: false, message: SET_ENGAGEMENT_MESSAGE[result.reason] })
+          failed++
+          continue
+        }
+      }
+      if (t(row.recommendationStateId) !== '' && input.seasonId) {
+        const result = await setPartnerRecommendationState(db, {
+          partnerId: made.id, seasonId: input.seasonId,
+          stateId: row.recommendationStateId, staffId: row.staffId,
+        })
+        if (!result.ok) {
+          rows.push({ index, ok: false, message: SET_RECOMMENDATION_MESSAGE[result.reason] })
+          failed++
+          continue
+        }
+      }
+      rows.push({ index, ok: true, id: made.id, created: true, changed: true })
+      created++
+      continue
+    }
 
     const now = await maybeOne<{
       category: string | null; contact_name: string | null
@@ -448,7 +565,7 @@ export async function savePartnerSheet(
     if (changed) updated++
   }
 
-  return { created: 0, updated, failed, rows }
+  return { created, updated, failed, rows }
 }
 
 

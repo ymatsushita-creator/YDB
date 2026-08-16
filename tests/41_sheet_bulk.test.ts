@@ -313,7 +313,7 @@ describe('表のまとめて保存', () => {
 
     const bad = await savePartnerSheet(db, {
       rows: [{
-        partnerId, category: '大学', contactName: '窓口 太郎',
+        partnerId, name: '架空表団体', category: '大学', contactName: '窓口 太郎',
         contactEmail: 'メールではない', contactDepartment: '', internalOwner: '',
         engagement: '共催先', recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '',
       recommendationStateId: '', staffId,
@@ -323,7 +323,7 @@ describe('表のまとめて保存', () => {
 
     const good = await savePartnerSheet(db, {
       rows: [{
-        partnerId, category: '大学', contactName: '窓口 太郎',
+        partnerId, name: '架空表団体', category: '大学', contactName: '窓口 太郎',
         contactEmail: 'mado@example.test',
         // 0034（応募管理表 011 にあってDBに無かった2列）。
         contactDepartment: '企画部社会共創課', internalOwner: '架空 職員',
@@ -348,7 +348,7 @@ describe('表のまとめて保存', () => {
       `INSERT INTO partners (name) VALUES ('架空部署団体') RETURNING id`)
     const r = await savePartnerSheet(db, {
       rows: [{
-        partnerId, category: '', contactName: '', contactEmail: '',
+        partnerId, name: '架空部署団体', category: '', contactName: '', contactEmail: '',
         contactDepartment: 'QREC', internalOwner: '', engagement: '', recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '',
       recommendationStateId: '', staffId,
       }],
@@ -359,7 +359,7 @@ describe('表のまとめて保存', () => {
     // 空白だけの値は入れない（0015 の形）。
     const blank = await savePartnerSheet(db, {
       rows: [{
-        partnerId, category: '', contactName: '', contactEmail: '',
+        partnerId, name: '架空部署団体', category: '', contactName: '', contactEmail: '',
         contactDepartment: '　', internalOwner: '', engagement: '', recommendationSeats: '', partneredOn: '', bestContactPeriod: '', location: '',
       recommendationStateId: '', staffId,
       }],
@@ -367,6 +367,31 @@ describe('表のまとめて保存', () => {
     assert.equal(blank.failed, 0)
     const after = (await listPartnerSheetRows(db)).find((p) => p.partner_id === partnerId)
     assert.equal(after?.contact_department, null, '空白だけなら空にする（空文字を残さない）')
+  })
+
+  test('団体の表：新規行を追加し、空行は無視する', async () => {
+    const r = await savePartnerSheet(db, {
+      seasonId,
+      rows: [{
+        partnerId: '', name: '架空新規連携先', category: '大学',
+        contactName: '窓口 花子', contactEmail: 'partner@example.test',
+        contactDepartment: '地域連携室', internalOwner: '架空 入力者',
+        recommendationSeats: '3', partneredOn: '2026-08-16',
+        bestContactPeriod: '秋', location: '福岡市', engagement: '推薦元',
+        recommendationStateId: '', staffId,
+      }, {
+        partnerId: '', name: '', category: '', contactName: '', contactEmail: '',
+        contactDepartment: '', internalOwner: '', recommendationSeats: '',
+        partneredOn: '', bestContactPeriod: '', location: '', engagement: '',
+        recommendationStateId: '', staffId: '',
+      }],
+    })
+    assert.equal(r.created, 1)
+    assert.equal(r.rows.length, 1, '空行は結果にも出さない')
+    const made = (await listPartnerSheetRows(db, seasonId))
+      .find((p) => p.name === '架空新規連携先')
+    assert.equal(made?.recommendation_seats, 3)
+    assert.equal(made?.engagement, '推薦元')
   })
 
   test('接触の表：新しい行は足し、既存行は直して版を積む', async () => {

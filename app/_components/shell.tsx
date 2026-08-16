@@ -85,6 +85,7 @@ const TABS: Array<{ id: Tab; href: string; label: string }> = [
 const ADD_LINKS = [
   { href: '/people/new', label: '候補者を編集' },
   { href: '/approach/new', label: '連携団体を編集' },
+  { href: '/ai', label: 'AI分析' },
   // ★ 依頼者の指示（実行⑯）――「連携団体を追加タブの下に、イベントを追加タブ」。
   //   並びは指示のとおり、連携団体の**すぐ下**に置く。
   { href: '/events/new', label: 'イベントを編集' },

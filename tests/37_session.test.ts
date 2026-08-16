@@ -132,6 +132,12 @@ describe('層（実行⑪。依頼者の指示）', () => {
     assert.equal(canOpen('personal', '/headhunting-notes'), true)
   })
 
+  test('APIキーを扱うAI分析画面を開けるのは all だけ', () => {
+    assert.equal(canOpen('all', '/ai'), true)
+    assert.equal(canOpen('personal', '/ai'), false)
+    assert.equal(canOpen('input', '/ai'), false)
+  })
+
   test('personal はヘッドハンティング以外を開ける', () => {
     for (const p of ['/borderline', '/interviews', '/approach', '/people',
       '/applications/x', '/operations', '/people/new']) {
