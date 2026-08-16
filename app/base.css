@@ -218,6 +218,14 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .hh-sidebar {
   /* ★ 入りきらないときは柱ごと送る（C-206）。 */
   overflow-y: auto;
+  /* ★★ **送る器にした瞬間、親の角丸が中身を切り抜く。** ★★（C-207）
+     `.sidebar-region` は四隅とも `--rounded-xl` なので、
+     天端のロゴ（白）の**右角まで丸く削られていた**（依頼者の指摘）。
+     ロゴは横バーへ続く辺なので、**右側の丸みを落とす。**
+     ここを落とさないまま丸みだけ `.hh-brand` で消しても、
+     切り抜いているのは親なので効かない。 */
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
   /* ★ 天端は横バーと同じにする（依頼者の指示。縦タブと横タブは同じ層）。
      `top` は**枠の余白の内側**から測られるので、`--space-md` を入れると
      余白ぶん（16px）さらに下がり、**縦バーだけが16px低い**状態になっていた
@@ -274,6 +282,9 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
 .hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
 .hh-nav a:hover { text-decoration: none; }
+/* ★ 区切り線は、上下に相手が居るときだけ引く（C-208。入力層で浮いていた）。 */
+.hh-nav:has(> :only-child) .hh-nav-divider,
+.hh-nav-divider:last-child { display: none; }
 .hh-nav-divider {
   display: block; height: 1px;
   margin: var(--space-xs) 0;
@@ -1858,17 +1869,14 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
 }
 .hh-frame:has(#rail-collapse:checked) .hh-brand-logo { width: 100%; height: auto; }
 
-/* ---- 横バーをしまう ---- */
-/* ★ こちらも潰し切らない。**掴みの分だけ帯を残す** ――
-   高さ 0 にすると、右端の掴みごと消えて戻せなくなる。 */
-.hh-criteria-ref {
-  overflow: hidden;
-  transition: max-height 260ms cubic-bezier(.4, 0, .2, 1), opacity 200ms ease;
-  max-height: 120px;
-}
-.hh-frame:has(#rail-collapse:checked) .hh-criteria-ref {
-  max-height: 12px; opacity: .35;
-}
+/* ---- 横バー（評価基準） ---- */
+/* ★ 高さは動かさない（C-208）。動かすと位置がずれて見える。 */
+.hh-criteria-ref { overflow: hidden; }
+/* ★ **評価基準の帯は縮めない**（依頼者の指摘。C-208）。
+   畳んで細帯にすると、帯の高さが変わって**中身の位置がずれる** ――
+   横バーと天端をそろえてあるのに、そこだけ上下する。
+   縦バーが縮んでも、この帯は同じ高さ・同じ位置に置いたままにする。
+   （収納で狭くなるのは縦バーだけ。横は元から画面いっぱいである。） */
 /* ★ 戻すのは**ロゴだけ**。端の掴みは消した（C-181。依頼者の指示）。 */
 
 /* ★ 動きを減らす設定を尊重する。切り替わりは残し、滑走だけ止める。 */

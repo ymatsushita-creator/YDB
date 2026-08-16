@@ -171,7 +171,12 @@ export default async function Home(
               いまは規則が無いのが正しい状態である。記入された人数を素直に出す。 */}
           <HomeKpi label="確度の高い候補者" value={latest.high_confidence}
                    href={to('/borderline')} />
-          <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
+          {/* ★ 開けない層には**数も出さない**（C-208。ペルソナ試験で見つけた）。
+              平社員には特別選考のタブが出ないのに、人数だけ出ていた。
+              押せない札に数字だけ載ると、「見せない」と決めた線が漏れる。 */}
+          {canOpen(tier ?? 'input', '/headhunting') && (
+            <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
+          )}
           {/* ★「Aスペース」に5枚目（実行⑯。依頼者の指示。C-162）――
               「応募」は「候補者」（識別できた人の累計）とは母集団が違う
               （C-62：単位の違う値を並べない）。既存カードへ相乗りさせず、

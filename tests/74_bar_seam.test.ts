@@ -35,7 +35,19 @@ const lastBlock = (src: string, selector: string) => {
   return all[all.length - 1]!
 }
 
-describe('バーの継ぎ目（C-198）', () => {
+describe('バーの継ぎ目（C-198 / C-207）', () => {
+  test('★ 柱を送る器にしたら、親の角丸で中身を切り抜かない', async () => {
+    // ★ `.hh-sidebar` に `overflow-y: auto` を足した瞬間、
+    //   `.sidebar-region`（生成物）の四隅の角丸が**中身を切り抜き**、
+    //   天端のロゴの右角が丸く削られた（依頼者の指摘。実画面で確認）。
+    //   `.hh-brand` 側で丸みを消しても、切っているのは親なので効かない。
+    const src = await css()
+    const b = lastBlock(src, '.hh-sidebar')
+    assert.match(b, /overflow-y:\s*auto/, '柱ごと送る形が外れている')
+    assert.match(b, /border-top-right-radius:\s*0/, '親の角丸がロゴを切り抜く')
+    assert.match(b, /border-bottom-right-radius:\s*0/)
+  })
+
   test('★ ロゴの器は、右と下を丸めない（展開時）', async () => {
     const b = lastBlock(await css(), '.hh-brand')
     assert.match(b, /border-top-right-radius:\s*0/, '右上が丸いと横バーと切れて見える')
