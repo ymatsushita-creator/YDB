@@ -3,7 +3,8 @@ import { defaultSeason, getSeason, listSeasons } from '../../src/queries/dashboa
 import { listAiPreAssessmentTargets } from '../../src/queries/ai_pre_assessment.ts'
 import { Card, Empty, num } from '../_components/ui.tsx'
 import { Breadcrumb, Shell, YearSwitch, seasonLabel } from '../_components/shell.tsx'
-import { runAiPreAssessmentAction } from './actions.ts'
+import { runAiPreAssessmentAction, askDatabaseAction } from './actions.ts'
+import { cookies } from 'next/headers'
 import { saveAnthropicApiKeyAction } from './actions.ts'
 import { hasAnthropicApiKey } from '../../src/secrets/anthropic.ts'
 
@@ -34,6 +35,14 @@ export default async function AiPage({ searchParams }: {
   const personId = sp.person ?? ''
   const targets = await listAiPreAssessmentTargets(db, season.id, again, personId)
   const keyConfigured = await hasAnthropicApiKey(db)
+
+  // ★ 直前の問いと答え。**記録層には残さない**（置き場所を決めていない）。
+  //   Cookie に短命で置き、描いたら消える扱いにする（C-200）。
+  const raw = (await cookies()).get('youthdb_ask')?.value
+  let asked: { q: string; answer: string; steps: string[] } | null = null
+  if (raw) {
+    try { asked = JSON.parse(raw) } catch { asked = null }
+  }
 
   return (
     <Shell active="borderline" seasonId={season.id}
@@ -69,6 +78,31 @@ export default async function AiPage({ searchParams }: {
           </button>
         </form>
       </Card></div>
+      {/* ★ DB全体への問い合わせ（依頼者の指示。実行⑰。C-200 / C-201）。
+          ★ **読める先は層で変わる** ―― 画面で伏せるのではなく、
+            AIへ渡す道具そのものを層で絞っている（`src/ai/ask.ts`）。 */}
+      <div className="section"><Card title="記録に聞く">
+        <form action={askDatabaseAction} className="editable-region">
+          <input type="hidden" name="seasonId" value={season?.id ?? ''} />
+          <label>問い
+            <input name="question" required maxLength={400}
+                   placeholder="例：3期の応募は何人か" />
+          </label>
+          <button className="button-primary" type="submit">聞く</button>
+        </form>
+        {asked && (
+          <div className="ask-answer">
+            <p className="section-note">{asked.q}</p>
+            <p>{asked.answer}</p>
+            {asked.steps.length > 0 && (
+              <p className="section-note">
+                読んだ記録: {asked.steps.join(' / ')}
+              </p>
+            )}
+          </div>
+        )}
+      </Card></div>
+
       <div className="section"><Card title="次の1件を分析">
         <form action={runAiPreAssessmentAction} className="editable-region">
           <input type="hidden" name="seasonId" value={season.id} />

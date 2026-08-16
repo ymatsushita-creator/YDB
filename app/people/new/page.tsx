@@ -160,13 +160,13 @@ export default async function NewCandidatePage({
         root={seasonLabel(season)}
         crumbs={[
           { label: '特別選考', href: `/headhunting?season=${season.id}` },
-          { label: '候補者追加' },
+          { label: '候補者を編集' },
         ]}
       />
 
       <div className="page-head">
         <div>
-          <h1 className="page-title">候補者追加</h1>
+          <h1 className="page-title">候補者を編集</h1>
           <p className="page-sub">{seasonLabel(season)} ・ 次の番号 {num(nextNumber)}</p>
         </div>
       </div>

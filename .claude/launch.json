@@ -4,13 +4,21 @@
     {
       "name": "youthdb",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev", "--port", "3111"],
+      "runtimeArgs": [
+        "dev",
+        "--port",
+        "3111"
+      ],
       "port": 3111
     },
     {
       "name": "youthdb-demo",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev:demo", "--port", "3112"],
+      "runtimeArgs": [
+        "dev:demo",
+        "--port",
+        "3112"
+      ],
       "port": 3112
     }
   ]

@@ -39,7 +39,8 @@ ul { padding: 0; list-style: none; }
   padding: var(--space-xxl) 0 var(--space-xl);
   display: flex; align-items: flex-end; gap: var(--space-lg); flex-wrap: wrap;
 }
-.page-title { font-size: 36px; font-weight: 600; line-height: 1.2; letter-spacing: -0.5px; }
+/* ★ 題名は画面から隠している（C-176）。字送りの指定はここでは効かない ――
+   下の `.page-title` が読み上げ用に畳んでいる。書いても死ぬので置かない。 */
 .page-sub { color: var(--color-steel); font-size: 14px; }
 
 .section-title { display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-md); font-size: 18px; font-weight: 600; line-height: 1.4; }
@@ -215,6 +216,8 @@ table.data td.num, table.data th.num { white-space: nowrap; }
   background: var(--color-shell);
 }
 .hh-sidebar {
+  /* ★ 入りきらないときは柱ごと送る（C-206）。 */
+  overflow-y: auto;
   /* ★ 天端は横バーと同じにする（依頼者の指示。縦タブと横タブは同じ層）。
      `top` は**枠の余白の内側**から測られるので、`--space-md` を入れると
      余白ぶん（16px）さらに下がり、**縦バーだけが16px低い**状態になっていた
@@ -231,7 +234,12 @@ table.data td.num, table.data th.num { white-space: nowrap; }
    縦バーごと送ると、天端のロゴまで流れて帯がそこだけ切れる。だから
    **送るのはタブの並びだけ**にする ―― ロゴ（帯）と足元は動かさない。
    足りないときは中で送る（C-113 で操作柱に対して行ったのと同じ手当て）。 */
-.hh-nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+ /* ★ タブも入口も**切らない**（C-205 / C-206。実画面で2度切れた）。
+    ―― nav を伸ばすと下の「〜を編集」が枠の外へ出て消え、
+       nav を縮めるとタブ自身が途中で切れた。
+    どちらも**中で送る**のをやめ、**柱ごと送る**形にする。 */
+.hh-nav { flex: 0 0 auto; min-height: 0; overflow-y: visible; }
+.hh-nav-add { flex: 0 0 auto; }
 .hh-sidebar-foot { flex: 0 0 auto; }
 /* 縦バーの内側の余白を突き抜けて、左上の角いっぱいに置く。
    角丸も縦バーに合わせる ―― ここだけ丸みが違うと、
@@ -254,6 +262,12 @@ table.data td.num, table.data th.num { white-space: nowrap; }
   margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
   padding: var(--logo-pad);
   border-radius: var(--rounded-xl) 0 0 0;
+  /* ★ 一括指定の**後ろ**で右側を明示的に落とす（C-198）。
+     一括の `0` に頼ると、後から別の節が `border-radius` を丸ごと
+     書き換えたときに右側だけ丸みが戻る ―― 実際それが起きた。 */
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
   background: #fff;
 }
 .hh-brand-logo { display: block; width: 100%; height: auto; }
@@ -1812,14 +1826,6 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
   transition: width 260ms cubic-bezier(.4, 0, .2, 1),
               padding 260ms cubic-bezier(.4, 0, .2, 1);
 }
-/* ★ ロゴは器ごと縮める。**器（.hh-brand）に固定の高さがある**ので、
-   絵だけ細くしても帯の高さが残り、縮んでいないように見えていた。 */
-.hh-frame:has(#rail-collapse:checked) .hh-brand {
-  height: auto; padding: 0;
-}
-.hh-frame:has(#rail-collapse:checked) .hh-brand-logo {
-  width: 100%; height: auto;
-}
 /* 縦バーの内側の余白も詰める ―― 残さないとロゴが 56px に収まらない。 */
 .hh-frame:has(#rail-collapse:checked) .hh-sidebar {
   padding-left: 4px; padding-right: 4px; overflow: hidden;
@@ -1836,7 +1842,15 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
   height: var(--logo-h);
   margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
   padding: 4px;
+  /* ★★ **右と下は丸めない**（依頼者の指摘。C-196）★★
+     縦バー・ロゴ・横バーは**ひと続きの面**である。右下に丸みが出ると
+     ロゴと横バーの間に切れ目が生まれ、3枚が別の板に見える。
+     丸めるのは外周の左上だけ。 */
   border-radius: var(--rounded-xl) 0 0 0;
+  /* ★ 右は枠の余白ぶんだけ伸ばして、横バーの左端と突き合わせる
+     （展開時の `.hh-brand` と同じ margin の作り）。
+     ★ **伸ばしすぎない** ―― 横バーの下に潜ると、横バー自身の
+       左下の丸みが白の上に出て、**曲線として見える。** */
   width: calc(var(--rail-stub) + var(--space-md));
   box-sizing: border-box;
   /* 縮んだロゴを器の中央に置く（上に張り付かせない）。 */
@@ -1926,9 +1940,18 @@ table.data.sheet thead th.sheet-lead {
 
 /* ★ 新規行は色で分ける（依頼者の指示。C-185）。
    面は濃く塗らない ―― 記録の状態ではなく「まだ保存していない」印である。 */
+/* ★ 新規行は**ひと目で分かる濃さ**にする（C-206。実画面で薄すぎた）。
+   面は塗るが、記録の状態ではないので**左の帯で意味を持たせる**。 */
 .sheet-lead-new { color: var(--color-accent); font-weight: 700; }
-tr:has(.sheet-lead-new) td { background-color: var(--color-accent-wash, #f2f7ff); }
-tr:has(.sheet-lead-new) td.sheet-lead { background-color: var(--color-accent-wash, #f2f7ff); }
+tr:has(.sheet-lead-new) td,
+tr:has(.sheet-lead-new) th.sheet-lead { background-color: #eaf2ff; }
+/* ★ セルを塗っても**入力欄の白**で埋まって見えない（実画面で確認）。
+   入力欄そのものに色を敷き、左端に帯を立てる。 */
+tr:has(.sheet-lead-new) input,
+tr:has(.sheet-lead-new) select { background-color: #f6faff; border-color: var(--color-accent); }
+tr:has(.sheet-lead-new) th.sheet-lead {
+  box-shadow: inset 4px 0 0 0 var(--color-accent);
+}
 
 /* 担当者メモの履歴（C-177）。畳んで置く ―― 現在のメモの邪魔をしない。 */
 .note-history { margin-top: var(--space-sm); font-size: 13px; }
@@ -1940,15 +1963,8 @@ tr:has(.sheet-lead-new) td.sheet-lead { background-color: var(--color-accent-was
 }
 .note-history-list li { display: flex; flex-direction: column; gap: 2px; }
 
-/* ★ 縦バーのボタンを詰める（依頼者の指示。実行⑰。C-189）。
-   ★ 2度目の指示で**さらに削った** ―― 厚みと間隔だけを削り、
-     字の大きさは変えない（比率を触ると読みにくくなる）。 */
-.sidebar-item, .sidebar-item-active {
-  padding-top: 3px; padding-bottom: 3px;
-  min-height: 0; line-height: 1.5; font-size: 13px;
-}
-.hh-nav { gap: 2px; }
-.hh-sidebar { gap: var(--space-sm); }
+/* ★ 縦バーのボタンは**元に戻した**（依頼者の指示。C-202）。
+   詰めすぎて押しづらくなったため、C-189 の削りを外す。 */
 
 /* =============================================================
    欲しい人ランキングを広げる（依頼者の指示。実行⑰。C-190）
@@ -1959,14 +1975,67 @@ tr:has(.sheet-lead-new) td.sheet-lead { background-color: var(--color-accent-was
      右を消さない ―― 隠れているだけで、タブを畳めば戻る。
    ★ 重ねるのではなく、左が右の上に乗る形にする（字が重ならない）。
    ============================================================= */
+/* ★ 左列を80%にするのは、**列の割り付けで行う**（C-202）。
+   要素に `width: 80%` を掛けると、列は元の幅のまま残り、
+   **中身と列の差が灰色の隙間として見える**（依頼者の指摘）。
+   列そのものを 80% にすれば、隙間は生まれない。 */
+/* ★ 左（欲しい人ランキング）を 80% に絞り、**空いた分を右へ渡す**
+   （依頼者の指示。C-203）。
+   ★ 要素に `width: 80%` を掛けない ―― 列は元の幅のまま残り、
+     中身との差が**灰色の隙間**として見える（依頼者の指摘）。
+   ★ 列の割り付けで取る。左は元の 1fr の 8 割、右はその分だけ広がる。 */
 @media (min-width: 1181px) {
-  .hh-grid:has(.hh-col-main) { position: relative; }
-  .hh-col-main {
-    width: 80%;
-    position: relative;
-    z-index: 2;
-    background: var(--color-shell);
-  }
-  /* 右列は残りの20%に押し込む。中身は消さない。 */
-  .hh-col-side { min-width: 0; overflow: hidden; }
+  .hh-grid { grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.55fr); }
+  .hh-col-side { min-width: 0; }
 }
+
+/* KPIの結果（C-197）。棒はCSSの幅だけで描く。軸は置かない ――
+   単位の違う数が並ぶので、共通の目盛りは引けない。 */
+.kpi-viz { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
+.kpi-viz-row { display: grid; grid-template-columns: minmax(0, 12rem) minmax(0, 1fr) auto; gap: var(--space-sm); align-items: center; }
+.kpi-viz-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-viz-track { height: 10px; border-radius: 999px; background: var(--color-hairline-soft); overflow: hidden; }
+.kpi-viz-bar { display: block; height: 100%; background: var(--color-accent); border-radius: 999px; }
+.kpi-viz-value { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; white-space: nowrap; }
+.kpi-viz-value small { margin-left: 4px; font-weight: 400; color: var(--color-steel); }
+.kpi-viz-name small { display: block; color: var(--color-steel); font-size: 11px; }
+.kpi-viz-none { color: var(--color-steel); font-style: normal; font-weight: 400; font-size: 12px; }
+/* 記録に聞く（C-200）。答えは引用として置く ―― 説明文と区別する。 */
+.ask-answer { margin-top: var(--space-md); padding-left: var(--space-sm);
+  border-left: 2px solid var(--color-accent); display: flex;
+  flex-direction: column; gap: 4px; font-size: 14px; white-space: pre-wrap; }
+/* ホームからKPIを足す（C-204）。1行に収める ―― 見た瞬間に決められるように。 */
+/* ホームからKPIを足す（C-204 / C-206。実画面で崩れを確認）。
+   縦積みだと「記入できます」の札と入力が重なるので、格子で組む。 */
+.home-kpi-add {
+  display: grid;
+  /* ★ 3枚並ぶ列（ホーム）では1枚が細いので、**2列**で組む。
+     `auto-fit` に任せると1列へ落ち、縦に伸びて下が余った（C-206）。 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs);
+  align-items: center;
+  margin: var(--space-md) 0 var(--space-sm);
+}
+.home-kpi-add input, .home-kpi-add select { width: 100%; min-width: 0; }
+.home-kpi-add button { grid-column: 1 / -1; justify-self: stretch; }
+/* KPIのカードは、入力と結果で高さを分け合う ―― 下に空きを残さない。 */
+.home-kpi-results { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+/* KPIの入力（C-206。実画面で崩れを確認）。
+   ラベルと入力を縦に組み、行として等分に並べる ――
+   素の inline 並びだと、選択の幅が隣の見出しへ食い込む。 */
+.kpi-add-form, .kpi-edit-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-sm);
+  align-items: end;
+}
+.kpi-add-form label, .kpi-edit-form label {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 12px; color: var(--color-steel); min-width: 0;
+}
+.kpi-add-form input, .kpi-add-form select, .kpi-add-form textarea,
+.kpi-edit-form input, .kpi-edit-form select, .kpi-edit-form textarea {
+  width: 100%; min-width: 0;
+}
+.kpi-add-form button, .kpi-edit-form button { justify-self: start; }

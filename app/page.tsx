@@ -8,6 +8,8 @@ import {
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
 import { listKpis } from '../src/queries/kpi.ts'
+import { listKpiMetrics } from '../src/queries/kpi_metrics.ts'
+import { saveKpiAction } from './kpis/actions.ts'
 import { Card, Empty, num, NotDerived } from './_components/ui.tsx'
 import { TimeSeries, Legend } from './_components/charts.tsx'
 import { Confidence } from './_components/headhunting.tsx'
@@ -104,13 +106,17 @@ export default async function Home(
     )
   }
 
-  const [trends, picks, hasRules, summary, kpis] = await Promise.all([
+  const [trends, picks, hasRules, summary, kpis, kpiMetrics] = await Promise.all([
     getHomeTrends(db, season.id),
     listConfidence(db, season.id, 3),
     hasScoringRules(db),
     getSummary(db, season.id),
     listKpis(db, season.id),
+    // ★ この画面からKPIを足すための選択肢（0049。C-204）。
+    listKpiMetrics(db),
   ])
+  // KPIを決められるのはALL権限だけ（コマンド側でも層を見る）。
+  const canEditKpi = tier === 'all'
 
   // ★ 応募の目標との比較（実行⑯。依頼者の指示。C-152 で引き継いだ値を使う）。
   //   目標が無い期（未受領）では出さない ―― 無い目標を出さない（C-127 と同じ形）。
@@ -160,8 +166,11 @@ export default async function Home(
         <div className="home-summary-grid">
           <HomeKpi label="候補者" value={latest.candidates} href={to('/people')} />
           <HomeKpi label="連携団体" value={latest.partners} href={to('/approach')} />
+          {/* ★ 確度は 0039 で**人が記入する**ものになった（C-206。実画面で確認）。
+              算出規則の有無で「算出なし」と出すのは、算出していた頃の言い方で、
+              いまは規則が無いのが正しい状態である。記入された人数を素直に出す。 */}
           <HomeKpi label="確度の高い候補者" value={latest.high_confidence}
-                   href={to('/borderline')} derived={hasRules} />
+                   href={to('/borderline')} />
           <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
           {/* ★「Aスペース」に5枚目（実行⑯。依頼者の指示。C-162）――
               「応募」は「候補者」（識別できた人の累計）とは母集団が違う
@@ -189,6 +198,26 @@ export default async function Home(
 
         <div className="section">
           <Card title="KPI" titleHref={to('/kpis')}>
+            {/* ★ この画面から直接足せる（依頼者の指示。C-204）――
+                KPIを見る場所と決める場所が別だと、見て気づいた瞬間に直せない。
+                ★ 変数は**数えられる語だけ**（0049）。実績はその語から数える。
+                ★ 足せるのはALL権限だけ（`saveKpiAction` が層を見る）。 */}
+            {canEditKpi && (
+              <form action={saveKpiAction} className="home-kpi-add editable-region">
+                <input type="hidden" name="seasonId" value={season.id} />
+                <input name="title" required maxLength={120} placeholder="題名" />
+                <select name="metricKey" defaultValue="">
+                  <option value="">変数なし</option>
+                  {kpiMetrics.map((m) => (
+                    <option key={m.key} value={m.key}>{m.label}</option>
+                  ))}
+                </select>
+                <input name="value" required inputMode="decimal" placeholder="目標" />
+                <input name="memo" maxLength={2000} placeholder="メモ" />
+                <input type="hidden" name="variable" value="―" />
+                <button className="button-primary" type="submit">足す</button>
+              </form>
+            )}
             {kpis.length === 0 ? <Empty>KPIはまだ登録されていない</Empty> : (
               <div className="home-kpi-results">
                 {kpis.map((kpi) => (
@@ -207,7 +236,7 @@ export default async function Home(
         <div className="section">
         <Card title="ピックアップ候補者" titleHref={to('/headhunting')}>
           {picks.length === 0 ? (
-            <Empty>確度がまだ算出されていない</Empty>
+            <Empty>確度がまだ記入されていない</Empty>
           ) : (
             <>
               <div className="pick-list">
