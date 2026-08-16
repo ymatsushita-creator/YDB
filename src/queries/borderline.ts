@@ -50,21 +50,9 @@ export interface BorderlineTask {
   waiting_days: number | null
 }
 
-export const listManualTasks = (db: Db, seasonId: string) =>
-  all<{
-    manual_task_id: string; title: string; person_id: string | null
-    person_name: string | null; owner_name: string | null
-    urgency: 'in_progress' | 'due' | 'later'; is_overdue: boolean
-    due_on: Date; due_time: string | null
-  }>(db, `
-    SELECT t.manual_task_id, t.title, t.person_id,
-           p.family_name || ' ' || p.given_name AS person_name,
-           t.owner_name, t.urgency, t.is_overdue, t.due_on, t.due_time
-      FROM v_manual_tasks t
-      LEFT JOIN persons p ON p.id = t.person_id
-     WHERE t.season_id = $1
-     ORDER BY t.is_overdue DESC, t.due_on, t.due_time NULLS LAST, t.title`,
-  [seasonId])
+/* ★ `listManualTasks` は消した（C-209）。手で足すやることの画面は無く、
+   **どこからも呼ばれていなかった。** 呼ばれない読み取りが残ると、
+   次に触る人が「使われている経路がある」と読む。 */
 
 export const listDerivedTasks = (db: Db, seasonId: string) =>
   all<{

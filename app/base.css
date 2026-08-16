@@ -2047,3 +2047,26 @@ tr:has(.sheet-lead-new) th.sheet-lead {
   width: 100%; min-width: 0;
 }
 .kpi-add-form button, .kpi-edit-form button { justify-self: start; }
+
+/* =============================================================
+   中身が無いときは、面積を分け合わない（C-209。深掘り試験で確認）
+
+   空の一覧でも2列のまま組んでいたので、**画面の半分が白い板**になっていた。
+   ★ 空のカードしか無い列は畳み、残りを本文へ渡す。
+   ★ 消さない ―― 中身が入れば元の割り付けに戻る。
+   ============================================================= */
+@media (min-width: 1181px) {
+  .hh-grid:has(.hh-col-side .hh-empty:only-child) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.32fr);
+  }
+}
+/* 空の知らせは、器いっぱいに広げず**上に寄せる**（下の余白を作らない）。
+   ★ 列そのものも引き伸ばさない ―― 伸ばすと白い板が縦に伸びる。 */
+.hh-col-main > .card-base:has(.hh-empty),
+.hh-col-side > .card-base:has(.hh-empty) { align-self: start; }
+/* ★ 列は格子で行の高さを決めている（0.6fr / 1.4fr）。
+   中身が空のときは**行の割り付けをやめて**中身なりにする ――
+   割り付けたままだと、空のカードが画面の高さまで伸びる。 */
+.hh-col-main:has(.hh-empty), .hh-col-side:has(.hh-empty) {
+  grid-template-rows: auto; align-content: start;
+}
