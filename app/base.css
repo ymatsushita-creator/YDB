@@ -329,7 +329,8 @@ table.data td.num, table.data th.num { white-space: nowrap; }
 .btn-physical {
   position: relative;
   white-space: nowrap;
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex; align-items: center; justify-content: flex-start;
+  text-align: left;
   gap: 6px;
   border-radius: var(--rounded-lg);
   border: 1px solid var(--color-sidebar-hairline);
@@ -1034,7 +1035,8 @@ html, body { height: 100%; overflow: hidden; }
 .button-primary, .button-secondary, .button-dark, .button-on-dark,
 .bl-page, .bl-tab, .hh-search-go {
   position: relative;
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex; align-items: center; justify-content: flex-start;
+  text-align: left;
   gap: 6px;
   padding: 7px 14px;
   border-radius: var(--rounded-md);
@@ -1107,6 +1109,8 @@ html, body { height: 100%; overflow: hidden; }
 .hh-search-go { padding: 0 var(--space-sm); height: 34px; }
 /* 操作柱のタブは行き先そのものなので、他のボタンより大きく取る。 */
 .sidebar-item, .sidebar-item-active {
+  align-items: flex-start;
+  text-align: left;
   min-height: 44px;
   padding: var(--space-sm) var(--space-md); border-radius: var(--rounded-lg);
   font-size: 15px;

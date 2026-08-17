@@ -61,7 +61,7 @@ export default async function NewEventPage({
     listEventOwners(db),
     getEventKind(db),
     all<{ id: string; title: string; day: string; starts: string; ends: string;
-      owner: string; note: string | null }>(db, `
+      owner: string | null; note: string | null }>(db, `
       SELECT a.id,
              a.title,
              jst_date(a.starts_at)::text                          AS day,
@@ -71,7 +71,7 @@ export default async function NewEventPage({
              a.note
         FROM appointments a
         JOIN appointment_kinds k ON k.id = a.kind_id AND k.code = 'event'
-        JOIN staffs s ON s.id = a.owner_staff_id
+        LEFT JOIN staffs s ON s.id = a.owner_staff_id
        WHERE a.season_id = $1 AND a.cancelled_at IS NULL
        ORDER BY a.starts_at DESC`, [season.id]),
   ])
@@ -149,7 +149,7 @@ export default async function NewEventPage({
                       <td className="nowrap">{e.day}</td>
                       <td className="nowrap">{e.starts}–{e.ends}</td>
                       <td>{e.title}</td>
-                      <td>{e.owner}</td>
+                      <td>{e.owner ?? '未記録'}</td>
                       <td className="hh-memo">{e.note ?? '—'}</td>
                     </tr>
                   ))}

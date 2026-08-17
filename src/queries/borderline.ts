@@ -436,7 +436,7 @@ export interface Appointment {
   starts_at: Date
   ends_at: Date
   starts_on: Date
-  owner_name: string
+  owner_name: string | null
 }
 
 /**
@@ -555,7 +555,7 @@ export interface AppointmentDetail {
   kind_label: string
   starts_at: Date
   ends_at: Date
-  owner_name: string
+  owner_name: string | null
   person_name: string | null
   cancelled: boolean
 }
@@ -568,7 +568,7 @@ export const getAppointmentDetail = (db: Db, appointmentId: string, seasonId: st
            (a.cancelled_at IS NOT NULL) AS cancelled
       FROM appointments a
       JOIN appointment_kinds k ON k.id = a.kind_id
-      JOIN staffs s ON s.id = a.owner_staff_id
+      LEFT JOIN staffs s ON s.id = a.owner_staff_id
       LEFT JOIN persons p ON p.id = a.person_id
      WHERE a.id = $1 AND a.season_id = $2`, [appointmentId, seasonId])
 

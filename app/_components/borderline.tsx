@@ -378,7 +378,7 @@ export function AttendancePopup({
         <>
           {jstStamp(appointment.starts_at)} 〜 {jstTime(appointment.ends_at)}
           {' ・ '}{appointment.kind_label}
-          {' ・ '}担当 {appointment.owner_name}
+          {' ・ '}担当 {appointment.owner_name ?? '未記録'}
           {' ・ '}参加 {recorded} 人
         </>
       }

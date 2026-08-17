@@ -69,4 +69,12 @@ describe('連携団体の状態は期をまたいで引き継ぐ（C-174。依�
 
     await db.close()
   })
+
+  test('★ 連携団体画面は、接触実績ではなく全団体の一覧を最初に出す', async () => {
+    const source = await import('node:fs/promises')
+      .then((fs) => fs.readFile(
+        new URL('../app/approach/page.tsx', import.meta.url), 'utf8'))
+    assert.match(source, /: sp\.view === 'list' \? 'list'[\s\S]*: 'list'\s*\n\s*const tabHref/,
+      '3期の接触が0件だと、登録済みの連携団体まで0件に見える')
+  })
 })
