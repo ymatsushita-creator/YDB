@@ -2,6 +2,9 @@ import Link from 'next/link'
 import type { ScoringSheet } from '../../src/queries/borderline.ts'
 import { num } from './ui.tsx'
 import { shownRationale } from '../../src/records/placeholder.ts'
+import {
+  gateOfScores, VERDICT_LABEL, DOCUMENT_SCREENING_PASS, DOCUMENT_SCREENING_STEP,
+} from '../../src/queries/document_screening.ts'
 import { applyAiLogicScoreAction } from '../borderline/actions.ts'
 import {
   scoreOnBorderlineAction, correctScoreOnBorderlineAction, submitOnBorderlineAction,
@@ -37,6 +40,9 @@ export function ScoreSheet({ sheet, context, showAi = false }: {
     </>
   )
 
+  // 合計と門。軸が1本も無い段では出さない（数える対象が無い）。
+  const gate = sheet.criteria.length > 0 ? gateOfScores(sheet.criteria) : null
+
   return (
     <>
       <h3 className="hh-sub">
@@ -52,6 +58,33 @@ export function ScoreSheet({ sheet, context, showAi = false }: {
           ? '評価軸が未登録'
           : `残り ${num(sheet.unscored_count)} / ${num(sheet.criteria.length)} 軸`}
       </p>
+
+      {/* ★★ 合計と門（C-216。依頼者の指示 C-212 ――「10点満点で、7点以上を
+          通して。それ以外は要注意ラベル」）。
+          第1周のペルソナ試験で、数字担当が4軸に点を入れ切っても
+          **合計も閾値も画面に無く**、通るのかどうか分からなかった。
+          ★ 満点は**記録から数える**（軸の scale_max の和）。定数を書き写さない。
+          ★ 門を出すのは書類選考だけ。他の段に閾値の指示は無い。 */}
+      {!sheet.no_criteria && gate && (
+        <p className="hh-note" style={{ marginTop: 0 }}>
+          <span className="strong">
+            合計 {num(gate.score)}
+            <span className="section-note"> / {num(gate.scaleMax)}</span>
+          </span>
+          {sheet.step_name === DOCUMENT_SCREENING_STEP && (
+            <>
+              {' ・ '}
+              <span className={gate.verdict === 'pass' ? 'badge-tag-green'
+                : gate.verdict === 'watch' ? 'badge-tag-orange' : 'badge-tag-gray'}>
+                {VERDICT_LABEL[gate.verdict]}
+              </span>
+              <span className="section-note">
+                {' '}{DOCUMENT_SCREENING_PASS} 点以上で人が読む段へ通す
+              </span>
+            </>
+          )}
+        </p>
+      )}
 
       {sheet.no_criteria ? (
         // 軸が無いことを「採点済み」に見せない。足りないのは点ではなく軸である。

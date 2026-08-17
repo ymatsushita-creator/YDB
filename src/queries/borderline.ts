@@ -1,4 +1,4 @@
-import { all, maybeOne, type Db } from '../db/client.ts'
+import { all, maybeOne, scalar, type Db } from '../db/client.ts'
 
 /**
  * ボーダーライン画面の問い合わせ（実行⑨）。
@@ -277,6 +277,28 @@ export const listCandidatesByStep = (db: Db, seasonId: string, stepId: string) =
      -- 一覧は応募の単位なので、待ちの長いほうを代表にして1行へ畳む。
      ORDER BY a.id, e.assigned_at`,
   [seasonId, stepId])
+
+/**
+ * その段で**確定済み・判定待ち**の応募の数（C-216）。
+ *
+ * ★ 段の一覧は `e.state <> 'submitted'`、つまり**採点する対象**しか出さない。
+ *   採点を確定した応募はその瞬間に一覧から消えるが、**判定はまだ残っている。**
+ *   平社員ペルソナ試験で「6人採点したのに、どこにも居ない」となった。
+ *   一覧から消すのは変えない（採点の場である）が、**黙って消さない** ――
+ *   件数を出して、判定はその応募の画面だと言う。
+ */
+export const countAwaitingDecision = (db: Db, seasonId: string, stepId: string) =>
+  scalar<number>(db, `
+    SELECT count(*)::int
+      FROM v_active_applications a
+      JOIN evaluations e ON e.application_id = a.id
+                        AND e.selection_step_id = $2
+                        AND e.state = 'submitted'
+     WHERE a.season_id = $1
+       AND NOT EXISTS (
+             SELECT 1 FROM v_effective_status_histories h
+              WHERE h.application_id = a.id
+                AND h.selection_step_id = $2)`, [seasonId, stepId])
 
 export interface ScoringCriterion {
   criteria_id: string

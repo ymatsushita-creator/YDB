@@ -22,7 +22,13 @@ import type { Db } from './client.ts'
 
 // new URL(..., import.meta.url) は Turbopack がモジュール参照として
 // 静的解決しようとして失敗する。実行時のパスとして組み立てる。
-const DATA_DIR = join(process.cwd(), '.pgdata')
+//
+// ★ `YOUTHDB_PGDATA` で別のディレクトリへ寄せられる（C-215）。
+//   模擬選考のような**捨てる前提の操作**を、開発中のDBと同じ場所へ
+//   書かせないための逃げ道である。指定が無ければ従来どおり .pgdata。
+const DATA_DIR = process.env.YOUTHDB_PGDATA
+  ? join(process.cwd(), process.env.YOUTHDB_PGDATA)
+  : join(process.cwd(), '.pgdata')
 
 const cache = globalThis as unknown as { __youthdb?: Promise<Db> }
 

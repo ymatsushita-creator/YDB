@@ -52,6 +52,37 @@ export const VERDICT_LABEL: Record<GateVerdict, string> = {
   incomplete: '採点中',
 }
 
+/** 段の呼び名。**画面がここを見て、書類選考のときだけ門を出す。** */
+export const DOCUMENT_SCREENING_STEP = '書類選考'
+
+/**
+ * 採点シートの数字から門を判定する（C-216）。
+ *
+ * ★ 記録を読み直さない ―― 画面が出している点そのものを数える。
+ *   別に引き直すと、画面の合計と門の判定が食い違う。
+ *
+ * ★ **平社員は満点も閾値も知らない。** 第1周のペルソナ試験で、
+ *   4軸に点を入れ切っても合計8点がどこにも出ず、7点で通ることも
+ *   画面から読めなかった。依頼者の指示（C-212）は
+ *   「10点満点で、7点以上を通して。それ以外は要注意ラベル」である。
+ */
+export const gateOfScores = (
+  criteria: readonly { score: number | null; scale_max: number }[],
+): { score: number; scaleMax: number; verdict: GateVerdict } => {
+  const scored = criteria.filter((c) => c.score !== null)
+  return {
+    score: scored.reduce((n, c) => n + Number(c.score), 0),
+    scaleMax: criteria.reduce((n, c) => n + Number(c.scale_max), 0),
+    verdict: verdictOf({
+      application_id: '', person_id: '', person_name: '',
+      score: scored.reduce((n, c) => n + Number(c.score), 0),
+      scale_max: criteria.reduce((n, c) => n + Number(c.scale_max), 0),
+      criteria_total: criteria.length,
+      scored_count: scored.length,
+    }),
+  }
+}
+
 /**
  * その期の書類選考にいる応募と、いまの点。
  *

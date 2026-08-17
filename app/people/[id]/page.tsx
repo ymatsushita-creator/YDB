@@ -14,12 +14,32 @@ import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime, filled,
 } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb } from '../../_components/shell.tsx'
+import { currentTier } from '../../../src/auth/current.ts'
+import { canOpen } from '../../../src/auth/tiers.ts'
 
 export const dynamic = 'force-dynamic'
 
-export default async function PersonPage({ params }: { params: Promise<{ id: string }> }) {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export default async function PersonPage({ params, searchParams }: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const db = await getDb()
   const { id } = await params
+  // ★ 来た期を持ち回る（C-216。平社員ペルソナ試験で詰まった）――
+  //   渡さないと操作柱のタブから `?season=` が落ち、2期の候補者を見て
+  //   詳細に入り「通常選考」で戻ると**進行中の期（3期）に戻る。**
+  //   候補者が消えたように見える。
+  const sp = await searchParams
+  const seasonParam = Array.isArray(sp.season) ? sp.season[0] : sp.season
+  const seasonId = seasonParam && UUID.test(seasonParam) ? seasonParam : undefined
+
+  // ★ 層の判定は `canOpen` だけで行う（CLAUDE.md / C-84）。
+  //   平社員（personal）は特別選考を開けない。開けない画面へのパンくずを
+  //   常設すると、押した瞬間にホームへ弾かれる ―― 試験で実際に踏んだ。
+  const tier = await currentTier()
+  const opensHeadhunting = tier !== null && canOpen(tier, '/headhunting')
 
   const person = await getPerson(db, id)
   // 知らない id・壊れた id・個人情報削除済みは、すべて「無い」で返す。
@@ -40,11 +60,14 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const kana = [person.family_name_kana, person.given_name_kana].filter(Boolean).join(' ')
 
   return (
-    <Shell active="headhunting">
-      {/* 年度を持たない画面。この人の記録は年度をまたぐので、根に年度を置けない。 */}
+    <Shell active={opensHeadhunting ? 'headhunting' : 'borderline'} seasonId={seasonId}>
+      {/* この人の記録は年度をまたぐ。ただし**どの期から来たか**は持ち回る。 */}
       <Breadcrumb
         crumbs={[
-          { label: '特別選考', href: '/headhunting' },
+          opensHeadhunting
+            ? { label: '特別選考', href: '/headhunting' }
+            // 平社員はここから来る。開ける画面へ戻す。
+            : { label: '通常選考', href: seasonId ? `/borderline?season=${seasonId}` : '/borderline' },
           { label: '人を探す', href: '/people' },
           { label: `${person.family_name} ${person.given_name}` },
         ]}
@@ -208,6 +231,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                           <form action={startSelectionAction} className="editable-inline">
                             <input type="hidden" name="personId" value={person.person_id} />
                             <input type="hidden" name="applicationId" value={a.application_id} />
+                            {/* ★ 押した後も期を保つ（C-216）。落とすと、始めた直後に
+                                進行中の期へ戻り、2期の候補者が消えたように見える。 */}
+                            {seasonId && <input type="hidden" name="season" value={seasonId} />}
                             <button className="button-secondary" type="submit">選考を始める</button>
                           </form>
                         )}
@@ -257,7 +283,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     <th>段</th>
                     <th>面接官</th>
                     <th>面接日</th>
-                    <th className="num">点</th>
+                    {/* ★ 点ではなく**点が付いた軸の数**（C-216。面接画面と同じ直し）。 */}
+                    <th className="num">採点した軸</th>
                     <th>所見</th>
                     <th></th>
                   </tr>

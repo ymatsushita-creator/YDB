@@ -6,6 +6,8 @@ import {
 import { searchPersons, getSeasonLevelBreakdown } from '../../src/queries/drilldown.ts'
 import { Card, Empty, LevelBadge, num, jstDay } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
+import { currentTier } from '../../src/auth/current.ts'
+import { canOpen } from '../../src/auth/tiers.ts'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,13 +67,21 @@ export default async function PeoplePage(
   // 断面が存在せず 0 が返るので、比較そのものが成り立たない。
   const comparable = new Date() >= new Date(season.application_open_date)
 
+  // ★ 層の判定は `canOpen` だけで行う（CLAUDE.md / C-84）。平社員（personal）は
+  //   特別選考を開けない。開けない画面をパンくずと強調に置くと、押した瞬間に
+  //   ホームへ弾かれる（C-216。平社員ペルソナ試験で踏んだ）。
+  const tier = await currentTier()
+  const opensHeadhunting = tier !== null && canOpen(tier, '/headhunting')
+
   return (
-    <Shell active="headhunting" seasonId={season.id}
+    <Shell active={opensHeadhunting ? 'headhunting' : 'borderline'} seasonId={season.id}
       years={<YearSwitch seasons={seasons} currentId={season.id} basePath="/people" />}>
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '特別選考', href: `/headhunting?season=${season.id}` },
+          opensHeadhunting
+            ? { label: '特別選考', href: `/headhunting?season=${season.id}` }
+            : { label: '通常選考', href: `/borderline?season=${season.id}` },
           { label: '人を探す' },
         ]}
       />
@@ -172,7 +182,9 @@ export default async function PeoplePage(
                   {rows.map((p) => (
                     <tr key={p.person_id}>
                       <td>
-                        <Link href={`/people/${p.person_id}`}>
+                        {/* ★ 期を持たせる（C-216）。落とすと、開いた先で期が
+                            進行中のものへ戻り、2期で選考中の人が「未応募」に見える。 */}
+                        <Link href={`/people/${p.person_id}?season=${season.id}`}>
                           {p.family_name} {p.given_name}
                         </Link>
                       </td>

@@ -20,6 +20,22 @@
         "3112"
       ],
       "port": 3112
+    },
+    {
+      "name": "youthdb-pilot",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "DATABASE_URL=",
+        "YOUTHDB_PGDATA=.pgdata-pilot",
+        "YOUTHDB_PASSWORD=pilot-all",
+        "YOUTHDB_PASSWORD_PERSONAL=pilot-hirashain",
+        "YOUTHDB_SESSION_SECRET=pilot-only-not-a-real-secret",
+        "pnpm",
+        "dev",
+        "--port",
+        "3113"
+      ],
+      "port": 3113
     }
   ]
 }

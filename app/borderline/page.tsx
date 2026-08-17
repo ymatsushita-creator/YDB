@@ -4,6 +4,7 @@ import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboa
 import {
   listCandidatesByConfidence, listStepTabs,
   listCandidatesByStep, listAppointments, getBorderlinePanel, getScoringSheet,
+  countAwaitingDecision,
   listPersonNotes, getAppointmentDetail, listAttendanceCandidates,
 } from '../../src/queries/borderline.ts'
 import { APPLY_AI_LOGIC_MESSAGE } from '../../src/commands/ai_pre_assessment.ts'
@@ -49,12 +50,21 @@ const LIST_LIMIT = 2000
  * 実際の選考ステップは年度ごとの登録で、名前も数も違う。
  * 固定すると**タブに載らないステップが出る**ので、その分は
  * 一覧の下に件数付きで明示する。**黙って隠さない。**
+ *
+ * ★★ **段は名前で引く。並び順（`sort_order`）で引かない**（C-216）。
+ *   0005 が特別選考を先頭へ入れて 0002 の段を1つずつ後ろへずらしたとき、
+ *   ここの番号だけが取り残され、**3つのタブすべてが別の段を指していた** ――
+ *   「書類選考」タブに特別選考、「2次選考」タブに書類選考が出て、
+ *   最終面接はどのタブにも出なかった。平社員ペルソナ試験で踏んだ。
+ *   並び順は期の編成で動く。**動かないのは段の呼び名である。**
+ *
+ * ★ `id`（`step1` など）は据え置く ―― 外に配ったリンクが切れる。
  */
-const FIXED_TABS: Array<{ id: string; label: string; stepOrder: number | null }> = [
-  { id: 'confidence', label: '1. 確度順候補者リスト', stepOrder: null },
-  { id: 'step1', label: '2. 書類選考', stepOrder: 1 },
-  { id: 'step3', label: '3. 2次選考', stepOrder: 3 },
-  { id: 'step4', label: '4. 最終選考', stepOrder: 4 },
+const FIXED_TABS: Array<{ id: string; label: string; stepName: string | null }> = [
+  { id: 'confidence', label: '1. 確度順候補者リスト', stepName: null },
+  { id: 'step1', label: '2. 書類選考', stepName: '書類選考' },
+  { id: 'step3', label: '3. 2次選考', stepName: 'グループ面接' },
+  { id: 'step4', label: '4. 最終選考', stepName: '最終面接' },
 ]
 
 export default async function BorderlinePage({
@@ -81,12 +91,12 @@ export default async function BorderlinePage({
   // --- 一覧のタブ ---
   const tabId = one(sp.tab) ?? 'confidence'
   const tab = FIXED_TABS.find((t) => t.id === tabId) ?? FIXED_TABS[0]!
-  const step = tab.stepOrder === null
+  const step = tab.stepName === null
     ? null
-    : stepTabs.find((s) => s.sort_order === tab.stepOrder) ?? null
+    : stepTabs.find((s) => s.step_name === tab.stepName) ?? null
 
   const [candidates, stepRows] = await Promise.all([
-    tab.stepOrder === null
+    tab.stepName === null
       ? listCandidatesByConfidence(db, season.id, {
         limit: LIST_LIMIT, offset: 0,
       })
@@ -94,9 +104,14 @@ export default async function BorderlinePage({
     step ? listCandidatesByStep(db, season.id, step.selection_step_id) : Promise.resolve(null),
   ])
 
+  // その段で確定済み・判定待ちの件数（C-216）。一覧から消えた分をここで言う。
+  const awaitingDecision = step
+    ? await countAwaitingDecision(db, season.id, step.selection_step_id)
+    : 0
+
   // タブに載っていないステップ。件数ごと出して、隠れていないことを示す。
-  const shownOrders = FIXED_TABS.flatMap((t) => (t.stepOrder === null ? [] : [t.stepOrder]))
-  const hiddenSteps = stepTabs.filter((s) => !shownOrders.includes(s.sort_order))
+  const shownNames = FIXED_TABS.flatMap((t) => (t.stepName === null ? [] : [t.stepName]))
+  const hiddenSteps = stepTabs.filter((s) => !shownNames.includes(s.step_name))
 
   // --- 右のパネル。指定が無ければ一覧の先頭 ---
   // ★ メモを開いているなら、その人をパネルにも出す。
@@ -190,7 +205,7 @@ export default async function BorderlinePage({
           {/* --- 候補者リスト --- */}
           <section className="panel-card">
             <header className="hh-head">
-              <h2>{tab.stepOrder === null ? '確度順候補者リスト' : `${tab.label.replace(/^\d+\. /, '')}の候補者`}</h2>
+              <h2>{tab.stepName === null ? '確度順候補者リスト' : `${tab.label.replace(/^\d+\. /, '')}の候補者`}</h2>
             </header>
 
             <div className="bl-tabs">
@@ -214,7 +229,7 @@ export default async function BorderlinePage({
               </p>
             )}
 
-            {tab.stepOrder !== null && !step && (
+            {tab.stepName !== null && !step && (
               <p className="hh-empty">この期にこの選考は無い。</p>
             )}
 
@@ -304,7 +319,14 @@ export default async function BorderlinePage({
 
             {stepRows && (
               stepRows.length === 0 ? (
-                <p className="hh-empty">このステップで動いている応募は無い。</p>
+                /* ★ 行き止まりにしない（C-216。平社員ペルソナ試験）――
+                   応募があっても、選考を始めていなければこの段は空になる。
+                   **始める口はこの画面に無い**ので、どこにあるかを言う。 */
+                <p className="hh-empty">
+                  このステップで動いている応募は無い。
+                  選考は「1. 確度順候補者リスト」で人を選び、
+                  右の「詳細を見る」→「選考を始める」から始まる。
+                </p>
               ) : (
                 <div className="scroll-pane">
                   <table className="hh-table bl-table">
@@ -352,7 +374,24 @@ export default async function BorderlinePage({
               )
             )}
 
+            {/* ★ 一覧は**採点する対象**しか出さない（確定した評価は消える）。
+                消えたものが宙に浮かないよう、**判定待ちの件数を言う**（C-216）――
+                平社員ペルソナ試験で「6人採点したのに、どこにも居ない」となった。 */}
+            {step && awaitingDecision > 0 && (
+              <p className="section-note">
+                この段で確定済み・判定待ちが {num(awaitingDecision)} 件ある。
+                判定は、その応募の画面（氏名の隣の「›」）で行う。
+              </p>
+            )}
 
+            {/* ★ タブに載らない段を**黙って隠さない**（この一覧の元からの決めごと）。
+                件数を出す。ここは実装が抜けていて、どこにも出ていなかった。 */}
+            {hiddenSteps.length > 0 && (
+              <p className="section-note">
+                タブに無い段:{' '}
+                {hiddenSteps.map((s) => `${s.step_name} ${num(s.open_applications)} 件`).join(' / ')}
+              </p>
+            )}
           </section>
         </div>
 
@@ -360,7 +399,16 @@ export default async function BorderlinePage({
           {/* --- 候補者パネル --- */}
           <section className="panel-card">
             {!panel ? (
-              <p className="hh-empty">候補者がまだ1人も居ない。</p>
+              /* ★ 段のタブでは、候補者が居ても「この段には居ない」だけで空になる。
+                 「1人も居ない」と書くと、確度順に15人居るのに0人だと読める
+                 （C-216。平社員ペルソナ試験で実際にそう読んだ）。 */
+              candidates ? (
+                <p className="hh-empty">候補者がまだ1人も居ない。</p>
+              ) : (
+                <p className="hh-empty">
+                  この段に候補者が居ない。「1. 確度順候補者リスト」から人を選ぶ。
+                </p>
+              )
             ) : (
               <>
                 <header className="hh-person-head">
