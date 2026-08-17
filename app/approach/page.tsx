@@ -262,8 +262,11 @@ export default async function ApproachPage(
           声を掛けていない相手が画面から消えていた。 */}
       <div className="section" hidden={view !== 'list'}>
         <Card title={`連携団体一覧（${num(partnerRows.length)} 件）`}>
+          {/* ★ 団体は期を持たない（C-213）。空表示に「この年度に」と書くと、
+              期を替えれば出てくるように読める ―― 出てこない。
+              経営層ペルソナ試験で見つけた（C-217）。 */}
           {partnerRows.length === 0 ? (
-            <Empty>この年度に団体がまだない</Empty>
+            <Empty>連携団体がまだ1件も登録されていない</Empty>
           ) : (
             <div className="table-wrap">
               <table className="data">

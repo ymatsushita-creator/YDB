@@ -120,8 +120,16 @@ async function build() {
     //   （0007）。今日のままだと、2026-04-15 に終わった2期の母集団に入らず、
     //   「年度ごとの現在地」に2期の行が出ない ―― 第1周でそれを踏んだ。
     //   `addCandidate` は識別日を受け取らないので、**捨てるDBの中だけ**で直す。
+    const identifiedOn = `2026-02-${String((i % 27) + 1).padStart(2, '0')}T09:00:00+09:00`
     await db.query(`UPDATE persons SET created_at = $1::timestamptz WHERE id = $2`,
-      [`2026-02-${String((i % 27) + 1).padStart(2, '0')}T09:00:00+09:00`, r.personId])
+      [identifiedOn, r.personId])
+    // ★ 候補者番号の付与日も同じ日へ寄せる。ホームの「候補者」は
+    //   `candidate_numbers.assigned_at` の**日次断面**で数える（dashboard.ts）。
+    //   今日のままだと、2026-04-15 に終わった2期の断面では 0 と出て、
+    //   「人を探す」の合計15と食い違う ―― 経営層ペルソナ試験でそう見えた。
+    await db.query(
+      `UPDATE candidate_numbers SET assigned_at = $1::timestamptz WHERE person_id = $2`,
+      [identifiedOn, r.personId])
     // 応募（`applications`）を作る口はコマンドに無い ―― 取り込みだけが作る。
     // 模擬選考は応募にぶら下がるので、取り込みと同じ形で1件ずつ足す。
     await db.query(`

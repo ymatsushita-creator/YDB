@@ -2,9 +2,13 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { freshDb } from '../src/db/testing.ts'
-import { all } from '../src/db/client.ts'
+import { all, scalar } from '../src/db/client.ts'
 import { DECIDE_CODE_MESSAGE } from '../src/commands/decide.ts'
 import { gateOfScores } from '../src/queries/document_screening.ts'
+import { countAwaitingDecision } from '../src/queries/borderline.ts'
+import { startSelection, submitEvaluation, decideStep } from '../src/commands/decide.ts'
+import { assignInterviewer } from '../src/commands/assign.ts'
+import { baseFixture, makePerson, makeApplication } from './support/fixtures.ts'
 
 /**
  * 平社員ペルソナのパイロット試験で見つけた詰まりの見張り（C-216）。
@@ -185,6 +189,54 @@ describe('採点シートの合計と門（C-216）', () => {
  * ★ 判定を訂正して不合格にすると、先に作られていた次の段の評価行が残る。
  *   それが「未割当・0/4・書く」として並び、押しても採点できなかった。
  */
+/**
+ * 経営層セットのパイロットで見つけた分（C-217）。
+ */
+describe('経営層が見た画面（C-217）', () => {
+  test('★ 連携団体の空表示は「この年度に」と言わない（団体は期を持たない）', async () => {
+    const s = await src('app/approach/page.tsx')
+    assert.doesNotMatch(s, /この年度に団体がまだない/,
+      '期を替えれば出てくるように読める（C-213 で団体は期を持たないと決めた）')
+    assert.match(s, /連携団体がまだ1件も登録されていない/)
+  })
+
+  /**
+   * ★ 判定待ちの件数は**記録から数える。** 確定しただけの評価は
+   *   段の一覧から消えるので、ここが 0 を返すと画面から完全に消える。
+   */
+  test('★ 確定だけして判定していない応募を数える', async () => {
+    const db = await freshDb({ seeds: 'production' })
+    const base = await baseFixture(db)
+    const seasonId = await scalar<string>(db,
+      `SELECT id FROM seasons WHERE cohort_number = 3 AND NOT is_demo`)
+    const personId = await makePerson(db, base.schoolId,
+      { familyName: '架空', givenName: '判定待ち' })
+    const appId = await makeApplication(db, personId, seasonId, '2026-11-01T10:00:00+09:00')
+    const intake = await scalar<string>(db,
+      `SELECT id FROM selection_steps WHERE season_id = $1 AND name = '応募受付'`, [seasonId])
+
+    await startSelection(db, appId)
+    assert.equal(await countAwaitingDecision(db, seasonId, intake), 0,
+      '確定していないのに判定待ちに数えている')
+
+    const ev = await scalar<string>(db,
+      `SELECT id FROM evaluations WHERE application_id = $1 AND selection_step_id = $2`,
+      [appId, intake])
+    await assignInterviewer(db, { evaluationId: ev, staffId: base.staffId })
+    const s = await submitEvaluation(db, { evaluationId: ev })
+    assert.ok(s.ok, '確定できない')
+    assert.equal(await countAwaitingDecision(db, seasonId, intake), 1,
+      '確定した応募が判定待ちに出ない ―― 一覧から消えたまま行方不明になる')
+
+    const d = await decideStep(db,
+      { applicationId: appId, decision: 'advance', staffId: base.staffId })
+    assert.ok(d.ok, '判定できない')
+    assert.equal(await countAwaitingDecision(db, seasonId, intake), 0,
+      '判定したのに判定待ちのまま残っている')
+    await db.close()
+  })
+})
+
 describe('触れない幽霊行を出さない（C-216）', () => {
   test('★ 面接の一覧は、終わった応募の空シートを外す', async () => {
     const s = await src('src/queries/interview.ts')
