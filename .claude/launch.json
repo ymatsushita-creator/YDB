@@ -36,6 +36,18 @@
         "3113"
       ],
       "port": 3113
+    },
+    {
+      "name": "ds-gallery",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8932",
+        "--directory",
+        "/private/tmp/claude-501/-Volumes-KIOXIA-2TB-NEO-YouthDB/7253bc54-6a67-4491-b24b-b1d51c545112/scratchpad/ds"
+      ],
+      "port": 8932
     }
   ]
 }

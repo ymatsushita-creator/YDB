@@ -144,6 +144,8 @@ describe('マイグレーション', () => {
       'v_ai_pre_assessment',
       'v_ai_pre_total',
       'v_ai_pre_viewpoints',
+      // 0053: 判定可能ステップ。統合タスク一覧と getDecidableStep の共有ビュー
+      'v_decidable_steps',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

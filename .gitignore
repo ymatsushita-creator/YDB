@@ -1,7 +1,13 @@
 node_modules/
 .DS_Store
+# 秘密の実体。**完全一致で書かない。**
+# `.env.local` と完全一致で書いていたため、`.env.localecho`（リダイレクト先を
+# 間違えて作られたファイル）が除外されず、APIキーがコミットされた（0c9cd6e）。
+# 1文字ずれても拾えるようにパターンで書く。
 .env
-.env.local
+.env.*
+!.env.example
+!.env.sample
 .next/
 out/
 dist/
@@ -33,3 +39,6 @@ scripts/sim-out/
 
 # パイロット試験の捨てるDB（C-215）。作り直せるので追跡しない。
 .pgdata-pilot/
+
+# セッションの一時退避。追跡もデプロイもしない。
+.claude-tmp/

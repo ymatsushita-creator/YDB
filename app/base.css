@@ -1569,10 +1569,263 @@ html, body { height: 100%; overflow: hidden; }
 
    高さを数えるのをやめ、**残りを受け取る**形にする（`.hh-grid` と同じ作法）。
    器は送らない。送るのは、入りきらないカードの中だけ。 */
-.hh-main:has(> .home-dashboard) { overflow: hidden; }
+/* =============================================================
+   選考の運転席（Phase4 Step2）
+
+   ★ .selection-cockpit は主領域（card-base 相当）。
+     運転席→状況レビューへ縦スクロール可能。
+   ★ 長いタスク一覧は安全に内部スクロール。
+     氏名・step が潰れずレスポンシブ。
+   ============================================================= */
+.selection-cockpit {
+  flex: 0 0 auto;
+  margin: 0 0 var(--space-md) 0;
+  padding: var(--space-md);
+  border-radius: var(--rounded-xl);
+  background: var(--color-canvas);
+  box-shadow: 0 2px 8px rgb(20 27 36 / 6%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-height: 0;
+}
+.selection-cockpit > h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+  flex: 0 0 auto;
+}
+
+.owner-filter-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+.owner-filter-tabs > a {
+  padding: 6px 12px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-steel);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  cursor: pointer;
+}
+.owner-filter-tabs > a:hover {
+  background: var(--color-surface);
+  border-color: var(--color-hairline-strong);
+  color: var(--color-ink);
+}
+.owner-filter-tabs > a.active {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-dark);
+}
+.owner-filter-tabs > a:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.task-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.task-item {
+  flex: 0 0 auto;
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-lg);
+  background: var(--color-canvas);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.task-item:hover {
+  border-color: var(--color-hairline-strong);
+}
+.task-item.selected {
+  border-color: var(--color-ink);
+  background: var(--color-card-tint-cream);
+}
+
+.task-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: baseline;
+  min-width: 0;
+}
+.task-action {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+.task-person {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: none;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.task-person:hover {
+  text-decoration: underline;
+}
+.task-person:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+.task-step {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: var(--rounded-sm);
+  background: var(--color-surface);
+  color: var(--color-slate);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.task-season {
+  flex: 0 0 auto;
+  color: var(--color-steel);
+  font-size: 12px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: 11px;
+  color: var(--color-steel);
+}
+.task-waiting,
+.task-sla,
+.task-overdue,
+.task-owner {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.task-overdue {
+  color: var(--color-danger, #d33333);
+  font-weight: 600;
+}
+
+.task-detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-slate);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.task-criteria {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-steel);
+}
+
+.task-item .button-primary {
+  align-self: flex-start;
+  flex: 0 0 auto;
+}
+
+/* インラインアクションパネル（Phase 4 Step 3）。
+   選択されたタスクカードの中に展開し、assign / reassign / unhold の
+   フォームを表示する。 */
+.task-panel {
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-hairline-soft);
+}
+
+.task-panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.task-panel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.task-panel-row label {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-slate);
+}
+
+.task-panel-row select {
+  flex: 1 1 auto;
+  min-width: 140px;
+  max-width: 280px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.task-panel-row select:focus {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -1px;
+}
+
+/* PRG 後のフィードバック（assign / reassign / unhold の結果）。
+   コックピット上部に出す。既存の .callout を再利用する。 */
+.task-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.task-notice .callout {
+  margin: 0;
+}
+
+.config-error {
+  flex: 0 0 auto;
+  padding: var(--space-md);
+  border-left: 3px solid var(--color-warning, #f59e0b);
+  background: var(--color-warning-light, rgba(245, 158, 11, 0.08));
+  color: var(--color-warning-dark, #92400e);
+  font-size: 13px;
+  border-radius: var(--rounded-sm);
+}
+
+.review-heading {
+  flex: 0 0 auto;
+  margin: var(--space-lg) 0 var(--space-md) 0;
+  padding-top: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-top: 2px solid var(--color-hairline-soft);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
 .home-dashboard {
-  flex: 1 1 0%;
-  min-height: 0; overflow: hidden;
+  flex: 0 0 auto;
   display: grid;
   /* 上は数字の帯（高さを決め打ちする ―― 中身なりにすると、
      余りがこちらへ流れて数字だけが間延びする）。下が残り全部。 */
@@ -1655,6 +1908,43 @@ a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm
   .home-detail-grid { grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr); }
   .home-detail-grid > .section:nth-child(3) { grid-column: 1 / -1; }
   .kpi-edit-form { grid-template-columns: 1fr 1fr; }
+
+  /* Task list responsive: wrap filters and ensure task items don't collapse */
+  .owner-filter-tabs {
+    gap: 6px;
+  }
+  .owner-filter-tabs > a {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .task-header {
+    gap: 6px;
+  }
+  .task-action {
+    font-size: 12px;
+  }
+  .task-person {
+    flex: 0 1 auto;
+  }
+  .task-step {
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+  .task-season {
+    font-size: 11px;
+  }
+
+  .task-meta {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .task-detail {
+    font-size: 11px;
+  }
+  .task-criteria {
+    font-size: 10px;
+  }
 }
 
 /* =============================================================

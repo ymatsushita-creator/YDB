@@ -8506,3 +8506,19 @@ CLIの環境変数経路も残す。API障害や認証失敗の本文を画面�
 
 検証: `tests/78_pilot_hirashain.test.ts`（15件。判定待ちの数え方はDBで確かめた）、
 `pnpm test` 全件、`tsc --noEmit`、`pnpm build`。本番へは1件も書いていない。
+
+---
+
+## C-218 Phase 4 Step 1 — 統合task query
+
+`getWorkTasks` で6つのtask typeを統一的に扱う：
+
+- **既存4種**（reassign/unhold/assign/evaluate — 担当を替える/保留を解く/担当を決める/評価する）は `v_open_tasks` を正典とし、同じ結果を返す
+- **decide**（判定）は `v_decidable_steps` / `getDecidableStep` を正典
+- **start_selection**（選考開始）は未評価または応募受付0軸
+- task typeの重みなし安定sort。Tier境界で行を選別
+- `v_open_tasks` 互換、write actionなし
+
+## C-219 Phase 4 Step 2 — ホーム運転席
+
+`page.tsx` に6種運転席：owner filtersの語、season/work/owner URL常設、正常Emptyと設定エラー区別、input早期return、既存KPI等は状況レビューへ移動、write actionなし。

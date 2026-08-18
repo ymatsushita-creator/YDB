@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { checkDeployTarget, EXPECTED } from './deploy-target.ts'
 
@@ -16,6 +16,10 @@ import { checkDeployTarget, EXPECTED } from './deploy-target.ts'
  *   ここがやるのは「読む・名乗る・渡す」だけ。
  *
  * ★ **迷ったら止める。** 読めない・違う先なら出さない。
+ *
+ * ★ 出す物を検査してから出す（監査ゲート）。`vercel --prod` は git の ref ではなく
+ *   **作業ディレクトリ**を送るので、未コミット・未追跡のファイルも本番へ出る。
+ *   何を出したのかを記録しないと、後から誰も突き合わせられない。
  */
 
 const linkPath = join(process.cwd(), '.vercel', 'project.json')
@@ -28,6 +32,20 @@ if (!check.ok) {
 }
 
 console.log(`書き込み先 ―― ${check.projectName}（約束した ${EXPECTED.projectName}。C-123）`)
+
+// 出す前の関門。送るファイルを検査し、出所（コミット・作業ツリーの汚れ・未push）を記録する。
+// 通らなければ出さない。記録できなければ出さない。
+const toolPath = (await readFile(join(process.cwd(), '.audit', 'TOOL_PATH'), 'utf8').catch(() => null))?.trim()
+if (!toolPath) {
+  console.error('デプロイしない ―― .audit/TOOL_PATH が無い。監査ツールの場所が分からない。')
+  console.error('（ツールが無いことを理由に検査を飛ばさない）')
+  process.exit(1)
+}
+const gate = spawnSync(toolPath, ['deploy-gate', '--repo', process.cwd()], { stdio: 'inherit' })
+if (gate.status !== 0) {
+  console.error('デプロイしない ―― 出す前の検査に通らなかった。')
+  process.exit(1)
+}
 
 // 出力はそのまま流す。vercel が言うことを、こちらで要約しない。
 const child = spawn('vercel', ['--prod', '--yes'], { stdio: 'inherit' })
