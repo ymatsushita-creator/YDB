@@ -27,6 +27,7 @@
     "test": "node scripts/test-preflight.ts && node --test --experimental-test-isolation=none \"tests/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "decisions:index": "node scripts/build-decisions-index.ts",
+    "decisions:missing": "node scripts/report-missing-decisions.ts",
     "structure": "node scripts/check-structure.ts",
     "verify": "npm run typecheck && npm run test && npm run decisions:index -- --check && npm run structure && npm run build",
     "verify:fast": "npm run typecheck && npm run test",
