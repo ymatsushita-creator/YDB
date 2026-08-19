@@ -319,6 +319,36 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     bad.length === 0 ? `${count} ファイル・グロブは node が展開する` : bad.join(' / '))
 }
 
+// ── S10 docs/ が分類され、直下に散らばっていない ────────────────────────────
+{
+  // ★ なぜ要るか（2026-08-19）:
+  //   ルート（S2）は機械で守られていたが、**`docs/` を見る検査が1つも無かった。**
+  //   結果、`docs/` 直下に監査記録・製品資料・凍結レポートが原理なく同居していた
+  //   （`audit-2026-08-19-remediation.md` / `personas.md` / `secret-in-history-*.md`）。
+  //   ルートから追い出した物の行き先が無秩序なら、追い出した意味が薄れる。
+  //   直下にファイルを置かず、必ず分類の下へ入れる。
+  const SECTIONS = ['audit', 'pilot', 'product', 'reports']
+  const problems: string[] = []
+  try {
+    const { stdout } = await run('git', ['ls-files', 'docs'], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 })
+    const files = stdout.split('\n').map((f) => f.trim()).filter((f) => f !== '')
+    const loose = files.filter((f) => f.split('/').length === 2)
+    if (loose.length > 0) {
+      problems.push(`docs/ 直下にファイルがある: ${loose.join(', ')}`
+        + `（${SECTIONS.map((x) => `docs/${x}/`).join(' / ')} のどれかへ）`)
+    }
+    const unknown = [...new Set(files.map((f) => f.split('/')[1]!))]
+      .filter((d) => !SECTIONS.includes(d) && !loose.some((l) => l.endsWith(`/${d}`)))
+    if (unknown.length > 0) {
+      problems.push(`docs/ に未定義の分類がある: ${unknown.join(', ')}`
+        + '（増やすなら `.consultant/STRUCTURE.md` §10 を先に直す）')
+    }
+  } catch { problems.push('git を読めず、**docs/ の構成を検査していない**') }
+
+  check('S10', 'docs/ が分類されている', problems.length === 0,
+    problems.length === 0 ? `直下にファイル無し・分類 ${SECTIONS.length} 種` : problems.join(' / '))
+}
+
 // ── S9 秘密が履歴に残っていない／公開先が増えていない ──────────────────────
 {
   const problems: string[] = []

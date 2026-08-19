@@ -52,7 +52,7 @@ pnpm verify   → 通る（exit 0）
 |---|---|---|
 | 1 | **GitHub の設定** —— 公開ミラーの要否、`main` の必須チェックとレビュー必須（High 3件） | 設定しない限り、公開ミラーはCI失敗時にもマージできる |
 | 2 | **`quality.yml` を required status check にする** | 設定しない限り、品質CIが落ちてもマージできる |
-| 3 | **allowlist への署名** —— `docs/audit-2026-08-19-allowlist-additions.yml` の `approved_by` を埋める | 監査上の Medium 30件を架空値・用語として正式に除外する場合に必要 |
+| 3 | **allowlist への署名** —— `docs/audit/2026-08-19-allowlist-additions.yml` の `approved_by` を埋める | 監査上の Medium 30件を架空値・用語として正式に除外する場合に必要 |
 | 4 | **次回デプロイから deploy-gate を必ず通す** | 過去の記録は復元できないため、以後の証跡を蓄積する |
 
 ## 独立レビュー（2026-08-19・4班）で判明した限界

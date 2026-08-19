@@ -288,7 +288,7 @@ S2 を追跡下のルート全ファイルへ広げ、当該ファイルを除�
 origin の全ブランチとローカルの `main` から到達できる。
 公開リモート `mirror=ymatsushita-creator/YDB` は78コミット遅れており到達しなかったが、
 **`git push mirror main` 一発で公開される状態だった。** 監査 D3-06 が10回指摘し続けたのは
-この距離である。remote を外した。詳細と手順は `docs/secret-in-history-2026-08-19.md`。
+この距離である。remote を外した。詳細と手順は `docs/audit/2026-08-19-secret-in-history.md`。
 
 ### なぜ10回の監査が止められなかったか
 
@@ -307,3 +307,32 @@ S9 を足して履歴とリモートを見る。
 
 鍵が履歴に在る以上、緑を出すのは嘘になる。**この検査を緩めて通さない。**
 解消は人間の操作（失効・再発行 → 公開先の決定 → 履歴除去または allowlist 登録）。
+
+## 第6次 —— `docs/` を分類し、機械で保つようにした（同日）
+
+構成の検査はルート直下（S2）を見ていたが、**`docs/` を見る検査は1つも無かった。**
+そのため `docs/` 直下に3種類のものが原理なく同居していた。
+
+```
+docs/audit-2026-08-19-remediation.md        監査の是正記録
+docs/audit-2026-08-19-allowlist-additions.yml  同上（YAML）
+docs/personas.md                            製品の参照資料
+docs/secret-in-history-2026-08-19.md        監査の是正記録（第5次で追加）
+```
+
+第1次でルート直下44本を9本へ絞り `REPORT-*.md` 35本を `docs/reports/` へ移したが、
+**移した先の秩序は誰も決めていなかった。** 追い出した物の行き先が無秩序なら、
+追い出した意味が薄れる。
+
+4分類へ整理し、参照（`HANDOFF.md` ほか3本）を追随させた。
+
+```
+docs/audit/    3 件    docs/pilot/    10 件
+docs/product/  1 件    docs/reports/  36 件
+```
+
+S10 を足し、`docs/` 直下のファイルと未定義の分類を落とす。
+負のテストで `docs/stray.md` を置き、✘ になることを確認した。
+
+`app/` `src/` `db/` `tests/` `scripts/` は `CLAUDE.md` の実装規律どおりで、乱れは無い
+（`src/commands` 19 / `src/queries` 15 / `app/_components` 9 など、役割の分離が保たれている）。

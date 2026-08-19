@@ -172,7 +172,7 @@ scripts/test-preflight.ts         テストが実際に走ることの確認
 したがって `.audit/REMEDIATION.md` §3 の後者 ——「指紋単位で allowlist へ登録し、
 **人間が架空であると署名する**」—— が正しい処理になる。
 
-貼り付け用の断片を用意した: **`docs/audit-2026-08-19-allowlist-additions.yml`**
+貼り付け用の断片を用意した: **`docs/audit/2026-08-19-allowlist-additions.yml`**
 
 1. 中身を自分の目で確認する（上の表と `git grep` で裏を取る）
 2. `approved_by:` の `TODO` を自分の名前と確認日に**自分で書き換える**
