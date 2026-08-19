@@ -1,3 +1,4 @@
+import { confirmDestructive } from './confirm-destructive.ts'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { join, isAbsolute } from 'node:path'
 import { openPostgres } from '../src/db/postgres.ts'
@@ -36,6 +37,11 @@ const snapshot = JSON.parse(await readFile(join(dir, 'dump.json'), 'utf8')) as D
 const url = new URL(process.env.DATABASE_URL)
 console.log(`戻す先 ―― ${url.hostname} / ${url.pathname.slice(1)}`)
 console.log(`戻すもの ―― ${snapshot.takenAt}（表 ${snapshot.tables.length}）`)
+
+// ★ 復元は現在のデータを上書きする。不可逆なので人間の承認を取る。
+if (!(await confirmDestructive('本番DBの復元（現在のデータを上書き）', url.hostname))) {
+  process.exit(1)
+}
 
 const db = await openPostgres(process.env.DATABASE_URL)
 

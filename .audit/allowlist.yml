@@ -225,3 +225,9 @@ allow:
     reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
     approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
     expires: 2027-08-19
+  - path: tests/70_ai_pre_assessment.test.ts
+    rules: [SECRET:ANTHROPIC_KEY]
+    fingerprints: [c5a0f4f9a65bc9e2]
+    reason: テスト用のプレースホルダ（sk-ant-test… の29文字。実キーは108文字で形式が異なる）。依頼者がAPIキーの扱いを対応済みと確認
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで確認）'
+    expires: 2027-08-19
