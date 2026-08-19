@@ -319,6 +319,49 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     bad.length === 0 ? `${count} ファイル・グロブは node が展開する` : bad.join(' / '))
 }
 
+// ── S9 秘密が履歴に残っていない／公開先が増えていない ──────────────────────
+{
+  const problems: string[] = []
+
+  // ★ なぜ要るか（2026-08-19）:
+  //   PII走査（`kurosaki scan`）も D6-02 も**作業ツリーしか見ない。**
+  //   `ANTHROPIC_API_KEY` は 0c9cd6e で入り 242ce59 で消されたため、
+  //   走査は「確定パターン11種では秘密を検出しなかった」と報告し続けた。
+  //   だが鍵は履歴に生きており、origin の全ブランチから到達できた。
+  //   **緑は正しく、そして無意味だった。** 履歴を見る目をここに置く。
+  //
+  //   これはパスを見る検査である。任意ファイルの中身までは見ていない ――
+  //   「秘密が無いことの証明」ではない（`.audit/AUDIT_CHARTER.md` §1 と同じ立場）。
+  const SECRET_PATH = /(^|\/)\.env(\.|$)/i
+  const ALLOWED_ENV = new Set(['.env.example'])
+  try {
+    const { stdout } = await run('git',
+      ['log', '--all', '--diff-filter=A', '--pretty=format:', '--name-only'],
+      { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 })
+    const leaked = [...new Set(stdout.split('\n').map((f) => f.trim())
+      .filter((f) => f !== '' && SECRET_PATH.test(f) && !ALLOWED_ENV.has(f)))]
+    if (leaked.length > 0) {
+      problems.push(`秘密を持ちうるファイルが履歴に在る: ${leaked.join(', ')}`
+        + '（作業ツリーから消しても履歴からは消えない。まず鍵を失効・再発行すること）')
+    }
+  } catch { problems.push('git 履歴を読めず、**履歴の秘密を検査していない**') }
+
+  // ★ 公開先が黙って増えないようにする。
+  //   `mirror=ymatsushita-creator/YDB`（公開）が10回の監査指摘のあいだ残り続け、
+  //   `git push mirror main` 一発で現役の鍵が公開される状態だった。
+  try {
+    const { stdout } = await run('git', ['remote'], { cwd: ROOT })
+    const extra = stdout.split('\n').map((r) => r.trim()).filter((r) => r !== '' && r !== 'origin')
+    if (extra.length > 0) {
+      problems.push(`origin 以外のリモートがある: ${extra.join(', ')}`
+        + '（push 先を1つ間違えるだけで公開範囲が変わる。監査 D3-06）')
+    }
+  } catch { /* git が無い。リモートは見られない */ }
+
+  check('S9', '秘密が履歴に無く、公開先が増えていない', problems.length === 0,
+    problems.length === 0 ? '履歴に .env 系の追加なし・リモートは origin のみ' : problems.join(' / '))
+}
+
 // ── C01〜C07 外部ツール（存在確認）──────────────────────────────────────────
 // 解決できないときは「検査していない」と言う。「問題なし」と言い換えない
 // （`.consultant/CHARTER.md` §1 / `.audit/AUDIT_CHARTER.md` §1 と同じ立場）。
