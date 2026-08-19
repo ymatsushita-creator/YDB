@@ -6,7 +6,7 @@ description: 構成基準（.consultant/STRUCTURE.md）を確かめ、崩れて�
 pnpm structure
 ```
 
-`S1`〜`S7` と、外部ツールの `C01`〜`C07` を見る。
+`S1`〜`S11` と、外部ツールの `C01`〜`C07` を見る。
 
 ## 落ちたときの直し方
 
@@ -21,6 +21,10 @@ pnpm structure
 | S5 | サブエージェントが消えた | `.claude/agents/` |
 | S6 | 実データ・受け入れ口がリポジトリ内に戻った | 外部ディレクトリへ移す |
 | S7 | `continue-on-error` / `--no-verify` / `\|\| true` が入った | 消す。握り潰しは事故を隠す |
+| S8 | テストのグロブが引用符から外れた・前段が消えた | `package.json` の `test` |
+| S9 | `.env` 系が履歴に入った・origin 以外のリモートが増えた | **まず鍵を失効**（`docs/audit/2026-08-19-secret-in-history.md`） |
+| S10 | `docs/` 直下にファイルが増えた・未定義の分類ができた | `docs/{audit,pilot,product,reports}/` へ |
+| S11 | 検査を足したのに `STRUCTURE.md` に節が無い | 基準を先に書く |
 
 基準そのものが現実に合わなくなったと判断した場合だけ、
 **`.consultant/STRUCTURE.md` を先に直し、その差分を人間が読む。**

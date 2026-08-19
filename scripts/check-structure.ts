@@ -392,6 +392,33 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     problems.length === 0 ? '履歴に .env 系の追加なし・リモートは origin のみ' : problems.join(' / '))
 }
 
+// ── S11 基準の文書と、実装されている検査が一致している ─────────────────────
+{
+  // ★ なぜ要るか（2026-08-19）:
+  //   `STRUCTURE.md` も `README.md` も `.claude/commands/structure.md` も
+  //   「S1〜S7」と書いたまま S8 が足され、さらに S9・S10 が足された。
+  //   **基準の文書が、実装されている検査より少ない状態を誰も検知しなかった。**
+  //   文書と実装が食い違うのは、このリポジトリで繰り返し起きている形である
+  //   （索引の但し書きだけがあって境界判定が無かった件と同じ）。ここで突き合わせる。
+  const own = readFileSync(fileURLToPath(import.meta.url), 'utf8')
+  // 同じIDを分岐で2回呼ぶ箇所（S1b・S4）があるので一意化する。
+  const implemented = [...new Set([...own.matchAll(/check\(\s*'([^']+)'/g)]
+    .map((m) => m[1]!).filter((id) => id !== 'C0x'))]
+  const doc = read('.consultant/STRUCTURE.md')
+  // 見出しの `〔S1・S1b〕` から拾う。節を足さずに検査だけ足すと、ここで落ちる。
+  const documented = [...doc.matchAll(/〔([^〕]+)〕/g)]
+    .flatMap((m) => m[1]!.split('・').map((x) => x.trim()))
+    .filter((x) => /^S\d+b?$/.test(x))
+  const missingDoc = implemented.filter((id) => !documented.includes(id))
+  const missingImpl = documented.filter((id) => !implemented.includes(id))
+  check('S11', '基準の文書と実装が一致している', missingDoc.length === 0 && missingImpl.length === 0,
+    missingDoc.length > 0
+      ? `実装にあるが STRUCTURE.md に節が無い: ${missingDoc.join(', ')}（基準を先に書く）`
+      : missingImpl.length > 0
+        ? `STRUCTURE.md にあるが実装が無い: ${missingImpl.join(', ')}（節を消すか実装する）`
+        : `${implemented.length} 件が文書と一致`)
+}
+
 // ── C01〜C07 外部ツール（存在確認）──────────────────────────────────────────
 // 解決できないときは「検査していない」と言う。「問題なし」と言い換えない
 // （`.consultant/CHARTER.md` §1 / `.audit/AUDIT_CHARTER.md` §1 と同じ立場）。
