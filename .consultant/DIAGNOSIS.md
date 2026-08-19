@@ -143,8 +143,11 @@ AIはこれを守るべき指示として読むため、依頼者の許可を得
 
 ## 残っている穴
 
-1. **`quality.yml` が required status check ではない。** 設定するまで、CIが落ちてもマージできる。
-   人間がGitHubで設定する（監査 D3-05。**10回連続で同じ指摘**）。
+1. **`quality.yml` を required status check にできない。** `NEO-AX/YDB` は private で、
+   現在のプランではブランチ保護も ruleset も 403 になる（2026-08-19 実測）。
+   **12回連続の指摘は、実行不能な是正を要求していた。**
+   プランを上げるか、限定事項として引き受けるかを決めれば閉じられる
+   （公開にする道は採らない ―― 現役の鍵が履歴に在る）。→ `HANDOFF.md`
 2. **現役の `ANTHROPIC_API_KEY` が履歴に在る**（`0c9cd6e`）。作業ツリーには無い。
    公開リモートへは渡っていない（remote は外した）。
    **まず鍵の失効・再発行。** → [`docs/audit/2026-08-19-secret-in-history.md`](../docs/audit/2026-08-19-secret-in-history.md)
