@@ -1014,7 +1014,9 @@ Notion's geometry is sober-editorial — `{rounded.md}` (8px) buttons distinguis
 
 1. Focus on ONE component at a time
 2. Reference component names and tokens directly
-3. Run `npx @google/design.md lint DESIGN.md` after edits
+3. **Do NOT run `npx @google/design.md lint` — that tool does not exist in this repository.**
+   （2026-08-19 追記。雛形から持ち込まれた指示で、存在しないコマンドを叩かせていた。
+   このファイルの反映は `pnpm tokens` が行い、`app/tokens.css` を生成する。）
 4. Add new variants as separate `components:` entries
 5. Default to `{typography.body-md}` for body
 6. Keep `{colors.primary}` (purple) as the primary CTA — distinct from `{colors.link-blue}` for inline links

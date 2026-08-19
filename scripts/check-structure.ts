@@ -392,6 +392,34 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     problems.length === 0 ? '履歴に .env 系の追加なし・リモートは origin のみ' : problems.join(' / '))
 }
 
+// ── S12 凍結文書には、凍結だと分かる但し書きが先頭にある ────────────────────
+{
+  // ★ なぜ要るか（2026-08-19）:
+  //   `docs/reports/` は 499,679字あり、リポジトリの `.md` の**80%を占める。**
+  //   「着手時に読む物ではない」は `docs/reports/README.md` にしか書かれておらず、
+  //   **それは目次を開いた人にしか伝わらない。** AIは grep で探すので、
+  //   現行文書より先に凍結文書へ当たる。実際 `design.md`（実行⑨で削除）を
+  //   現役のように書いた文書が5本あった。
+  //   各ファイルの先頭に「凍結」と「では何が正か」を置く。
+  const MARK = '【凍結】'
+  const problems: string[] = []
+  try {
+    const { stdout } = await run('git', ['ls-files', 'docs/reports/REPORT-*.md'], { cwd: ROOT })
+    const files = stdout.split('\n').map((f) => f.trim()).filter(Boolean)
+    if (files.length === 0) problems.push('凍結レポートが1本も見つからない（対象の取り方が変わった可能性）')
+    for (const f of files) {
+      // 先頭5行以内に無ければ、grep で1ファイルだけ拾った相手には届かない。
+      const head = (readIf(f) ?? '').split('\n').slice(0, 5).join('\n')
+      if (!head.includes(MARK)) problems.push(f)
+    }
+  } catch { problems.push('git を読めず、**凍結の但し書きを検査していない**') }
+
+  check('S12', '凍結文書に但し書きがある', problems.length === 0,
+    problems.length === 0 ? '凍結レポートは全て先頭で凍結を名乗っている'
+      : `先頭5行に ${MARK} が無い: ${problems.slice(0, 5).join(', ')}`
+        + `${problems.length > 5 ? ` ほか${problems.length - 5}件` : ''}`)
+}
+
 // ── S11 基準の文書と、実装されている検査が一致している ─────────────────────
 {
   // ★ なぜ要るか（2026-08-19）:

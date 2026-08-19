@@ -1,5 +1,9 @@
 # YouthDB 作業報告 2.0 — 実行② 第1報
 
+> **【凍結】この文書は書かれた時点の記録で、後から書き換えない。**
+> 現行の仕様と食い違う記述があれば、`CLAUDE.md` と `db/DECISIONS.md` が正である。
+> 設計判断は番号で引ける —— `pnpm decisions:show C-121`（`db/DECISIONS-INDEX.md` に一覧）。
+
 2026-08-06
 
 **実行②の最初の報告書。** 実行①（`REPORT-1.0.md` / `REPORT-1.1.md`）は凍結済みで、
