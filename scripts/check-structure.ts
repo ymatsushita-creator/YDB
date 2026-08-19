@@ -97,7 +97,7 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   }
 }
 
-// ── S2 ルート直下は着手時に読む物だけ（在ることも見る）─────────────────────
+// ── S2 ルート直下は着手時に読む物と、動かすのに要る物だけ ─────────────────
 {
   const ALLOWED = ['README.md', 'AGENTS.md', 'SUPERVISOR.md', 'vision.md', 'director.md',
     'domain.md', 'CLAUDE.md', 'process.md', 'HANDOFF.md']
@@ -107,10 +107,31 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   const extra = found.filter((f) => !ALLOWED.includes(f))
   // 規律文書が消えていないことも見る。初版は「0本」でも ✔ になった。
   const gone = ALLOWED.filter((f) => !existsSync(at(f)))
-  check('S2', 'ルート直下は規律文書9本だけ', extra.length === 0 && gone.length === 0,
+
+  // ★ 読み物以外も見る（2026-08-19 再検証）。拡張子で絞っていたため、ルートに
+  //   コミットされた使い捨てスクリプト `.pp.tmp.ts` を**どの検査も拾えなかった。**
+  //   そのファイルは `join(process.cwd(), '2期応募管理.xlsx')` と書いており、
+  //   実データがリポジトリのルートに在る前提だった（監査 D2-01 の是正と正面から矛盾する）。
+  //   S6 は実データの**存在**は見るが、実データをリポジトリ内に**要求するコード**は見ない。
+  //   ここで塞ぐ。対象は追跡下のファイルだけ（生成物・無視対象を所見にしない）。
+  const CONFIG = ['.env.example', '.gitignore', '.vercelignore', 'next-env.d.ts', 'next.config.ts',
+    'package.json', 'pnpm-lock.yaml', 'proxy.ts', 'tsconfig.json', 'vercel.json']
+  let stray: string[] = []
+  try {
+    const { stdout } = await run('git', ['ls-files'], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 })
+    stray = stdout.split('\n').map((f) => f.trim())
+      .filter((f) => f !== '' && !f.includes('/'))
+      .filter((f) => !ALLOWED.includes(f) && !CONFIG.includes(f))
+  } catch { /* git が無い。ルートの追跡状況は見られない */ }
+
+  check('S2', 'ルート直下は規律文書9本と設定だけ',
+    extra.length === 0 && gone.length === 0 && stray.length === 0,
     gone.length > 0 ? `規律文書が無い: ${gone.join(', ')}`
       : extra.length > 0 ? `着手時に読まない物がルートにある: ${extra.join(', ')} → docs/ へ`
-        : `${found.length} 本（既定どおり）`)
+        : stray.length > 0
+          ? `ルートに追跡下の余計なファイルがある: ${stray.join(', ')}`
+            + '（使い捨ては追跡下へ置かない。道具にするなら scripts/ へ）'
+          : `規律文書 ${found.length} 本・設定 ${CONFIG.length} 本（既定どおり）`)
 }
 
 // ── S3 番号で参照する物に索引がある ─────────────────────────────────────────

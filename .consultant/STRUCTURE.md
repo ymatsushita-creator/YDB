@@ -57,10 +57,23 @@ SUPERVISOR.md  vision.md  director.md  domain.md  CLAUDE.md  process.md   規律
 HANDOFF.md     いまの状態
 ```
 
+追跡下に置ける読み物以外は、動かすのに要る設定10本に限る。
+
+```
+.env.example  .gitignore  .vercelignore  next-env.d.ts  next.config.ts
+package.json  pnpm-lock.yaml  proxy.ts  tsconfig.json  vercel.json
+```
+
 - 実行レポートは `docs/reports/`。**着手時に読む物ではない。**
   2026-08-19 時点で35本・7,733行あり、これがルートにあると
   規律文書がその6倍の量のノイズに埋もれる。
 - 凍結した文書を現行文書と同じ場所に置かない。
+- **使い捨てのスクリプトを追跡下へ置かない。** 道具にするなら `scripts/` へ移し、
+  受領データは `scripts/intake-dir.ts` 経由で外部から取る。
+  初版の S2 は読み物の拡張子しか数えておらず、ルートにコミットされた `.pp.tmp.ts`
+  （`join(process.cwd(), '2期応募管理.xlsx')` —— 実データがリポジトリのルートに在る前提）を
+  **どの検査も拾えなかった**（2026-08-19 再検証）。S6 は実データの存在は見るが、
+  実データをリポジトリ内に**要求するコード**は見ない。S2 は追跡下のルート全ファイルを見る。
 
 ## 3. 番号で参照する物には索引を置く〔S3〕
 
