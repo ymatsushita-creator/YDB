@@ -87,6 +87,13 @@ pnpm structure       # 構成基準（.consultant/STRUCTURE.md の S1〜S12）�
 pnpm tokens          # app/tokens.css を作り直す（basic/DESIGN.md から生成）
 ```
 
+### コードで見慣れない語に出会ったら
+
+用語の正典は [`domain.md`](domain.md)。ただし**コードには旧生態系比喩が残っている**
+（`森` 179 / `林` 152 / `木` 56 箇所）。対応表は
+[`docs/product/legacy-terms.md`](docs/product/legacy-terms.md) にある。
+**読むための表であって、新しく書くときは使わない。**
+
 ### 画面のCSS
 
 `app/base.css` は `@import` の並びで、実体は [`app/_styles/`](app/_styles/) の10本にある。

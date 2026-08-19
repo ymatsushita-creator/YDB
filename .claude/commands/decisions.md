@@ -44,3 +44,9 @@ pnpm decisions:index
 
 生成物（`db/DECISIONS-INDEX.md`）も一緒にコミットする。
 ずれは CI が `--check` で落とす。**索引を手で編集しない。**
+
+## 見慣れない語（森・林・木・幹）
+
+コードに旧生態系比喩が残っている。対応表は
+[`docs/product/legacy-terms.md`](../../docs/product/legacy-terms.md)。
+**読むための表であって、新しく書くときは使わない。**
