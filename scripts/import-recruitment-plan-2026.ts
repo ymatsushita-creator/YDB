@@ -1,3 +1,4 @@
+import { intakePath } from './intake-dir.ts'
 import { join } from 'node:path'
 import { openPostgres } from '../src/db/postgres.ts'
 import { Workbook } from '../src/import/xlsx.ts'
@@ -25,7 +26,7 @@ import type { Db } from '../src/db/client.ts'
  * ★ 個人情報は扱わない。3表とも氏名・連絡先を含まない。
  */
 
-const XLSX = join(process.cwd(), '2期応募管理2.xlsx')
+const XLSX = intakePath('2期応募管理2.xlsx')
 const apply = process.argv.includes('--apply')
 
 const url = process.env.DATABASE_URL

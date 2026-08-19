@@ -1,3 +1,4 @@
+import { intakePath } from './intake-dir.ts'
 import { join } from 'node:path'
 import { openPostgres } from '../src/db/postgres.ts'
 import { Workbook } from '../src/import/xlsx.ts'
@@ -19,7 +20,7 @@ import type { Db } from '../src/db/client.ts'
  * ★ 期は両方に入れる ―― 2期と3期は同じ軸・同じ段を持つ（0006）。
  */
 
-const XLSX = join(process.cwd(), '2期応募管理.xlsx')
+const XLSX = intakePath('2期応募管理.xlsx')
 const apply = process.argv.includes('--apply')
 
 const url = process.env.DATABASE_URL
