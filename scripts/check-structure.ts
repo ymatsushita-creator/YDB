@@ -327,7 +327,7 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   //   （`audit-2026-08-19-remediation.md` / `personas.md` / `secret-in-history-*.md`）。
   //   ルートから追い出した物の行き先が無秩序なら、追い出した意味が薄れる。
   //   直下にファイルを置かず、必ず分類の下へ入れる。
-  const SECTIONS = ['audit', 'pilot', 'product', 'reports']
+  const SECTIONS = ['audit', 'consultant', 'pilot', 'product', 'reports']
   const problems: string[] = []
   try {
     const { stdout } = await run('git', ['ls-files', 'docs'], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 })

@@ -39,11 +39,17 @@ export const FOREIGN_PREFIXES = new Set(['B'])
  * 照合から外す経路（自己参照）。
  *   `db/DECISIONS-INDEX.md`  生成物。欠番リストを本文に持つため自分の出力を読み返す
  *   `.consultant/`           この問題を記述した診断文書。書き足すと件数が動いた
- *   `scripts/decisions-*`    照合そのものを実装・説明しているファイル
+ *   `docs/consultant/`       同上（診断の経緯）。`.consultant/` から出した先で、
+ *                            除外し忘れて件数が 45→47 に戻った（実測）
+ *   `scripts/decisions-*` `scripts/show-decision.ts`
+ *                            照合そのものを実装・説明しているファイル
+ *
+ * ★ **番号について書いた文書は、番号の参照元ではない。** ここを1つ外すたびに
+ *   件数が動く。経路を増やすときは必ずこの表に足す。
  */
-export const EXCLUDE = [':!db/DECISIONS-INDEX.md', ':!.consultant/',
+export const EXCLUDE = [':!db/DECISIONS-INDEX.md', ':!.consultant/', ':!docs/consultant/',
   ':!scripts/build-decisions-index.ts', ':!scripts/decisions-refs.ts',
-  ':!scripts/report-missing-decisions.ts']
+  ':!scripts/report-missing-decisions.ts', ':!scripts/show-decision.ts']
 
 /** 見出しから拾った記録。`line` は1始まり（エディタの行番号と揃える）。 */
 export type Entry = { id: string; prefix: string; number: number; title: string; line: number }

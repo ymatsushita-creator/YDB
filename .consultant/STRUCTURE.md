@@ -181,6 +181,7 @@ package.json  pnpm-lock.yaml  proxy.ts  tsconfig.json  vercel.json
 
 ```
 docs/audit/     監査の是正記録・所見への対処（日付から始める）
+docs/consultant/ 構成診断の経緯。着手時に読む物ではない（現在の所見は .consultant/DIAGNOSIS.md）
 docs/pilot/     Pilot 運用の文書（B-1〜B-7 の別番号体系を持つ）
 docs/product/   製品の参照資料（ペルソナ等）
 docs/reports/   実行①〜⑮の凍結レポート。着手時に読む物ではない

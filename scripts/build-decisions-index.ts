@@ -1,6 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
+import { collectRefs, findDangling, FOREIGN_PREFIXES, HEADING, parseHeadings } from './decisions-refs.ts'
+import type { Entry } from './decisions-refs.ts'
+
 /**
  * `db/DECISIONS.md` の索引を作る。
  *
@@ -23,34 +26,6 @@ import { fileURLToPath } from 'node:url'
 
 const SOURCE = new URL('../db/DECISIONS.md', import.meta.url)
 const INDEX = new URL('../db/DECISIONS-INDEX.md', import.meta.url)
-
-/** 見出し1行から拾った記録。`line` は1始まり（エディタの行番号と揃える）。 */
-type Entry = { id: string; prefix: string; number: number; title: string; line: number }
-
-/**
- * `## C-192 題名` / `### C-1. 題名` の両方を拾う。
- * 番号の直後は `.` か空白のどちらでもよいが、`C-1a` のような続きは拾わない
- * （`(?![0-9])` ではなく `[.\s]` を要求することで、`C-19` が `C-192` に化けない）。
- */
-const HEADING = /^#{2,4}\s+([A-F])-(\d+)[.\s]\s*(.+?)\s*$/
-
-function parse(markdown: string): Entry[] {
-  const entries: Entry[] = []
-  markdown.split('\n').forEach((text, i) => {
-    const m = HEADING.exec(text)
-    if (!m) return
-    const [, prefix, digits, title] = m
-    entries.push({
-      id: `${prefix}-${digits}`,
-      prefix: prefix!,
-      number: Number(digits),
-      // `(.+?)\s*$` で末尾空白は既に落ちている。★は「影響大」の目印なので残す。
-      title: title!,
-      line: i + 1,
-    })
-  })
-  return entries
-}
 
 /**
  * 同じ番号が2度以上出ている記録を返す。
@@ -83,7 +58,7 @@ function render(
   entries: Entry[],
   dupes: ReturnType<typeof findDuplicates>,
   nearMisses: ReturnType<typeof findNearMisses>,
-  dangling: ReturnType<typeof findDanglingRefs>,
+  dangling: Array<{ id: string; from: string[] }>,
 ): string {
   const out: string[] = [
     '# 設計判断の索引',
@@ -183,83 +158,20 @@ function findNearMisses(markdown: string): Array<{ line: number; text: string }>
     LOOSE.test(text) && !HEADING.test(text) ? [{ line: i + 1, text: text.trim() }] : [])
 }
 
-/**
- * 別の番号体系。`docs/pilot/DEPLOY-READINESS.md` が自分の連番として `B-1`〜`B-7` を使い、
- * `db/DECISIONS.md` 自身がそれを「`DEPLOY-READINESS.md` B-3」と出典付きで引いている（L2571）。
- * `db/DECISIONS.md` に `B-` の見出しは**1件も無い**。欠番ではなく、別の文書の番号である。
- * 欠番として毎回掲げると、人間が本物のほうを読み飛ばす。
- */
-const FOREIGN_PREFIXES = new Set(['B'])
-
-/**
- * 本文から参照されているのに、見出しが存在しない番号を返す。
- *
- * ★「番号から本文へ辿れる」という索引の前提が、実際に成立しているかを見る。
- *
- * ★ 並び順は**接頭辞 → 番号**で決める。番号だけで比べていた初版では `D-30` が
- *   `C-165` より前に来ており、さらに同番異接頭辞（`A-256` と `C-256`）が同順位になって、
- *   Map の挿入順＝`git grep` の出力順に依存していた。**`--check` が環境で揺れる。**
- */
-function findDanglingRefs(
-  entries: Entry[],
-  repoRefs: Map<string, Set<string>>,
-): Array<{ id: string; from: string[] }> {
-  const known = new Set(entries.map((e) => e.id))
-  return [...repoRefs.entries()]
-    .filter(([id]) => !known.has(id) && !FOREIGN_PREFIXES.has(id[0]!))
-    .map(([id, from]) => ({ id, from: [...from].sort() }))
-    .sort((a, b) =>
-      a.id[0]!.localeCompare(b.id[0]!) || Number(a.id.slice(2)) - Number(b.id.slice(2)))
-}
-
 const markdown = await readFile(SOURCE, 'utf8')
-const entries = parse(markdown)
+const entries = parseHeadings(markdown)
 
 if (entries.length === 0) {
   console.error('索引の対象が1件も見つからない。DECISIONS.md の見出しの形が変わった可能性がある。')
   process.exit(1)
 }
 
-// リポジトリ内から参照されている番号を集める（コード・文書。生成物と履歴は対象外）。
+// 参照の収集は `decisions-refs.ts` に置いてある（`decisions:missing` と共有する）。
+// 索引に要るのは出所のファイル名だけなので、行と本文はここで落とす。
+// 行番号を索引に載せると、無関係な編集のたびに古くなり `--check` が本題と関係なく落ちる。
 const repoRefs = new Map<string, Set<string>>()
-{
-  const { execFile } = await import('node:child_process')
-  const { promisify } = await import('node:util')
-  const run = promisify(execFile)
-
-  // ★ 照合から外す経路（2026-08-19 の再検証で判明した自己参照）:
-  //   `db/DECISIONS-INDEX.md`  生成物。欠番リストを本文に持つため、自分が数えた欠番を
-  //                            次回の入力として読み返す。**欠番が自己維持する。**
-  //   `.consultant/`           この問題を記述した診断文書。欠番の話を書き足しただけで
-  //                            件数が 53→54 へ増えた。**測る対象に測定の記録が混ざる。**
-  //                            境界判定を入れると、残る `A-256` は「`SHA-256` を `A-256` と
-  //                            読む誤検知」と書いた一文だけになる。
-  //   このファイル自身          下の docstring が `C-165`〜`C-212` を引いている。
-  const EXCLUDE = [':!db/DECISIONS-INDEX.md', ':!.consultant/', ':!scripts/build-decisions-index.ts']
-
-  try {
-    // ★ `-I` でバイナリを外す。付けないと `Binary file public/brand/logo_gradient.png matches`
-    //   という**行そのものが番号として索引へ入り**、`Number(id.slice(2))` が NaN になって
-    //   ソートの比較子が壊れる（実測済み）。
-    // ★ `-h` / `-o` は使わない。出所を捨ててしまい、欠番を埋める人間に手がかりが残らない。
-    //   `-H` で（対象が1本になっても）ファイル名を必ず前置させる。
-    const { stdout } = await run('git', ['grep', '-I', '-H', '-E', '[A-F]-[0-9]+', '--', '.', ...EXCLUDE],
-      { cwd: fileURLToPath(new URL('..', import.meta.url)), maxBuffer: 32 * 1024 * 1024 })
-
-    // ★ 境界はここで見る。`\b` は macOS の git（POSIX ERE）で効かないため、
-    //   git 側に任せると `SHA-256` が `A-256` として拾われる。
-    //   **初版はこの但し書きだけを書いて、判定を実装していなかった。**
-    //   前は英数字でないこと、後ろは数字でないことを要求する。
-    const REF = /(?<![0-9A-Za-z])([A-F])-([0-9]+)(?![0-9])/g
-    for (const line of stdout.split('\n')) {
-      const sep = line.indexOf(':')
-      if (sep < 0) continue
-      const file = line.slice(0, sep)
-      for (const m of line.slice(sep + 1).matchAll(REF)) {
-        repoRefs.set(`${m[1]}-${m[2]}`, (repoRefs.get(`${m[1]}-${m[2]}`) ?? new Set()).add(file))
-      }
-    }
-  } catch { /* git が無い / 追跡外。参照の照合はできない */ }
+for (const [id, refs] of await collectRefs()) {
+  repoRefs.set(id, new Set(refs.map((r) => r.file)))
 }
 
 const nearMisses = findNearMisses(markdown)
@@ -267,7 +179,7 @@ for (const n of nearMisses) {
   console.warn(`⚠ 番号の見出しに見えるが拾えない ―― L${n.line}: ${n.text.slice(0, 60)}`)
 }
 
-const dangling = findDanglingRefs(entries, repoRefs)
+const dangling = findDangling(entries, repoRefs).map((d) => ({ id: d.id, from: [...d.refs].sort() }))
 if (dangling.length > 0) {
   console.warn(`⚠ 参照されているが本文に見出しが無い番号 ―― ${dangling.length} 件: `
     + `${dangling.slice(0, 8).map((d) => d.id).join(', ')}`
