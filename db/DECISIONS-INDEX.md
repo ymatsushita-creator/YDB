@@ -26,13 +26,63 @@ CI（`quality.yml`）が `--check` でずれを見るので、追記したら作
 
 ## ★ 参照先が本文に無い番号
 
-53 個の番号が、リポジトリ内から参照されているのに `db/DECISIONS.md` に見出しが無い。
+45 個の番号が、リポジトリ内から参照されているのに `db/DECISIONS.md` に見出しが無い。
 **「番号から本文へ辿れる」という前提が、この分だけ成立していない。**
 記録が抜けているのか、番号を書き間違えているのかは、人間が本文を見て決める。
 
-```
-B-1 B-2 B-3 B-4 B-5 B-6 B-7 D-30 C-165 C-166 C-167 C-168 C-169 C-170 C-171 C-172 C-173 C-174 C-175 C-176 C-177 C-178 C-179 C-180 C-181 C-182 C-183 C-184 C-185 C-186 C-187 C-188 C-189 C-190 C-191 C-196 C-197 C-198 C-199 C-200 C-201 C-202 C-203 C-204 C-205 C-206 C-207 C-208 C-209 C-210 C-211 C-212 A-256
-```
+AIはここを埋められない（`CLAUDE.md`「記録にない値の創作」の禁止にあたる）。
+何を決めたのかを知っているのは、その判断を下した人間だけである。
+**参照元を挙げるので、コードの側から「何を決めた番号だったか」を辿ること。**
+
+| 番号 | 参照元 |
+|---|---|
+| `C-165` | `db/migrations/0045_ai_pre_viewpoints.sql`<br>`src/ai/pre_assessment.ts` |
+| `C-166` | `app/_components/scoring.tsx`<br>`app/interviews/[evaluation]/page.tsx`<br>`src/records/placeholder.ts`<br>`tests/71_placeholder.test.ts` |
+| `C-167` | `app/base.css` |
+| `C-168` | `app/_components/sheet.tsx`<br>`app/_components/shell.tsx`<br>`tests/66_events_and_forms.test.ts` |
+| `C-169` | `app/_components/shell.tsx`<br>`app/base.css` |
+| `C-170` | `app/_components/shell.tsx`<br>`app/base.css` |
+| `C-171` | `app/approach/page.tsx` |
+| `C-172` | `app/base.css` |
+| `C-173` | `app/base.css` |
+| `C-174` | `tests/71_placeholder.test.ts` |
+| `C-175` | `app/base.css` |
+| `C-176` | `app/base.css` |
+| `C-177` | `app/base.css`<br>`app/people/[id]/page.tsx`<br>`src/queries/intake.ts` |
+| `C-178` | `app/approach/page.tsx` |
+| `C-179` | `app/funnel/page.tsx`<br>`src/queries/dashboard.ts` |
+| `C-180` | `app/approach/page.tsx`<br>`app/approach/sheet-actions.ts`<br>`db/migrations/0046_partner_columns.sql` |
+| `C-181` | `app/_components/shell.tsx`<br>`app/base.css` |
+| `C-182` | `app/base.css` |
+| `C-183` | `app/people/new/page.tsx`<br>`src/commands/sheet.ts`<br>`tests/41_sheet_bulk.test.ts` |
+| `C-184` | `app/people/new/page.tsx`<br>`src/commands/sheet.ts`<br>`tests/41_sheet_bulk.test.ts` |
+| `C-185` | `app/_components/sheet.tsx`<br>`app/base.css` |
+| `C-186` | `app/base.css`<br>`db/DECISIONS.md` |
+| `C-187` | `tests/22_reference_season.test.ts`<br>`tests/23_selection_rounds.test.ts`<br>`tests/26_hold.test.ts`<br>`tests/48_criteria_weighting.test.ts` |
+| `C-188` | `app/_components/shell.tsx`<br>`app/base.css` |
+| `C-189` | `app/base.css` |
+| `C-190` | `app/base.css` |
+| `C-191` | `app/base.css` |
+| `C-196` | `app/base.css`<br>`tests/74_bar_seam.test.ts` |
+| `C-197` | `app/base.css`<br>`app/kpis/page.tsx` |
+| `C-198` | `app/base.css`<br>`tests/74_bar_seam.test.ts` |
+| `C-199` | `app/kpis/actions.ts`<br>`app/kpis/page.tsx`<br>`db/migrations/0049_kpi_metric.sql`<br>`src/commands/kpi.ts`<br>`src/queries/kpi.ts`<br>`src/queries/kpi_metrics.ts`<br>`tests/72_kpi_metric.test.ts` |
+| `C-200` | `app/ai/actions.ts`<br>`app/ai/page.tsx`<br>`app/base.css`<br>`src/ai/ask.ts`<br>`tests/70_ai_pre_assessment.test.ts`<br>`tests/73_ask_tiers.test.ts` |
+| `C-201` | `app/ai/actions.ts`<br>`app/ai/page.tsx`<br>`src/ai/ask.ts`<br>`tests/73_ask_tiers.test.ts` |
+| `C-202` | `app/base.css` |
+| `C-203` | `app/base.css` |
+| `C-204` | `app/base.css`<br>`app/page.tsx` |
+| `C-205` | `app/_components/headhunting.tsx`<br>`app/base.css`<br>`src/secrets/anthropic.ts`<br>`tests/70_ai_pre_assessment.test.ts` |
+| `C-206` | `app/_components/headhunting.tsx`<br>`app/base.css`<br>`app/page.tsx`<br>`src/seed/demo.ts`<br>`tests/45_home.test.ts`<br>`tests/57_confidence_axis.test.ts` |
+| `C-207` | `app/base.css`<br>`tests/74_bar_seam.test.ts` |
+| `C-208` | `app/base.css`<br>`app/page.tsx` |
+| `C-209` | `app/base.css`<br>`src/queries/borderline.ts`<br>`src/queries/headhunting.ts` |
+| `C-210` | `app/people/[id]/actions.ts`<br>`app/people/[id]/page.tsx`<br>`src/commands/decide.ts`<br>`tests/75_end_to_end_selection.test.ts` |
+| `C-211` | `app/_components/scoring.tsx`<br>`app/borderline/[person]/page.tsx`<br>`app/borderline/actions.ts`<br>`app/borderline/page.tsx`<br>`src/commands/ai_pre_assessment.ts` |
+| `C-212` | `app/_components/scoring.tsx`<br>`db/DECISIONS.md`<br>`db/seeds/0010_document_screening_criteria.production.sql`<br>`src/queries/document_screening.ts`<br>`tests/22_reference_season.test.ts`<br>`tests/48_criteria_weighting.test.ts`<br>`tests/76_document_gate.test.ts`<br>`tests/78_pilot_hirashain.test.ts` |
+| `D-30` | `db/DECISIONS.md` |
+
+別の番号体系として照合から除外: `B-`（`docs/pilot/DEPLOY-READINESS.md` 自身の連番。`db/DECISIONS.md` に見出しは無い）
 
 ## A. 動かして見つかった不具合
 

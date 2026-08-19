@@ -127,9 +127,19 @@ function render(
       '**「番号から本文へ辿れる」という前提が、この分だけ成立していない。**',
       '記録が抜けているのか、番号を書き間違えているのかは、人間が本文を見て決める。',
       '',
-      '```',
-      dangling.map((d) => d.id).join(' '),
-      '```',
+      'AIはここを埋められない（`CLAUDE.md`「記録にない値の創作」の禁止にあたる）。',
+      '何を決めたのかを知っているのは、その判断を下した人間だけである。',
+      '**参照元を挙げるので、コードの側から「何を決めた番号だったか」を辿ること。**',
+      '',
+      '| 番号 | 参照元 |',
+      '|---|---|',
+      // 行番号は載せない。無関係な編集で行がずれるたびに索引が古くなり、
+      // CI の `--check` が本題と関係なく落ちて「検査を緩めろ」という圧力を生む。
+      // ファイルまで分かれば grep で足りる。
+      ...dangling.map((d) => `| \`${d.id}\` | ${d.from.map((f) => `\`${f}\``).join('<br>')} |`),
+      '',
+      `別の番号体系として照合から除外: \`${[...FOREIGN_PREFIXES].join('-` / `')}-\``
+        + '（`docs/pilot/DEPLOY-READINESS.md` 自身の連番。`db/DECISIONS.md` に見出しは無い）',
       '',
     )
   }
@@ -174,17 +184,32 @@ function findNearMisses(markdown: string): Array<{ line: number; text: string }>
 }
 
 /**
+ * 別の番号体系。`docs/pilot/DEPLOY-READINESS.md` が自分の連番として `B-1`〜`B-7` を使い、
+ * `db/DECISIONS.md` 自身がそれを「`DEPLOY-READINESS.md` B-3」と出典付きで引いている（L2571）。
+ * `db/DECISIONS.md` に `B-` の見出しは**1件も無い**。欠番ではなく、別の文書の番号である。
+ * 欠番として毎回掲げると、人間が本物のほうを読み飛ばす。
+ */
+const FOREIGN_PREFIXES = new Set(['B'])
+
+/**
  * 本文から参照されているのに、見出しが存在しない番号を返す。
  *
  * ★「番号から本文へ辿れる」という索引の前提が、実際に成立しているかを見る。
- *   レビューでは `C-165`〜`C-212` など約50個の参照先が不在と報告された。
+ *
+ * ★ 並び順は**接頭辞 → 番号**で決める。番号だけで比べていた初版では `D-30` が
+ *   `C-165` より前に来ており、さらに同番異接頭辞（`A-256` と `C-256`）が同順位になって、
+ *   Map の挿入順＝`git grep` の出力順に依存していた。**`--check` が環境で揺れる。**
  */
-function findDanglingRefs(entries: Entry[], repoRefs: Map<string, string[]>): Array<{ id: string; from: string[] }> {
+function findDanglingRefs(
+  entries: Entry[],
+  repoRefs: Map<string, Set<string>>,
+): Array<{ id: string; from: string[] }> {
   const known = new Set(entries.map((e) => e.id))
   return [...repoRefs.entries()]
-    .filter(([id]) => !known.has(id))
-    .map(([id, from]) => ({ id, from }))
-    .sort((a, b) => Number(a.id.slice(2)) - Number(b.id.slice(2)))
+    .filter(([id]) => !known.has(id) && !FOREIGN_PREFIXES.has(id[0]!))
+    .map(([id, from]) => ({ id, from: [...from].sort() }))
+    .sort((a, b) =>
+      a.id[0]!.localeCompare(b.id[0]!) || Number(a.id.slice(2)) - Number(b.id.slice(2)))
 }
 
 const markdown = await readFile(SOURCE, 'utf8')
@@ -195,19 +220,44 @@ if (entries.length === 0) {
   process.exit(1)
 }
 
-// リポジトリ内から参照されている番号を集める（コード・文書・コミットではなく作業ツリー）。
-const repoRefs = new Map<string, string[]>()
+// リポジトリ内から参照されている番号を集める（コード・文書。生成物と履歴は対象外）。
+const repoRefs = new Map<string, Set<string>>()
 {
   const { execFile } = await import('node:child_process')
   const { promisify } = await import('node:util')
   const run = promisify(execFile)
+
+  // ★ 照合から外す経路（2026-08-19 の再検証で判明した自己参照）:
+  //   `db/DECISIONS-INDEX.md`  生成物。欠番リストを本文に持つため、自分が数えた欠番を
+  //                            次回の入力として読み返す。**欠番が自己維持する。**
+  //   `.consultant/`           この問題を記述した診断文書。欠番の話を書き足しただけで
+  //                            件数が 53→54 へ増えた。**測る対象に測定の記録が混ざる。**
+  //                            境界判定を入れると、残る `A-256` は「`SHA-256` を `A-256` と
+  //                            読む誤検知」と書いた一文だけになる。
+  //   このファイル自身          下の docstring が `C-165`〜`C-212` を引いている。
+  const EXCLUDE = [':!db/DECISIONS-INDEX.md', ':!.consultant/', ':!scripts/build-decisions-index.ts']
+
   try {
-    // 追跡下のファイルだけを見る。生成物と履歴は対象外。
-    // `\b` は macOS の git（POSIX ERE）で効かない。境界は取得後に自前で見る。
-    const { stdout } = await run('git', ['grep', '-hoE', '[A-F]-[0-9]+', '--', '.'],
+    // ★ `-I` でバイナリを外す。付けないと `Binary file public/brand/logo_gradient.png matches`
+    //   という**行そのものが番号として索引へ入り**、`Number(id.slice(2))` が NaN になって
+    //   ソートの比較子が壊れる（実測済み）。
+    // ★ `-h` / `-o` は使わない。出所を捨ててしまい、欠番を埋める人間に手がかりが残らない。
+    //   `-H` で（対象が1本になっても）ファイル名を必ず前置させる。
+    const { stdout } = await run('git', ['grep', '-I', '-H', '-E', '[A-F]-[0-9]+', '--', '.', ...EXCLUDE],
       { cwd: fileURLToPath(new URL('..', import.meta.url)), maxBuffer: 32 * 1024 * 1024 })
-    for (const id of stdout.split('\n').map((x) => x.trim()).filter(Boolean)) {
-      repoRefs.set(id, [...(repoRefs.get(id) ?? []), 'repo'])
+
+    // ★ 境界はここで見る。`\b` は macOS の git（POSIX ERE）で効かないため、
+    //   git 側に任せると `SHA-256` が `A-256` として拾われる。
+    //   **初版はこの但し書きだけを書いて、判定を実装していなかった。**
+    //   前は英数字でないこと、後ろは数字でないことを要求する。
+    const REF = /(?<![0-9A-Za-z])([A-F])-([0-9]+)(?![0-9])/g
+    for (const line of stdout.split('\n')) {
+      const sep = line.indexOf(':')
+      if (sep < 0) continue
+      const file = line.slice(0, sep)
+      for (const m of line.slice(sep + 1).matchAll(REF)) {
+        repoRefs.set(`${m[1]}-${m[2]}`, (repoRefs.get(`${m[1]}-${m[2]}`) ?? new Set()).add(file))
+      }
     }
   } catch { /* git が無い / 追跡外。参照の照合はできない */ }
 }
