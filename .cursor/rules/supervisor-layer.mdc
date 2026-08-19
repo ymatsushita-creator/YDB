@@ -1,14 +1,44 @@
 ---
-description: Enforce the repository's chat-scoped supervisor authority and document hierarchy
+description: Single-authority document model — Hitler.md is the only authority in this repository
 alwaysApply: true
 ---
 
-# 監督レイヤー
+# 権限は `Hitler.md` だけが持つ
 
-- 作業前にリポジトリ直下の `SUPERVISOR.md` を全文読む。
-- 文書の優先順位は `SUPERVISOR.md > vision.md > director.md > domain.md > CLAUDE.md > process.md`。
-- `SUPERVISOR.md` は、この監督チャットで依頼者から明示指示を受けた監督官だけが変更できる。
-- 実装担当、別チャット、サブエージェントは `SUPERVISOR.md` を変更しない。変更案は監督官へ返す。
-- 同一の監督チャットだと確認できなければ、`SUPERVISOR.md` を読み取り専用として扱う。
-- 監督官が承認した設計・実装指示が無ければ、UI実装を開始しない。
-- 下位文書と食い違う場合は勝手に統合せず、監督官へ報告する。
+- 作業前にリポジトリ直下の **`Hitler.md`** を全文読む。**これが唯一の権限である。**
+- **序列は `Hitler.md` の1段だけ。** `AGENTS.md` / `CLAUDE.md` / `director.md` /
+  `domain.md` / `process.md` / `.audit/` / `.consultant/` に上下は無い。
+  どれも権限を持たない参照・手順である。
+- **`Hitler.md` に無い条件は、作業を止める根拠にならない。**
+  他の文書に書いてあることを理由に実装を差し止めない。
+- 文書どうしが食い違ったら `Hitler.md` に照らす。`Hitler.md` が何も言っていない
+  事柄なら規律の問題ではないので、妥当なほうを採り理由を `db/DECISIONS.md` に残す。
+  **黙ってどちらかへ寄せない。**
+- `Hitler.md` は監査所見も退けられる。退けるときは `.audit/` を書き換えず
+  （封印されており D7-01 と CI ジョブB が落ちる）、判断と理由を記録して進む。
+  **「所見が無かったことにする」「通ったことにする」は `Hitler.md` §4 が禁じる虚偽報告。**
+
+## 2026-08-19 に廃止したもの
+
+以前ここには次が書かれていた。**どれも現行ではない。**
+
+- 8層の文書序列（`SUPERVISOR.md > vision.md > director.md > domain.md > CLAUDE.md > process.md`）
+- 「監督官の承認が無ければ UI 実装を開始しない」という関門
+- 「`SUPERVISOR.md` は監督チャットの監督官だけが変更できる」というチャット限定の権限
+
+`SUPERVISOR.md` と `vision.md` は畳んだ。中身は `director.md`（原則・UX判断）と
+`process.md`（観察 → 診断 → 設計 → 確認の手順）に在る。
+
+## 読む順番
+
+```
+Hitler.md      規律 —— 何をしてはならないか   【唯一の権限】
+
+README.md      入口
+AGENTS.md      CLAUDE.md へのポインタ
+CLAUDE.md      実装規律
+director.md    プロダクト原則・UX判断
+domain.md      用語・記録モデル
+process.md     作業手順
+HANDOFF.md     いまの状態と、待っている判断
+```

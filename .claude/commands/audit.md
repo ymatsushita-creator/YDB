@@ -12,7 +12,9 @@ kurosaki scan  --repo .
 ## 所見の扱い
 
 意見に **Critical / High** が残る間は、commit / push / マージ / デプロイへ進まない
-（`.audit/AUDIT_CHARTER.md` §4。`SUPERVISOR.md` の「監査文書の最高権限」）。
+（`.audit/AUDIT_CHARTER.md` §4）。**これを退けられるのは `Hitler.md` と依頼者だけである**
+（2026-08-19 に権限を `Hitler.md` へ一本化した。C-222）。退けた場合は判断と理由を
+`db/DECISIONS.md` に残す。所見を無かったことにしない。
 
 所見を3つに分ける。**分類を報告に必ず書く。**
 

@@ -1,9 +1,11 @@
 # AGENTS.md
 
-このリポジトリの開発規律は **`CLAUDE.md` を正典**とする。
-監督判断と権限境界は **`SUPERVISOR.md`** が下位文書に優先する。
-その上に **`.consultant/`（作り方の構造）**、さらに上に
-**`.audit/`（監査・最高権限）** が立つ。
+**権限を持つのは `Hitler.md` だけである**（依頼者指示 2026-08-19）。
+多層の序列は廃止した。他の文書はすべて権限を持たない参照・手順である。
+
+開発規律の実体は **`CLAUDE.md`**。本書はそこへの一枚のポインタである。
+`Hitler.md` §1 が `AGENTS.md` を実体・`CLAUDE.md` をその差分としているのは
+汎用テンプレートの記述であり、**このリポジトリでは逆**である。この一点は本書が現実を示す。
 
 以前この文書は `CLAUDE.md` の複製だったが、**複製は必ず片方だけ古くなる。**
 実際、実行⑧の内容のまま29行分ずれていた。実行⑨で一枚のポインタに置き換えた。
@@ -11,32 +13,26 @@
 ## 着手前に読む順番
 
 ```
-.audit/        Audit        何を出してはならないか（最上位・監査人の文書）
-               AUDIT_CHARTER.md / IRREVERSIBLE_OPS.md / REMEDIATION.md / 監査意見
-    ↓
-.consultant/   Structure    どう作れば速く安全に回るか（構成・工程・ゲート）
-               CHARTER.md / STRUCTURE.md / DIAGNOSIS.md
-    ↓
-SUPERVISOR.md  Oversight    誰が設計・実装を許可するか
-    ↓
-vision.md      Why          なぜ存在するのか（内容は未受領。枠のみ）
-    ↓
-director.md    Principles   何を守るのか（憲法）
-    ↓
+Hitler.md      Constitution 不可侵ルール・禁止事項・完了ゲート  【唯一の権限】
+
+―― 以下は序列ではない。何がどこに書いてあるかの一覧である ――
+
+.audit/        Audit        監査所見
+.consultant/   Structure    構成・工程・ゲート
+director.md    Principles   何を守るのか（プロダクト原則・UX判断）
 domain.md      Model        何が存在するのか
-    ↓
-    ↓
-CLAUDE.md      Engineering  どう開発するのか  ← 開発規律の正典
-    ↓
-process.md     Loop         どう回すのか（MVP モード）
+CLAUDE.md      Engineering  どう開発するのか  ← 実装規律の実体
+process.md     Loop         どう回すのか
 ```
 
-上が下に優先する。ただし**食い違いを勝手にどちらかへ寄せない。**
-`SUPERVISOR.md` は、この監督チャットで依頼者から明示指示を受けた監督官だけが変更できる。
-`.audit/` は監査人の文書であり、**監督官を含め誰も実装セッションからは変更できない。**
-監査意見に Critical / High が残る間は commit / push / マージ / デプロイへ進まない。
-`.consultant/` は構成・工程だけを扱い、**プロダクトの中身（vision / director / domain）には及ばない。**
-`.audit/` と食い違えば監査が勝つ。
+**`Hitler.md` に無い条件は、作業を止める根拠にならない。**
+食い違ったら `Hitler.md` に照らす。`Hitler.md` が何も言っていない事柄なら
+規律の問題ではないので、妥当なほうを採り理由を `db/DECISIONS.md` に残す。
+**食い違いを黙ってどちらかへ寄せない。**
+
+`Hitler.md` は監査所見も退けられる。退けるときは `.audit/` を書き換えず
+（封印されており D7-01 と CI ジョブB が落ちる）、
+**退けた判断と理由を `db/DECISIONS.md` に記録して進む。所見を無かったことにしない。**
 
 ## そのほか
 

@@ -37,6 +37,6 @@ $(cat .consultant/TOOL_PATH) prompt --repo . "<目的>"
 ## 進んではならない場合
 
 - 監査が **Critical / High** を出している（`kurosaki audit --repo .`）
-- 監督官の承認が無い（`SUPERVISOR.md`）
+  ★ ただし退けられるのは `Hitler.md` と依頼者だけ。退けたら理由を `db/DECISIONS.md` に残す
 
 どちらも、計画を出すところまでで止める。
