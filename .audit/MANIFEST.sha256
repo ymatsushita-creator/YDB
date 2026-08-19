@@ -1,7 +1,7 @@
 # 監査基盤の正本ハッシュ。書き換えは D7-01 で検知される。
 # 生成: kurosaki install
-49d8c1cf79205f8cd667a667a97933fc006f16e60f9ae13dc894125e50b117a6  .audit/AUDIT_CHARTER.md
-e6b816b9b66c49c3c43038cb3d94e87ab77128ad51437cf1cf9663ed178fca62  .audit/IRREVERSIBLE_OPS.md
+11438dcecc9487193b32e733dc4631a093101bd8037caa0e41582a01d625f59a  .audit/AUDIT_CHARTER.md
+65fef785ea0699ac76cdf724f48a471d51ba575255eaae34d0b1ba3ca3e7aff1  .audit/IRREVERSIBLE_OPS.md
 c0dbbd1be793cdd136256a27f507dfa14b73dc86997d1222f564a50523a4b174  .audit/TOOL_PATH
 98c6acf6aaaea31d7f75b355d860ffc15d1c1993c07064290704eb0a65e3484e  .audit/allowlist.yml
 7a1682c9293cef6c00ae0d1fcb7d9ad9d8fb830e693c3cfa51d02083bd1a2574  .cursor/rules/supervisor-layer.mdc
