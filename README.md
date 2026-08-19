@@ -23,6 +23,7 @@
 - [`db/DECISIONS-INDEX.md`](db/DECISIONS-INDEX.md) — **`C-121` などの番号から本文へ辿る索引**（生成物）
 - [`db/DECISIONS.md`](db/DECISIONS.md) — 設計判断の本体。理由とテストが書いてある
 - [`docs/reports/`](docs/reports/) — 実行①〜⑮の凍結レポート。**着手時に読む物ではない**
+  （各ファイルの先頭に凍結の但し書きがある。grepで1本だけ拾っても分かるようにしてある）
 - [`basic/DESIGN.md`](basic/DESIGN.md) — 意匠トークン
 
 `AGENTS.md` は `CLAUDE.md` へのポインタである（複製は必ず片方だけ古くなるため）。
@@ -82,9 +83,33 @@ pnpm verify:fast     # 型検査 + テストだけ（ビルドを省く）
 pnpm typecheck
 pnpm test
 pnpm decisions:index # DECISIONS.md に追記したら回す（生成物も一緒にコミットする）
-pnpm structure       # 構成基準（.consultant/STRUCTURE.md の S1〜S11）だけを見る
-pnpm tokens          # app/tokens.css を作り直す
+pnpm structure       # 構成基準（.consultant/STRUCTURE.md の S1〜S12）だけを見る
+pnpm tokens          # app/tokens.css を作り直す（basic/DESIGN.md から生成）
 ```
+
+### 画面のCSS
+
+`app/base.css` は `@import` の並びで、実体は [`app/_styles/`](app/_styles/) の10本にある。
+**取り込み順がそのままカスケードの順序である。並べ替えない。**
+`app/tokens.css` は生成物（`pnpm tokens`）。手で編集しない。
+
+### 設計判断を引く —— `db/DECISIONS.md` は開かない
+
+`db/DECISIONS.md` は **496,136字（≒33万トークン相当）**で、どの文脈長にも入らない。
+**全文を読もうとしない。** 番号から引く。
+
+```bash
+pnpm decisions:show C-121        # その判断の本文だけを出す（約5,000字）
+pnpm decisions:show C-95..C-96   # 範囲でまとめて
+pnpm decisions:missing           # 参照されているのに本文が無い番号と、その参照元
+```
+
+コード中の `C-121` のような番号は、この道具で本文へ辿れる。
+一覧は [`db/DECISIONS-INDEX.md`](db/DECISIONS-INDEX.md)（生成物。手で編集しない）。
+
+**45件が「参照されているのに本文が無い」状態にある。** 実行⑯・⑰が報告書も
+設計判断も残さずに終わったためで、`pnpm decisions:missing` が参照元のコードから
+手がかりを集める。**埋められるのは、その判断を下した人間だけである。**
 
 ## ゲート —— 何が止めるか
 
@@ -94,7 +119,7 @@ pnpm tokens          # app/tokens.css を作り直す
 | pre-push | 同上 ＋ 保護ブランチへの強制push | `.githooks/pre-push`（同上） |
 | CI: audit | 個人情報・体制監査 | `.github/workflows/audit.yml`（同上） |
 | CI: quality | **型検査・テスト・索引・構成基準・ビルド** | `.github/workflows/quality.yml` |
-| 構成基準 | ルート・索引・deny・役割分離・実データ・検査の迂回・履歴の秘密・`docs/` の分類 | `pnpm structure`（`.consultant/STRUCTURE.md` の S1〜S11） |
+| 構成基準 | ルート・索引・deny・役割分離・実データ・検査の迂回・履歴の秘密・`docs/` の分類・凍結の但し書き | `pnpm structure`（`.consultant/STRUCTURE.md` の S1〜S12） |
 | deploy | 送る物の検査と出所の記録 | `kurosaki deploy-gate`（`pnpm deploy:production` の前段） |
 
 `.audit/` `.githooks/` `audit.yml` は監査法人の管轄で、**実装セッションからは変更できない**

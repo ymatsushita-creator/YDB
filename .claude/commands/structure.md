@@ -6,7 +6,7 @@ description: 構成基準（.consultant/STRUCTURE.md）を確かめ、崩れて�
 pnpm structure
 ```
 
-`S1`〜`S11` と、外部ツールの `C01`〜`C07` を見る。
+`S1`〜`S12` と、外部ツールの `C01`〜`C07` を見る。
 
 ## 落ちたときの直し方
 
@@ -25,6 +25,7 @@ pnpm structure
 | S9 | `.env` 系が履歴に入った・origin 以外のリモートが増えた | **まず鍵を失効**（`docs/audit/2026-08-19-secret-in-history.md`） |
 | S10 | `docs/` 直下にファイルが増えた・未定義の分類ができた | `docs/{audit,pilot,product,reports}/` へ |
 | S11 | 検査を足したのに `STRUCTURE.md` に節が無い | 基準を先に書く |
+| S12 | 凍結レポートの先頭に `【凍結】` の但し書きが無い | 先頭5行以内に入れる（本文は書き換えない） |
 
 基準そのものが現実に合わなくなったと判断した場合だけ、
 **`.consultant/STRUCTURE.md` を先に直し、その差分を人間が読む。**
