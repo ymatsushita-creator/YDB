@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
 /**
@@ -82,7 +82,10 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     check('S1b', '品質CIが完了条件を回す', false, '.github/workflows/quality.yml が無い')
   } else {
     const live = stripYamlComments(body)
-    const need = ['pnpm typecheck', 'pnpm test', 'pnpm structure', 'pnpm build']
+    // ★ `decisions:index` を落とさない。S1 は verify 側でこの段を要求しているのに、
+    //   S1b は CI 側で要求していなかった。**CI からこの段だけ消しても S1b は ✔ のまま**で、
+    //   `CLAUDE.md` の「同じものが CI で走る」が保証されていなかった（2026-08-19 再検証）。
+    const need = ['pnpm typecheck', 'pnpm test', 'pnpm decisions:index', 'pnpm structure', 'pnpm build']
     // `run:` の行だけを対象にする。ヘッダの説明文で通させない。
     const commands = live.split('\n').filter((l) => /^\s*(-\s*)?run:/.test(l) || /^\s{6,}\S/.test(l)).join('\n')
     const missing = need.filter((c) => !commands.includes(c))
@@ -191,22 +194,60 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   // ★ 防壁は**実際に動かして**確かめる。
   //   初版はソースに特定の文字列があるかを見ていたので、コメント1行で満たせた。
   //   実証された3つの回避（cwd依存・シンボリックリンク・大小文字）を、ここで毎回試す。
-  const probe = `import('${at('scripts/intake-dir.ts')}').then(m => { m.intakeDir(); console.log('ACCEPTED') })`
+  //
+  // ★★ 第2版は「動かして落ちた」を「防壁が拒否した」と読んでいた。これが誤りだった
+  //    （2026-08-19 の再検証で実証）。`import()` の失敗も exit 1 なので、
+  //    **`intake-dir.ts` が消えても・壊れても S6 は ✔ を出していた。**
+  //    検査対象が存在しないのに「防壁は3通りの回避を実際に拒否した」と表示する状態である。
+  //    負のテストは防壁を壊す方向しか試しておらず、**探査を壊す方向**を試していなかった。
+  //
+  //    そこで拒否を `assertOutsideRepo` 固有のメッセージで同定する。
+  //    それ以外の失敗は「検査できなかった」として ✘ にする。**合格の側へ倒さない。**
+  const REJECTION = '受け入れ口をリポジトリの中へ向けられない'
+  const probe = `import(${JSON.stringify(pathToFileURL(at('scripts/intake-dir.ts')).href)})`
+    + `.then(m => { m.intakeDir(); console.log('ACCEPTED') })`
+
+  /** 探査を1回走らせ、終了コードと出力をそのまま返す。例外を握り潰さない。 */
+  const attempt = async (dir: string): Promise<{ code: number; stdout: string; stderr: string }> => {
+    try {
+      const { stdout, stderr } = await run(process.execPath, ['--input-type=module', '-e', probe],
+        { env: { ...process.env, YOUTHDB_INTAKE_DIR: dir }, cwd: at('scripts') })
+      return { code: 0, stdout, stderr }
+    } catch (e) {
+      const err = e as { code?: number; stdout?: string; stderr?: string }
+      return { code: err.code ?? 1, stdout: err.stdout ?? '', stderr: err.stderr ?? '' }
+    }
+  }
+  const lastLine = (s: string) => s.trim().split('\n').pop() ?? '(出力なし)'
+
+  // 負の対照 —— リポジトリの中を指す3通り。すべて**防壁の拒否で**落ちねばならない。
   for (const [name, dir] of [
     ['直指定', at('db', 'private')],
     ['大小文字違い', at('db', 'private').replace('/YouthDB/', '/youthdb/')],
     ['リポジトリ自身', ROOT],
   ] as const) {
-    try {
-      // 受理されたら（exit 0）防壁が抜けている。cwd も変えて試す。
-      await run(process.execPath, ['--input-type=module', '-e', probe],
-        { env: { ...process.env, YOUTHDB_INTAKE_DIR: dir }, cwd: at('scripts') })
+    const r = await attempt(dir)
+    if (r.code === 0) {
       problems.push(`受け入れ口の防壁が抜ける（${name}: ${dir}）`)
-    } catch { /* exit 1 = 正しく止まった */ }
+    } else if (!r.stderr.includes(REJECTION)) {
+      // ここが第2版で ✔ になっていた経路である。
+      problems.push(`防壁を検査できなかった（${name}: exit ${r.code}・拒否メッセージが出ていない）`
+        + ` ―― ${lastLine(r.stderr)}`)
+    }
+  }
+
+  // 正の対照 —— 正当な外部ディレクトリは**受理されねばならない**。
+  // これが通らないなら探査系そのものが壊れており、上の3件が「落ちた」ことは何の根拠にもならない。
+  const outside = join(ROOT, '..', 'YouthDB-private')
+  const positive = await attempt(outside)
+  if (!positive.stdout.includes('ACCEPTED')) {
+    problems.push(`探査系が壊れている（正当な外部 ${outside} すら受理されない: exit ${positive.code}）`
+      + ` ―― ${lastLine(positive.stderr)}`)
   }
 
   check('S6', '実データがリポジトリの外にある', problems.length === 0,
-    problems.length === 0 ? '実データ・受け入れ口とも無し。防壁は3通りの回避を実際に拒否した'
+    problems.length === 0
+      ? '実データ・受け入れ口とも無し。防壁は3通りの回避を拒否メッセージ付きで拒み、正当な外部は受理した'
       : problems.join(' / '))
 }
 
