@@ -6,10 +6,10 @@ import { freshDb } from '../src/db/testing.ts'
 import { scalar, type Db } from '../src/db/client.ts'
 import { baseFixture, makeSeason } from './support/fixtures.ts'
 import { listTaskOwners, hasSelectionSteps } from '../src/queries/tasks.ts'
+import { appCss } from './support/css.ts'
 
 const PROJECT_ROOT = join(import.meta.dirname, '..')
 const PAGE_FILE = join(PROJECT_ROOT, 'app', 'page.tsx')
-const CSS_FILE = join(PROJECT_ROOT, 'app', 'base.css')
 
 describe('ホーム画面の契約テスト（選考の運転席）', () => {
   let pageContent: string
@@ -17,7 +17,7 @@ describe('ホーム画面の契約テスト（選考の運転席）', () => {
 
   test.before(async () => {
     pageContent = await readFile(PAGE_FILE, 'utf-8')
-    cssContent = await readFile(CSS_FILE, 'utf-8')
+    cssContent = await appCss()
   })
 
   test('1. getWorkTasks / listTaskOwners / hasSelectionSteps のimport と呼出。SELECT 元素なし', () => {

@@ -4,6 +4,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { canOpen, TIERS, TIER_HOME } from '../src/auth/tiers.ts'
+import { appCss } from './support/css.ts'
 
 /**
  * ホームとタブ（実行⑫。依頼者の指示）。
@@ -151,7 +152,7 @@ describe('タブの名称と構造', () => {
   test('ホームと特別選考の間に横罫線がある', async () => {
     const src = await body('app/_components/shell.tsx')
     assert.match(src, /t\.id === 'home'.*hh-nav-divider/)
-    const css = await read('app/base.css')
+    const css = await appCss()
     const rule = /\.hh-nav-divider \{([^}]*)\}/.exec(css)
     assert.match(rule![1]!, /height:\s*1px/)
   })
@@ -198,7 +199,7 @@ describe('横バー（現在地の帯）', () => {
    *   **層をまたいで同じ性質を2箇所で決めない。**
    */
   test('★ 帯は sticky で、後ろの層が position を戻していない', async () => {
-    const base = await read('app/base.css')
+    const base = await appCss()
     assert.match(base, /\.zoom-bar \{[^}]*position: sticky/,
       'base.css で固定する')
 
@@ -366,14 +367,14 @@ describe('残った面積の使い方', () => {
    * 次に1枚減ったときにまた余白が出る。
    */
   test('★ 1枚しか無い列は、その1枚に高さを全部渡す', async () => {
-    const css = await read('app/base.css')
+    const css = await appCss()
     const rule = /\.hh-col-main:has\(> :only-child\)[^{]*\{([^}]*)\}/.exec(css)
     assert.ok(rule, '1枚のときの割り付けが無い')
     assert.match(rule![1]!, /grid-template-rows:\s*minmax\(0, 1fr\)/)
   })
 
   test('★ ランキングの行は中身なりにしない（片方が空でも余白を残さない）', async () => {
-    const css = await read('app/base.css')
+    const css = await appCss()
     const rule = /\.hh-rankings \{([^}]*)\}/.exec(css)
     assert.match(rule![1]!, /grid-auto-rows:\s*minmax\(0, 1fr\)/,
       '中身なりだと、片方が空のときに下へ余りが出る')
@@ -416,7 +417,7 @@ describe('評価基準（横バー）', () => {
    *   ―― 確かめる頁は、本番と**同じ入れ子**で作る（C-140）。
    */
   test('★ 帯の基準点は黒バーと同じ箱にある（高さが真ん中に揃う）', async () => {
-    const css = await read('app/base.css')
+    const css = await appCss()
     const main = /\.hh-main \{([^}]*)\}/.exec(css)
     assert.ok(main, '.hh-main の規則がある')
     assert.match(main![1]!, /position:\s*relative/,
@@ -444,7 +445,7 @@ describe('評価基準（横バー）', () => {
     assert.match(ref, /aria-hidden=\{copy \|\| undefined\}/,
       '2組目は写しである。読み上げが二度読まないようにする')
 
-    const css = await read('app/base.css')
+    const css = await appCss()
     const rule = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
     assert.ok(rule, '規則がある')
     assert.match(rule![1]!, /height:\s*var\(--logo-h\)/)
@@ -499,7 +500,7 @@ describe('評価基準（横バー）', () => {
   })
 
   test('★ 縦タブと横タブは同じ層（天端・厚みをそろえる。依頼者の指示）', async () => {
-    const css = await read('app/base.css')
+    const css = await appCss()
     // 帯の厚みは両方 `--logo-h`。ロゴ枠は**縮ませない**（縮むと厚みが食い違う）。
     const brand = /\.hh-brand \{([^}]*)\}/.exec(css)
     assert.match(brand![1]!, /height:\s*var\(--logo-h\)/)
@@ -516,7 +517,7 @@ describe('評価基準（横バー）', () => {
   test('★ 縦バーの足元を切らない（出る手段を画面から消さない）', async () => {
     // 足元（期の切り替え・デモ札・出る）が 60px はみ出して届かなかった。
     // 送るのは**タブの並びだけ** ―― ロゴ（帯）と足元は動かさない。
-    const css = await read('app/base.css')
+    const css = await appCss()
     // ★ C-206 ―― 中で送ると、タブか入口のどちらかが必ず切れた。
     //   **柱ごと送る**（`.hh-sidebar` が送り、nav も入口も縮ませない）。
     assert.match(css, /\.hh-nav \{ flex: 0 0 auto;/, 'タブを縮ませない')

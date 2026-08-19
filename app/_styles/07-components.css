@@ -1,0 +1,373 @@
+/* =============================================================
+   ボタンの見た目を1つに揃える（実行⑨で依頼者の指示）
+
+   それまで4系統あった ―― btn-physical / button-primary /
+   button-secondary / bl-page / bl-tab。厚みも角丸も別々で、
+   **同じ「押せる」が4通りに見えていた。**
+
+   形は1つ。**違うのは役目の重さだけ**で、それは面の色で表す。
+     主      … 面を塗る（その画面で最も進む操作）
+     副      … 白い面＋縁
+     暗い面  … 操作柱の上（地が暗いので、明暗を逆にする）
+   ============================================================= */
+
+.btn-physical,
+.button-primary, .button-secondary, .button-dark, .button-on-dark,
+.bl-page, .bl-tab, .hh-search-go {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: flex-start;
+  text-align: left;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--rounded-md);
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.2;
+  white-space: nowrap; text-decoration: none; cursor: pointer;
+  border: 1px solid var(--color-hairline-strong);
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 70%), rgb(26 26 26 / 6%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 80%),
+    0 1px 0 rgb(26 26 26 / 10%),
+    0 2px 4px rgb(26 26 26 / 10%);
+}
+.btn-physical:hover,
+.button-primary:hover, .button-secondary:hover, .button-dark:hover,
+.button-on-dark:hover, .bl-page:hover, .bl-tab:hover, .hh-search-go:hover {
+  filter: brightness(1.04); text-decoration: none;
+}
+.btn-physical:active,
+.button-primary:active, .button-secondary:active, .button-dark:active,
+.button-on-dark:active, .bl-page:active, .bl-tab:active, .hh-search-go:active {
+  top: 1px;
+  box-shadow: inset 0 2px 4px rgb(26 26 26 / 22%);
+}
+.btn-physical:focus-visible,
+.button-primary:focus-visible, .button-secondary:focus-visible,
+.bl-page:focus-visible, .bl-tab:focus-visible, .hh-search-go:focus-visible {
+  outline: 2px solid var(--color-primary-deep); outline-offset: 2px;
+}
+
+/* 主の操作だけ面を塗る。1画面に何個も置かない。 */
+.button-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary-deep);
+  color: var(--color-on-primary);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(0 0 0 / 12%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    0 1px 0 rgb(26 26 26 / 18%),
+    0 2px 4px rgb(26 26 26 / 16%);
+}
+
+/* いま選ばれているもの（タブ・ページ・期）は沈める。
+   押せることではなく「ここに居る」ことを形で示す。 */
+.bl-tab.is-on, .bl-page.is-on, .zoom-crumb-current {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary-deep);
+  color: var(--color-on-primary);
+  background-image: none;
+  box-shadow: inset 0 2px 5px rgb(0 0 0 / 30%);
+  top: 1px;
+}
+
+/* 暗い操作柱の上。地が暗いので明暗を逆にする。 */
+.sidebar-item, .sidebar-item-active, .hh-sidebar .btn-physical {
+  background-color: var(--color-brand-navy-mid);
+  border-color: var(--color-sidebar-hairline);
+  color: var(--color-on-dark);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 10%), rgb(0 0 0 / 16%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 12%),
+    0 1px 0 rgb(0 0 0 / 30%),
+    0 2px 5px rgb(0 0 0 / 26%);
+}
+.sidebar-item-active {
+  background-color: var(--color-sidebar-active);
+  border-color: var(--color-sidebar-active-border);
+}
+.hh-search-go { padding: 0 var(--space-sm); height: 34px; }
+/* 操作柱のタブは行き先そのものなので、他のボタンより大きく取る。 */
+.sidebar-item, .sidebar-item-active {
+  align-items: flex-start;
+  text-align: left;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md); border-radius: var(--rounded-lg);
+  font-size: 15px;
+}
+.bl-page { min-width: 32px; padding: 4px 10px; font-size: 12px; }
+.bl-tab { padding: 6px 14px; font-size: 12px; }
+
+
+/* 一覧の行から先へ行けるようにする（実行⑨で依頼者の指示）。
+   **一覧で終わらせない。** 行のどこを押しても同じ場所へ行く。 */
+.row-link { cursor: pointer; }
+.row-link:hover { background: var(--color-card-tint-cream); }
+.row-link td:first-child { position: relative; }
+.row-detail {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: var(--rounded-sm);
+  color: var(--color-steel); font-size: 14px; text-decoration: none;
+}
+.row-detail:hover { background: var(--color-surface); color: var(--color-ink); text-decoration: none; }
+.hh-list li { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+
+/* =============================================================
+   顔写真をランキングにも出す（実行⑩。依頼者の指示）
+
+   `hh-list` は 1fr / auto / auto の3列で、名前の列に写真を足すと
+   写真ぶんだけ名前が押し出される。**押し出さない** ―― 名前の列に
+   写真を含めたまま省略が効くよう、内側で最小幅を 0 に落とす。
+   ============================================================= */
+.hh-list-name.bl-person { min-width: 0; }
+.hh-list-name.bl-person .avatar { width: 24px; height: 24px; font-size: 10px; }
+.hh-table .bl-person .avatar { width: 26px; height: 26px; font-size: 10px; }
+
+/* =============================================================
+   間を詰める（実行⑩。依頼者の指示）
+
+   見出しの上下に 32px、セクション間に 32px 空けていた。カードが
+   縦に並ぶ一覧の画面では、**画面の3割が余白**になっていた。
+   トークンは変えない（意匠の原典は `basic/DESIGN.md`）。
+   画面の組み方だけを詰める。
+   ============================================================= */
+.page-head, .cockpit-head { padding: var(--space-lg) 0 var(--space-md); }
+.section { margin-top: var(--space-lg); }
+.section + .section { margin-top: var(--space-md); }
+
+/* =============================================================
+   送れることを、見えるようにする（実行⑩。依頼者の指摘「見切れてる」）
+
+   中身はカードの中で送れていた。**送れることが見えていなかった。**
+   macOS の既定はスクロールバーを隠すので、行の途中で切れた絵だけが残り、
+   「切れている」としか読めない。**細い軌道を常時出す。**
+
+   併せて表の見出しを貼り付ける。送ったときに列の意味が消えない。
+   ============================================================= */
+.scroll-pane, .cal-wrap, .hh-tasks, .hh-list,
+.hh-col-main, .hh-col-side, .hh-main {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline-strong) transparent;
+}
+.scroll-pane::-webkit-scrollbar, .cal-wrap::-webkit-scrollbar,
+.hh-tasks::-webkit-scrollbar, .hh-list::-webkit-scrollbar,
+.hh-main::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-pane::-webkit-scrollbar-thumb, .cal-wrap::-webkit-scrollbar-thumb,
+.hh-tasks::-webkit-scrollbar-thumb, .hh-list::-webkit-scrollbar-thumb,
+.hh-main::-webkit-scrollbar-thumb {
+  background: var(--color-hairline-strong); border-radius: var(--rounded-full);
+}
+
+.scroll-pane > table thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--color-canvas);
+}
+
+/* 一覧の名前セルは「名前 + 次の層への入口」の2つ。押す先が違うので離す。 */
+.bl-table td:has(> .bl-person) { display: flex; align-items: center; gap: var(--space-xxs); }
+
+/* =============================================================
+   週の予定を、読める形で並べる（実行⑩。依頼者の指摘「見切れてる」）
+
+   升は1つ 44px しかない。**氏名は必ず切れる。**
+   升は位置で時刻を表す場所であって、名前を読む場所ではない。
+   格子の下に一覧を置き、名前と種別はそこで読む。
+   ============================================================= */
+.cal-list { display: flex; flex-direction: column; margin-top: var(--space-sm); }
+.cal-list li {
+  display: flex; align-items: center; gap: var(--space-xs);
+  padding: 4px 2px; font-size: 12px;
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.cal-list li:last-child { border-bottom: 0; }
+.cal-dot {
+  width: 3px; height: 14px; border-radius: var(--rounded-full);
+  background: currentColor; flex: 0 0 auto;
+}
+.cal-list-when { color: var(--color-steel); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cal-list-who { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-list-kind { margin-left: auto; color: var(--color-stone); white-space: nowrap; }
+.cal-list-out { color: var(--color-semantic-warning); white-space: nowrap; }
+
+/* =============================================================
+   面接シート（実行⑩。依頼者の様式）
+
+   記入欄が10ある。**1列に積むと、書いている場所がすぐ画面外へ出る。**
+   短いもの（面接日・書いた人）だけ横に並べ、長い記述は幅いっぱいに置く。
+   ============================================================= */
+.iv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
+.iv-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--color-slate); }
+.iv-field-wide { margin-top: var(--space-md); }
+.iv-field input, .iv-field select, .iv-field textarea {
+  font-family: inherit; font-size: 14px; font-weight: 400;
+  padding: 8px 10px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-editable);
+  color: var(--color-ink);
+}
+.iv-field textarea { resize: vertical; line-height: 1.6; }
+.iv-radios { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-sm); }
+.iv-radio { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
+
+/* 団体名・氏名の列。**縦に潰さない。**
+   幅が足りないときは表ごと横に送る（`.table-wrap`）。
+   1文字ずつ折り返した列は、読めないだけでなく行の高さも壊す。 */
+.cell-name { white-space: nowrap; }
+
+/* =============================================================
+   合言葉の画面（実行⑩。依頼者の指示）
+
+   外枠を被らない。**入る前に中身の形を見せない。**
+   ============================================================= */
+.login-frame {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: var(--space-lg); background: var(--color-shell);
+}
+.login-card {
+  width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: var(--space-sm);
+  padding: var(--space-xxl);
+  background: var(--color-canvas);
+  /* 縁は自分で持つ。`editable-region`（記録の印）に借りていたのを外した（C-82）。 */
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-2);
+}
+.login-logo { width: 100%; height: auto; margin-bottom: var(--space-lg); }
+.login-label { font-size: 13px; font-weight: 600; color: var(--color-slate); }
+.login-input {
+  font-family: inherit; font-size: 16px; padding: 10px 12px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas); color: var(--color-ink);
+}
+.login-button { margin-top: var(--space-xs); padding: 10px; border: 0; cursor: pointer; }
+.login-error { color: var(--color-semantic-error); font-size: 13px; font-weight: 600; }
+
+/* 出る。合言葉は共有なので、共用の端末では必ず出る。 */
+.hh-signout {
+  margin-top: var(--space-xs); padding: 4px 10px;
+  font-family: inherit; font-size: 11px;
+  color: var(--color-on-dark-muted);
+  background: transparent;
+  border: 1px solid var(--color-sidebar-hairline);
+  border-radius: var(--rounded-sm);
+  cursor: pointer;
+}
+.hh-signout:hover { color: var(--color-on-dark); }
+
+/* =============================================================
+   ポップアップ（実行⑪。依頼者の指示）
+
+   ★ 開閉は URL で行う。JS は使っていない（`Popup`）。
+     覆いそのものが戻り先へのリンクなので、外を押せば閉じる。
+   ============================================================= */
+.popup-layer { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; }
+/* 覆いはリンク。押すと閉じる。中身より下に敷く。 */
+.popup-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.32); }
+.popup-card {
+  position: relative;
+  width: min(560px, calc(100vw - 2 * var(--space-lg)));
+  /* 画面より高くしない。中身は器の中で送る（C-52）。 */
+  max-height: min(76vh, 720px);
+  display: flex; flex-direction: column; gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.popup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); }
+.popup-title { font-size: 15px; font-weight: 600; }
+.popup-sub { margin-top: 2px; font-size: 12px; color: var(--color-stone); }
+.popup-close { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+.popup-close:hover { text-decoration: none; }
+/* 送るのは中身だけ。頭と入力欄は動かさない。 */
+.popup-body { min-height: 0; flex: 1 1 auto; }
+
+/* メモ。書いた人・日時・内容はすべて記入必須（依頼者の指示）。 */
+.memo-form { display: flex; flex-direction: column; gap: var(--space-sm); }
+.memo-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+.memo-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.memo-field > span { font-weight: 600; color: var(--color-slate); }
+.memo-field input, .memo-field textarea {
+  font-family: inherit; font-size: 13px; padding: 6px 8px;
+  border-radius: var(--rounded-sm); resize: vertical;
+}
+.memo-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.memo-item { padding-bottom: var(--space-sm); border-bottom: 1px solid var(--color-hairline-soft); }
+.memo-item:last-child { border-bottom: 0; }
+.memo-meta { display: flex; gap: var(--space-sm); font-size: 12px; }
+.memo-meta .dim { font-variant-numeric: tabular-nums; }
+/* 改行を残す。面談のメモは箇条書きで書かれる。 */
+.memo-body { margin-top: 2px; font-size: 13px; white-space: pre-wrap; }
+
+/* 点の打ち直し（C-133）。畳んで置く ―― 読むつもりで押す事故を避ける。
+   確定前だけ出る（判定は can_score で、コマンドが見る門と同じ）。 */
+.score-fix { display: block; margin-top: 4px; font-size: 12px; font-weight: 400; }
+.score-fix > summary { color: var(--color-slate); cursor: pointer; width: fit-content; }
+.score-fix .score-form { margin-top: 6px; flex-wrap: wrap; }
+
+/* 取り消し（C-131）。畳んで置く ―― 読むつもりで押す事故を避ける。 */
+.memo-undo { margin-top: 4px; font-size: 12px; }
+.memo-undo > summary { color: var(--color-slate); cursor: pointer; width: fit-content; }
+.memo-undo-form {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--space-xs); margin-top: 6px;
+}
+.memo-undo-form input {
+  flex: 1 1 140px; min-width: 0;
+  font-family: inherit; font-size: 12px; padding: 5px 8px;
+  border-radius: var(--rounded-sm);
+}
+/* 高さを持つ枠は縮ませない（C-66 / C-113 / C-128 と同じ手当て）。 */
+.memo-undo-form button { flex: 0 0 auto; font-size: 12px; padding: 5px 10px; }
+
+/* 予定の参加者。チェックを入れると接点が1件積まれる。 */
+.attend-form { display: flex; flex-direction: column; gap: var(--space-sm); min-height: 0; }
+.attend-list { display: flex; flex-direction: column; }
+.attend-item { border-bottom: 1px solid var(--color-hairline-soft); }
+.attend-item:last-child { border-bottom: 0; }
+.attend-item label {
+  display: flex; align-items: center; gap: var(--space-xs);
+  padding: 6px 2px; font-size: 13px; cursor: pointer;
+}
+.attend-item .avatar { width: 26px; height: 26px; font-size: 10px; }
+.attend-name { font-weight: 500; }
+.attend-item .dim { margin-left: auto; font-size: 12px; }
+
+/* 名前を押すと出るボタン（メモ・採点）。行の中に収める。 */
+.row-actions { display: inline-flex; gap: 4px; margin-left: var(--space-xs); }
+.row-action {
+  padding: 2px 8px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas); color: var(--color-slate);
+}
+.row-action:hover { text-decoration: none; color: var(--color-ink); }
+
+/* 予定の一覧は行ごと押せる（参加者のポップアップを開く）。 */
+.cal-list-link {
+  display: flex; align-items: center; gap: var(--space-xs);
+  width: 100%; color: inherit;
+}
+.cal-list-link:hover { text-decoration: none; color: var(--color-brand-orange-deep); }
+
+/* 戻る ―― 帯の先頭。**1つ上の階層へ**（実行⑪。依頼者の指示）。
+   現在地より左に置く。行き先が無い画面には出さない。 */
+.zoom-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-right: var(--space-sm); padding: 4px 10px;
+  font-size: 12px; font-weight: 600;
+  color: var(--color-on-dark);
+  background: transparent;
+  border: 1px solid var(--color-sidebar-hairline);
+  border-radius: var(--rounded-sm);
+  white-space: nowrap;
+}
+.zoom-back:hover { text-decoration: none; background: rgba(255, 255, 255, 0.08); }
+
+/* デモ期。実在の期と同じ顔で並べない（0029）。 */
+.hh-year.is-demo { border-style: dashed; }

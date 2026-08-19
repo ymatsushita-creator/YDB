@@ -1,0 +1,160 @@
+/* =============================================================
+   スクロール無しで成り立たせる（実行⑨で依頼者の指示）
+
+   ★ ページそのものは縦に伸ばさない。外枠を画面の高さに固定し、
+     **長い表はカードの内側で送る。**
+
+   全部を1画面に詰めて字を小さくする方向は取らない。読めない画面は
+   スクロールが無くても使えない。**送る場所を、ページからカードへ移す。**
+   ============================================================= */
+
+html, body { height: 100%; overflow: hidden; }
+
+/* 高さの連鎖を、どこか1箇所でも切らさない。
+   flex/grid の子は既定で min-height:auto なので、明示的に 0 へ落とさないと
+   「縮まないのに親は固定」になり、**はみ出したぶんが切れて到達できなくなる。**
+   実際これで 214px ぶんの中身が消えていた。 */
+.hh-frame {
+  height: 100vh; overflow: hidden;
+  grid-template-rows: minmax(0, 1fr);
+}
+.hh-frame > * { min-height: 0; }
+.hh-main {
+  display: flex; flex-direction: column; gap: var(--space-md);
+  min-width: 0; height: 100%; min-height: 0; overflow: hidden;
+  padding-left: var(--space-md);
+  /* ★ 評価基準の帯（`.hh-criteria-ref`）の**基準点**である（C-140）。
+     これが無いと `position: absolute` は画面そのものを基準にし、
+     `top: 0` が**枠の外枠（`.hh-frame` の余白）の上端**を指す ――
+     帯は黒バーより `--space-md` ぶん上で中央を取り、
+     画面では**文字が上へ寄って見えた。** 基準点を黒バーと同じ箱に置く。 */
+  position: relative;
+}
+
+/* 帯の下に残った高さを、そのまま中身の高さにする。 */
+.hh-grid { flex: 1 1 0%; min-height: 0; align-items: stretch; overflow: hidden; }
+.hh-col-main, .hh-col-side { min-height: 0; }
+
+/* ★ セクションの位置を固定し、送るのはカードの中だけにする。
+
+   列ごとスクロールさせると、**やることを読むために候補者リストが動く。**
+   関係のない2つが連動すると、いま何を見ていたか分からなくなる。
+   だから列は伸縮させ、**カードは自分の中で送る。**
+
+   ただし縮めるだけでは中身が下のカードに重なる（C-52）。
+   縮む先には必ず `overflow-y: auto` を置く ―― **切らない。送る。**
+   ============================================================= */
+/* ★ セクションの位置を、中身に関わらず固定する。
+
+   高さを「中身なり」にすると、やることが1件増えただけで
+   **下のカードの位置が動く。** 読む場所が毎回変わるので、
+   **列を比率で割り付けて境目を固定し、各カードは自分の中で送る。**
+
+   grid にするのは、flex だと子の伸縮が中身の高さに引きずられるため。
+   `minmax(0, Nfr)` は「中身がどれだけ高くても、この比率に収める」。 */
+/* 左右で必要な高さが違う。**比率は列ごとに決める**が、
+   どちらも「中身に関わらず固定」であることは変えない。 */
+.hh-col-main, .hh-col-side {
+  display: grid;
+  gap: var(--space-md);
+  overflow: hidden;
+}
+/* 上が「やること」（横4枚で高さは頭打ち）、下が一覧。
+   一覧に高さを寄せる ―― 一覧できることが、この画面の役目である。 */
+.hh-col-main { grid-template-rows: minmax(0, 0.6fr) minmax(0, 1.4fr); }
+/* 上が候補者パネル、下が日程カレンダー。
+   カレンダーは格子なので、縮むと**時間の目盛りごと潰れて用を成さない。**
+   依頼者の指示で、カレンダーを伸ばし候補者パネルを縮めた（1.25/0.75 → 0.85/1.15）。 */
+/* 上が候補者パネル、下が日程カレンダー。
+   カレンダーは格子と一覧の2段なので、こちらへ高さを寄せる（依頼者の指示）。 */
+/* ★ ここに `.hh-col-side { grid-template-rows: .85fr 1.15fr }` があったが、
+   後段（`10-round-16-17.css` の C-190）が同じ詳細度で `1fr 1fr` を無条件に上書きしており、
+   **出荷されるCSSには元々入っていなかった**（最適化で落ちていた）。
+   1本のファイルだったときは最適化に隠れて見えず、分割して初めて表に出た。2026-08-19 に削除。 */
+.hh-col-main > *, .hh-col-side > * { min-height: 0; overflow: hidden; }
+/* 3つ以上並ぶ列（アプローチなど）は、等分ではなく中身なりに戻す。 */
+.hh-col-main:has(> :nth-child(3)), .hh-col-side:has(> :nth-child(3)) {
+  grid-auto-rows: minmax(0, auto);
+  grid-template-rows: none;
+}
+/* ★ 1つしか無い列は、その1つへ**残った高さを全部渡す**（依頼者の指示。C-137）。
+   比率（0.6 / 1.4）は上下2枚を前提にした割り付けなので、上のカードを外すと
+   **下の 1.4 が空いたまま残る** ―― 画面の下半分が灰色の余白になっていた。
+   「何枚あるか」で割り付けを変える。**枚数を数えるのは CSS の仕事**である
+   （画面ごとに別のクラスを足すと、次に1枚減ったときにまた余白が出る）。 */
+.hh-col-main:has(> :only-child), .hh-col-side:has(> :only-child) {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+
+.panel-card { display: flex; flex-direction: column; min-height: 0; }
+/* 見出しと注記は動かさない。位置が動くと、読む場所が毎回変わる。 */
+.panel-card > .hh-head, .panel-card > .hh-note,
+.panel-card > .bl-tabs, .panel-card > h2 { flex: 0 0 auto; }
+/* 中身だけが伸縮し、入りきらなければその中で送る。 */
+/* ★ 送るのは「並ぶもの」だけ。事実の一覧（dl）や見出しは送らない。
+   dl を伸縮対象にしたら、**中身ごと潰れて見出しだけが残った。** */
+.panel-card > .hh-tasks, .panel-card > .hh-list, .panel-card > .cal-wrap {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+}
+/* 候補者パネルは、見出しから下をまとめて1つの送る器にする。 */
+.panel-card > .hh-sub, .panel-card > .hh-facts,
+.panel-card > .hh-criteria, .panel-card > .hh-memo { flex: 0 0 auto; }
+/* 表は自分では送れないので、送る器を被せる。 */
+.scroll-pane { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.scroll-pane > table { width: 100%; }
+
+/* 3タブに畳んだ既存画面は、外枠の中で送る。 */
+.hh-main > .page-head, .hh-main > .cockpit-head { flex: 0 0 auto; }
+.hh-main > .grid, .hh-main > .callout { flex: 0 0 auto; }
+.hh-main > .section { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+/* タブや見出しの帯は縮ませない。縮むと**選べるはずのタブが切れる。** */
+.hh-main > .section-fixed { flex: 0 0 auto; overflow: visible; }
+
+/* ★ 一覧の画面は、ページごと送る（依頼者の指示）。
+
+   位置を固定する仕組み（`.hh-col-*` の比率固定）は、枠が2つの
+   ダッシュボード（ヘッドハンティング／ボーダーライン）のために作った。
+   **カードが縦に4つ5つ並ぶ一覧の画面に同じものを効かせると、
+   1枚あたりの高さが数行ぶんまで潰れ、表が見出しだけになる。**
+
+   一覧の画面は `.hh-grid` を持たない。そこだけ、外枠を送る器にして
+   カードは中身なりの高さに戻す。**潰さない。並べる。** */
+.hh-main:not(:has(> .hh-grid)) { overflow-y: auto; }
+.hh-main:not(:has(> .hh-grid)) > .section {
+  flex: 0 0 auto; min-height: 0; overflow: visible;
+}
+
+/* 画面の下に置いた「まだ無いもの」は、たたんでおく。
+   常に開いていると、それだけで1画面ぶんの高さを食う。 */
+
+/* ★ 切らない。**はみ出したら、そこで送れるようにする。**
+   ページは伸ばさないが、届かない中身を作るのは、スクロールより悪い。 */
+.hh-col-main, .hh-col-side { overflow-y: auto; }
+.panel-card > .hh-table, .panel-card > .hh-list, .panel-card > .hh-tasks {
+  overflow-y: auto;
+}
+
+/* =============================================================
+   未記入（実行⑨で依頼者の指示）
+
+   ★ **「記入できるのに空」と「導出できないから空」は別物である。**
+     前者だけを赤くする。後者まで赤くすると、**誰も直せないものが
+     「直すべきもの」として並ぶ** ―― 画面が催促しているのに手の打ちようが
+     ない、という状態を作らない。
+
+   色だけで伝えない。赤い欄には必ず「未記入」の文字が入る。
+   ============================================================= */
+
+.unset {
+  display: inline-flex; align-items: center;
+  padding: 1px 7px; border-radius: var(--rounded-sm);
+  background: var(--color-unset-soft);
+  color: var(--color-unset);
+  border: 1px solid var(--color-unset);
+  font-size: 11px; font-weight: 600; letter-spacing: .3px;
+}
+
+/* 導出できないだけの空欄。**赤くしない。** */
+.not-derived { color: var(--color-stone); font-size: 12px; }
+

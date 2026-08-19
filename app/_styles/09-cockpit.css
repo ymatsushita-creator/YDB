@@ -1,0 +1,412 @@
+/* =============================================================
+   選考の運転席（Phase4 Step2）
+
+   ★ .selection-cockpit は主領域（card-base 相当）。
+     運転席→状況レビューへ縦スクロール可能。
+   ★ 長いタスク一覧は安全に内部スクロール。
+     氏名・step が潰れずレスポンシブ。
+   ============================================================= */
+.selection-cockpit {
+  flex: 0 0 auto;
+  margin: 0 0 var(--space-md) 0;
+  padding: var(--space-md);
+  border-radius: var(--rounded-xl);
+  background: var(--color-canvas);
+  box-shadow: 0 2px 8px rgb(20 27 36 / 6%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-height: 0;
+}
+.selection-cockpit > h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+  flex: 0 0 auto;
+}
+
+.owner-filter-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+.owner-filter-tabs > a {
+  padding: 6px 12px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-steel);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  cursor: pointer;
+}
+.owner-filter-tabs > a:hover {
+  background: var(--color-surface);
+  border-color: var(--color-hairline-strong);
+  color: var(--color-ink);
+}
+.owner-filter-tabs > a.active {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-dark);
+}
+.owner-filter-tabs > a:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.task-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.task-item {
+  flex: 0 0 auto;
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-lg);
+  background: var(--color-canvas);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.task-item:hover {
+  border-color: var(--color-hairline-strong);
+}
+.task-item.selected {
+  border-color: var(--color-ink);
+  background: var(--color-card-tint-cream);
+}
+
+.task-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: baseline;
+  min-width: 0;
+}
+.task-action {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+.task-person {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: none;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.task-person:hover {
+  text-decoration: underline;
+}
+.task-person:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+.task-step {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: var(--rounded-sm);
+  background: var(--color-surface);
+  color: var(--color-slate);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.task-season {
+  flex: 0 0 auto;
+  color: var(--color-steel);
+  font-size: 12px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: 11px;
+  color: var(--color-steel);
+}
+.task-waiting,
+.task-sla,
+.task-overdue,
+.task-owner {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.task-overdue {
+  color: var(--color-danger, #d33333);
+  font-weight: 600;
+}
+
+.task-detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-slate);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.task-criteria {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-steel);
+}
+
+.task-item .button-primary {
+  align-self: flex-start;
+  flex: 0 0 auto;
+}
+
+/* インラインアクションパネル（Phase 4 Step 3）。
+   選択されたタスクカードの中に展開し、assign / reassign / unhold の
+   フォームを表示する。 */
+.task-panel {
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-hairline-soft);
+}
+
+.task-panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.task-panel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.task-panel-row label {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-slate);
+}
+
+.task-panel-row select {
+  flex: 1 1 auto;
+  min-width: 140px;
+  max-width: 280px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.task-panel-row select:focus {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -1px;
+}
+
+/* PRG 後のフィードバック（assign / reassign / unhold の結果）。
+   コックピット上部に出す。既存の .callout を再利用する。 */
+.task-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.task-notice .callout {
+  margin: 0;
+}
+
+.config-error {
+  flex: 0 0 auto;
+  padding: var(--space-md);
+  border-left: 3px solid var(--color-warning, #f59e0b);
+  background: var(--color-warning-light, rgba(245, 158, 11, 0.08));
+  color: var(--color-warning-dark, #92400e);
+  font-size: 13px;
+  border-radius: var(--rounded-sm);
+}
+
+.review-heading {
+  flex: 0 0 auto;
+  margin: var(--space-lg) 0 var(--space-md) 0;
+  padding-top: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-top: 2px solid var(--color-hairline-soft);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.home-dashboard {
+  flex: 0 0 auto;
+  display: grid;
+  /* 上は数字の帯（高さを決め打ちする ―― 中身なりにすると、
+     余りがこちらへ流れて数字だけが間延びする）。下が残り全部。 */
+  grid-template-rows: 104px minmax(0, 1fr); gap: var(--space-md);
+}
+/* ★ 下の段は**左右とも天井まで伸ばす。** 伸ばさないと、
+   中身の少ないカード（ピックアップ）だけが途中で切れて、
+   その下に灰色の帯が残る ―― 画面の右下だけが欠けて見える。 */
+.home-dashboard > .home-detail-grid { min-height: 0; align-items: stretch; }
+/* ★ カードは `.card-base` である（`.panel-card` ではない）。
+   前の指定は `.panel-card` を狙っていて、**1つも当たっていなかった** ――
+   だから中身の少ないカードが伸びず、下に灰色が残っていた。 */
+.home-dashboard .section {
+  margin: 0; min-height: 0; height: 100%;
+  display: flex; flex-direction: column;
+}
+.home-dashboard .section > .card-base {
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.home-dashboard .section > .card-base > .section-title { flex: 0 0 auto; }
+/* 見出しの下の中身が残りを取り、入りきらなければ**その中だけ**が送る。 */
+.home-dashboard .section > .card-base > :not(.section-title) {
+  min-height: 0; overflow-y: auto;
+}
+/* 図は器いっぱいまで伸ばす。SVG は viewBox を持つので、
+   高さを渡せば縦横比のまま収まる（数字を書き足さない）。 */
+.home-dashboard .section > .card-base > svg { flex: 1 1 auto; height: auto; }
+.home-dashboard .pick-card { padding: var(--space-sm); }
+/* ★「Aスペース」―― 依頼者が呼ぶ名（実行⑯）。ホーム上段のKPI帯。
+   後で「Aスペースを直せ」と言われたら、まずこの帯（.home-kpi）を疑う。
+   ★ 枚数は4枚固定ではない ―― 目標が受領済みの期は「応募（目標比）」が
+     5枚目として増える（C-162）。auto-fit で枚数に合わせて幅を割る。 */
+.home-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-sm);
+}
+/* 目標との比較（meta）。値の下に小さく添える。 */
+.home-kpi-meta {
+  display: block; margin-top: 2px;
+  color: var(--color-steel); font-size: 12px; font-weight: 500;
+}
+.home-detail-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(220px, .85fr) minmax(220px, .7fr); gap: var(--space-md); min-height: 0; }
+.home-kpi {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: var(--space-md); border-radius: var(--rounded-xl);
+  background: var(--color-canvas); box-shadow: 0 2px 8px rgb(20 27 36 / 6%);
+}
+.home-kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(#f03090, #f0f000, #50f000, #00c0f0); }
+.home-kpi-label { color: var(--color-steel); font-size: 13px; font-weight: 600; line-height: 1.2; }
+.home-kpi-value { color: var(--color-ink); font-size: clamp(28px, 3vw, 42px); line-height: 1; font-variant-numeric: tabular-nums; }
+/* 詳細へ飛べるタイル（依頼者の指示）。開ける層にだけ付く。 */
+a.home-kpi-link { text-decoration: none; transition: box-shadow .12s ease, transform .12s ease; }
+a.home-kpi-link:hover { box-shadow: 0 4px 14px rgb(20 27 36 / 12%); transform: translateY(-1px); }
+a.home-kpi-link:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+a.home-kpi-link::after { content: '›'; position: absolute; top: var(--space-sm); right: var(--space-sm); color: var(--color-steel); font-size: 16px; line-height: 1; }
+/* 見出しから詳細へ飛ぶリンク（推移・ピックアップ）。 */
+.section-title-link { color: inherit; text-decoration: none; }
+.section-title-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.section-title-go { color: var(--color-steel); font-weight: 600; }
+
+/* KPIは変数の異なる数を同じ軸へ載せない。値を大きく読ませるカードで可視化する。 */
+.home-kpi-results { display: grid; gap: var(--space-sm); align-content: start; }
+.kpi-result-card {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-sm);
+  padding: var(--space-sm); border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-lg); background: var(--color-canvas);
+}
+.kpi-result-card > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; }
+.kpi-result-card > strong { grid-row: span 2; font-size: clamp(24px, 2.5vw, 38px); line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi-result-card > small { color: var(--color-steel); }
+.kpi-result-card > p { grid-column: 1 / -1; margin: var(--space-xs) 0 0; color: var(--color-steel); white-space: pre-wrap; }
+.kpi-edit-form { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(140px, .8fr) minmax(100px, .5fr) minmax(220px, 1.5fr) auto; gap: var(--space-sm); align-items: end; }
+.kpi-edit-form label { display: grid; gap: 4px; color: var(--color-steel); font-size: 12px; font-weight: 650; }
+.kpi-edit-form input, .kpi-edit-form textarea { width: 100%; }
+.kpi-manage-list { display: grid; gap: var(--space-md); }
+.kpi-manage-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-sm); align-items: end; padding-bottom: var(--space-md); border-bottom: 1px solid var(--color-hairline-soft); }
+@media (max-width: 1100px) {
+  .home-detail-grid { grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr); }
+  .home-detail-grid > .section:nth-child(3) { grid-column: 1 / -1; }
+  .kpi-edit-form { grid-template-columns: 1fr 1fr; }
+
+  /* Task list responsive: wrap filters and ensure task items don't collapse */
+  .owner-filter-tabs {
+    gap: 6px;
+  }
+  .owner-filter-tabs > a {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .task-header {
+    gap: 6px;
+  }
+  .task-action {
+    font-size: 12px;
+  }
+  .task-person {
+    flex: 0 1 auto;
+  }
+  .task-step {
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+  .task-season {
+    font-size: 11px;
+  }
+
+  .task-meta {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .task-detail {
+    font-size: 11px;
+  }
+  .task-criteria {
+    font-size: 10px;
+  }
+}
+
+/* =============================================================
+   押した直後の骨組み（C-142）
+
+   ★ **中身のふりをしない。** 数字や行の形をした箱は出さない ――
+     まだ無いものを「ある」ように見せないのは、この製品が 0017 から
+     守ってきた線である（無いことを 0 と書かない）。
+   ★ 寸法は `Shell` と同じトークンで描く（`--logo-w` は `.hh-frame` の列が持つ）。
+     数値を書き写すと器の寸法が2箇所になり、必ずどちらかが古くなる。
+   ★ 動かさない ―― 光らせるには遷移状態をクライアントで見ることになり、
+     `'use client'` が3つ目になる（C-95 / C-104）。事実は文字で言う。
+   ============================================================= */
+.hh-skeleton-side {
+  /* 幅は `.hh-frame` の1列目（--logo-w）。高さは器いっぱい。
+     ★ 面の色は `.hh-sidebar` が持っている（`.sidebar-region` は角丸と余白だけ）。
+       骨組みにも同じ面を敷く ―― 敷かないと**柱が消えて器が崩れて見える**
+       （再現して撮って気づいた。C-142）。 */
+  background: var(--bar-face);
+  min-height: 320px;
+}
+.hh-skeleton-bar {
+  height: var(--logo-h);
+  flex: 0 0 auto;   /* 高さを指定した枠には必ず添える（C-66 / C-113 / C-128） */
+  border-radius: var(--rounded-xl);
+  background: var(--bar-face);
+}
+.hh-skeleton-note {
+  margin: var(--space-lg) 0 0;
+  padding: var(--space-lg);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--rounded-lg);
+  color: var(--color-steel);
+  font-size: 13px;
+}
+

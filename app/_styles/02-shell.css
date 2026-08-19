@@ -1,0 +1,163 @@
+/* =============================================================
+   ヘッドハンティング（実行⑨）
+
+   依頼者の画面画像そのままの3本柱 ―― 暗い操作柱・オレンジの階層バー・
+   薄いブルーグレーの地に浮く白いカード。
+   色・角丸・余白はすべてトークン（DESIGN.md 生成）。直値で書かない。
+   ============================================================= */
+
+/* =============================================================
+   ロゴが、2本のバーの寸法を決める（実行⑩。依頼者の指示）
+
+   ★ **ロゴの横 = 縦バーの幅、ロゴの縦 = 横バーの高さ。**
+     ロゴ枠は左上の角にぴたりと収まり、そこから下へ縦バーが、
+     右へ横バーが伸びる。
+
+   ★ 縦は目分量で置かない。画像の実寸から導く ――
+     `public/brand/logo_gradient.png` は 1283 × 305（比 4.2066）。
+
+       枠の横 204 − 余白 12×2 = 画像 180
+       画像の縦 = 180 ÷ 4.2066 = 42.79
+       枠の縦   = 42.79 + 12×2 = 66.79  →  67px
+
+     実行⑩でロゴをグラデーション版に差し替えたとき、比が 3.15 → 4.21 に
+     変わった。**縦の値も計算し直す。**
+
+     画像を差し替えたら**この計算をやり直す。**
+     実行⑨では目分量の 236×106 で置き、ロゴが外側から生えて見えた。
+   ============================================================= */
+:root {
+  --logo-w: 204px;
+  --logo-h: 67px;
+  --logo-pad: 12px;
+
+  /* ★ 2本のバーの面は**ここ1箇所**で決める（依頼者の指示。実行⑪で真っ黒）。
+       横バーと縦バーは1つの面である（C-90）。別々に書くと、片方を変えた
+       ときにもう一方が取り残されて、また2枚に見える。
+
+     ★ `--color-brand-navy`（#242424）ではなく**真っ黒**である。
+       この上に置くものは、黒より暗くできない ―― 沈んで見せる形
+       （`.zoom-crumb-current`）は、面を少し明るくして縁で表す。 */
+  --bar-face: #000;
+}
+
+/* 縦バー。面は `.sidebar-region`（生成物）が塗るので、ここで上書きする。 */
+.hh-sidebar { background: var(--bar-face); }
+
+/* ★ 列の隙間は 0 にする。
+   隙間を空けたまま横バーをマイナスマージンで引き戻すと、**箱は接するのに
+   絵だけ離れる** ―― `.hh-main` は `overflow: hidden`（または送る器）なので、
+   親の外へはみ出した 16px が描画で切り取られるためである。
+   代わりに `.hh-main` の内側に余白を持たせ、横バーだけがその余白を打ち消す。
+   こうすると横バーは**親の中に収まったまま**左端へ着く。 */
+.hh-frame {
+  display: grid;
+  grid-template-columns: var(--logo-w) minmax(0, 1fr);
+  column-gap: 0;
+  row-gap: var(--space-md);
+  min-height: 100vh;
+  padding: var(--space-md);
+  background: var(--color-shell);
+}
+.hh-sidebar {
+  /* ★ 入りきらないときは柱ごと送る（C-206）。 */
+  overflow-y: auto;
+  /* ★★ **送る器にした瞬間、親の角丸が中身を切り抜く。** ★★（C-207）
+     `.sidebar-region` は四隅とも `--rounded-xl` なので、
+     天端のロゴ（白）の**右角まで丸く削られていた**（依頼者の指摘）。
+     ロゴは横バーへ続く辺なので、**右側の丸みを落とす。**
+     ここを落とさないまま丸みだけ `.hh-brand` で消しても、
+     切り抜いているのは親なので効かない。 */
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  /* ★ 天端は横バーと同じにする（依頼者の指示。縦タブと横タブは同じ層）。
+     `top` は**枠の余白の内側**から測られるので、`--space-md` を入れると
+     余白ぶん（16px）さらに下がり、**縦バーだけが16px低い**状態になっていた
+     ―― 厚みが同じでも、天端がずれていれば2枚に見える。 */
+  position: sticky; top: 0;
+  display: flex; flex-direction: column; gap: var(--space-lg);
+  height: calc(100vh - var(--space-xl));
+  min-height: 0;
+}
+/* ★ 足元（期の切り替え・デモ札・出る）が **60px はみ出して届かなかった。**
+   縦バーは高さを固定なのに中身が縮まず、あふれたぶんが切り取られていた
+   ―― **出る手段が画面から消えていた。**
+
+   縦バーごと送ると、天端のロゴまで流れて帯がそこだけ切れる。だから
+   **送るのはタブの並びだけ**にする ―― ロゴ（帯）と足元は動かさない。
+   足りないときは中で送る（C-113 で操作柱に対して行ったのと同じ手当て）。 */
+ /* ★ タブも入口も**切らない**（C-205 / C-206。実画面で2度切れた）。
+    ―― nav を伸ばすと下の「〜を編集」が枠の外へ出て消え、
+       nav を縮めるとタブ自身が途中で切れた。
+    どちらも**中で送る**のをやめ、**柱ごと送る**形にする。 */
+.hh-nav { flex: 0 0 auto; min-height: 0; overflow-y: visible; }
+.hh-nav-add { flex: 0 0 auto; }
+.hh-sidebar-foot { flex: 0 0 auto; }
+/* 縦バーの内側の余白を突き抜けて、左上の角いっぱいに置く。
+   角丸も縦バーに合わせる ―― ここだけ丸みが違うと、
+   **貼り付けた別物**に見える。`.sidebar-region` は `--rounded-xl` なので、
+   ここも `--rounded-xl`（以前は `--rounded-lg` で 4px ずれていた）。
+
+   ★ **右上は丸めない**（依頼者の指示。実行⑪）。
+     ここはロゴが横バーへ接する辺である。丸めると、接している2つの間に
+     地の色の三日月が残り、**触れているのに切れて見える。**
+     外へ向いた角（左上）だけを丸め、continuation の側は四角で突き合わせる。 */
+.hh-brand {
+  display: flex;
+  align-items: center;
+  /* ★ **縮ませない**（依頼者の指示。横タブと同じ層・同じ幅にする）。
+     縦バーは縦の flex なので、既定（flex-shrink: 1）だと中身が詰まったとき
+     ロゴの枠が 67 → 24 まで潰れ、隣の横バー（67）と厚みが違って
+     **2枚に見えた。** 送る画面の操作柱が 81 → 58 に潰れた C-66 と同じ形。 */
+  flex: 0 0 auto;
+  height: var(--logo-h);
+  margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
+  padding: var(--logo-pad);
+  border-radius: var(--rounded-xl) 0 0 0;
+  /* ★ 一括指定の**後ろ**で右側を明示的に落とす（C-198）。
+     一括の `0` に頼ると、後から別の節が `border-radius` を丸ごと
+     書き換えたときに右側だけ丸みが戻る ―― 実際それが起きた。 */
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+  background: #fff;
+}
+.hh-brand-logo { display: block; width: 100%; height: auto; }
+.hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
+.hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
+.hh-nav a:hover { text-decoration: none; }
+/* ★ 区切り線は、上下に相手が居るときだけ引く（C-208。入力層で浮いていた）。 */
+.hh-nav:has(> :only-child) .hh-nav-divider,
+.hh-nav-divider:last-child { display: none; }
+.hh-nav-divider {
+  display: block; height: 1px;
+  margin: var(--space-xs) 0;
+  background: var(--color-sidebar-hairline);
+}
+/* 副文（`<em>`）の指定は消した ―― 出さなくなったため（実行⑪。依頼者の指示）。
+   使わない見た目の指定を残すと、次に触る人が「まだあるもの」として扱う。 */
+.hh-nav-add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-sidebar-hairline);
+}
+
+/* 名前で検索。素の form なので JS 無しで動く。 */
+.hh-search { display: flex; flex-direction: column; gap: 6px; }
+.hh-search-row { display: flex; gap: 6px; }
+.hh-search-input {
+  flex: 1 1 auto; min-width: 0; height: 34px; padding: 0 var(--space-xs);
+  font-family: inherit; font-size: 13px;
+  background: var(--color-brand-navy-deep); color: var(--color-on-dark);
+  border: 1px solid var(--color-sidebar-hairline); border-radius: var(--rounded-md);
+}
+.hh-search-input::placeholder { color: var(--color-on-dark-muted); }
+.hh-search-input:focus { outline: 2px solid var(--color-sidebar-active-border); outline-offset: -1px; }
+.hh-search-go { padding: 0 var(--space-sm); height: 34px; font-size: 12px; white-space: nowrap; flex: 0 0 auto; }
+
+.hh-sidebar-foot { display: flex; flex-direction: column; gap: var(--space-xs); margin-top: auto; }
+.hh-demo { color: var(--color-star-on); font-size: 11px; font-weight: 600; padding: 0 var(--space-xxs); }
+.hh-live { color: var(--color-on-dark-muted); font-size: 11px; padding: 0 var(--space-xxs); }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { appCss } from './support/css.ts'
 
 /**
  * 押した直後に出す骨組み（C-142）。
@@ -63,7 +64,7 @@ describe('押した直後の骨組み（C-142）', () => {
     assert.match(src, /className="hh-main"/)
     assert.doesNotMatch(src, /style=\{\{/, '骨組みが自前の寸法を持っている')
 
-    const css = await read('app/base.css')
+    const css = await appCss()
     const bar = /\.hh-skeleton-bar \{([^}]*)\}/.exec(css)
     assert.ok(bar, '帯の骨の規則がある')
     assert.match(bar![1]!, /height:\s*var\(--logo-h\)/, '帯の厚みを数値で書いている')
@@ -75,7 +76,7 @@ describe('押した直後の骨組み（C-142）', () => {
     // 面の色は `.hh-sidebar` が持っており、`.sidebar-region` は角丸と余白だけ。
     // 骨組みに `.hh-sidebar` は付かないので、**同じ面を自分で敷く。**
     // 再現して撮るまで、柱が消えたまま出していた（C-142）。
-    const css = await read('app/base.css')
+    const css = await appCss()
     const side = /\.hh-skeleton-side \{([^}]*)\}/.exec(css)
     assert.ok(side, '柱の骨の規則がある')
     assert.match(side![1]!, /background:\s*var\(--bar-face\)/,

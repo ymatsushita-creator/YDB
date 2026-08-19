@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { appCss } from './support/css.ts'
 
 /**
  * 縦バー・ロゴ・横バーは、ひと続きの面である（C-192 / C-196 / C-198）。
@@ -10,7 +11,7 @@ import { readFile } from 'node:fs/promises'
  *   **見た目は見られないが、指定が生きているかは読める。** それを見張る。
  */
 
-const css = () => readFile(new URL('../app/base.css', import.meta.url), 'utf8')
+const css = () => appCss()
 
 /**
  * そのセレクタの、最後に書かれた宣言ブロック（後ろが勝つため）。

@@ -1,0 +1,177 @@
+/* =============================================================
+   ホームの図（実行⑫。依頼者の指示「サマリーをビジュアライズ」）
+
+   ★ 表をやめて絵で読ませる。ただし**数は必ず添える** ――
+     絵だけでは「だいたい多い」しか分からない。
+   ★ 色で意味を分けない（「色は線、面は黒」）。長さと位置で比べさせる。
+   ============================================================= */
+
+.bar-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.bar-list li {
+  display: grid;
+  grid-template-columns: minmax(88px, 26%) minmax(0, 1fr) auto;
+  align-items: center; gap: var(--space-sm);
+  font-size: 13px;
+}
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track {
+  height: 10px; border-radius: var(--rounded-full);
+  background: var(--color-hairline); overflow: hidden;
+}
+.bar-fill { display: block; height: 100%; background: var(--color-ink); }
+.bar-value { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.bar-note { font-weight: 400; color: var(--color-steel); font-size: 12px; }
+
+/* 内訳の帯。区切りは線で入れる（色分けしない）。 */
+.stack-bar {
+  display: flex; height: 28px; border-radius: var(--rounded-sm);
+  overflow: hidden; border: 1px solid var(--color-hairline-strong);
+}
+.stack-seg {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-ink); color: var(--color-canvas);
+  font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--color-canvas);
+}
+.stack-seg:last-child { border-right: 0; }
+.stack-seg:nth-child(2) { background: var(--color-steel); }
+.stack-seg:nth-child(3) { background: var(--color-hairline-strong); color: var(--color-ink); }
+.stack-seg-text { padding: 0 4px; }
+.stack-legend {
+  display: flex; flex-wrap: wrap; gap: var(--space-md);
+  margin-top: var(--space-sm); font-size: 12px; color: var(--color-steel);
+}
+.stack-legend li { display: flex; align-items: center; gap: 6px; }
+.stack-legend strong { color: var(--color-ink); font-variant-numeric: tabular-nums; }
+.stack-key {
+  width: 10px; height: 10px; border-radius: 2px;
+  background: var(--color-ink); display: inline-block;
+}
+.stack-legend li:nth-child(2) .stack-key { background: var(--color-steel); }
+.stack-legend li:nth-child(3) .stack-key { background: var(--color-hairline-strong); }
+
+/* 割合の輪。 */
+.ring { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ring svg { width: 108px; height: 108px; }
+.ring-track { fill: none; stroke: var(--color-hairline); stroke-width: 10; }
+.ring-fill {
+  fill: none; stroke: var(--color-ink); stroke-width: 10; stroke-linecap: round;
+}
+.ring-value {
+  fill: var(--color-ink); font-size: 22px; font-weight: 600;
+  text-anchor: middle; font-variant-numeric: tabular-nums;
+}
+.ring-label { font-size: 12px; font-weight: 600; }
+.ring-caption { font-size: 12px; color: var(--color-steel); }
+
+/* ピックアップの3人。**表ではなくカードで出す。** */
+.pick-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); }
+.pick-card {
+  display: flex; flex-direction: column; gap: var(--space-xs);
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline); border-radius: var(--rounded-md);
+  background: var(--color-canvas);
+}
+.pick-head { display: flex; align-items: center; gap: var(--space-sm); }
+.pick-rank {
+  font-size: 12px; font-weight: 600; color: var(--color-steel);
+  font-variant-numeric: tabular-nums;
+}
+.pick-name { font-weight: 600; }
+.home-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-lg); align-items: center; }
+
+/* 評価基準（実行⑬）。横バーの右側に置く。
+   ★ **動かさない**（依頼者の指示）。以前は1行に収めて横へ流していたが、
+     流れているものは狙って読めない。**全件を同時に出す** ―― 帯の高さの
+     中で折り返し、字を詰める。切って隠すのではなく、入るまで畳む（C-65）。 */
+.hh-criteria-ref {
+  position: absolute; z-index: 21;
+  top: 0; right: var(--space-sm);
+  width: min(58%, 760px); height: var(--logo-h);
+  display: flex; align-items: center;
+  color: var(--color-on-dark);
+  overflow: hidden;
+}
+.hh-main:has(.hh-criteria-ref) .zoom-bar { padding-right: min(60%, 780px); }
+/* ★ 依頼者の指示（実行⑭）――「真ん中配置、文字大きめ、横スクロールにして」。
+   折り返しをやめて**1行に並べ、横へ送れるようにする。**
+   ★ **勝手には流さない**（実行⑬の指示は生きている）。送るのは利用者である。
+   ★ 天端で切れないよう、縦は中央に置いて1行に収める（C-65）。 */
+.hh-criteria-scroll {
+  width: 100%; height: 100%; min-width: 0;
+  display: flex; align-items: center;
+  /* ★ **自動で流す**（依頼者の指示。実行⑮。C-139）。流しているあいだは
+     こちらで位置を決めるので、送り帯は出さない（`overflow: hidden`）。
+     **動きを止める人のための道は下の `prefers-reduced-motion` に置く。** */
+  overflow: hidden;
+  /* 収まるときは中央、溢れるときは先頭から ―― `safe` が無いと
+     中央寄せのままでは**左端が掴めなくなる**（送れない領域ができる）。
+     流しが止まる（動きを減らす設定）ときに効く。 */
+  justify-content: center;
+  justify-content: safe center;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-on-dark) 34%, transparent) transparent;
+}
+.hh-criteria-track {
+  display: flex; align-items: center; flex-wrap: nowrap;
+  min-width: 0; white-space: nowrap;
+  /* 2組ぶんの幅を持たせ、半分ぶん流して先頭へ戻る ―― **切れ目が見えない。**
+     ★ 速さは**軸の長さで決めない。** 一定の速さ（linear）で 60 秒で1周する。
+       速さを中身に合わせると、期ごとに読める速さが変わる。 */
+  /* ★ 送り箱（flex）の中では、指定した幅も**縮められる。**
+     縮むと `translateX(-50%)` の半分が「2組ぶんの半分」でなくなり、
+     1周したところで**継ぎ目が飛ぶ。** 高さを持つ枠と同じ手当て
+     （C-66 / C-113 / C-128。**5度目**）。 */
+  flex: 0 0 auto; width: max-content;
+  animation: criteria-marquee 60s linear infinite;
+}
+/* 読みたいものに指を置いたら止まる。**読ませるために流している**ので、
+   読もうとした瞬間に逃げない。 */
+.hh-criteria-ref:hover .hh-criteria-track,
+.hh-criteria-ref:focus-within .hh-criteria-track { animation-play-state: paused; }
+/* 1組ぶん。2組を隙間なく並べるため、塊の間と同じ間隔を右に持たせる。 */
+.hh-criteria-run {
+  display: inline-flex; align-items: center; flex-wrap: nowrap;
+  gap: var(--space-sm); padding-right: var(--space-sm); white-space: nowrap;
+}
+@keyframes criteria-marquee {
+  to { transform: translateX(-50%); }
+}
+/* ★ 動きを減らす設定の人には**流さない。** 代わりに自分で送れるようにし、
+   写し（2組目）は消す ―― 止まったまま同じ並びが2度出ると、
+   「軸が30本ある」ように読める。 */
+@media (prefers-reduced-motion: reduce) {
+  .hh-criteria-scroll { overflow-x: auto; overflow-y: hidden; }
+  .hh-criteria-track { animation: none; width: auto; }
+  .hh-criteria-run[aria-hidden="true"] { display: none; }
+}
+/* 段ごとの塊。**見出しは出さない**（依頼者の指示）ので、境目は区切り線で見せる。 */
+.hh-criteria-group {
+  display: flex; align-items: center; flex-wrap: nowrap;
+  gap: var(--space-sm);
+  white-space: nowrap;
+}
+.hh-criteria-group + .hh-criteria-group {
+  padding-left: var(--space-sm);
+  border-left: 1px solid color-mix(in srgb, var(--color-on-dark) 22%, transparent);
+}
+.hh-criteria-axis {
+  display: inline-flex; align-items: center; gap: 4px;
+  /* 依頼者の指示で2度大きくした（10px → 13px → **16px**。実行⑭ / 実行⑮）。
+     1行に収めているので、帯の高さ（--logo-h = 67px）にはまだ余裕がある。 */
+  font-size: 16px; font-weight: 600; line-height: 1.2;
+  color: var(--color-on-dark-muted);
+}
+/* ★ 重み付けの札（必須／加点）は**消した**（依頼者の指示。実行⑮。C-134）。
+   規則も残さない ―― 使わない指定を置いておくと、次に触る人が
+   「まだあるもの」として扱う（実行⑭で流す指定を落としたときと同じ）。 */
+/* ★ `prefers-reduced-motion` の分岐は落とした ―― **動かすのをやめた**ので、
+   減らす動きが無い。使わない指定を残すと、次に触る人が「まだあるもの」として扱う。 */
+/* ★ ホームは**残りの高さを全部使う**（依頼者の指示。実行⑯。C-161）。
+
+   前は `calc(100vh - ロゴ - 108px)` で高さを当てていた。**108 は当て推量**で、
+   パンくずと見出しの実寸とは合わない ―― 合わない分だけ下に灰色が残り、
+   足りなければ器ごと送れてしまう（画面が縦にずれる）。
+
+   高さを数えるのをやめ、**残りを受け取る**形にする（`.hh-grid` と同じ作法）。
+   器は送らない。送るのは、入りきらないカードの中だけ。 */

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
+import { appCss } from './support/css.ts'
 
 /**
  * ホームの枠の使い方（C-161。依頼者の指示）。
@@ -19,7 +20,7 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url))
 
 describe('ホームは枠を使い切る（C-161）', () => {
   let css = ''
-  before(async () => { css = await readFile(join(ROOT, 'app/base.css'), 'utf8') })
+  before(async () => { css = await appCss() })
 
   test('★ Step2はflex: 0 0 autoで高さ固定、gridで並べる', () => {
     const block = /\.home-dashboard\s*\{[^}]*\}/.exec(css)?.[0] ?? ''

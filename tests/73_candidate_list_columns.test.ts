@@ -7,6 +7,7 @@ import { freshDb } from '../src/db/testing.ts'
 import { one } from '../src/db/client.ts'
 import { listCandidatesByConfidence } from '../src/queries/borderline.ts'
 import { getPersonPhoto } from '../src/queries/photo.ts'
+import { appCss } from './support/css.ts'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 const read = (path: string) => readFile(join(ROOT, path), 'utf8')
@@ -35,7 +36,7 @@ describe('候補者一覧の列と顔写真（C-193）', () => {
 
   test('列をカード幅へ押し込まず、横へ送って読む', async () => {
     const page = await read('app/borderline/page.tsx')
-    const css = await read('app/base.css')
+    const css = await appCss()
     assert.match(page, /candidate-unified-table/)
     assert.match(css, /\.candidate-unified-table\s*\{[^}]*width:\s*max-content/,
       '列幅を潰さず横スクロールへ渡していない')
