@@ -178,18 +178,18 @@ export async function Shell({
               {t.id === 'home' && <span className="hh-nav-divider" aria-hidden />}
             </Fragment>
           ))}
-          <div className="hh-nav-add" aria-label="追加">
-            {addLinks.map((item) => (
-              <Link
-                key={item.href}
-                href={tabHref(item.href)}
-                className="sidebar-item btn-physical"
-              >
-                <span>{item.label}</span>
-              </Link>
-            ))}
-          </div>
         </nav>
+        <div className="hh-nav-add" aria-label="追加">
+          {addLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={tabHref(item.href)}
+              className="sidebar-item btn-physical"
+            >
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
 
         {/*
           名前で検索。素の <form> なので JS が無くても動く。

@@ -8,6 +8,8 @@ export interface KpiRecord {
   variable: string
   value: string
   memo: string | null
+  /** 数えられる変数（0049。C-199）。空なら実績を数えない。 */
+  metric_key: string | null
   archived_at: Date | null
   revised_at: Date
 }
@@ -18,12 +20,12 @@ export const listKpis = (db: Db, seasonId: string, includeArchived = false) => {
   return all<KpiRecord>(db, `
     WITH latest AS (
       SELECT DISTINCT ON (r.kpi_id)
-             r.kpi_id, r.title, r.variable, r.value, r.memo,
+             r.kpi_id, r.title, r.variable, r.value, r.memo, r.metric_key,
              r.archived_at, r.created_at AS revised_at
         FROM kpi_revisions r
        ORDER BY r.kpi_id, r.revision_no DESC
     )
-    SELECT k.id, l.title, l.variable, l.value, l.memo,
+    SELECT k.id, l.title, l.variable, l.value, l.memo, l.metric_key,
            l.archived_at, l.revised_at
       FROM kpis k
       JOIN latest l ON l.kpi_id = k.id

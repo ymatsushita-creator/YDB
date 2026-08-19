@@ -25,6 +25,8 @@ export async function saveKpiAction(formData: FormData): Promise<void> {
   const common = {
     seasonId, title: t(formData, 'title'), variable: t(formData, 'variable'),
     value: t(formData, 'value'), memo: t(formData, 'memo'),
+    // ★ 変数（0049。C-199）。マスタに無い語はコマンド側で弾く。
+    metricKey: t(formData, 'metricKey'),
   }
   const kpiId = t(formData, 'kpiId')
   const result = kpiId ? await reviseKpi(db, { ...common, kpiId }) : await addKpi(db, common)

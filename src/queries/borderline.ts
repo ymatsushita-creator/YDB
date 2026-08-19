@@ -1,4 +1,4 @@
-import { all, maybeOne, type Db } from '../db/client.ts'
+import { all, maybeOne, scalar, type Db } from '../db/client.ts'
 
 /**
  * ボーダーライン画面の問い合わせ（実行⑨）。
@@ -50,21 +50,9 @@ export interface BorderlineTask {
   waiting_days: number | null
 }
 
-export const listManualTasks = (db: Db, seasonId: string) =>
-  all<{
-    manual_task_id: string; title: string; person_id: string | null
-    person_name: string | null; owner_name: string | null
-    urgency: 'in_progress' | 'due' | 'later'; is_overdue: boolean
-    due_on: Date; due_time: string | null
-  }>(db, `
-    SELECT t.manual_task_id, t.title, t.person_id,
-           p.family_name || ' ' || p.given_name AS person_name,
-           t.owner_name, t.urgency, t.is_overdue, t.due_on, t.due_time
-      FROM v_manual_tasks t
-      LEFT JOIN persons p ON p.id = t.person_id
-     WHERE t.season_id = $1
-     ORDER BY t.is_overdue DESC, t.due_on, t.due_time NULLS LAST, t.title`,
-  [seasonId])
+/* ★ `listManualTasks` は消した（C-209）。手で足すやることの画面は無く、
+   **どこからも呼ばれていなかった。** 呼ばれない読み取りが残ると、
+   次に触る人が「使われている経路がある」と読む。 */
 
 export const listDerivedTasks = (db: Db, seasonId: string) =>
   all<{
@@ -290,6 +278,28 @@ export const listCandidatesByStep = (db: Db, seasonId: string, stepId: string) =
      ORDER BY a.id, e.assigned_at`,
   [seasonId, stepId])
 
+/**
+ * その段で**確定済み・判定待ち**の応募の数（C-216）。
+ *
+ * ★ 段の一覧は `e.state <> 'submitted'`、つまり**採点する対象**しか出さない。
+ *   採点を確定した応募はその瞬間に一覧から消えるが、**判定はまだ残っている。**
+ *   平社員ペルソナ試験で「6人採点したのに、どこにも居ない」となった。
+ *   一覧から消すのは変えない（採点の場である）が、**黙って消さない** ――
+ *   件数を出して、判定はその応募の画面だと言う。
+ */
+export const countAwaitingDecision = (db: Db, seasonId: string, stepId: string) =>
+  scalar<number>(db, `
+    SELECT count(*)::int
+      FROM v_active_applications a
+      JOIN evaluations e ON e.application_id = a.id
+                        AND e.selection_step_id = $2
+                        AND e.state = 'submitted'
+     WHERE a.season_id = $1
+       AND NOT EXISTS (
+             SELECT 1 FROM v_effective_status_histories h
+              WHERE h.application_id = a.id
+                AND h.selection_step_id = $2)`, [seasonId, stepId])
+
 export interface ScoringCriterion {
   criteria_id: string
   criteria_name: string
@@ -448,7 +458,7 @@ export interface Appointment {
   starts_at: Date
   ends_at: Date
   starts_on: Date
-  owner_name: string
+  owner_name: string | null
 }
 
 /**
@@ -567,7 +577,7 @@ export interface AppointmentDetail {
   kind_label: string
   starts_at: Date
   ends_at: Date
-  owner_name: string
+  owner_name: string | null
   person_name: string | null
   cancelled: boolean
 }
@@ -580,7 +590,7 @@ export const getAppointmentDetail = (db: Db, appointmentId: string, seasonId: st
            (a.cancelled_at IS NOT NULL) AS cancelled
       FROM appointments a
       JOIN appointment_kinds k ON k.id = a.kind_id
-      JOIN staffs s ON s.id = a.owner_staff_id
+      LEFT JOIN staffs s ON s.id = a.owner_staff_id
       LEFT JOIN persons p ON p.id = a.person_id
      WHERE a.id = $1 AND a.season_id = $2`, [appointmentId, seasonId])
 

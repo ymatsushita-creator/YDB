@@ -79,7 +79,7 @@ describe('0005 2期の特別選考9軸', () => {
    * ★ 書類選考の4軸は 0010 で入った（C-187。依頼者が呼び名を決めた。実行⑰）。
    *   1本目の論理力はAIが付け、**この順で並べて上から人に見せる。**
    */
-  test('★ 書類選考は4軸16点（C-187。依頼者が呼び名を決めた）', async () => {
+  test('★ 書類選考は4軸10点（C-212。依頼者が満点を変更）', async () => {
     const db = await freshDb({ seeds: 'production' })
     const rows = await all<{ name: string; scale_max: number }>(db, `
       SELECT c.name, c.scale_max
@@ -89,7 +89,7 @@ describe('0005 2期の特別選考9軸', () => {
        WHERE se.cohort_number = 2 AND ss.name = '書類選考'
        ORDER BY c.sort_order`)
     assert.equal(rows.length, 4)
-    assert.equal(rows.reduce((n, r) => n + Number(r.scale_max), 0), 16)
+    assert.equal(rows.reduce((n, r) => n + Number(r.scale_max), 0), 10)
     assert.equal(rows[0]!.name, '論理力')
     await db.close()
   })

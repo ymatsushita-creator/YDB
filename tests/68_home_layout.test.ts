@@ -21,17 +21,20 @@ describe('ホームは枠を使い切る（C-161）', () => {
   let css = ''
   before(async () => { css = await readFile(join(ROOT, 'app/base.css'), 'utf8') })
 
-  test('★ 高さを 100vh から引き算して当てない', () => {
+  test('★ Step2はflex: 0 0 autoで高さ固定、gridで並べる', () => {
     const block = /\.home-dashboard\s*\{[^}]*\}/.exec(css)?.[0] ?? ''
     assert.ok(block, '.home-dashboard の指定が無い')
     assert.doesNotMatch(block, /calc\(100vh/,
       'パンくずと見出しの実寸は数えられない。当てた分だけ灰色が残るか、器ごと送れる')
-    assert.match(block, /flex:\s*1 1 0%/, '残りの高さを受け取っていない')
+    assert.match(block, /flex:\s*0 0 auto/, 'Step2は高さを自動で確定する（縮まない）')
+    assert.match(block, /display:\s*grid/, 'Step2は上下2段を並べるgridである')
   })
 
   test('★ ホームの器は送らない（送るのはカードの中だけ）', () => {
-    assert.match(css, /\.hh-main:has\(> \.home-dashboard\)\s*\{\s*overflow:\s*hidden/,
-      'ホームで画面全体が送れる')
+    assert.doesNotMatch(css, /\.hh-main:has\(> \.home-dashboard\)\s*\{[^}]*overflow:\s*hidden/,
+      'ホーム専用の切断指定は廃止。汎用ルールで統一する')
+    assert.match(css, /\.hh-main:not\(:has\(> \.hh-grid\)\)\s*\{\s*overflow-y:\s*auto/,
+      '一覧画面は汎用ルール（.hh-grid を持たない場合）で外枠を送る')
   })
 
   test('★ カードは .card-base である（.panel-card ではない）', () => {

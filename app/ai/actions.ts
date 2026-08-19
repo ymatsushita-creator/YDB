@@ -2,7 +2,9 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { currentTier } from '../../src/auth/current.ts'
+import { askDatabase } from '../../src/ai/ask.ts'
 import { getDb } from '../../src/db/server.ts'
 import { listAiPreAssessmentTargets } from '../../src/queries/ai_pre_assessment.ts'
 import { listAiPreLabels, recordAiPreAssessment } from '../../src/commands/ai_pre_assessment.ts'
@@ -26,6 +28,40 @@ export async function saveAnthropicApiKeyAction(formData: FormData): Promise<voi
   const result = await saveAnthropicApiKey(
     await getDb(), t(formData, 'apiKey'), process.env.YOUTHDB_SESSION_SECRET)
   back(seasonId, personId, result.ok ? 'key_saved' : result.reason)
+}
+
+/**
+ * DB全体へ問い合わせる（C-200。依頼者の指示）。
+ *
+ * ★ 答えはURLに載せない ―― 個人の記録が混ざる（CLAUDE.md）。
+ *   立てた問いと答えは**記録層に残さず**、その場で描いて終わりにする
+ *   （残すなら置き場所を決めてからにする）。ここでは Cookie 経由で戻す。
+ */
+export async function askDatabaseAction(formData: FormData): Promise<void> {
+  const seasonId = t(formData, 'seasonId')
+  const personId = t(formData, 'personId')
+  // ★ 問い合わせは全層が使える。**読める先が層で変わる**（C-201）。
+  // 層が取れないときは**いちばん狭い層**として扱う（開かない方へ倒す）。
+  const tier = (await currentTier()) ?? 'input'
+  const db = await getDb()
+  const apiKey = await loadAnthropicApiKey(db, process.env.YOUTHDB_SESSION_SECRET)
+  if (!apiKey) back(seasonId, personId, 'key_required')
+  const question = t(formData, 'question')
+  let payload: { q: string; answer: string; steps: string[] }
+  try {
+    const r = await askDatabase(db, question, tier, apiKey ?? undefined)
+    payload = { q: question, answer: r.answer, steps: r.steps.map((s) => s.tool) }
+  } catch (e) {
+    payload = {
+      q: question, steps: [],
+      answer: `答えられなかった: ${e instanceof Error ? e.message : '不明'}`,
+    }
+  }
+  const jar = await cookies()
+  jar.set('youthdb_ask', JSON.stringify(payload), {
+    httpOnly: true, sameSite: 'lax', path: '/ai', maxAge: 300,
+  })
+  back(seasonId, personId, 'asked')
 }
 
 /** 登録済みの鍵を復号し、その実行だけAIクライアントへ渡す。 */

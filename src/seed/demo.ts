@@ -1278,12 +1278,22 @@ async function seedPersonas(db: Db, ctx: PersonaContext): Promise<void> {
   // 順番に進むため1人につき開いている評価が1件しかなく、件と人が常に
   // 一致していた。常に一致するデータでは、画面が2つを混同していても
   // 気づけない。tests/13 がこの形の存在を検査する。
-  for (const interviewer of [staff(4), staff(5)]) {
+  // ★ 片方は**今日から数えて**割り当てる（C-206）。
+  //   固定日だけで作ると、日が進むにつれ全件が期限切れへ倒れ、
+  //   「期限内のやること」が1件も無いデータになる（実際そうなって落ちた）。
+  //   期限内と期限切れが**同時に在る**形を、日付が進んでも保つ。
+  for (const [i, interviewer] of [staff(4), staff(5)].entries()) {
     await db.query(
-      `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
-                                state, assigned_at)
-       VALUES ($1,$2,$3,'pending',$4)`,
-      [stalledApp, active.stepIds[2], interviewer, ts('2026-07-15', 10)])
+      i === 0
+        ? `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                    state, assigned_at)
+           VALUES ($1,$2,$3,'pending',$4)`
+        : `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                    state, assigned_at)
+           VALUES ($1,$2,$3,'pending', now() - interval '1 day')`,
+      i === 0
+        ? [stalledApp, active.stepIds[2], interviewer, ts('2026-07-15', 10)]
+        : [stalledApp, active.stepIds[2], interviewer])
     stats.evaluations++
   }
 

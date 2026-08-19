@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
+import { applyAiLogicScore } from "../../src/commands/ai_pre_assessment.ts"
 import { saveScore, correctScore, type SaveScoreCode } from '../../src/commands/score.ts'
 import { submitEvaluation, type DecideCode } from '../../src/commands/decide.ts'
 import {
@@ -55,6 +56,22 @@ function backTo(form: FormData, result: Record<string, string>): string {
   if (layer && UUID.test(person)) return `/borderline/${person}?${q}`
   if (UUID.test(person)) q.set('person', person)
   return `/borderline?${q}`
+}
+
+/**
+ * AIが出した論理力の点を、書類選考の「論理力」軸へ入れる（C-211）。
+ *
+ * ★ 依頼者の指示は「自動で入れろ」だが、**入れる瞬間は人が押す。**
+ *   応募が来た時点で勝手に成績が入ると、AIが分析する前の応募には
+ *   点が入らず、後から入った分析との差が分からなくなる。
+ *   押した時点で最新の分析を1件だけ写す。
+ * ★ 人が既に付けていれば上書きしない（コマンド側で見る）。
+ */
+export async function applyAiLogicScoreAction(formData: FormData): Promise<void> {
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const db = await getDb()
+  const result = await applyAiLogicScore(db, { applicationId })
+  redirect(backTo(formData, { ai: result.ok ? (result.applied ? 'applied' : 'kept') : result.reason }))
 }
 
 /** 1軸ぶんの点と根拠を保存する。全軸まとめてではない（記録層の単位に合わせる）。 */

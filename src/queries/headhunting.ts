@@ -76,19 +76,7 @@ export interface ApproachTotals {
   scheduling: number
 }
 
-export const getApproachTotals = (db: Db, seasonId: string) =>
-  maybeOne<ApproachTotals>(db, `
-    SELECT count(*)                                                AS candidates,
-           count(*) FILTER (WHERE approach_code = 'not_approached') AS not_approached,
-           count(*) FILTER (WHERE approach_code = 'considering')    AS considering,
-           count(*) FILTER (WHERE approach_code = 'approaching')    AS approaching,
-           count(*) FILTER (WHERE approach_code = 'scheduling')     AS scheduling
-      FROM v_headhunting_list WHERE season_id = $1`, [seasonId])
-
-// -------------------------------------------------------------
-// 2. 候補者確度ランキング（画像 E）
-// -------------------------------------------------------------
-
+/* ★ `getApproachTotals` は消した（C-209）。どこからも呼ばれていない。 */
 export interface ConfidenceRow {
   person_id: string
   person_name: string
@@ -133,24 +121,7 @@ export interface ConfidenceMeta {
  * これを画面に出さないと、%が「いま計算した値」に見える。実際は凍結値で、
  * 算出日以降の接点は反映されていない。注記が無いと画面が嘘をつく。
  */
-export const getConfidenceMeta = (db: Db, seasonId: string) =>
-  maybeOne<ConfidenceMeta>(db, `
-    SELECT c.calculated_on,
-           m.rule_count,
-           m.max_points,
-           count(*) AS population
-      FROM v_candidate_confidence_latest c
-      JOIN score_snapshots sn
-        ON sn.person_id = c.person_id AND sn.season_id = c.season_id
-       AND sn.calculated_on = c.calculated_on
-      JOIN v_scoring_rule_set_max m ON m.rule_set_id = sn.rule_set_id
-     WHERE c.season_id = $1
-     GROUP BY c.calculated_on, m.rule_count, m.max_points`, [seasonId])
-
-// -------------------------------------------------------------
-// 3. 応募者成績ランキング（画像 D）
-// -------------------------------------------------------------
-
+/* ★ `getConfidenceMeta` は消した（C-209）。どこからも呼ばれていない。 */
 export interface ScoreRow {
   application_id: string
   person_id: string

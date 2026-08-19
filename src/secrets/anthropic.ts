@@ -56,5 +56,14 @@ export async function loadAnthropicApiKey(
   }
 }
 
-export const hasAnthropicApiKey = async (db: Db): Promise<boolean> =>
-  Boolean(await maybeOne(db, `SELECT 1 FROM app_secrets WHERE name = $1`, [SECRET_NAME]))
+/**
+ * 鍵が**使える状態か**（C-205。実画面で見つけた）。
+ *
+ * ★ 行があることと、使えることは別である ――
+ *   サーバ秘密が変わると復号できず、画面は「登録済み」と出したまま
+ *   実行だけが「鍵を貼り付け」で落ちる。**気づけない。**
+ *   だから行の有無ではなく、**復号できるか**で答える。
+ */
+export const hasAnthropicApiKey = async (
+  db: Db, secret = process.env.YOUTHDB_SESSION_SECRET,
+): Promise<boolean> => Boolean(await loadAnthropicApiKey(db, secret))

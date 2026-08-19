@@ -8,6 +8,18 @@ import {
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
 import { listKpis } from '../src/queries/kpi.ts'
+import { listKpiMetrics } from '../src/queries/kpi_metrics.ts'
+import { getWorkTasks, listTaskOwners, hasSelectionSteps, type UnifiedTask, type TaskType } from '../src/queries/tasks.ts'
+import { saveKpiAction } from './kpis/actions.ts'
+import {
+  cockpitAssignAction, cockpitReassignAction, cockpitUnholdAction,
+} from './home-actions.ts'
+import {
+  listAssignableStaff, type AssignableStaff,
+  parseAssignCode, ASSIGN_CODE_MESSAGE,
+  parseReassignCode, REASSIGN_CODE_MESSAGE,
+} from '../src/commands/assign.ts'
+import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../src/commands/unhold.ts'
 import { Card, Empty, num, NotDerived } from './_components/ui.tsx'
 import { TimeSeries, Legend } from './_components/charts.tsx'
 import { Confidence } from './_components/headhunting.tsx'
@@ -15,6 +27,74 @@ import { Avatar } from './_components/borderline.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from './_components/shell.tsx'
 
 export const dynamic = 'force-dynamic'
+
+// ----------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------
+
+const TASK_ACTION_LABELS: Record<TaskType, string> = {
+  start_selection: '選考を始める',
+  reassign: '担当を替える',
+  unhold: '保留を解く',
+  assign: '担当を決める',
+  evaluate: '評価する',
+  decide: '判定する',
+}
+
+type OwnerFilter =
+  | { kind: 'all' }
+  | { kind: 'team' }
+  | { kind: 'unassigned' }
+  | { kind: 'staff'; staffId: string }
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function parseOwnerFilter(value: string | undefined): OwnerFilter {
+  if (!value || value === 'all') return { kind: 'all' }
+  if (value === 'team') return { kind: 'team' }
+  if (value === 'unassigned') return { kind: 'unassigned' }
+  if (value.startsWith('staff:')) {
+    const staffId = value.slice(6)
+    if (UUID_REGEX.test(staffId)) {
+      return { kind: 'staff', staffId }
+    }
+  }
+  return { kind: 'all' }
+}
+
+function ownerFilterToUrl(filter: OwnerFilter): string {
+  switch (filter.kind) {
+    case 'all':
+      return 'all'
+    case 'team':
+      return 'team'
+    case 'unassigned':
+      return 'unassigned'
+    case 'staff':
+      return `staff:${filter.staffId}`
+  }
+}
+
+function taskMatchesOwner(task: UnifiedTask, filter: OwnerFilter): boolean {
+  switch (filter.kind) {
+    case 'all':
+      return true
+    case 'team':
+      return task.owner_scope === 'team'
+    case 'unassigned':
+      return task.owner_scope === 'unassigned'
+    case 'staff':
+      return task.owner_scope === 'staff' && task.owner_staff_id === filter.staffId
+  }
+}
+
+function buildHomeUrl(seasonId: string, filter: OwnerFilter, workId?: string): string {
+  const params = new URLSearchParams()
+  params.set('season', seasonId)
+  params.set('owner', ownerFilterToUrl(filter))
+  if (workId) params.set('work', workId)
+  return `/?${params.toString()}`
+}
 
 function HomeKpi(
   { label, value, href, derived = true, meta }:
@@ -55,15 +135,21 @@ function HomeKpi(
  *   `db/DECISIONS.md` にある。
  */
 export default async function Home(
-  { searchParams }: { searchParams: Promise<{ season?: string }> },
+  { searchParams }: {
+    searchParams: Promise<{
+      season?: string; work?: string; owner?: string
+      assign?: string; reassign?: string; unhold?: string
+    }>
+  },
 ) {
+  const params = await searchParams
   const tier = await currentTier()
   // 券が無ければ proxy に合言葉を聞かせる。**ここで既定の層に倒さない。**
   if (tier === null) redirect('/headhunting')
 
   const db = await getDb()
   const seasons = await listSeasons(db)
-  const season = (await getSeason(db, (await searchParams).season)) ?? defaultSeason(seasons)
+  const season = (await getSeason(db, params.season)) ?? defaultSeason(seasons)
 
   // 入力層。**数字を1つも出さない** ―― 見る画面を開けない層に
   // 見る画面の抜粋を出すと、押せない案内が並ぶ。
@@ -104,13 +190,45 @@ export default async function Home(
     )
   }
 
-  const [trends, picks, hasRules, summary, kpis] = await Promise.all([
+  const ownerFilter = parseOwnerFilter(params.owner)
+
+  const [trends, picks, hasRules, summary, kpis, kpiMetrics, tasks, taskOwners, selectionStepsConfigured] = await Promise.all([
     getHomeTrends(db, season.id),
     listConfidence(db, season.id, 3),
     hasScoringRules(db),
     getSummary(db, season.id),
     listKpis(db, season.id),
+    // ★ この画面からKPIを足すための選択肢（0049。C-204）。
+    listKpiMetrics(db),
+    getWorkTasks(db, { seasonId: season.id, tier }),
+    listTaskOwners(db),
+    hasSelectionSteps(db, season.id),
   ])
+  // KPIを決められるのはALL権限だけ（コマンド側でも層を見る）。
+  const canEditKpi = tier === 'all'
+
+  const filteredTasks = tasks.filter(t => taskMatchesOwner(t, ownerFilter))
+  const selectedTask = params.work
+    ? filteredTasks.find(t => t.task_key === params.work)
+    : undefined
+
+  // assign / reassign タスクが選ばれているときだけ担当候補を読む
+  const needsStaff = selectedTask?.kind === 'assign' || selectedTask?.kind === 'reassign'
+  const assignableStaff: AssignableStaff[] = needsStaff
+    ? await listAssignableStaff(db, season.id)
+    : []
+
+  // PRG 後の結果コード
+  const assignResult = parseAssignCode(params.assign)
+  const reassignResult = parseReassignCode(params.reassign)
+  const unholdResult = parseUnholdCode(params.unhold)
+
+  const ownerFilterOptions = [
+    { label: 'チーム全体', value: 'all' },
+    { label: 'チーム共通', value: 'team' },
+    { label: '未割当', value: 'unassigned' },
+    ...taskOwners.map(o => ({ label: o.label, value: `staff:${o.id}` })),
+  ]
 
   // ★ 応募の目標との比較（実行⑯。依頼者の指示。C-152 で引き継いだ値を使う）。
   //   目標が無い期（未受領）では出さない ―― 無い目標を出さない（C-127 と同じ形）。
@@ -156,13 +274,195 @@ export default async function Home(
         </div>
       </div>
 
+      <section className="selection-cockpit">
+        <h2>選考の運転席</h2>
+        <div className="owner-filter-tabs">
+          {ownerFilterOptions.map((option) => {
+            const newFilter = parseOwnerFilter(option.value)
+            const safeWork = selectedTask && taskMatchesOwner(selectedTask, newFilter)
+              ? selectedTask.task_key
+              : undefined
+            const href = buildHomeUrl(season.id, newFilter, safeWork)
+            const isActive = ownerFilterToUrl(ownerFilter) === option.value
+            return (
+              <Link
+                key={option.value}
+                href={href}
+                className={isActive ? 'active' : ''}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {option.label}
+              </Link>
+            )
+          })}
+        </div>
+        {/* PRG 後の結果フィードバック */}
+        {(assignResult || reassignResult || unholdResult) && (
+          <div className="task-notice">
+            {assignResult && (
+              <p className={`callout${assignResult === 'ok' ? ' ok' : ''}`}>
+                {ASSIGN_CODE_MESSAGE[assignResult]}
+              </p>
+            )}
+            {reassignResult && (
+              <p className={`callout${reassignResult === 'reassigned' ? ' ok' : ''}`}>
+                {REASSIGN_CODE_MESSAGE[reassignResult]}
+              </p>
+            )}
+            {unholdResult && (
+              <p className={`callout${unholdResult === 'unheld' ? ' ok' : ''}`}>
+                {UNHOLD_CODE_MESSAGE[unholdResult]}
+              </p>
+            )}
+          </div>
+        )}
+        {!selectionStepsConfigured ? (
+          <div className="config-error">選考フローが設定されていません</div>
+        ) : filteredTasks.length === 0 ? (
+          <Empty>今日必要な選考処理はありません</Empty>
+        ) : (
+          <div className="task-list">
+            {filteredTasks.map((task) => {
+              const isSelected = selectedTask?.task_key === task.task_key
+              const ownerText = task.owner_scope === 'team'
+                ? 'チーム共通'
+                : task.owner_scope === 'unassigned'
+                  ? '未割当'
+                  : task.owner_name || '未割当'
+              return (
+                <article
+                  key={task.task_key}
+                  className={isSelected ? 'task-item selected' : 'task-item'}
+                >
+                  <div className="task-header">
+                    <span className="task-action">{TASK_ACTION_LABELS[task.kind]}</span>
+                    <Link
+                      href={`/people/${task.person_id}?season=${season.id}`}
+                      className="task-person"
+                    >
+                      {task.person_name}
+                    </Link>
+                    <span className="task-step">{task.step_name}</span>
+                    <span className="task-season">{seasonLabel(season)}</span>
+                  </div>
+                  <div className="task-meta">
+                    <span className="task-waiting">{task.waiting_days}日待ち</span>
+                    <span className="task-sla">
+                      {task.sla_days === null
+                        ? 'SLA 未設定'
+                        : `SLA ${task.sla_days}日`}
+                    </span>
+                    {task.is_overdue && (
+                      <span className="task-overdue">{task.overdue_days}日超過</span>
+                    )}
+                    <span className="task-owner">{ownerText}</span>
+                  </div>
+                  {task.detail && <p className="task-detail">{task.detail}</p>}
+                  {task.criteria_total > 0 && (
+                    <p className="task-criteria">
+                      採点 {task.criteria_scored}/{task.criteria_total}
+                    </p>
+                  )}
+                  <Link
+                    href={buildHomeUrl(season.id, ownerFilter, task.task_key)}
+                    className="button-primary"
+                  >
+                    {TASK_ACTION_LABELS[task.kind]}
+                  </Link>
+                  {/* インラインアクションパネル：assign / reassign / unhold のみ */}
+                  {isSelected && task.kind === 'assign' && (
+                    <div className="task-panel">
+                      <form action={cockpitAssignAction} className="task-panel-form editable-inline">
+                        <input type="hidden" name="evaluationId" value={task.source_id} />
+                        <input type="hidden" name="seasonId" value={season.id} />
+                        <input type="hidden" name="owner" value={ownerFilterToUrl(ownerFilter)} />
+                        <input type="hidden" name="work" value={task.task_key} />
+                        <div className="task-panel-row">
+                          <label htmlFor={`assign-staff-${task.source_id}`}>担当者</label>
+                          <select
+                            id={`assign-staff-${task.source_id}`}
+                            name="staffId"
+                            required
+                            defaultValue=""
+                          >
+                            <option value="">選択してください</option>
+                            {assignableStaff.map((st) => (
+                              <option key={st.staff_id} value={st.staff_id}>
+                                {st.display_name}（{st.pending}件）
+                              </option>
+                            ))}
+                          </select>
+                          <button type="submit" className="button-primary">決める</button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                  {isSelected && task.kind === 'reassign' && (
+                    <div className="task-panel">
+                      <form action={cockpitReassignAction} className="task-panel-form editable-inline">
+                        <input type="hidden" name="evaluationId" value={task.source_id} />
+                        <input type="hidden" name="seasonId" value={season.id} />
+                        <input type="hidden" name="owner" value={ownerFilterToUrl(ownerFilter)} />
+                        <input type="hidden" name="work" value={task.task_key} />
+                        <div className="task-panel-row">
+                          <label htmlFor={`reassign-staff-${task.source_id}`}>新しい担当者</label>
+                          <select
+                            id={`reassign-staff-${task.source_id}`}
+                            name="staffId"
+                            required
+                            defaultValue=""
+                          >
+                            <option value="">選択してください</option>
+                            {assignableStaff
+                              .filter((st) => st.staff_id !== task.owner_staff_id)
+                              .map((st) => (
+                                <option key={st.staff_id} value={st.staff_id}>
+                                  {st.display_name}（{st.pending}件）
+                                </option>
+                              ))}
+                          </select>
+                          <button type="submit" className="button-primary">替える</button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                  {isSelected && task.kind === 'unhold' && (
+                    <div className="task-panel">
+                      <form action={cockpitUnholdAction} className="task-panel-form editable-inline">
+                        <input type="hidden" name="evaluationId" value={task.source_id} />
+                        <input type="hidden" name="seasonId" value={season.id} />
+                        <input type="hidden" name="owner" value={ownerFilterToUrl(ownerFilter)} />
+                        <input type="hidden" name="work" value={task.task_key} />
+                        <div className="task-panel-row">
+                          <button type="submit" className="button-primary">保留を解く</button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      <h2 className="review-heading">状況レビュー</h2>
+
       <div className="home-dashboard">
         <div className="home-summary-grid">
           <HomeKpi label="候補者" value={latest.candidates} href={to('/people')} />
           <HomeKpi label="連携団体" value={latest.partners} href={to('/approach')} />
+          {/* ★ 確度は 0039 で**人が記入する**ものになった（C-206。実画面で確認）。
+              算出規則の有無で「算出なし」と出すのは、算出していた頃の言い方で、
+              いまは規則が無いのが正しい状態である。記入された人数を素直に出す。 */}
           <HomeKpi label="確度の高い候補者" value={latest.high_confidence}
-                   href={to('/borderline')} derived={hasRules} />
-          <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
+                   href={to('/borderline')} />
+          {/* ★ 開けない層には**数も出さない**（C-208。ペルソナ試験で見つけた）。
+              平社員には特別選考のタブが出ないのに、人数だけ出ていた。
+              押せない札に数字だけ載ると、「見せない」と決めた線が漏れる。 */}
+          {canOpen(tier ?? 'input', '/headhunting') && (
+            <HomeKpi label="特別選考" value={latest.special} href={to('/headhunting')} />
+          )}
           {/* ★「Aスペース」に5枚目（実行⑯。依頼者の指示。C-162）――
               「応募」は「候補者」（識別できた人の累計）とは母集団が違う
               （C-62：単位の違う値を並べない）。既存カードへ相乗りさせず、
@@ -189,6 +489,26 @@ export default async function Home(
 
         <div className="section">
           <Card title="KPI" titleHref={to('/kpis')}>
+            {/* ★ この画面から直接足せる（依頼者の指示。C-204）――
+                KPIを見る場所と決める場所が別だと、見て気づいた瞬間に直せない。
+                ★ 変数は**数えられる語だけ**（0049）。実績はその語から数える。
+                ★ 足せるのはALL権限だけ（`saveKpiAction` が層を見る）。 */}
+            {canEditKpi && (
+              <form action={saveKpiAction} className="home-kpi-add editable-region">
+                <input type="hidden" name="seasonId" value={season.id} />
+                <input name="title" required maxLength={120} placeholder="題名" />
+                <select name="metricKey" defaultValue="">
+                  <option value="">変数なし</option>
+                  {kpiMetrics.map((m) => (
+                    <option key={m.key} value={m.key}>{m.label}</option>
+                  ))}
+                </select>
+                <input name="value" required inputMode="decimal" placeholder="目標" />
+                <input name="memo" maxLength={2000} placeholder="メモ" />
+                <input type="hidden" name="variable" value="―" />
+                <button className="button-primary" type="submit">足す</button>
+              </form>
+            )}
             {kpis.length === 0 ? <Empty>KPIはまだ登録されていない</Empty> : (
               <div className="home-kpi-results">
                 {kpis.map((kpi) => (
@@ -207,7 +527,7 @@ export default async function Home(
         <div className="section">
         <Card title="ピックアップ候補者" titleHref={to('/headhunting')}>
           {picks.length === 0 ? (
-            <Empty>確度がまだ算出されていない</Empty>
+            <Empty>確度がまだ記入されていない</Empty>
           ) : (
             <>
               <div className="pick-list">

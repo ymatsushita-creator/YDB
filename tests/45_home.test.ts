@@ -517,9 +517,12 @@ describe('評価基準（横バー）', () => {
     // 足元（期の切り替え・デモ札・出る）が 60px はみ出して届かなかった。
     // 送るのは**タブの並びだけ** ―― ロゴ（帯）と足元は動かさない。
     const css = await read('app/base.css')
-    const nav = /\.hh-nav \{ flex: 1 1 auto;([^}]*)\}/.exec(css)
-    assert.ok(nav, 'タブの並びが伸縮して中で送る')
-    assert.match(nav![1]!, /overflow-y:\s*auto/)
+    // ★ C-206 ―― 中で送ると、タブか入口のどちらかが必ず切れた。
+    //   **柱ごと送る**（`.hh-sidebar` が送り、nav も入口も縮ませない）。
+    assert.match(css, /\.hh-nav \{ flex: 0 0 auto;/, 'タブを縮ませない')
+    assert.match(css, /\.hh-sidebar \{\s*\/\*[^*]*\*\/\s*overflow-y: auto;/,
+      '柱ごと送る形になっていない')
     assert.match(css, /\.hh-sidebar-foot \{ flex: 0 0 auto; \}/, '足元は縮ませない')
+    assert.match(css, /\.hh-nav-add \{ flex: 0 0 auto; \}/, '追加の入口を縮ませない')
   })
 })

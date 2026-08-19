@@ -3,6 +3,10 @@ import type { ScoringSheet } from '../../src/queries/borderline.ts'
 import { num } from './ui.tsx'
 import { shownRationale } from '../../src/records/placeholder.ts'
 import {
+  gateOfScores, VERDICT_LABEL, DOCUMENT_SCREENING_PASS, DOCUMENT_SCREENING_STEP,
+} from '../../src/queries/document_screening.ts'
+import { applyAiLogicScoreAction } from '../borderline/actions.ts'
+import {
   scoreOnBorderlineAction, correctScoreOnBorderlineAction, submitOnBorderlineAction,
 } from '../borderline/actions.ts'
 
@@ -36,6 +40,9 @@ export function ScoreSheet({ sheet, context, showAi = false }: {
     </>
   )
 
+  // 合計と門。軸が1本も無い段では出さない（数える対象が無い）。
+  const gate = sheet.criteria.length > 0 ? gateOfScores(sheet.criteria) : null
+
   return (
     <>
       <h3 className="hh-sub">
@@ -51,6 +58,33 @@ export function ScoreSheet({ sheet, context, showAi = false }: {
           ? '評価軸が未登録'
           : `残り ${num(sheet.unscored_count)} / ${num(sheet.criteria.length)} 軸`}
       </p>
+
+      {/* ★★ 合計と門（C-216。依頼者の指示 C-212 ――「10点満点で、7点以上を
+          通して。それ以外は要注意ラベル」）。
+          第1周のペルソナ試験で、数字担当が4軸に点を入れ切っても
+          **合計も閾値も画面に無く**、通るのかどうか分からなかった。
+          ★ 満点は**記録から数える**（軸の scale_max の和）。定数を書き写さない。
+          ★ 門を出すのは書類選考だけ。他の段に閾値の指示は無い。 */}
+      {!sheet.no_criteria && gate && (
+        <p className="hh-note" style={{ marginTop: 0 }}>
+          <span className="strong">
+            合計 {num(gate.score)}
+            <span className="section-note"> / {num(gate.scaleMax)}</span>
+          </span>
+          {sheet.step_name === DOCUMENT_SCREENING_STEP && (
+            <>
+              {' ・ '}
+              <span className={gate.verdict === 'pass' ? 'badge-tag-green'
+                : gate.verdict === 'watch' ? 'badge-tag-orange' : 'badge-tag-gray'}>
+                {VERDICT_LABEL[gate.verdict]}
+              </span>
+              <span className="section-note">
+                {' '}{DOCUMENT_SCREENING_PASS} 点以上で人が読む段へ通す
+              </span>
+            </>
+          )}
+        </p>
+      )}
 
       {sheet.no_criteria ? (
         // 軸が無いことを「採点済み」に見せない。足りないのは点ではなく軸である。
@@ -178,6 +212,18 @@ export function ScoreSheet({ sheet, context, showAi = false }: {
             className="hh-more">
             AI分析 ›
           </Link>
+          {/* ★ AIが出した論理力を、この段の「論理力」軸へ入れる（C-211）。
+              ★ 押した時点で最新の分析を1件だけ写す ―― 応募の時点で
+                勝手に入れると、分析より前の応募に点が入らない。
+              ★ 人が既に付けていれば上書きしない（コマンド側で見る）。 */}
+          {' 　'}
+          {/* ★ 戻り先に要る値は `hidden` がまとめて持っている ――
+              自分で並べると、期やタブが欠けて**打った場所へ戻れない**
+              （実画面でホームへ飛ばされて気づいた。C-211）。 */}
+          <form action={applyAiLogicScoreAction} className="editable-inline">
+            {hidden}
+            <button className="button-secondary" type="submit">AIの論理力を入れる</button>
+          </form>
         </>
       )}
     </>

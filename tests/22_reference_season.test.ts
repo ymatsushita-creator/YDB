@@ -259,7 +259,7 @@ describe('本番シードの評価の観点', () => {
     await db.close()
   })
 
-  test('★ 書類選考は4軸16点（C-187。依頼者が呼び名を決めた）', async () => {
+  test('★ 書類選考は4軸10点（C-212。依頼者が満点を変更）', async () => {
     const db = await productionDb()
     const rows = await all<{ name: string; scale_max: number; sort_order: number }>(db, `
       SELECT c.name, c.scale_max, c.sort_order
@@ -271,9 +271,8 @@ describe('本番シードの評価の観点', () => {
     assert.deepEqual(rows.map((r) => r.name),
       ['論理力', 'NEOとの親和性', 'やり遂げた実績', 'コミットする意志'],
       '軸の呼び名は依頼者が決めたもの。こちらで言い換えない')
-    assert.deepEqual(rows.map((r) => Number(r.scale_max)), [4, 4, 4, 4])
-    // ★ 満点16は応募管理表で確かめた値。4軸×4点で一致する。
-    assert.equal(rows.reduce((n, r) => n + Number(r.scale_max), 0), 16)
+    assert.deepEqual(rows.map((r) => Number(r.scale_max)), [4, 2, 2, 2])
+    assert.equal(rows.reduce((n, r) => n + Number(r.scale_max), 0), 10)
     // ★ 1本目が論理力（AIが付け、この順で並べる）。
     assert.equal(rows[0]!.name, '論理力', '並べ替えの基準が1本目に来ていない')
     await db.close()

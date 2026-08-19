@@ -62,11 +62,15 @@ export default async function ApproachPage(
   //   したのは団体の属性であって、推定リーチや識別人数は導出値である）。
   const view = sp.view === 'channel' ? 'channel'
     : sp.view === 'edit' ? 'edit'
+    : sp.view === 'partner' ? 'partner'
     // ★ 連携団体一覧（依頼者の指示。実行⑰。C-178）。
     //   「団体別のリーチ」は接点のある団体しか出ない ―― 170件のうち
     //   接点があるのは53件で、**残り117件はどの画面にも出ていなかった。**
     : sp.view === 'list' ? 'list'
-    : 'partner'
+    // 団体は期を持たない。3期に接触実績がまだ無くても、2期で登録した
+    // 連携団体そのものは同じ一覧に出す。実績だけを見る画面を既定にすると、
+    // 登録済みの団体が0件に見えてしまう。
+    : 'list'
   const tabHref = (v: string, extra: Record<string, string> = {}) =>
     `/approach?${new URLSearchParams({ season: season.id, view: v, ...extra })}`
   // 団体の行を開いた先に、その団体の接触の表を出す（依頼者の指示）。
@@ -258,8 +262,11 @@ export default async function ApproachPage(
           声を掛けていない相手が画面から消えていた。 */}
       <div className="section" hidden={view !== 'list'}>
         <Card title={`連携団体一覧（${num(partnerRows.length)} 件）`}>
+          {/* ★ 団体は期を持たない（C-213）。空表示に「この年度に」と書くと、
+              期を替えれば出てくるように読める ―― 出てこない。
+              経営層ペルソナ試験で見つけた（C-217）。 */}
           {partnerRows.length === 0 ? (
-            <Empty>この年度に団体がまだない</Empty>
+            <Empty>連携団体がまだ1件も登録されていない</Empty>
           ) : (
             <div className="table-wrap">
               <table className="data">

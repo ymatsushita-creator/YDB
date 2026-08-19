@@ -4,14 +4,50 @@
     {
       "name": "youthdb",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev", "--port", "3111"],
+      "runtimeArgs": [
+        "dev",
+        "--port",
+        "3111"
+      ],
       "port": 3111
     },
     {
       "name": "youthdb-demo",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev:demo", "--port", "3112"],
+      "runtimeArgs": [
+        "dev:demo",
+        "--port",
+        "3112"
+      ],
       "port": 3112
+    },
+    {
+      "name": "youthdb-pilot",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "DATABASE_URL=",
+        "YOUTHDB_PGDATA=.pgdata-pilot",
+        "YOUTHDB_PASSWORD=pilot-all",
+        "YOUTHDB_PASSWORD_PERSONAL=pilot-hirashain",
+        "YOUTHDB_SESSION_SECRET=pilot-only-not-a-real-secret",
+        "pnpm",
+        "dev",
+        "--port",
+        "3113"
+      ],
+      "port": 3113
+    },
+    {
+      "name": "ds-gallery",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8932",
+        "--directory",
+        "/private/tmp/claude-501/-Volumes-KIOXIA-2TB-NEO-YouthDB/7253bc54-6a67-4491-b24b-b1d51c545112/scratchpad/ds"
+      ],
+      "port": 8932
     }
   ]
 }

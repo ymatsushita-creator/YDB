@@ -1,3 +1,4 @@
+import { APPLY_AI_LOGIC_MESSAGE } from '../../../src/commands/ai_pre_assessment.ts'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
@@ -85,6 +86,12 @@ export default async function BorderlineScorePage({
         ]}
       />
 
+      {/* ★ AIの点を入れた結果（C-211）。 */}
+      {typeof sp.ai === 'string' && APPLY_AI_LOGIC_MESSAGE[sp.ai] && (
+        <p className={`callout${sp.ai === 'applied' ? ' ok' : ''}`}>
+          {APPLY_AI_LOGIC_MESSAGE[sp.ai]}
+        </p>
+      )}
       {savedScore && (
         <p className={`callout${savedScore === 'saved' ? ' ok' : ''}`}>
           {SAVE_SCORE_CODE_MESSAGE[savedScore]}

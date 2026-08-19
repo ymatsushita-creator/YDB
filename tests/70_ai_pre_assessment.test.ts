@@ -240,7 +240,13 @@ describe('APIキー入力画面', () => {
     assert.doesNotMatch(shell, /href: '\/ai'/, '左サイドバーへAI分析を追加しない')
     assert.match(scoring, /sheet\.step_name === '書類選考'/)
     assert.match(page, /label: '通常選考'[\s\S]*label: '書類選考'[\s\S]*label: '採点'[\s\S]*label: 'AI分析'/)
-    assert.doesNotMatch(action, /cookies\(|localStorage|sessionStorage/)
+    // ★ 狙いは**鍵をブラウザ側へ置かないこと**であって、Cookie の禁止ではない。
+    //   C-200 で「記録に聞く」の答えを短命な Cookie で戻すようにしたので、
+    //   `cookies(` そのものを禁じると、鍵と無関係な用途まで落ちる。
+    //   見るのは「鍵が入った Cookie を作っていないか」に絞る。
+    assert.doesNotMatch(action, /localStorage|sessionStorage/)
+    assert.doesNotMatch(action, /set\((['"`]).*(apiKey|api_key|anthropic).*\1/i,
+      '鍵をブラウザ側（Cookie）へ置いている')
     assert.doesNotMatch(action, /p\.set\(['"]apiKey|console\.(log|error).*apiKey/)
   })
 
@@ -248,7 +254,10 @@ describe('APIキー入力画面', () => {
     const db = await freshDb()
     const apiKey = 'sk-ant-test-persistent-secret'
     assert.equal((await saveAnthropicApiKey(db, apiKey, 'server-secret')).ok, true)
-    assert.equal(await hasAnthropicApiKey(db), true)
+    // ★ 「行がある」ではなく「復号できる」で答える（C-205）。
+    assert.equal(await hasAnthropicApiKey(db, 'server-secret'), true)
+    assert.equal(await hasAnthropicApiKey(db, 'ちがう秘密ちがう秘密ちがう秘密ちがう秘密'), false,
+      '復号できないのに「登録済み」と言っている')
     const stored = await maybeOne<{ ciphertext: string }>(db,
       `SELECT ciphertext FROM app_secrets WHERE name = 'anthropic_api_key'`)
     assert.notEqual(stored?.ciphertext, apiKey)

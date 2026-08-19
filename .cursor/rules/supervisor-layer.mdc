@@ -1,0 +1,14 @@
+---
+description: Enforce the repository's chat-scoped supervisor authority and document hierarchy
+alwaysApply: true
+---
+
+# 監督レイヤー
+
+- 作業前にリポジトリ直下の `SUPERVISOR.md` を全文読む。
+- 文書の優先順位は `SUPERVISOR.md > vision.md > director.md > domain.md > CLAUDE.md > process.md`。
+- `SUPERVISOR.md` は、この監督チャットで依頼者から明示指示を受けた監督官だけが変更できる。
+- 実装担当、別チャット、サブエージェントは `SUPERVISOR.md` を変更しない。変更案は監督官へ返す。
+- 同一の監督チャットだと確認できなければ、`SUPERVISOR.md` を読み取り専用として扱う。
+- 監督官が承認した設計・実装指示が無ければ、UI実装を開始しない。
+- 下位文書と食い違う場合は勝手に統合せず、監督官へ報告する。

@@ -42,9 +42,10 @@ export function RankMark({ rank }: { rank: number }) {
 export function RankDelta({
   delta, hasPrevious,
 }: { delta: number | null; hasPrevious: boolean }) {
-  if (!hasPrevious || delta === null) {
-    return <span className="rank-delta rank-delta-none">前回なし</span>
-  }
+  // ★ 順位の算出をやめたので、**全行が「前回なし」**になっていた（C-206。
+  //   実画面で確認）。並んでも何も伝えないので、何も出さない。
+  //   ★ 「変動なし」との取り違えは起きない ―― そちらは出し続ける。
+  if (!hasPrevious || delta === null) return null
   if (delta === 0) return <span className="rank-delta rank-delta-flat">変動なし</span>
   const up = delta > 0
   return (
@@ -74,7 +75,10 @@ export function Stars({ score, scaleMax }: { score: number; scaleMax: number }) 
 
 /** 確度。規則が未登録なら「—」ではなく、その旨を出す。 */
 export function Confidence({ ratio }: { ratio: number | null }) {
-  if (ratio === null) return <span className="muted-note">規則未登録</span>
+  // ★ 確度は 0039 で**人が記入する**ものになった（C-151）。
+  //   「規則未登録」は算出していた頃の言い方で、いまは意味を持たない
+  //   ―― 全行に並んで、読む人の目を潰していた（C-205。実画面で確認）。
+  if (ratio === null) return <span className="muted-note">未記入</span>
   return <span className="confidence">{(ratio * 100).toFixed(0)}%</span>
 }
 

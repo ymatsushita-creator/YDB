@@ -15,3 +15,10 @@ db/private
 *.pptx
 scripts/sim-out
 Codexから移行した旧YouthDBデータ_*
+
+# 秘密。**Vercel CLI は作業ディレクトリを送るので、.env 系も一緒に上がる。**
+# 本番の値は Vercel の Environment Variables で渡す（`vercel env ls` で確認できる）。
+# 送信物に秘密を混ぜない。
+.env
+.env.*
+.claude-tmp
