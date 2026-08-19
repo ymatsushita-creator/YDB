@@ -1,3 +1,4 @@
+import { intakePath } from './intake-dir.ts'
 import { join } from 'node:path'
 import { openPostgres } from '../src/db/postgres.ts'
 import { Workbook } from '../src/import/xlsx.ts'
@@ -13,7 +14,7 @@ if (!url) throw new Error('DATABASE_URL が無い')
 console.log(`書き込み先: ${/@([^/:]+)/.exec(url)?.[1] ?? '(不明)'}`
   + `${apply ? '  ★ --apply（実際に書く）' : '  （既定：書かない）'}\n`)
 
-const book = new Workbook(join(process.cwd(), '2期応募管理2.xlsx'))
+const book = new Workbook(intakePath('2期応募管理2.xlsx'))
 const plan = planEvents(book.rows(EVENT_SHEET), 2026)
 const db = await openPostgres(url)
 const season = (await db.query<{ id: string }>(

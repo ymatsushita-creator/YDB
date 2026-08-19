@@ -1,3 +1,4 @@
+import { intakePath } from './intake-dir.ts'
 import { join } from 'node:path'
 import { openPostgres } from '../src/db/postgres.ts'
 import { Workbook } from '../src/import/xlsx.ts'
@@ -22,7 +23,7 @@ import type { Db } from '../src/db/client.ts'
  *   入らなかった件数を出すので、必要なら人を先に足してから流し直す。
  */
 
-const XLSX = join(process.cwd(), '2期応募管理.xlsx')
+const XLSX = intakePath('2期応募管理.xlsx')
 const apply = process.argv.includes('--apply')
 
 const url = process.env.DATABASE_URL
