@@ -1,3 +1,4 @@
+import { confirmDestructive } from './confirm-destructive.ts'
 import pg from 'pg'
 import { saveSnapshot } from './backup-file.ts'
 import { actorName } from '../src/db/postgres.ts'
@@ -34,6 +35,11 @@ const target = new URL(url)
 console.log(`書き込み先 ―― ${target.hostname} / ${target.pathname.slice(1)}`
   + (apply ? '  ★ --apply（実際に消す）' : '  （既定：数えるだけ）'))
 console.log('')
+
+// ★ 数えるだけの既定モードは承認不要。実際に消す `--apply` のときだけ人間に問う。
+if (apply && !(await confirmDestructive('デモデータの削除', target.hostname))) {
+  process.exit(1)
+}
 
 const client = new pg.Client({
   connectionString: url,

@@ -1,3 +1,4 @@
+import { confirmDestructive } from './confirm-destructive.ts'
 import { openPostgres, actorName } from '../src/db/postgres.ts'
 import { migrate, seed, ledgerTail } from '../src/db/migrate.ts'
 import { saveSnapshot } from './backup-file.ts'
@@ -31,6 +32,11 @@ if (!process.env.DATABASE_URL) {
 const url = new URL(process.env.DATABASE_URL)
 // ★ 接続文字列そのものは出力しない。名乗るのは host と db だけ。
 console.log(`書き込み先 ―― ${url.hostname} / ${url.pathname.slice(1)}`)
+
+// ★ 名乗ったうえで、人間の承認を取る。本番の帳簿を書き換える操作は不可逆。
+if (!(await confirmDestructive('本番へのマイグレーション適用', url.hostname))) {
+  process.exit(1)
+}
 
 /** 帳簿の末尾を1行で。**行数ではなく名前で言う。** */
 async function ledger(db: Db): Promise<string> {
