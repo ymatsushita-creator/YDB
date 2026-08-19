@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { parseHeadings } from './decisions-refs.ts'
+import { parseHeadings, sliceEntry } from './decisions-refs.ts'
 
 /**
  * 番号を指定して、その設計判断の本文だけを出す。
@@ -14,12 +14,16 @@ import { parseHeadings } from './decisions-refs.ts'
  *   ファイルを分割するには憲法の書き換えと再封印が要る（人間の判断）。
  *   そこで**分割せずに、開かなくて済むようにする。**
  *
- *     pnpm decisions:show C-176        1件を出す
+ *     pnpm decisions:show C-176        1件を出す（`db/decisions/C-176.md` と同じ内容）
  *     pnpm decisions:show C-165 C-206  複数まとめて
  *     pnpm decisions:show C-165..C-170 範囲で
  *
  * ★ 索引（`pnpm decisions:index`）が番号から行へ、本書が行から本文へ辿る。
  *   2つ合わせて、全文を読まずに「なぜこの形なのか」へ到達できる。
+ *
+ * ★ **端末を持たない相手には効かない。** AIが最初にやるのは grep とファイルを開くことで、
+ *   コマンドの存在を知らなければ 49万字を開こうとする。だから
+ *   `pnpm decisions:parts` が同じ内容を `db/decisions/<番号>.md` へ展開してある。
  */
 
 const SOURCE = new URL('../db/DECISIONS.md', import.meta.url)
@@ -61,11 +65,10 @@ for (const id of wanted) {
     console.log('')
   }
   for (const hit of hits) {
-    // 次の見出しの手前までが本文。見出しの階層は問わない（## と ### が混在する）。
-    const next = entries.find((e) => e.line > hit.line)
-    const end = next ? next.line - 1 : lines.length
+    // 本文の切り出しは `decisions-refs.ts` に置いてある（`decisions:parts` と共有する）。
+    // ★ 番号の見出しだけで止めると、節の最後の記録が次の節見出しまで飲み込む。
     console.log(`─── ${hit.id} ─── db/DECISIONS.md:${hit.line}`)
-    console.log(lines.slice(hit.line - 1, end).join('\n').replace(/\n+$/, ''))
+    console.log(sliceEntry(lines, hit))
     console.log('')
   }
 }

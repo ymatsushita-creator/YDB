@@ -62,6 +62,11 @@ jobs:
         # 次のセッションのAIが古い索引を根拠にする。生成物のずれを検知する。
         run: pnpm decisions:index -- --check
 
+      - name: 設計判断の1件1ファイルが本体と一致しているか
+        # `db/decisions/` は `db/DECISIONS.md` の写し（生成物）である。
+        # ずれると、AIが開くほうだけが古くなる ―― **索引より写しのほうが読まれる。**
+        run: pnpm decisions:parts -- --check
+
       - name: 構成基準（.consultant/STRUCTURE.md）
         # 外部ツール `consultant` は CI から解決できない。C01〜C07 は未実行になり、
         # スクリプトはそれを「未実行」と明記して通す（「問題なし」とは言わない）。

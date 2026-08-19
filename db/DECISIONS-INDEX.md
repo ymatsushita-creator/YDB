@@ -4,7 +4,7 @@
 `pnpm decisions:index` で `db/DECISIONS.md` から作る。
 CI（`quality.yml`）が `--check` でずれを見るので、追記したら作り直すこと。
 
-対象: `db/DECISIONS.md` / 記録 220 件
+対象: `db/DECISIONS.md` / 記録 221 件
 
 `C-121` のような番号は、コード内のコメント・`CLAUDE.md`・レポートから参照される。
 ここで番号から本文の行へ辿れる。
@@ -47,7 +47,7 @@ AIはここを埋められない（`CLAUDE.md`「記録にない値の創作」�
 | `C-173` | `app/_styles/10-round-16-17.css` |
 | `C-174` | `tests/71_placeholder.test.ts` |
 | `C-175` | `app/_styles/10-round-16-17.css` |
-| `C-176` | `app/_styles/01-foundation.css`<br>`app/_styles/10-round-16-17.css` |
+| `C-176` | `README.md`<br>`app/_styles/01-foundation.css`<br>`app/_styles/10-round-16-17.css`<br>`db/DECISIONS.md` |
 | `C-177` | `app/_styles/10-round-16-17.css`<br>`app/people/[id]/page.tsx`<br>`src/queries/intake.ts` |
 | `C-178` | `app/approach/page.tsx` |
 | `C-179` | `app/funnel/page.tsx`<br>`src/queries/dashboard.ts` |
@@ -113,7 +113,7 @@ AIはここを埋められない（`CLAUDE.md`「記録にない値の創作」�
 
 ## C. 構造の整理・以後の決定
 
-178 件
+179 件
 
 | 番号 | 判断 | 行 |
 |---|---|---|
@@ -295,6 +295,7 @@ AIはここを埋められない（`CLAUDE.md`「記録にない値の創作」�
 | `C-217` | 経営層セットのパイロット。エクセルで呼び名と実データを突き合わせた | L8437 |
 | `C-218` | Phase 4 Step 1 — 統合task query | L8512 |
 | `C-219` | Phase 4 Step 2 — ホーム運転席 | L8522 |
+| `C-220` | 設計判断を1件ずつ開ける形にした（封印を書き換えずに） | L8526 |
 
 ## D. 確定した仕様
 

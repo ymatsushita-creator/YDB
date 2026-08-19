@@ -8,6 +8,7 @@ description: 実装に入る前に、コンサルの工程で計画を立てる
 ## 1. 観察（`investigator` サブエージェントに渡す）
 
 - `db/DECISIONS-INDEX.md` を引き、**同じ論点が過去に決着していないか**を最初に見る。
+  本文は `db/decisions/<番号>.md` を1件だけ開く（`db/DECISIONS.md` は開かない）。
   決着していれば覆す提案ではなく、その決定を持ち帰る
 - 触る場所（`src/commands/` 書き込み・`src/queries/` 読み取り）と影響範囲を列挙する
 - 守っているテスト（`tests/NN_*.test.ts`）を挙げる

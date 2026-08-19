@@ -21,7 +21,8 @@
 
 - [`HANDOFF.md`](HANDOFF.md) — いま何が動いていて、誰の判断を待っているか
 - [`db/DECISIONS-INDEX.md`](db/DECISIONS-INDEX.md) — **`C-121` などの番号から本文へ辿る索引**（生成物）
-- [`db/DECISIONS.md`](db/DECISIONS.md) — 設計判断の本体。理由とテストが書いてある
+- [`db/decisions/`](db/decisions/README.md) — **設計判断を1件ずつ開く**（生成物。`C-176` なら `db/decisions/C-176.md`）
+- [`db/DECISIONS.md`](db/DECISIONS.md) — 設計判断の本体。理由とテストが書いてある。**開かない**
 - [`docs/reports/`](docs/reports/) — 実行①〜⑮の凍結レポート。**着手時に読む物ではない**
   （各ファイルの先頭に凍結の但し書きがある。grepで1本だけ拾っても分かるようにしてある）
 - [`basic/DESIGN.md`](basic/DESIGN.md) — 意匠トークン
@@ -83,6 +84,7 @@ pnpm verify:fast     # 型検査 + テストだけ（ビルドを省く）
 pnpm typecheck
 pnpm test
 pnpm decisions:index # DECISIONS.md に追記したら回す（生成物も一緒にコミットする）
+pnpm decisions:parts # 同上。番号ごとの1件1ファイル（db/decisions/）を作り直す
 pnpm structure       # 構成基準（.consultant/STRUCTURE.md の S1〜S12）だけを見る
 pnpm tokens          # app/tokens.css を作り直す（basic/DESIGN.md から生成）
 ```
@@ -105,14 +107,26 @@ pnpm tokens          # app/tokens.css を作り直す（basic/DESIGN.md から�
 `db/DECISIONS.md` は **496,136字（≒33万トークン相当）**で、どの文脈長にも入らない。
 **全文を読もうとしない。** 番号から引く。
 
+**いちばん短い道 ―― 1件を1ファイルで開く。**
+
+```
+db/decisions/C-121.md      その判断だけ（2〜12KB）。grep でも当たる
+db/decisions/README.md     217件の目次
+```
+
+端末からも同じものが出る ――
+
 ```bash
 pnpm decisions:show C-121        # その判断の本文だけを出す（約5,000字）
 pnpm decisions:show C-95..C-96   # 範囲でまとめて
 pnpm decisions:missing           # 参照されているのに本文が無い番号と、その参照元
 ```
 
-コード中の `C-121` のような番号は、この道具で本文へ辿れる。
+コード中の `C-121` のような番号は、これで本文へ辿れる。
 一覧は [`db/DECISIONS-INDEX.md`](db/DECISIONS-INDEX.md)（生成物。手で編集しない）。
+
+★ `db/decisions/` も生成物である。**記録を足すのは `db/DECISIONS.md`** で、
+そのあと `pnpm decisions:index && pnpm decisions:parts` を回す。CI がずれを落とす。
 
 **45件が「参照されているのに本文が無い」状態にある。** 実行⑯・⑰が報告書も
 設計判断も残さずに終わったためで、`pnpm decisions:missing` が参照元のコードから

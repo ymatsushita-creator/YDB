@@ -38,6 +38,8 @@ export const FOREIGN_PREFIXES = new Set(['B'])
 /**
  * 照合から外す経路（自己参照）。
  *   `db/DECISIONS-INDEX.md`  生成物。欠番リストを本文に持つため自分の出力を読み返す
+ *   `db/decisions/`          生成物。`db/DECISIONS.md` の写しなので、独立した参照元ではない
+ *                            （外さないと欠番の参照元が本体と写しで二重に並ぶ）
  *   `.consultant/`           この問題を記述した診断文書。書き足すと件数が動いた
  *   `docs/consultant/`       同上（診断の経緯）。`.consultant/` から出した先で、
  *                            除外し忘れて件数が 45→47 に戻った（実測）
@@ -47,7 +49,7 @@ export const FOREIGN_PREFIXES = new Set(['B'])
  * ★ **番号について書いた文書は、番号の参照元ではない。** ここを1つ外すたびに
  *   件数が動く。経路を増やすときは必ずこの表に足す。
  */
-export const EXCLUDE = [':!db/DECISIONS-INDEX.md', ':!.consultant/', ':!docs/consultant/',
+export const EXCLUDE = [':!db/DECISIONS-INDEX.md', ':!db/decisions/', ':!.consultant/', ':!docs/consultant/',
   ':!scripts/build-decisions-index.ts', ':!scripts/decisions-refs.ts',
   ':!scripts/report-missing-decisions.ts', ':!scripts/show-decision.ts']
 
@@ -113,4 +115,26 @@ export function findDangling<T>(entries: Entry[], refs: Map<string, T>): Array<{
     .map(([id, r]) => ({ id, refs: r }))
     .sort((a, b) =>
       a.id[0]!.localeCompare(b.id[0]!) || Number(a.id.slice(2)) - Number(b.id.slice(2)))
+}
+
+/** 節の見出し（`## A. 動かして見つかった不具合`）。番号の見出しではない。 */
+export const SECTION_HEADING = /^##\s+([A-F])\.\s*(.+?)\s*$/
+
+/**
+ * 1件の本文を切り出す。
+ *
+ * ★ 終わりは「次の番号の見出し」だけでは足りない ―― 節の最後の記録は、
+ *   次の節見出し（`## D. 確定した仕様`）まで飲み込んでしまう。
+ *   番号の見出しと節の見出しの**両方**で止める。
+ * ★ 末尾の区切り（`---`）と空行は落とす。記録そのものではない。
+ */
+export function sliceEntry(lines: readonly string[], entry: Entry): string {
+  let end = lines.length
+  for (let i = entry.line; i < lines.length; i++) {
+    const text = lines[i]!
+    if (HEADING.test(text) || SECTION_HEADING.test(text) || /^#\s/.test(text)) { end = i; break }
+  }
+  const body = lines.slice(entry.line - 1, end)
+  while (body.length > 0 && /^(\s*|-{3,})$/.test(body[body.length - 1]!)) body.pop()
+  return body.join('\n')
 }
