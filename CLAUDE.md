@@ -3,7 +3,11 @@
 ## 文書の責任
 
 ```text
-SUPERVISOR.md  監督判断・権限境界（全てに優先）
+.audit/        監査文書（最高権限。全てに優先する）
+               AUDIT_CHARTER.md / IRREVERSIBLE_OPS.md / REMEDIATION.md / 監査意見
+.consultant/   構成基準（作り方の構造。.audit/ に劣後し、以下に優先する）
+               CHARTER.md / STRUCTURE.md / DIAGNOSIS.md
+SUPERVISOR.md  監督判断・権限境界（上記2つを除く全てに優先）
 vision.md    目的
 director.md  プロダクト原則
 domain.md    用語・記録モデル
@@ -11,8 +15,20 @@ CLAUDE.md    実装規律（本書）
 process.md   作業手順
 ```
 
+引き当てる物（読む順番には入らない）:
+
+```text
+db/DECISIONS-INDEX.md  設計判断の索引（生成物。番号から本文の行へ辿る）
+db/DECISIONS.md        設計判断の本体
+docs/reports/          実行①〜⑮の凍結レポート。着手時に読む物ではない
+HANDOFF.md             いまの状態と、待っている判断
+```
+
 `SUPERVISOR.md` は実装担当が変更してはならない。監督官が承認した設計と
 実装指示が無い場合、観察・診断から実装へ進まない。
+`.audit/` は監督官も実装担当も変更できず、**監査要求は本書の条文に優先する。**
+`.consultant/` は構成・工程・完了条件について本書に優先する（中身の仕様には及ばない）。
+本書と食い違ったら、本書の側を直す。
 
 同じ要件を複数文書へ複製しない。矛盾した場合は上位文書を優先し、
 現行文書へ旧条文を併記せずGit履歴を参照する。
@@ -38,7 +54,10 @@ process.md   作業手順
 - 日付は `jst_date()` / `jst_today()` を使う
 - 追記専用テーブルの訂正は打ち消し行で行う
 - `app/tokens.css` は生成物。`pnpm tokens` で作る
-- 実在個人情報をデモ、テスト、スクリーンショットへ使わない
+- 実在個人情報をデモ、テスト、スクリーンショットへ使わない。ダミーは Faker(ja_JP) で作る
+- **実データをリポジトリの中に置かない。** 置き場は外部（既定 `../YouthDB-private/`）で、
+  解決は `scripts/intake-dir.ts` が行う。中を指す指定は拒否される。
+  `.gitignore` は防壁ではなく残骸への保険である（監査 D2-01）
 - 本番の状態は、自分の実行記録ではなく**本番の帳簿に聞く**
   （`schema_migrations.applied_by`。行数から段数を推測しない。C-121）
 
@@ -52,13 +71,20 @@ process.md   作業手順
 
 ## 完了条件
 
-- `pnpm test`
-- `pnpm exec tsc --noEmit`
-- `pnpm build`
+```
+pnpm verify
+```
+
+型検査 → テスト → 設計判断の索引 → 構成基準 → ビルド を順に回す。**同じものが CI で走る**
+（`.github/workflows/quality.yml`）。以前は3つを手で打つ規約しか無く、
+強制する機械が1件も無かった。**「回した」という申告は完了の根拠にならない。**
+
+- `pnpm verify`（途中まででよいときは `pnpm verify:fast` ＝ 型検査＋テスト）
 - 画面またはSQLで結果を確認
 - 単位と母集団は**画面に書かない**（依頼者の指示。C-62）。
   定義はクエリのコメントと `db/DECISIONS.md` に置く
-- `db/DECISIONS.md` に理由とテストを記録
+- `db/DECISIONS.md` に理由とテストを記録し、`pnpm decisions:index` で索引を作り直す
+  （索引は生成物。手で編集しない。ずれは CI が `--check` で落とす）
 
 ## 禁止
 
@@ -69,6 +95,10 @@ process.md   作業手順
 - 記録にない値の創作
 - 単位の違う値の割り算
 - 旧生態系比喩を現行UIや現行仕様の用語として使うこと
+- **検査を通すために検査の側を緩めること。** 閾値を下げる、テストを消す・skip する、
+  `continue-on-error` を足す、`--no-verify` を使う、allowlist を広げる ——
+  いずれも禁止であり、いずれも CI で検知される
+- 生成物を手で編集すること（`app/tokens.css` / `db/DECISIONS-INDEX.md`）
 
 <!-- kurosaki:begin —— この区画は監査法人が管理する。実装セッションで編集しないこと。 -->
 ## 監査基盤（編集禁止）

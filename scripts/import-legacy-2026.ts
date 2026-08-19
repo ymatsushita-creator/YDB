@@ -1,5 +1,6 @@
-import { readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { intakeWritePath } from './intake-dir.ts'
 import { openPostgres } from '../src/db/postgres.ts'
 import { openPglite } from '../src/db/pglite.ts'
 import { all as allRows, maybeOne, scalar, type Db } from '../src/db/client.ts'
@@ -30,13 +31,13 @@ import { isPortOpen } from './guard.ts'
  * ★ 出力に個人情報を出さない。
  *   旧IDと件数だけを出す。氏名・メールは**画面にも報告書にも出さない**
  *   （CLAUDE.md）。埋める表 `--worksheet` は氏名を含むので、
- *   gitignore 済みの `db/private/` にしか書かない。
+ *   リポジトリの外（受領ディレクトリ）にしか書かない。
  *
  * ★ 冪等。応募は `form_response_id`、人は `source_ref`（0023）で重ねない。
  */
 
-const LEGACY_DIR = join(process.cwd(), 'db/private/legacy-youthdb-2026-08-07/tables')
-const SUPPLEMENT_PATH = join(process.cwd(), 'db/private/legacy-supplements-2026.json')
+const LEGACY_DIR = intakeWritePath('db-private', 'legacy-youthdb-2026-08-07', 'tables')
+const SUPPLEMENT_PATH = intakeWritePath('db-private', 'legacy-supplements-2026.json')
 const COHORT = 2
 
 const mode = process.argv.includes('--apply') ? 'apply'
@@ -70,7 +71,7 @@ const readJson = async <T>(path: string, fallback: T): Promise<T> => {
 const rows = await readJson<LegacyCandidate[]>(join(LEGACY_DIR, 'youth_candidates.json'), [])
 if (rows.length === 0) {
   console.error(`旧データが読めない: ${LEGACY_DIR}/youth_candidates.json`)
-  console.error('db/private/ は git 管理外である。原本を置いてから実行する。')
+  console.error(`原本はリポジトリの外に置く ―― ${LEGACY_DIR}`)
   process.exit(1)
 }
 
@@ -93,7 +94,7 @@ for (const [field, count] of Object.entries(plan.missingCounts) as [MissingField
 }
 
 if (mode === 'worksheet') {
-  // ★ 氏名を含む。gitignore 済みの db/private/ にしか書かない。
+  // ★ 氏名を含む。リポジトリの外（受領ディレクトリ）にしか書かない。
   const sheet: Record<string, Supplement & { _name: string; _status: string }> = {}
   for (const b of plan.blocked) {
     const row = rows.find((r) => r.id === b.legacyId)!
@@ -109,6 +110,9 @@ if (mode === 'worksheet') {
       })),
     }
   }
+  // 受け入れディレクトリを新しく用意した環境では db-private/ がまだ無い。
+  // backup-file.ts / db-restore.ts と同じく、書く前に作る。
+  await mkdir(dirname(SUPPLEMENT_PATH), { recursive: true })
   await writeFile(SUPPLEMENT_PATH, `${JSON.stringify(sheet, null, 2)}\n`, 'utf8')
   console.log('')
   console.log(`埋める表を書き出した: ${SUPPLEMENT_PATH}`)
