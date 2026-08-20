@@ -134,7 +134,7 @@ export async function Shell({
         「ロゴの下を押したら縦バーを収納、右端を押したら横バーを収納、
           もう一度押したら復活」。
 
-        ★ `'use client'` を増やさない（CLAUDE.md：表と追従光の2つだけ）。
+        ★ `'use client'` を増やさない（AGENTS.md：いまは表だけ）。
           チェックボックスを隠して置き、`:has()` で枠の形を変える。
           JS が無くても動く。**状態は画面が持ち、記録層には触らない。**
 
@@ -148,14 +148,14 @@ export async function Shell({
           中途半端な状態が作れてしまい、戻し方も2箇所になっていた。 */}
       <input type="checkbox" id="rail-collapse" className="collapse-flag" />
 
-      <aside className="sidebar-region hh-sidebar">
+      <aside className="hh-sidebar">
         {/* ★ ロゴ全体がボタン（依頼者の指示。実行⑰。C-188）。
             帯を別に置くのをやめ、ロゴの面そのもので開閉する。 */}
         <label htmlFor="rail-collapse" className="hh-brand collapse-grip"
                title="タブをしまう / 出す">
           {/* グラデーション版（依頼者の指示。実行⑩）。
               **ロゴを変形・着色・装飾しない。** 比は 1283:305 で固定し、
-              高さは `--logo-h` に反映してある。 */}
+              高さは `--bar-h` に合わせてある。 */}
           <img
             className="hh-brand-logo"
             src="/brand/logo_gradient_720.png"
@@ -389,7 +389,7 @@ export function YearSwitch({
         「3,4、5期と作っていくことを考えれば、ボタンはこの形式ではなく選択に」。
         期が増えるほど札は横に伸び、狭い画面から溢れる。選択なら増えても幅が変わらない。
 
-        ★ `'use client'` を増やさない（CLAUDE.md：表と追従光の2つだけ）。
+        ★ `'use client'` を増やさない（AGENTS.md：いまは表だけ）。
         だから onChange で飛ばさず、**GETフォーム**にする。
         JS が無くても動き、`?season=` の形も今までと同じ。
       */}

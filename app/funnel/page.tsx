@@ -12,15 +12,15 @@ export const dynamic = 'force-dynamic'
 
 const SERIES = [
   { key: 'applicant_cum', label: '応募', color: 'var(--color-primary)' },
-  { key: 'accepted_cum', label: '合格', color: 'var(--color-brand-green)' },
-  { key: 'net_accepted_cum', label: '辞退控除後の合格', color: 'var(--color-brand-teal)', dashed: true },
-  { key: 'rejected_cum', label: '不合格', color: 'var(--color-stone)' },
-  { key: 'withdrawn_cum', label: '辞退', color: 'var(--color-brand-orange)' },
+  { key: 'accepted_cum', label: '合格', color: 'var(--color-brand-lime-deep)' },
+  { key: 'net_accepted_cum', label: '辞退控除後の合格', color: 'var(--color-brand-cyan-deep)', dashed: true },
+  { key: 'rejected_cum', label: '不合格', color: 'var(--color-mute)' },
+  { key: 'withdrawn_cum', label: '辞退', color: 'var(--color-brand-coral-deep)' },
 ] as const
 
 const GROVE = [
   { key: 'identified_person_cum', label: `接点継続中（直近${ACTIVE_WINDOW_DAYS}日に接点のある人）`,
-    color: 'var(--color-brand-purple)' },
+    color: 'var(--color-brand-periwinkle)' },
 ] as const
 
 export default async function FunnelPage(
@@ -94,15 +94,15 @@ export default async function FunnelPage(
         <Card title="段">
           <FunnelStages stages={[
             { label: '接点継続中', value: s.identified_person,
-              note: '（人）', color: 'var(--color-brand-purple)' },
+              note: '（人）', color: 'var(--color-brand-periwinkle)' },
             // 接点継続中（人）→ 応募（件）は単位が違い、日次では母集団も違う。
             // 割り算を出さない。年度単位の転換率は下のカードで出す。
             { label: '応募 applicant', value: s.applicant,
               note: '（応募）', color: 'var(--color-primary)', showRatio: false },
             { label: '合格 accepted', value: s.accepted,
-              note: '（応募）', color: 'var(--color-brand-green)' },
+              note: '（応募）', color: 'var(--color-brand-lime-deep)' },
             { label: '辞退控除後の合格 net accepted', value: s.net_accepted,
-              note: '（辞退控除後）', color: 'var(--color-brand-teal)' },
+              note: '（辞退控除後）', color: 'var(--color-brand-cyan-deep)' },
           ]} />
           <p className="section-note" style={{ marginTop: 16 }}>
             不合格 {num(s.rejected)} ・ 辞退 {num(s.withdrawn)} ・ 再応募 {num(s.reapplicant)}

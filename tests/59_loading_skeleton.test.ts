@@ -35,7 +35,7 @@ describe('押した直後の骨組み（C-142）', () => {
     assert.match(src, /role="status"/, '読み上げに拾われない（見えない人に伝わらない）')
   })
 
-  test("★ 'use client' を増やしていない（表と追従光の2つだけ。C-95 / C-104）", async () => {
+  test("★ 'use client' を増やしていない（いまは表だけ。C-95 / C-104）", async () => {
     const clients: string[] = []
     for (const dir of ['app', 'src']) {
       for (const f of await readdir(join(ROOT, dir), { recursive: true })) {
@@ -44,7 +44,7 @@ describe('押した直後の骨組み（C-142）', () => {
         if (/^'use client'/m.test(src.split('\n').slice(0, 3).join('\n'))) clients.push(join(dir, f))
       }
     }
-    assert.deepEqual(clients.sort(), ['app/_components/glass.tsx', 'app/_components/sheet.tsx'],
+    assert.deepEqual(clients.sort(), ['app/_components/sheet.tsx'],
       "'use client' が増えている")
   })
 
@@ -67,7 +67,7 @@ describe('押した直後の骨組み（C-142）', () => {
     const css = await appCss()
     const bar = /\.hh-skeleton-bar \{([^}]*)\}/.exec(css)
     assert.ok(bar, '帯の骨の規則がある')
-    assert.match(bar![1]!, /height:\s*var\(--logo-h\)/, '帯の厚みを数値で書いている')
+    assert.match(bar![1]!, /height:\s*var\(--bar-h\)/, '帯の厚みを数値で書いている')
     // ★ 高さを指定した枠には flex: 0 0 auto を添える（C-66 / C-113 / C-128。**5度目**）。
     assert.match(bar![1]!, /flex:\s*0 0 auto/)
   })
@@ -79,7 +79,7 @@ describe('押した直後の骨組み（C-142）', () => {
     const css = await appCss()
     const side = /\.hh-skeleton-side \{([^}]*)\}/.exec(css)
     assert.ok(side, '柱の骨の規則がある')
-    assert.match(side![1]!, /background:\s*var\(--bar-face\)/,
+    assert.match(side![1]!, /background:\s*var\(--rail-face\)/,
       '柱に面が無い（背景が透けて、器が崩れて見える）')
   })
 })

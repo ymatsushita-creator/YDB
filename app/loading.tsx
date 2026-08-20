@@ -6,10 +6,10 @@
  *   「無いことを 0 と書かない」「算出なしと書く」を守ってきた。骨組みも同じ規律で扱う。
  *   出すのは**器の寸法と、読み込み中だという事実**だけである。
  *
- * ★ 器の寸法は `Shell` と**同じトークン**で描く（`--logo-w` / `--logo-h`）。
+ * ★ 器の寸法は `Shell` と**同じトークン**で描く（`--rail-w` / `--bar-h`）。
  *   数値を書き写すと、器の寸法が2箇所になって必ずどちらかが古くなる。
  *
- * ★ `'use client'` を増やさない（C-95 / C-104。表と追従光の2つだけ）。
+ * ★ `'use client'` を増やさない（C-95 / C-104。いまは表だけ）。
  *   「前の画面を残したまま帯だけ光らせる」には遷移状態をクライアントで見る必要があり、
  *   それは3つ目のクライアント境界になる。**規律のほうを優先した。**
  *
@@ -20,10 +20,10 @@
 export default function Loading() {
   return (
     <div className="hh-frame" role="status" aria-live="polite">
-      {/* 操作柱の位置（幅は Shell と同じ `--logo-w`）。中身は描かない。 */}
-      <aside className="sidebar-region hh-skeleton-side" />
+      {/* 操作柱の位置（幅は Shell と同じ `--rail-w`）。中身は描かない。 */}
+      <aside className="hh-skeleton-side" />
       <div className="hh-main">
-        {/* 横バーの位置（厚みは Shell と同じ `--logo-h`）。 */}
+        {/* 横バーの位置（厚みは Shell と同じ `--bar-h`）。 */}
         <div className="hh-skeleton-bar" />
         <p className="hh-skeleton-note">読み込み中</p>
       </div>

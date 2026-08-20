@@ -1,0 +1,213 @@
+/* ============================================================
+   app.css — DESIGN.md の typography / components を CSS クラスへ写す。
+   クラス名は DESIGN.md のキー名をそのまま使う（対応を追えるように）。
+   ここに新しい意匠を発明しない。無い状態は「無い」と分かるようにする。
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas-soft);        /* canvas-soft = 既定のページ面 */
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px; line-height: 24px;    /* body-md */
+}
+::selection { background: var(--selection-bg); color: var(--selection-fg); }
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; color: inherit; }
+
+/* ─── typography.* ──────────────────────────────────── */
+.display-xl { font-size:48px; font-weight:600; line-height:48px; letter-spacing:-2.4px; }
+.display-lg { font-size:32px; font-weight:600; line-height:40px; letter-spacing:-1.28px; }
+.display-md { font-size:24px; font-weight:600; line-height:32px; letter-spacing:-.96px; }
+.display-sm { font-size:20px; font-weight:600; line-height:28px; letter-spacing:-.6px; }
+.body-lg    { font-size:18px; font-weight:400; line-height:28px; }
+.body-md    { font-size:16px; font-weight:400; line-height:24px; }
+.body-md-strong { font-size:16px; font-weight:500; line-height:24px; }
+.body-sm    { font-size:14px; font-weight:400; line-height:20px; letter-spacing:-.28px; }
+.body-sm-strong { font-size:14px; font-weight:500; line-height:20px; letter-spacing:-.28px; }
+.caption      { font-size:12px; font-weight:400; line-height:16px; }
+.caption-mono { font-family: var(--font-mono); font-size:12px; font-weight:400; line-height:16px; }
+.code         { font-family: var(--font-mono); font-size:13px; font-weight:400; line-height:20px; }
+.num          { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t-body { color: var(--body); } .t-mute { color: var(--mute); } .t-ink { color: var(--ink); }
+
+/* ─── components.button-* ───────────────────────────── */
+.btn { display:inline-flex; align-items:center; gap:var(--s-xs);
+       height:40px; padding:0 var(--s-sm); border:0; border-radius:var(--r-pill);
+       font-size:16px; font-weight:500; line-height:24px; cursor:pointer; }
+.button-primary   { background: var(--primary); color: var(--on-primary); }
+.button-secondary { background: var(--canvas); color: var(--ink); border:1px solid var(--hairline); }
+.button-brand     { color: var(--ink); position:relative; overflow:hidden; }
+.button-brand::before { content:""; position:absolute; inset:-40%;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(182,207,11,.95), transparent 40%),
+    radial-gradient(circle at 40% 70%, rgba(241,211,112,.95), transparent 44%),
+    radial-gradient(circle at 62% 30%, rgba(237,128,138,.9), transparent 44%),
+    radial-gradient(circle at 88% 55%, rgba(82,180,225,.9), transparent 44%);
+  filter: blur(6px); }
+.button-brand > * { position: relative; }
+.btn-sm { height:32px; padding:0 var(--s-xs); font-size:14px; line-height:20px; }
+
+.icon-button-circular { width:32px; height:32px; display:inline-grid; place-items:center;
+  background:var(--canvas); color:var(--ink); border:1px solid var(--hairline);
+  border-radius:var(--r-full); cursor:pointer; }
+
+/* ─── components.tab-ghost / tab-active ─────────────── */
+.tabs { display:flex; gap:var(--s-xs); flex-wrap:wrap; }
+.tab-ghost, .tab-active {
+  display:inline-flex; align-items:center; height:32px; padding:0 var(--s-md);
+  border-radius:var(--r-pill-sm); font-size:14px; line-height:20px; }
+.tab-ghost  { background:var(--canvas); color:var(--ink); border:1px solid var(--hairline); }
+.tab-active { background:var(--primary); color:var(--on-primary); font-weight:500;
+              position:relative; overflow:hidden; }
+/* accent: brand-spectrum ―― 面を塗らず、下端の細線だけ */
+.tab-active::after { content:""; position:absolute; left:var(--s-md); right:var(--s-md); bottom:3px; height:2px;
+  background:linear-gradient(90deg,var(--brand-lime),var(--brand-yellow),var(--brand-coral),var(--brand-cyan),var(--brand-lavender)); }
+
+/* ─── components.badge-* ────────────────────────────── */
+.badge { display:inline-flex; align-items:center; height:20px; padding:0 var(--s-xs);
+         border-radius:var(--r-full); font-size:12px; line-height:16px; white-space:nowrap; }
+.badge-secondary { background:var(--canvas-soft-2); color:var(--body); }
+.badge-success   { background:var(--success-soft); color:var(--success-deep); }
+.badge-warning   { background:var(--warning-soft); color:var(--warning-deep); }
+.badge-error     { background:var(--error-soft);   color:var(--error-deep); }
+.badge-info      { background:var(--info-soft);    color:var(--info-deep); }
+.badge-brand     { color:var(--ink); position:relative; overflow:hidden; }
+.badge-brand::before { content:""; position:absolute; inset:-60%;
+  background: radial-gradient(circle at 20% 30%, rgba(182,207,11,.9), transparent 45%),
+              radial-gradient(circle at 55% 70%, rgba(241,132,154,.9), transparent 45%),
+              radial-gradient(circle at 85% 35%, rgba(82,180,225,.9), transparent 45%);
+  filter: blur(5px); }
+.badge-brand > * { position:relative; }
+
+/* ─── components.card-* ─────────────────────────────── */
+.card-marketing       { background:var(--canvas); color:var(--ink); border:1px solid var(--hairline);
+                        border-radius:var(--r-md); padding:var(--s-lg); }
+.card-marketing-large { background:var(--canvas); color:var(--ink); border:1px solid var(--hairline);
+                        border-radius:var(--r-lg); padding:var(--s-xl); }
+.card-marketing-dark  { background:var(--canvas-dark-soft); color:var(--on-primary);
+                        border:1px solid var(--hairline-dark); border-radius:var(--r-md); padding:var(--s-lg); }
+.card-soft            { background:var(--canvas-soft); color:var(--ink); border-radius:var(--r-md); padding:var(--s-lg); }
+.template-card        { background:var(--canvas); color:var(--ink); border:1px solid var(--hairline);
+                        border-radius:var(--r-md); padding:var(--s-md); }
+/* card-brand-accent — accentBorder は左の細線1本だけ */
+.card-brand-accent    { background:var(--canvas); color:var(--ink); border:1px solid var(--hairline);
+                        border-radius:var(--r-md); padding:var(--s-lg);
+                        position:relative; overflow:hidden; }
+.card-brand-accent::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:linear-gradient(180deg,var(--brand-lime),var(--brand-yellow),var(--brand-coral),var(--brand-cyan),var(--brand-lavender)); }
+
+/* ─── components.form-input-* ───────────────────────── */
+.form-input, .form-input-sm, .form-input-lg {
+  width:100%; background:var(--canvas); color:var(--ink);
+  border:1px solid var(--hairline); border-radius:var(--r-sm); padding:0 var(--s-sm);
+  font-size:14px; line-height:20px; }
+.form-input { height:40px; } .form-input-sm { height:32px; }
+.form-input-lg { height:48px; font-size:16px; }
+.form-input:focus-visible, .form-input-sm:focus-visible, .form-input-lg:focus-visible {
+  outline:none; border-color:var(--brand-cyan); box-shadow:0 0 0 3px var(--brand-cyan-soft); }
+.field { display:grid; gap:var(--s-xxs); }
+.field > label { font-size:12px; line-height:16px; color:var(--body); }
+
+/* ─── components.ex-data-table-cell ─────────────────── */
+.table-wrap { background:var(--canvas); border:1px solid var(--hairline);
+              border-radius:var(--r-md); overflow:hidden; }
+.table-scroll { overflow-x:auto; }
+table.data { width:100%; border-collapse:collapse; }
+table.data thead th {
+  background:var(--canvas-soft); color:var(--body);
+  font-family:var(--font-mono); font-size:12px; font-weight:400; line-height:16px;
+  text-align:left; padding:var(--s-xs) var(--s-sm); border-bottom:1px solid var(--hairline);
+  white-space:nowrap; }
+table.data tbody td {
+  font-size:14px; line-height:20px; letter-spacing:-.28px;
+  padding:var(--s-xs) var(--s-sm); border-bottom:1px solid var(--hairline); }
+table.data tbody tr:last-child td { border-bottom:0; }
+table.data tbody tr:hover { background:var(--canvas-soft-2); }
+table.data td.n { font-family:var(--font-mono); font-variant-numeric:tabular-nums; text-align:right; }
+
+/* ─── components.nav-* + ex-app-shell-row（左の操作柱）── */
+.shell { display:grid; grid-template-columns:248px 1fr; min-height:100vh; }
+.sidebar { background:var(--canvas); border-right:1px solid var(--hairline);
+           padding:var(--s-lg) var(--s-md); display:flex; flex-direction:column; gap:var(--s-lg); }
+.brand-mark { height:22px; display:flex; align-items:center; gap:var(--s-xs); }
+.brand-dot { width:22px; height:22px; border-radius:var(--r-full); }
+.brand-word { font-weight:600; letter-spacing:-.4px; font-size:14px; }
+.nav { display:grid; gap:2px; }
+/* ex-app-shell-row：activeIndicator は細い spectrum。行を塗らない */
+.nav-row { display:flex; align-items:center; gap:var(--s-xs);
+  padding:var(--s-xs) var(--s-sm); border-radius:var(--r-sm);
+  color:var(--body); font-size:14px; line-height:20px; position:relative; }
+.nav-row:hover { background:var(--canvas-soft-2); }
+.nav-row-active { color:var(--ink); font-weight:500; background:var(--canvas-soft-2); }
+.nav-row-active::before { content:""; position:absolute; left:0; top:6px; bottom:6px; width:3px;
+  border-radius:var(--r-full);
+  background:linear-gradient(180deg,var(--brand-lime),var(--brand-coral),var(--brand-cyan),var(--brand-lavender)); }
+.sidebar-section-label { font-family:var(--font-mono); font-size:12px; line-height:16px;
+  color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
+.sidebar-foot { margin-top:auto; display:grid; gap:var(--s-xs); }
+
+/* ─── components.nav-bar（上の帯）───────────────────── */
+.nav-bar { height:64px; background:var(--canvas); color:var(--ink);
+  border-bottom:1px solid var(--hairline); padding:var(--s-sm) var(--s-lg);
+  display:flex; align-items:center; gap:var(--s-md); position:sticky; top:0; z-index:5; }
+.crumb { display:flex; align-items:center; gap:var(--s-xs); font-size:14px; line-height:20px; color:var(--body); }
+.crumb b { color:var(--ink); font-weight:500; }
+.crumb .sep { color:var(--hairline-strong); }
+.spacer { margin-left:auto; }
+.nav-cta { display:inline-flex; align-items:center; height:28px; padding:0 var(--s-xs);
+  border-radius:var(--r-sm); font-size:14px; font-weight:500; line-height:20px; cursor:pointer; }
+.nav-cta-primary { background:var(--primary); color:var(--on-primary); border:0; }
+.nav-cta-ghost   { background:var(--canvas); color:var(--ink); border:1px solid var(--hairline); }
+
+/* ─── page 骨格 ─────────────────────────────────────── */
+.main { min-width:0; display:flex; flex-direction:column; }
+.page { padding:var(--s-xl) var(--s-lg) var(--s-4xl); display:grid; gap:var(--s-lg);
+        max-width:1200px; width:100%; }
+.grid { display:grid; gap:var(--s-md); }
+.cols-4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.cols-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.cols-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.row { display:flex; align-items:center; gap:var(--s-xs); flex-wrap:wrap; }
+.section-head { display:flex; align-items:flex-end; gap:var(--s-sm); }
+hr.hairline { border:0; border-top:1px solid var(--hairline); margin:0; }
+
+/* ─── components.hero-band（dark, decoration: brand-spectrum）── */
+.hero-band { position:relative; overflow:hidden; background:var(--canvas-dark);
+  color:var(--on-primary); border-radius:var(--r-lg); padding:var(--s-xl) var(--s-lg); }
+.hero-band > * { position:relative; }
+.hero-band .mesh { position:absolute; inset:0; opacity:.5; filter:blur(28px); }
+
+/* ─── components.ex-empty-state-card ────────────────── */
+.empty { background:var(--canvas-soft); border-radius:var(--r-lg); padding:var(--s-3xl);
+  text-align:center; color:var(--body); position:relative; overflow:hidden; }
+
+/* ─── components.ex-toast ───────────────────────────── */
+.toast { display:flex; gap:var(--s-sm); align-items:center; background:var(--canvas);
+  border:1px solid var(--hairline); border-radius:var(--r-md);
+  padding:var(--s-sm) var(--s-md); font-size:14px; line-height:20px;
+  box-shadow:0 1px 2px rgba(5,5,5,.04), 0 8px 24px rgba(5,5,5,.06); position:relative; overflow:hidden; }
+.toast::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--info); }
+
+/* ─── components.link-inline ────────────────────────── */
+.link-inline { color:var(--link); }
+.link-inline:hover { color:var(--brand-cyan-deep); text-decoration:underline; }
+
+/* ─── components.footer ─────────────────────────────── */
+.footer { background:var(--canvas); border-top:1px solid var(--hairline);
+  color:var(--body); font-size:14px; line-height:20px; padding:var(--s-lg); margin-top:auto; }
+
+/* ─── 補助：進行の細棒（可視化に spectrum を使う唯一の場所）─ */
+.meter { height:6px; border-radius:var(--r-full); background:var(--canvas-soft-2); overflow:hidden; }
+.meter > i { display:block; height:100%; border-radius:var(--r-full); }
+
+.visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden;
+  clip-path:inset(50%); white-space:nowrap; }
+
+@media (max-width:900px) {
+  .shell { grid-template-columns:1fr; }
+  .sidebar { display:none; }
+  .cols-4, .cols-3, .cols-2 { grid-template-columns:1fr; }
+}

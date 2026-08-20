@@ -166,7 +166,10 @@ git 履歴・コード内コメント・索引・`decisions:show` の参照は1�
 連結はバイト単位で往復し、`pnpm decisions:canon -- --check` が `verify` と CI で毎回確かめる。
 1件ずつ開く導線（`db/decisions/<番号>.md`。C-220）はこれまでどおり在る。
 
-**`.consultant/STRUCTURE.md`（244行）も超過している。** S1〜S13 を1本で持つため。
+~~**`.consultant/STRUCTURE.md` も超過している。**~~ **解消した**（2026-08-20。C-235）。
+原稿を `.consultant/structure-src/`（節ごとに16本・最大45行）に置き、本文はその連結＝生成物にした。
+`pnpm structure:canon -- --check` が `verify` と CI で往復を確かめる。
+★ **これで §2 の行数に関する逸脱は残っていない。**
 
 **S9（秘密が履歴に無い）を意図して赤いまま運用している。**
 現役の `ANTHROPIC_API_KEY` が git 履歴 `0c9cd6e` に在り、依頼者の判断でその鍵を使い続けている。

@@ -35,29 +35,55 @@ const lastBlock = (src: string, selector: string) => {
   return all[all.length - 1]!
 }
 
-describe('バーの継ぎ目（C-198 / C-207）', () => {
-  test('★ 柱を送る器にしたら、親の角丸で中身を切り抜かない', async () => {
-    // ★ `.hh-sidebar` に `overflow-y: auto` を足した瞬間、
-    //   `.sidebar-region`（生成物）の四隅の角丸が**中身を切り抜き**、
-    //   天端のロゴの右角が丸く削られた（依頼者の指摘。実画面で確認）。
-    //   `.hh-brand` 側で丸みを消しても、切っているのは親なので効かない。
-    const src = await css()
-    const b = lastBlock(src, '.hh-sidebar')
+/**
+ * ★ 2026-08-20 の意匠刷新（C-236）で、**継ぎ目そのものが無くなった。**
+ *
+ *   旧版は「浮いた黒い板を2枚、角丸で突き合わせる」形だったので、
+ *   どの角を丸めてどの角を四角にするかが崩れの原因だった（C-192〜C-207。
+ *   依頼者の指摘に3回落ちた）。
+ *
+ *   DESIGN.md の `nav-bar` / `ex-app-shell-row` は**浮いた板を指示していない**。
+ *   操作柱と上の帯は canvas の面で、境目は hairline 1本である。
+ *   角丸を持たないので、突き合わせる角が存在しない ――
+ *   **崩れの原因を消したのであって、直したのではない。**
+ *
+ *   ここで見張るのは、板が戻っていないことと、寸法が1つのトークンから
+ *   出ていることである（＝天端と厚みが揃う条件）。
+ */
+describe('バーの継ぎ目（C-198 / C-207 → C-236）', () => {
+  test('★ 柱ごと送る（中で送るとタブか足元が切れる。C-205 / C-206）', async () => {
+    const b = lastBlock(await css(), '.hh-sidebar')
     assert.match(b, /overflow-y:\s*auto/, '柱ごと送る形が外れている')
-    assert.match(b, /border-top-right-radius:\s*0/, '親の角丸がロゴを切り抜く')
-    assert.match(b, /border-bottom-right-radius:\s*0/)
+    assert.match(b, /position:\s*sticky/, '柱が送りに付いて動く')
   })
 
-  test('★ ロゴの器は、右と下を丸めない（展開時）', async () => {
-    const b = lastBlock(await css(), '.hh-brand')
-    assert.match(b, /border-top-right-radius:\s*0/, '右上が丸いと横バーと切れて見える')
-    assert.match(b, /border-bottom-right-radius:\s*0/, '右下が丸いと切れて見える')
-    assert.match(b, /border-bottom-left-radius:\s*0/, '左下が丸いと縦バーと切れて見える')
+  test('★ 操作柱と上の帯に角丸を持たせない（突き合わせる角を作らない）', async () => {
+    const src = await css()
+    for (const sel of ['.hh-sidebar', '.hh-brand', '.zoom-bar']) {
+      const b = lastBlock(src, sel)
+      assert.doesNotMatch(b, /border-radius/,
+        `${sel} が角丸を持っている ―― 板が2枚に見える形へ戻っている`)
+    }
   })
 
-  test('★ 収納時も、高さは横バーと同じ（--logo-h）', async () => {
+  test('★ 天端は揃う（柱・ロゴ枠・帯が同じ 0 から始まる）', async () => {
+    const src = await css()
+    assert.match(lastBlock(src, '.hh-sidebar'), /top:\s*0/, '柱の天端が下がっている')
+    assert.match(lastBlock(src, '.hh-brand'), /top:\s*0/, 'ロゴ枠の天端が下がっている')
+    assert.match(lastBlock(src, '.zoom-bar'), /top:\s*0/, '帯の天端が下がっている')
+  })
+
+  test('★ 厚みは1つのトークンから出る（ロゴ枠と帯を別々に書かない）', async () => {
+    const src = await css()
+    for (const sel of ['.hh-brand', '.zoom-bar', '.hh-skeleton-bar']) {
+      assert.match(lastBlock(src, sel), /height:\s*var\(--bar-h\)/,
+        `${sel} が厚みを自分で決めている ―― 片方だけ古くなる`)
+    }
+  })
+
+  test('★ 収納時も、厚みは横バーと同じ（--bar-h）', async () => {
     const b = lastBlock(await css(), '.hh-frame:has(#rail-collapse:checked) .hh-brand')
-    assert.match(b, /height:\s*var\(--logo-h\)/,
+    assert.match(b, /height:\s*var\(--bar-h\)/,
       'height: auto にすると縦幅がずれる（実際にずれた）')
     assert.doesNotMatch(b, /height:\s*auto/)
   })

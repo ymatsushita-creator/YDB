@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>渡辺 蓮 — YouthDB proto</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar">
+  <div class="brand-mark">
+    <span class="brand-dot grad-spectrum" aria-hidden="true"></span>
+    <span class="brand-word">NEO ACADEMIA</span>
+  </div>
+
+  <nav class="nav" aria-label="主なナビゲーション">
+    <a class="nav-row" href="index.html">ホーム</a>
+    <hr class="hairline" style="margin:6px 0">
+    <a class="nav-row nav-row-active" href="people.html" aria-current="page">特別選考</a>
+    <a class="nav-row" href="#">通常選考</a>
+    <a class="nav-row" href="#">連携団体</a>
+    <a class="nav-row" href="#">面接</a>
+  </nav>
+
+  <nav class="nav" aria-label="編集">
+    <span class="sidebar-section-label" style="padding:0 var(--s-sm) 4px">edit</span>
+    <a class="nav-row" href="#">候補者を編集</a>
+    <a class="nav-row" href="#">連携団体を編集</a>
+    <a class="nav-row" href="#">イベントを編集</a>
+  </nav>
+
+  <form class="field" onsubmit="return false">
+    <label class="sidebar-section-label" for="q">名前で検索</label>
+    <div class="row" style="gap:var(--s-xxs)">
+      <input id="q" class="form-input-sm" type="search" placeholder="名前を入力..." style="flex:1">
+      <button class="btn btn-sm button-primary" type="submit">探す</button>
+    </div>
+  </form>
+
+  <div class="sidebar-foot">
+    <span class="sidebar-section-label">期</span>
+    <div class="tabs">
+      <span class="tab-active" style="height:28px">3期</span>
+      <span class="tab-ghost" style="height:28px">2期</span>
+      <span class="tab-ghost" style="height:28px">1期</span>
+    </div>
+    <p class="caption t-mute" style="margin:8px 0 0">デモ期 ・ 架空データ ・ 記録は残ります</p>
+    <button class="btn btn-sm button-secondary" style="justify-content:center">出る</button>
+  </div>
+</aside>
+
+  <div class="main">
+    <header class="nav-bar">
+      <div class="crumb">
+        <b>3期</b><span class="sep">›</span>
+        <a href="people.html">特別選考</a><span class="sep">›</span>
+        <b>渡辺 蓮</b>
+      </div>
+      <div class="spacer"></div>
+      <button class="nav-cta nav-cta-ghost">保留にする</button>
+      <button class="nav-cta nav-cta-ghost">担当を替える</button>
+      <button class="nav-cta nav-cta-primary">接点を記録</button>
+    </header>
+
+    <main class="page" style="max-width:1160px">
+
+      <!-- 人の見出し：card-marketing-dark で極性を反転。spectrum は輪郭のみ -->
+      <section class="card-marketing-dark" style="padding:var(--s-xl)">
+        <div class="row" style="align-items:flex-start;gap:var(--s-lg)">
+          <span class="grad-spectrum" style="width:56px;height:56px;border-radius:var(--r-full);flex:none"></span>
+          <div style="min-width:0">
+            <div class="row" style="gap:var(--s-xs);margin-bottom:var(--s-xxs)">
+              <span class="badge badge-success">アプローチ中</span>
+              <span class="badge badge-secondary">特別選考</span>
+              <span class="caption-mono" style="color:var(--mute)">PERSON 8f2c-41ab</span>
+            </div>
+            <h1 class="display-lg" style="margin:0 0 var(--s-xxs)">渡辺 蓮</h1>
+            <p class="body-md" style="color:var(--mute);margin:0">東京大 ／ 学生団体A ・ 担当 佐藤 ・ 直近の接点 2026-08-14</p>
+          </div>
+          <div class="spacer"></div>
+          <div style="text-align:right;flex:none">
+            <p class="caption-mono" style="color:var(--mute);margin:0 0 var(--s-xxs)">SCORE</p>
+            <p class="display-lg num" style="margin:0">82</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid" style="grid-template-columns:minmax(0,1fr) 320px">
+
+        <div class="grid" style="gap:var(--s-lg)">
+
+          <!-- 選考の進み：spectrum は現在地の細棒のみ -->
+          <section class="card-marketing-large">
+            <div class="section-head" style="margin-bottom:var(--s-lg)">
+              <h2 class="display-sm" style="margin:0">選考</h2>
+              <span class="caption t-mute">3期 ・ 5段</span>
+              <div class="spacer"></div>
+              <button class="btn btn-sm button-primary">評価する</button>
+            </div>
+            <div class="grid" style="grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s-xs)">
+              <div><div class="meter"><i style="width:100%;background:var(--primary)"></i></div>
+                <p class="caption t-body" style="margin:var(--s-xs) 0 0">書類</p>
+                <p class="caption-mono t-mute" style="margin:0">通過 07-28</p></div>
+              <div><div class="meter"><i style="width:100%;background:var(--primary)"></i></div>
+                <p class="caption t-body" style="margin:var(--s-xs) 0 0">一次面接</p>
+                <p class="caption-mono t-mute" style="margin:0">通過 08-06</p></div>
+              <div><div class="meter"><i class="grad-line" style="width:60%"></i></div>
+                <p class="body-sm-strong" style="margin:var(--s-xs) 0 0">二次面接</p>
+                <p class="caption-mono" style="margin:0;color:var(--brand-cyan-deep)">評価待ち</p></div>
+              <div><div class="meter"></div>
+                <p class="caption t-mute" style="margin:var(--s-xs) 0 0">最終</p>
+                <p class="caption-mono t-mute" style="margin:0">—</p></div>
+              <div><div class="meter"></div>
+                <p class="caption t-mute" style="margin:var(--s-xs) 0 0">判定</p>
+                <p class="caption-mono t-mute" style="margin:0">—</p></div>
+            </div>
+          </section>
+
+          <!-- 接点（起きたこと）。予定とは別 -->
+          <section class="table-wrap">
+            <div class="row" style="justify-content:space-between;padding:var(--s-md)">
+              <h2 class="display-sm" style="margin:0">接点</h2>
+              <div class="tabs">
+                <span class="tab-active" style="height:28px">全部（7）</span>
+                <span class="tab-ghost" style="height:28px">面談</span>
+                <span class="tab-ghost" style="height:28px">連絡</span>
+              </div>
+            </div>
+            <div class="table-scroll">
+            <table class="data">
+              <thead><tr><th style="text-align:right">date</th><th>kind</th><th>via</th><th>note</th><th>recorded_by</th></tr></thead>
+              <tbody>
+                <tr><td class="n">08-14</td><td>面談</td><td class="t-body">学生団体A</td>
+                    <td class="t-body">二次に向けた擦り合わせ。研究との両立に不安あり。</td><td class="t-body">佐藤</td></tr>
+                <tr><td class="n">08-06</td><td>一次面接</td><td class="t-body">オンライン</td>
+                    <td class="t-body">論理性が高い。志望動機は具体的。</td><td class="t-body">髙橋</td></tr>
+                <tr><td class="n">07-30</td><td>連絡</td><td class="t-body">メール</td>
+                    <td class="t-body">日程調整。返信は 3 時間以内。</td><td class="t-body">佐藤</td></tr>
+                <tr><td class="n">07-21</td><td>イベント</td><td class="t-body">イベントB</td>
+                    <td class="t-body">登壇後に本人から声掛け。</td><td class="t-body">佐藤</td></tr>
+                <tr><td class="n">06-30</td><td>連絡</td><td class="t-body">DM</td>
+                    <td class="t-body">初回接触。反応あり。</td><td class="t-body">取り込み</td></tr>
+              </tbody>
+            </table>
+            </div>
+          </section>
+
+          <!-- 評価メモ入力：focus だけが色を持つ -->
+          <section class="card-marketing-large">
+            <h2 class="display-sm" style="margin:0 0 var(--s-md)">評価を書く</h2>
+            <div class="grid cols-2" style="gap:var(--s-sm);margin-bottom:var(--s-sm)">
+              <div class="field"><label for="e-step">段</label>
+                <select id="e-step" class="form-input"><option>二次面接</option><option>最終</option></select></div>
+              <div class="field"><label for="e-score">点</label>
+                <input id="e-score" class="form-input" type="text" placeholder="0–100" value="82"></div>
+            </div>
+            <div class="field" style="margin-bottom:var(--s-md)">
+              <label for="e-note">所見</label>
+              <textarea id="e-note" class="form-input" rows="3" style="height:auto;padding:var(--s-xs) var(--s-sm);resize:vertical" placeholder="判断の根拠を書く。結論だけを書かない。"></textarea>
+            </div>
+            <div class="row">
+              <span class="caption t-mute">記録は残ります。取り消しは履歴に出ます。</span>
+              <div class="spacer"></div>
+              <button class="btn button-secondary">下書き</button>
+              <button class="btn button-primary">保存する</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 右柱 -->
+        <div class="grid" style="gap:var(--s-md);align-content:start">
+          <section class="card-marketing">
+            <p class="caption-mono t-mute" style="margin:0 0 var(--s-sm)">PROFILE</p>
+            <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:var(--s-xs) var(--s-sm)">
+              <dt class="caption t-mute">圏</dt><dd class="body-sm" style="margin:0">東京大</dd>
+              <dt class="caption t-mute">コミュニティ</dt><dd class="body-sm" style="margin:0">学生団体A</dd>
+              <dt class="caption t-mute">期</dt><dd class="body-sm num" style="margin:0">3</dd>
+              <dt class="caption t-mute">担当</dt><dd class="body-sm" style="margin:0">佐藤</dd>
+              <dt class="caption t-mute">状態</dt><dd class="body-sm" style="margin:0">アプローチ中</dd>
+              <dt class="caption t-mute">初回接点</dt><dd class="body-sm num" style="margin:0">2026-06-30</dd>
+            </dl>
+            <hr class="hairline" style="margin:var(--s-md) 0">
+            <a class="link-inline body-sm-strong" href="#">プロフィールを直す →</a>
+          </section>
+
+          <section class="card-marketing">
+            <p class="caption-mono t-mute" style="margin:0 0 var(--s-sm)">NEXT</p>
+            <p class="body-md-strong" style="margin:0 0 var(--s-xxs)">二次面接</p>
+            <p class="caption-mono t-body" style="margin:0 0 var(--s-md)">08-22 14:00 ・ オンライン</p>
+            <button class="btn btn-sm button-secondary" style="width:100%;justify-content:center">予定を直す</button>
+          </section>
+
+          <section class="card-soft">
+            <p class="caption-mono t-mute" style="margin:0 0 var(--s-xs)">HISTORY</p>
+            <p class="caption t-body" style="margin:0">プロフィールの変更は 4 件。すべてスナップショットが残っています。</p>
+            <a class="link-inline caption" href="#" style="display:inline-block;margin-top:var(--s-xs)">履歴を見る →</a>
+          </section>
+
+          <section class="card-marketing" style="border-color:var(--error-soft)">
+            <p class="caption-mono" style="margin:0 0 var(--s-xs);color:var(--error-deep)">CAUTION</p>
+            <p class="caption t-body" style="margin:0 0 var(--s-sm)">見送りにすると、この期の選考は止まります。記録は消えません。</p>
+            <button class="btn btn-sm button-secondary" style="border-color:var(--error-soft);color:var(--error-deep)">見送りにする</button>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="row" style="justify-content:space-between">
+        <span class="caption-mono t-mute">PROTO 03 ・ people / detail</span>
+        <span class="caption t-mute">濃い面は人の見出しだけ。以下は白面で情報を通す</span>
+      </div>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

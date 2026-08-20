@@ -1,163 +1,341 @@
 /* =============================================================
-   ヘッドハンティング（実行⑨）
+   02 外枠 —— 操作柱・ロゴ・上の帯・評価基準の帯
+   -------------------------------------------------------------
+   典拠は DESIGN.md の `nav-bar` / `ex-app-shell-row` / `footer`。
 
-   依頼者の画面画像そのままの3本柱 ―― 暗い操作柱・オレンジの階層バー・
-   薄いブルーグレーの地に浮く白いカード。
-   色・角丸・余白はすべてトークン（DESIGN.md 生成）。直値で書かない。
+   ★ 意匠は刷新した（依頼者の指示 2026-08-20）。
+     旧版は**真っ黒の操作柱と、ロゴから伸びる虹色の帯**だった。
+     DESIGN.md はどちらも指示していない ――
+       ・操作面は canvas（白）に hairline。`nav-bar` の指定そのまま。
+       ・現在地は**行を塗らず、3px のスペクトラムの線**で示す
+         （`ex-app-shell-row` の activeIndicator）。
+       ・虹の帯は「等幅の帯にするな」「面を塗るな」に正面から反する。
+     黒は面ではなく**主操作と identity の面**（`hero-band` / `button-primary`）
+     に回した。
+
+   ★ 送り方・固定・収納の**挙動は変えていない**（C-113 / C-161 /
+     C-198 / C-205〜208）。意匠だけを差し替えている。
    ============================================================= */
 
-/* =============================================================
-   ロゴが、2本のバーの寸法を決める（実行⑩。依頼者の指示）
-
-   ★ **ロゴの横 = 縦バーの幅、ロゴの縦 = 横バーの高さ。**
-     ロゴ枠は左上の角にぴたりと収まり、そこから下へ縦バーが、
-     右へ横バーが伸びる。
-
-   ★ 縦は目分量で置かない。画像の実寸から導く ――
-     `public/brand/logo_gradient.png` は 1283 × 305（比 4.2066）。
-
-       枠の横 204 − 余白 12×2 = 画像 180
-       画像の縦 = 180 ÷ 4.2066 = 42.79
-       枠の縦   = 42.79 + 12×2 = 66.79  →  67px
-
-     実行⑩でロゴをグラデーション版に差し替えたとき、比が 3.15 → 4.21 に
-     変わった。**縦の値も計算し直す。**
-
-     画像を差し替えたら**この計算をやり直す。**
-     実行⑨では目分量の 236×106 で置き、ロゴが外側から生えて見えた。
-   ============================================================= */
-:root {
-  --logo-w: 204px;
-  --logo-h: 67px;
-  --logo-pad: 12px;
-
-  /* ★ 2本のバーの面は**ここ1箇所**で決める（依頼者の指示。実行⑪で真っ黒）。
-       横バーと縦バーは1つの面である（C-90）。別々に書くと、片方を変えた
-       ときにもう一方が取り残されて、また2枚に見える。
-
-     ★ `--color-brand-navy`（#242424）ではなく**真っ黒**である。
-       この上に置くものは、黒より暗くできない ―― 沈んで見せる形
-       （`.zoom-crumb-current`）は、面を少し明るくして縁で表す。 */
-  --bar-face: #000;
-}
-
-/* 縦バー。面は `.sidebar-region`（生成物）が塗るので、ここで上書きする。 */
-.hh-sidebar { background: var(--bar-face); }
-
-/* ★ 列の隙間は 0 にする。
-   隙間を空けたまま横バーをマイナスマージンで引き戻すと、**箱は接するのに
-   絵だけ離れる** ―― `.hh-main` は `overflow: hidden`（または送る器）なので、
-   親の外へはみ出した 16px が描画で切り取られるためである。
-   代わりに `.hh-main` の内側に余白を持たせ、横バーだけがその余白を打ち消す。
-   こうすると横バーは**親の中に収まったまま**左端へ着く。 */
+/* 枠。柱と本体の2列。**器は送らない**（送るのは中の面）。 */
 .hh-frame {
   display: grid;
-  grid-template-columns: var(--logo-w) minmax(0, 1fr);
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   column-gap: 0;
-  row-gap: var(--space-md);
-  min-height: 100vh;
-  padding: var(--space-md);
-  background: var(--color-shell);
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-canvas-soft);
 }
+.hh-frame > * { min-height: 0; }
+
+/* -------------------------------------------------------------
+   操作柱
+   ------------------------------------------------------------- */
 .hh-sidebar {
-  /* ★ 入りきらないときは柱ごと送る（C-206）。 */
-  overflow-y: auto;
-  /* ★★ **送る器にした瞬間、親の角丸が中身を切り抜く。** ★★（C-207）
-     `.sidebar-region` は四隅とも `--rounded-xl` なので、
-     天端のロゴ（白）の**右角まで丸く削られていた**（依頼者の指摘）。
-     ロゴは横バーへ続く辺なので、**右側の丸みを落とす。**
-     ここを落とさないまま丸みだけ `.hh-brand` で消しても、
-     切り抜いているのは親なので効かない。 */
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  /* ★ 天端は横バーと同じにする（依頼者の指示。縦タブと横タブは同じ層）。
-     `top` は**枠の余白の内側**から測られるので、`--space-md` を入れると
-     余白ぶん（16px）さらに下がり、**縦バーだけが16px低い**状態になっていた
-     ―― 厚みが同じでも、天端がずれていれば2枚に見える。 */
   position: sticky; top: 0;
   display: flex; flex-direction: column; gap: var(--space-lg);
-  height: calc(100vh - var(--space-xl));
+  height: 100vh;
   min-height: 0;
+  /* 入りきらないときは柱ごと送る（C-206）。 */
+  overflow-y: auto;
+  padding: 0 var(--space-sm) var(--space-md);
+  background: var(--rail-face);
+  /* 面の切り替えは線1本で示す。影を落とさない ―― 操作柱は浮いていない。 */
+  border-right: 1px solid var(--color-hairline);
 }
-/* ★ 足元（期の切り替え・デモ札・出る）が **60px はみ出して届かなかった。**
-   縦バーは高さを固定なのに中身が縮まず、あふれたぶんが切り取られていた
-   ―― **出る手段が画面から消えていた。**
-
-   縦バーごと送ると、天端のロゴまで流れて帯がそこだけ切れる。だから
-   **送るのはタブの並びだけ**にする ―― ロゴ（帯）と足元は動かさない。
-   足りないときは中で送る（C-113 で操作柱に対して行ったのと同じ手当て）。 */
- /* ★ タブも入口も**切らない**（C-205 / C-206。実画面で2度切れた）。
-    ―― nav を伸ばすと下の「〜を編集」が枠の外へ出て消え、
-       nav を縮めるとタブ自身が途中で切れた。
-    どちらも**中で送る**のをやめ、**柱ごと送る**形にする。 */
-.hh-nav { flex: 0 0 auto; min-height: 0; overflow-y: visible; }
-.hh-nav-add { flex: 0 0 auto; }
-.hh-sidebar-foot { flex: 0 0 auto; }
-/* 縦バーの内側の余白を突き抜けて、左上の角いっぱいに置く。
-   角丸も縦バーに合わせる ―― ここだけ丸みが違うと、
-   **貼り付けた別物**に見える。`.sidebar-region` は `--rounded-xl` なので、
-   ここも `--rounded-xl`（以前は `--rounded-lg` で 4px ずれていた）。
-
-   ★ **右上は丸めない**（依頼者の指示。実行⑪）。
-     ここはロゴが横バーへ接する辺である。丸めると、接している2つの間に
-     地の色の三日月が残り、**触れているのに切れて見える。**
-     外へ向いた角（左上）だけを丸め、continuation の側は四角で突き合わせる。 */
+/* 柱を送る器にしても、天端のロゴは切り抜かれない（角丸を持たせない）。 */
 .hh-brand {
-  display: flex;
-  align-items: center;
-  /* ★ **縮ませない**（依頼者の指示。横タブと同じ層・同じ幅にする）。
-     縦バーは縦の flex なので、既定（flex-shrink: 1）だと中身が詰まったとき
-     ロゴの枠が 67 → 24 まで潰れ、隣の横バー（67）と厚みが違って
-     **2枚に見えた。** 送る画面の操作柱が 81 → 58 に潰れた C-66 と同じ形。 */
+  position: sticky; top: 0; z-index: 2;
   flex: 0 0 auto;
-  height: var(--logo-h);
-  margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
-  padding: var(--logo-pad);
-  border-radius: var(--rounded-xl) 0 0 0;
-  /* ★ 一括指定の**後ろ**で右側を明示的に落とす（C-198）。
-     一括の `0` に頼ると、後から別の節が `border-radius` を丸ごと
-     書き換えたときに右側だけ丸みが戻る ―― 実際それが起きた。 */
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-  background: #fff;
+  display: flex; align-items: center;
+  height: var(--bar-h);
+  margin: 0 calc(var(--space-sm) * -1);
+  padding: 0 var(--space-md);
+  background: var(--rail-face);
+  border-bottom: 1px solid var(--color-hairline);
+  cursor: pointer;
 }
-.hh-brand-logo { display: block; width: 100%; height: auto; }
-.hh-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
-.hh-nav a { display: flex; flex-direction: column; gap: 1px; color: var(--color-on-dark); }
-.hh-nav a:hover { text-decoration: none; }
-/* ★ 区切り線は、上下に相手が居るときだけ引く（C-208。入力層で浮いていた）。 */
-.hh-nav:has(> :only-child) .hh-nav-divider,
-.hh-nav-divider:last-child { display: none; }
+/* ロゴは変形も着色もしない（意匠の資産）。高さだけ器に合わせる。 */
+.hh-brand-logo { display: block; width: 100%; max-width: 156px; height: auto; }
+
+.hh-nav { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+/* DESIGN.md `ex-app-shell-row` ―― 行を色で塗らない。 */
+.hh-nav a, .sidebar-item, .sidebar-item-active {
+  position: relative;
+  display: flex; align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--rounded-sm);
+  color: var(--color-body);
+  font-size: var(--type-body-sm-font-size);
+  line-height: var(--type-body-sm-line-height);
+  letter-spacing: var(--type-body-sm-letter-spacing);
+}
+.hh-nav a:hover, .sidebar-item:hover { background: var(--color-canvas-soft-2); text-decoration: none; color: var(--color-ink); }
+.sidebar-item-active {
+  background: var(--color-canvas-soft-2);
+  color: var(--color-ink);
+  font-weight: var(--type-body-sm-strong-font-weight);
+}
+/* 現在地の印。**細い線だけ。** */
+.sidebar-item-active::before {
+  content: '';
+  position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+  border-radius: var(--rounded-full);
+  background: var(--spectrum-line-v);
+}
 .hh-nav-divider {
   display: block; height: 1px;
-  margin: var(--space-xs) 0;
-  background: var(--color-sidebar-hairline);
+  margin: var(--space-xs) var(--space-sm);
+  background: var(--color-hairline);
 }
-/* 副文（`<em>`）の指定は消した ―― 出さなくなったため（実行⑪。依頼者の指示）。
-   使わない見た目の指定を残すと、次に触る人が「まだあるもの」として扱う。 */
+.hh-nav:has(> :only-child) .hh-nav-divider,
+.hh-nav-divider:last-child { display: none; }
+
 .hh-nav-add {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  margin-top: var(--space-xs);
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 2px;
   padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-sidebar-hairline);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.sidebar-section-label {
+  display: block;
+  padding: 0 var(--space-sm) var(--space-xxs);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  line-height: var(--type-caption-mono-line-height);
+  color: var(--color-mute);
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
 /* 名前で検索。素の form なので JS 無しで動く。 */
-.hh-search { display: flex; flex-direction: column; gap: 6px; }
-.hh-search-row { display: flex; gap: 6px; }
+.hh-search { display: flex; flex-direction: column; gap: var(--space-xxs); }
+.hh-search-row { display: flex; gap: var(--space-xxs); }
 .hh-search-input {
-  flex: 1 1 auto; min-width: 0; height: 34px; padding: 0 var(--space-xs);
-  font-family: inherit; font-size: 13px;
-  background: var(--color-brand-navy-deep); color: var(--color-on-dark);
-  border: 1px solid var(--color-sidebar-hairline); border-radius: var(--rounded-md);
+  flex: 1 1 auto; min-width: 0; height: 32px;
+  padding: 0 var(--space-sm);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+  font-size: var(--type-body-sm-font-size);
 }
-.hh-search-input::placeholder { color: var(--color-on-dark-muted); }
-.hh-search-input:focus { outline: 2px solid var(--color-sidebar-active-border); outline-offset: -1px; }
-.hh-search-go { padding: 0 var(--space-sm); height: 34px; font-size: 12px; white-space: nowrap; flex: 0 0 auto; }
+.hh-search-input::placeholder { color: var(--color-mute); }
+.hh-search-input:focus {
+  outline: none;
+  border-color: var(--color-brand-cyan);
+  box-shadow: 0 0 0 3px var(--color-brand-cyan-soft);
+}
+.hh-search-go { flex: 0 0 auto; height: 32px; padding: 0 var(--space-sm); white-space: nowrap; }
 
-.hh-sidebar-foot { display: flex; flex-direction: column; gap: var(--space-xs); margin-top: auto; }
-.hh-demo { color: var(--color-star-on); font-size: 11px; font-weight: 600; padding: 0 var(--space-xxs); }
-.hh-live { color: var(--color-on-dark-muted); font-size: 11px; padding: 0 var(--space-xxs); }
+.hh-sidebar-foot {
+  flex: 0 0 auto;
+  margin-top: auto;
+  display: flex; flex-direction: column; gap: var(--space-xs);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-hairline);
+}
+.hh-years { display: flex; flex-direction: column; gap: var(--space-xxs); }
+.hh-years-row { display: flex; gap: var(--space-xxs); }
+.hh-year-select {
+  flex: 1 1 auto; min-width: 0; height: 32px;
+  padding: 0 var(--space-xs);
+  background: var(--color-canvas); color: var(--color-ink);
+  border: 1px solid var(--color-hairline); border-radius: var(--rounded-sm);
+  font-size: var(--type-body-sm-font-size);
+}
+.hh-year-go { flex: 0 0 auto; height: 32px; padding: 0 var(--space-sm); }
+
+/* 運用中かデモか。**色ではなく語で分ける**（0029）。
+   デモだけ warning の濃い字を当てる ―― 架空の数字を実在として読ませない。 */
+.hh-demo, .hh-live {
+  padding: 0 var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  line-height: var(--type-caption-mono-line-height);
+}
+.hh-demo { color: var(--color-warning-deep); }
+.hh-live { color: var(--color-mute); }
+.hh-signout {
+  height: 32px; padding: 0 var(--space-sm);
+  background: var(--color-canvas); color: var(--color-body);
+  border: 1px solid var(--color-hairline); border-radius: var(--rounded-pill);
+  font-size: var(--type-button-md-font-size);
+  font-weight: var(--type-button-md-font-weight);
+  cursor: pointer;
+}
+.hh-signout:hover { background: var(--color-canvas-soft-2); color: var(--color-ink); }
+
+/* -------------------------------------------------------------
+   しまう / 出す（C-170 / C-181 / C-188）
+   ロゴの面そのものが札。JS を使わない（`:has()` で枠の形を変える）。
+   ------------------------------------------------------------- */
+.collapse-flag { position: absolute; opacity: 0; pointer-events: none; }
+.hh-frame:has(#rail-collapse:checked) { grid-template-columns: var(--bar-h) minmax(0, 1fr); }
+.hh-frame:has(#rail-collapse:checked) .hh-sidebar { padding-left: 0; padding-right: 0; }
+.hh-frame:has(#rail-collapse:checked) .hh-brand {
+  height: var(--bar-h); margin: 0; padding: 0; justify-content: center;
+}
+.hh-frame:has(#rail-collapse:checked) .hh-brand-logo { max-width: 40px; }
+.hh-frame:has(#rail-collapse:checked) .hh-nav,
+.hh-frame:has(#rail-collapse:checked) .hh-nav-add,
+.hh-frame:has(#rail-collapse:checked) .hh-search,
+.hh-frame:has(#rail-collapse:checked) .hh-sidebar-foot { display: none; }
+
+/* -------------------------------------------------------------
+   本体
+   ------------------------------------------------------------- */
+.hh-main {
+  position: relative;
+  display: flex; flex-direction: column;
+  min-width: 0; height: 100%; min-height: 0;
+  overflow: hidden;
+  padding: 0 var(--space-lg) var(--space-lg);
+}
+/* 一覧画面（`.hh-grid` を持たない画面）は外枠を送る。 */
+.hh-main:not(:has(> .hh-grid)) { overflow-y: auto; }
+.hh-main:not(:has(> .hh-grid)) > .section { flex: 0 0 auto; min-height: 0; overflow: visible; }
+
+.hh-main > .page-head, .hh-main > .cockpit-head { flex: 0 0 auto; }
+.hh-main > .grid, .hh-main > .callout { flex: 0 0 auto; }
+.hh-main > .section { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.hh-main > .section-fixed { flex: 0 0 auto; overflow: visible; }
+
+/* -------------------------------------------------------------
+   上の帯 —— いま開いている階層（DESIGN.md `nav-bar`）
+   ------------------------------------------------------------- */
+.zoom-bar {
+  position: sticky; top: 0; z-index: 4;
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--space-xs);
+  height: var(--bar-h);
+  margin: 0 calc(var(--space-lg) * -1) var(--space-md);
+  padding: 0 var(--space-lg);
+  background: var(--rail-face);
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  font-size: var(--type-body-sm-font-size);
+  line-height: var(--type-body-sm-line-height);
+}
+.zoom-seg { display: inline-flex; align-items: center; gap: var(--space-xs); min-width: 0; }
+.zoom-sep { color: var(--color-hairline-strong); }
+/* 根（期）。押せない ―― ドライブ名と同じ。 */
+.zoom-root {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  color: var(--color-ink);
+  padding: 2px var(--space-xs);
+  border: 1px dashed var(--color-hairline-strong);
+  border-radius: var(--rounded-xs);
+}
+.zoom-crumb {
+  padding: 2px var(--space-xs);
+  border-radius: var(--rounded-xs);
+  color: var(--color-body);
+}
+.zoom-crumb:hover { background: var(--color-canvas-soft-2); color: var(--color-ink); text-decoration: none; }
+/* 末尾（いま居る場所）。**面を塗らず、下に細い線**を通す。 */
+.zoom-crumb-current {
+  position: relative;
+  padding: 2px var(--space-xs) 4px;
+  color: var(--color-ink);
+  font-weight: var(--type-body-sm-strong-font-weight);
+  white-space: nowrap;
+}
+.zoom-crumb-current::after {
+  content: '';
+  position: absolute; left: var(--space-xxs); right: var(--space-xxs); bottom: 0; height: 2px;
+  background: var(--spectrum-line);
+}
+.zoom-back { margin-right: var(--space-xs); }
+
+/* -------------------------------------------------------------
+   評価基準の帯（C-134 / C-208）
+   横バーの右側に重ね、自動で流す。**高さは動かさない。**
+   ------------------------------------------------------------- */
+.hh-criteria-ref {
+  position: absolute; top: 0; right: var(--space-lg); left: 40%;
+  z-index: 5;
+  height: var(--bar-h);
+  display: flex; align-items: center;
+  pointer-events: none;
+}
+.hh-criteria-scroll {
+  display: flex; align-items: center; justify-content: safe center;
+  width: 100%;
+  overflow: hidden;
+  /* 右端で溶かす。切り落とすと「続きがある」ことが読めない。 */
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+}
+.hh-criteria-track {
+  flex: 0 0 auto;
+  width: max-content;
+  display: flex; align-items: center;
+  animation: criteria-marquee 90s linear infinite;
+}
+.hh-criteria-run { display: flex; align-items: center; flex-wrap: nowrap; }
+.hh-criteria-group {
+  display: flex; align-items: center; flex-wrap: nowrap;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  border-right: 1px solid var(--color-hairline);
+}
+.hh-criteria-axis {
+  white-space: nowrap;
+  color: var(--color-body);
+  font-size: 13px;
+  line-height: var(--type-body-sm-line-height);
+}
+.hh-criteria-ref:hover .hh-criteria-track { animation-play-state: paused; }
+@keyframes criteria-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hh-criteria-track { animation: none; }
+  .hh-criteria-scroll { overflow-x: auto; }
+  .hh-criteria-ref { pointer-events: auto; }
+}
+
+/* -------------------------------------------------------------
+   本体の2柱（一覧＋詳細）
+   ------------------------------------------------------------- */
+.hh-grid {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+  gap: var(--space-md);
+  align-items: stretch;
+  overflow: hidden;
+}
+.hh-col-main, .hh-col-side {
+  display: grid;
+  gap: var(--space-md);
+  min-height: 0;
+  overflow: hidden;
+}
+.hh-col-main { grid-template-rows: minmax(0, 0.6fr) minmax(0, 1.4fr); }
+/* ★ 右柱は段数が画面ごとに違う（人の板＋一覧、など）。
+     明示の1段にすると2枚目が暗黙の段へ落ち、1枚目が潰れる
+     （実画面で人の板が帯の高さまで潰れた）。**段は等分で自動に取る。** */
+.hh-col-side { grid-auto-rows: minmax(0, 1fr); }
+.hh-col-main > *, .hh-col-side > * { min-height: 0; overflow: hidden; }
+.hh-col-main:has(> :only-child), .hh-col-side:has(> :only-child) { grid-template-rows: minmax(0, 1fr); }
+.hh-col-main:has(> :nth-child(3)), .hh-col-side:has(> :nth-child(3)) {
+  grid-auto-rows: minmax(0, auto);
+  grid-template-rows: none;
+  overflow-y: auto;
+}
+
+@media (max-width: 1100px) {
+  .hh-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, auto); overflow-y: auto; }
+  .hh-col-main { grid-template-rows: none; grid-auto-rows: minmax(0, auto); }
+}
+@media (max-width: 900px) {
+  .hh-frame { grid-template-columns: minmax(0, 1fr); }
+  .hh-sidebar { display: none; }
+  .hh-criteria-ref { display: none; }
+}

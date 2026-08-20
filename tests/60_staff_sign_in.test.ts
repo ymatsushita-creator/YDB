@@ -144,6 +144,6 @@ describe('入口の形（C-146）', () => {
         }
       }
     }
-    assert.deepEqual(clients.sort(), ['app/_components/glass.tsx', 'app/_components/sheet.tsx'])
+    assert.deepEqual(clients.sort(), ['app/_components/sheet.tsx'])
   })
 })

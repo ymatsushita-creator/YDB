@@ -176,7 +176,7 @@ describe('表（スプシ形式）', () => {
     }
     await walk('app')
     assert.deepEqual(found.sort(),
-      ['app/_components/glass.tsx', 'app/_components/sheet.tsx'])
+      ['app/_components/sheet.tsx'])
   })
 
   test('★ 表は判定を持たない（コマンドを呼ぶだけ）', async () => {
@@ -203,18 +203,25 @@ describe('横バー（現在地の帯）', () => {
     assert.match(base, /\.zoom-bar \{[^}]*position: sticky/,
       'base.css で固定する')
 
-    // 後ろに読む層（白黒・ブランド・ガラス）が position を戻していないこと。
+    // ★ 2026-08-20 の意匠刷新（C-236）で、後ろに読む層（白黒・ブランド・
+    //   ガラス）は**無くなった。** 意匠は `tokens.css` と `base.css` の2枚だけ。
+    //   同じ性質を2箇所で決める余地そのものを消したので、
+    //   ここでは**層が増えていないこと**を見張る。
+    const layout = await read('app/layout.tsx')
+    const layers = [...layout.matchAll(/^import '\.\/([^']+\.css)'/gm)].map((m) => m[1]!)
+    assert.deepEqual(layers, ['tokens.css', 'base.css'],
+      '意匠の層が増えている（同じ性質を2箇所で決められるようになる）')
+
+    // 合成した1本の中で、`.zoom-bar` の position を後から戻していないこと。
     // ★ 見るのは**帯そのもの**の規則だけ。擬似要素（`::after`）は
-    //   グラデーション線で、`absolute` を持つのが正しい。
-    for (const layer of ['app/monochrome.css', 'app/brand.css', 'app/glass.css']) {
-      const css = await read(layer)
-      for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
-        const selectors = rule[1]!.split(',').map((s) => s.trim())
-        const touchesBar = selectors.some((s) => /(^|\s)\.zoom-bar$/.test(s))
-        if (!touchesBar) continue
-        assert.doesNotMatch(rule[2]!, /position\s*:/,
-          `${layer} が帯の position を上書きしている: ${rule[1]!.trim()}`)
-      }
+    //   現在地の印で、`absolute` を持つのが正しい。
+    for (const rule of base.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      const selectors = rule[1]!.split(',').map((x) => x.trim())
+      if (!selectors.some((x) => /(^|\s)\.zoom-bar$/.test(x))) continue
+      const decls = rule[2]!
+      if (/position:\s*sticky/.test(decls)) continue
+      assert.doesNotMatch(decls, /position\s*:/,
+        `帯の position を上書きしている: ${rule[1]!.trim()}`)
     }
   })
 
@@ -223,10 +230,26 @@ describe('横バー（現在地の帯）', () => {
     assert.match(shell, /className="zoom-bar"/)
   })
 
-  test('虹色の波は長い波長で、切り替え時間は最初の0.8倍', async () => {
-    const css = await read('app/brand.css')
-    assert.match(css, /--wave-len:\s*1600px/)
-    assert.match(css, /animation:\s*brand-wave 40s linear infinite/)
+  /**
+   * ★ ロゴから伸びる虹色の波（実行⑩〜⑫）は **2026-08-20 に退役した**（C-236。
+   *   依頼者の指示 ――「今のフロントエンドから何も引き継ぐ必要はない。
+   *   DESIGN.md に従って」）。DESIGN.md は
+   *     ・「Avoid: equal-width rainbow stripes / hard colour boundaries」
+   *     ・「面をスペクトラムで塗らない。線と細い印に落とす」
+   *   と定めており、幅いっぱいを走る帯はこれに正面から反する。
+   *
+   *   代わりに **いま居る場所（`.zoom-crumb-current`）の下に細線1本**だけを引く。
+   *   ここでは「波が戻っていない」ことと「印が線であること」を見張る。
+   */
+  test('現在地の印は、面ではなく細い線である（虹の帯は戻っていない）', async () => {
+    const css = await appCss()
+    assert.doesNotMatch(css, /brand-wave|--wave-len/,
+      'ロゴから伸びる虹色の波が戻っている（DESIGN.md が禁じる等幅の帯）')
+
+    const rule = /\.zoom-crumb-current::after \{([^}]*)\}/.exec(css)
+    assert.ok(rule, '現在地の印が無い')
+    assert.match(rule![1]!, /height:\s*2px/, '印が線ではなく面になっている')
+    assert.match(rule![1]!, /var\(--spectrum-line\)/, '印がスペクトラムを使っていない')
   })
 })
 
@@ -451,7 +474,7 @@ describe('評価基準（横バー）', () => {
     const css = await appCss()
     const rule = /\.hh-criteria-ref \{([^}]*)\}/.exec(css)
     assert.ok(rule, '規則がある')
-    assert.match(rule![1]!, /height:\s*var\(--logo-h\)/)
+    assert.match(rule![1]!, /height:\s*var\(--bar-h\)/)
     // ★ 自動で流す（C-139）。動きの指定と、止める人のための道が**両方**要る。
     assert.match(css, /@keyframes criteria-marquee/, '流す指定が無い')
     const track = /\.hh-criteria-track \{([^}]*)\}/.exec(css)
@@ -506,10 +529,10 @@ describe('評価基準（横バー）', () => {
     const css = await appCss()
     // 帯の厚みは両方 `--logo-h`。ロゴ枠は**縮ませない**（縮むと厚みが食い違う）。
     const brand = /\.hh-brand \{([^}]*)\}/.exec(css)
-    assert.match(brand![1]!, /height:\s*var\(--logo-h\)/)
+    assert.match(brand![1]!, /height:\s*var\(--bar-h\)/)
     assert.match(brand![1]!, /flex:\s*0 0 auto/, 'ロゴ枠を縮ませない（67→24 に潰れていた）')
     const zoom = /\.zoom-bar \{([^}]*)\}/.exec(css)
-    assert.match(zoom![1]!, /height:\s*var\(--logo-h\)/)
+    assert.match(zoom![1]!, /height:\s*var\(--bar-h\)/)
     // 天端をそろえる。`top` に余白を入れると縦バーだけ 16px 下がる。
     // （`.hh-sidebar` は面を塗るだけの規則が先にあるので、位置を持つほうを見る）
     const sidebar = /\.hh-sidebar \{[^}]*position:\s*sticky;\s*top:\s*([^;]+);/.exec(css)
@@ -523,10 +546,10 @@ describe('評価基準（横バー）', () => {
     const css = await appCss()
     // ★ C-206 ―― 中で送ると、タブか入口のどちらかが必ず切れた。
     //   **柱ごと送る**（`.hh-sidebar` が送り、nav も入口も縮ませない）。
-    assert.match(css, /\.hh-nav \{ flex: 0 0 auto;/, 'タブを縮ませない')
-    assert.match(css, /\.hh-sidebar \{\s*\/\*[^*]*\*\/\s*overflow-y: auto;/,
+    assert.match(css, /\.hh-nav \{[^}]*flex:\s*0 0 auto/, 'タブを縮ませない')
+    assert.match(css, /\.hh-sidebar \{[^}]*overflow-y:\s*auto/,
       '柱ごと送る形になっていない')
-    assert.match(css, /\.hh-sidebar-foot \{ flex: 0 0 auto; \}/, '足元は縮ませない')
-    assert.match(css, /\.hh-nav-add \{ flex: 0 0 auto; \}/, '追加の入口を縮ませない')
+    assert.match(css, /\.hh-sidebar-foot \{[^}]*flex:\s*0 0 auto/, '足元は縮ませない')
+    assert.match(css, /\.hh-nav-add \{[^}]*flex:\s*0 0 auto/, '追加の入口を縮ませない')
   })
 })

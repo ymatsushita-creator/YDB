@@ -109,7 +109,7 @@ export default async function OperationsPage(
                       </td>
                       <td className="num">
                         {p.over_sla ? (
-                          <strong style={{ color: 'var(--color-semantic-error)' }}>
+                          <strong style={{ color: 'var(--color-error-deep)' }}>
                             {num(p.waiting_days)} 日
                           </strong>
                         ) : `${num(p.waiting_days)} 日`}

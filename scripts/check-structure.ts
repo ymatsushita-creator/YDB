@@ -67,7 +67,8 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   const verify = pkg.scripts?.verify ?? ''
   // `structure`（この検査自身）も必須にする。初版は自分を必須段から落としていた。
   // `lint` は `Hitler.md` §5-1 の完了ゲート（2026-08-20 に充足。C-231）。
-  const stages = ['lint', 'typecheck', 'test', 'decisions:canon', 'decisions:index', 'structure', 'build']
+  const stages = ['lint', 'typecheck', 'test', 'decisions:canon', 'structure:canon',
+    'decisions:index', 'structure', 'build']
   const missing = stages.filter((s) => !verify.includes(s))
   // `;` で繋ぐと最後の段の終了コードしか残らず、型検査とテストの失敗が握り潰される。
   const segments = verify.split('&&').length
@@ -89,7 +90,7 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     //   S1b は CI 側で要求していなかった。**CI からこの段だけ消しても S1b は ✔ のまま**で、
     //   `CLAUDE.md` の「同じものが CI で走る」が保証されていなかった（2026-08-19 再検証）。
     const need = ['pnpm lint', 'pnpm typecheck', 'pnpm test', 'pnpm decisions:canon',
-      'pnpm decisions:index', 'pnpm structure', 'pnpm build']
+      'pnpm structure:canon', 'pnpm decisions:index', 'pnpm structure', 'pnpm build']
     // `run:` の行だけを対象にする。ヘッダの説明文で通させない。
     const commands = live.split('\n').filter((l) => /^\s*(-\s*)?run:/.test(l) || /^\s{6,}\S/.test(l)).join('\n')
     const missing = need.filter((c) => !commands.includes(c))

@@ -1,0 +1,134 @@
+/* ============================================================
+   tokens.css — basic/DESIGN.md の front-matter を機械的に写したもの
+   ここには判断を入れない。DESIGN.md に無い値は書かない。
+   ============================================================ */
+:root {
+  /* ─── Core ─────────────────────────────────────────── */
+  --primary: #050505;
+  --on-primary: #ffffff;
+  --ink: #080808;
+  --body: #525252;
+  --mute: #8a8a8a;
+
+  /* ─── Surfaces ─────────────────────────────────────── */
+  --canvas: #ffffff;
+  --canvas-soft: #fafafa;
+  --canvas-soft-2: #f4f4f4;
+  --canvas-dark: #050505;
+  --canvas-dark-soft: #0d0d0d;
+  --canvas-dark-2: #151515;
+  --hairline: #e8e8e8;
+  --hairline-strong: #b8b8b8;
+  --hairline-dark: #262626;
+  --hairline-dark-strong: #3a3a3a;
+
+  /* ─── Brand Spectrum ───────────────────────────────── */
+  --brand-lime: #B6CF0B;
+  --brand-lime-soft: #E9F59C;
+  --brand-lime-deep: #8EAB00;
+  --brand-yellow: #F1D370;
+  --brand-yellow-bright: #F4D12A;
+  --brand-yellow-soft: #FFF1B2;
+  --brand-yellow-deep: #C59A00;
+  --brand-coral: #ED808A;
+  --brand-coral-soft: #F8C2C7;
+  --brand-coral-deep: #D95B6D;
+  --brand-pink: #F1849A;
+  --brand-pink-soft: #FBC8D3;
+  --brand-pink-deep: #D95B78;
+  --brand-cyan: #52B4E1;
+  --brand-cyan-soft: #B9E3F5;
+  --brand-cyan-deep: #2289BC;
+  --brand-periwinkle: #7A86BF;
+  --brand-periwinkle-soft: #C9CEE8;
+  --brand-periwinkle-deep: #5967A4;
+  --brand-lavender: #9C82C8;
+  --brand-lavender-soft: #D9CDEC;
+  --brand-lavender-deep: #7658A8;
+
+  /* ─── Functional ───────────────────────────────────── */
+  --link: #368FC1;
+  --link-deep: #216B94;
+  --link-bg-soft: #DFF3FC;
+  --success: #73A900;
+  --success-soft: #E8F5C3;
+  --success-deep: #527C00;
+  --warning: #E0AC18;
+  --warning-soft: #FFF0BE;
+  --warning-deep: #A87700;
+  --error: #D95B6D;
+  --error-soft: #F9D9DD;
+  --error-deep: #AE3448;
+  --info: #52B4E1;
+  --info-soft: #DDF3FC;
+  --info-deep: #267DA6;
+
+  --selection-bg: #050505;
+  --selection-fg: #ffffff;
+
+  /* ─── Typography families ──────────────────────────── */
+  --font-sans: Geist, Inter, system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+  /* ─── Rounded ──────────────────────────────────────── */
+  --r-none: 0px;
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill-sm: 64px;
+  --r-pill: 100px;
+  --r-full: 9999px;
+
+  /* ─── Spacing ──────────────────────────────────────── */
+  --s-xxs: 4px;
+  --s-xs: 8px;
+  --s-sm: 12px;
+  --s-md: 16px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+  --s-2xl: 40px;
+  --s-3xl: 48px;
+  --s-4xl: 64px;
+  --s-5xl: 96px;
+  --s-6xl: 128px;
+  --s-section: 192px;
+}
+
+/* ─── gradients.brand-spectrum ────────────────────────────
+   DESIGN.md「Suggested CSS Construction」をそのまま採用。
+   等幅の帯にしない。黒が gradient の周りに残ること。 */
+.grad-spectrum {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(182,207,11,.95), transparent 30%),
+    radial-gradient(circle at 36% 62%, rgba(241,211,112,.95), transparent 34%),
+    radial-gradient(circle at 51% 42%, rgba(237,128,138,.88), transparent 34%),
+    radial-gradient(circle at 67% 28%, rgba(82,180,225,.92), transparent 36%),
+    radial-gradient(circle at 83% 38%, rgba(122,134,191,.92), transparent 34%),
+    radial-gradient(circle at 96% 18%, rgba(156,130,200,.92), transparent 32%),
+    var(--canvas-dark);
+}
+/* gradients.brand-spectrum-soft — opacity .22 / blur 72px */
+.grad-spectrum-soft::before {
+  content: "";
+  position: absolute; inset: -80px;
+  opacity: .22; filter: blur(72px);
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(182,207,11,.95), transparent 30%),
+    radial-gradient(circle at 36% 62%, rgba(241,211,112,.95), transparent 34%),
+    radial-gradient(circle at 51% 42%, rgba(237,128,138,.88), transparent 34%),
+    radial-gradient(circle at 67% 28%, rgba(82,180,225,.92), transparent 36%),
+    radial-gradient(circle at 83% 38%, rgba(122,134,191,.92), transparent 34%),
+    radial-gradient(circle at 96% 18%, rgba(156,130,200,.92), transparent 32%);
+}
+/* gradients.brand-warm / brand-cool — linear 3 stop */
+.grad-warm { background: linear-gradient(90deg, var(--brand-lime), var(--brand-yellow), var(--brand-coral)); }
+.grad-cool { background: linear-gradient(90deg, var(--brand-cyan), var(--brand-periwinkle), var(--brand-lavender)); }
+/* 細い線としての spectrum（activeIndicator / accentBorder 用） */
+.grad-line {
+  background: linear-gradient(90deg,
+    var(--brand-lime), var(--brand-yellow), var(--brand-coral),
+    var(--brand-pink), var(--brand-cyan), var(--brand-periwinkle), var(--brand-lavender));
+}

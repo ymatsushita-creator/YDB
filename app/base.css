@@ -1,18 +1,18 @@
 /* 画面のCSS —— 取り込み順がそのままカスケードの順序である。**並べ替えない。**
  *
- * ★ 2026-08-19 に1本 2,366行から分割した。設計判断（`C-` 番号）の参照が28箇所あり、
- *   1行直すたびに全体を読むことになっていた。**中身は1バイトも変えていない**
- *   （分割前の連結と一致することを確認済み）。
- *   色・余白・角丸・書体のスケールは `tokens.css`（`basic/DESIGN.md` から生成）にある。
+ * ★ 2026-08-20 に全面的に書き直した（依頼者の指示 ――「今のフロントエンドから
+ *   何も引き継ぐ必要はない。DESIGN.md に従って」）。
+ *   旧版（10ファイル・3,900行）は、白黒の土台（`monochrome.css`）＋
+ *   線に色を差すブランド層（`brand.css`）＋リキッドグラス（`glass.css`）の
+ *   3枚重ねだった。**いずれも DESIGN.md には無い。**
+ *
+ *   いまは6枚で、全部が `tokens.css`（`basic/DESIGN.md` から生成）だけを見る。
+ *   **色・余白・角丸・書体をこの下の階層で作らない。**
  */
 
-@import './_styles/01-foundation.css';   /* 土台 —— 文字・記録の引用・注意喚起 */
-@import './_styles/02-shell.css';   /* 外枠 —— ヘッドハンティング・ロゴ・2本のバー・帯 */
-@import './_styles/03-controls.css';   /* 部品 —— 物理ボタン・カード・数字と母集団・星・記録と訂正 */
-@import './_styles/04-forms-sheet.css';   /* 記入できる場所と、固定の場所／スプシ形式の表 */
-@import './_styles/05-borderline.css';   /* ボーダーライン */
-@import './_styles/06-layout.css';   /* スクロール無しで成り立たせる／未記入 */
-@import './_styles/07-components.css';   /* ボタンの統一・顔写真・間・送り・週の予定・面接シート・合言葉・ポップアップ */
-@import './_styles/08-home-figure.css';   /* ホームの図 */
-@import './_styles/09-cockpit.css';   /* 選考の運転席／押した直後の骨組み */
-@import './_styles/10-round-16-17.css';   /* 実行⑯・⑰ —— 詳細ボタン・面積の配り直し・しまう／出す・題名・行の識別・ランキング・空のとき */
+@import './_styles/01-foundation.css';   /* 土台 —— 字・地・余白・補助の文 */
+@import './_styles/02-shell.css';        /* 外枠 —— 操作柱・ロゴ・上の帯・評価基準 */
+@import './_styles/03-controls.css';     /* 操作 —— ボタン・タブ・札・棒・環・顔 */
+@import './_styles/04-tables.css';       /* 表 —— 密な表・スプシ形式・暦 */
+@import './_styles/05-forms.css';        /* 記入 —— 入力・面接シート・合言葉・ポップアップ */
+@import './_styles/06-cards.css';        /* 面 —— カード・運転席・ホーム・時系列 */

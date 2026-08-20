@@ -169,6 +169,6 @@ describe('画面の配置に、欠けが無い（実行⑯）', () => {
       if (typeof f !== 'string' || !/\.tsx?$/.test(f)) continue
       if ((await read(join('app', f))).startsWith("'use client'")) found.push(f)
     }
-    assert.deepEqual(found.sort(), ['_components/glass.tsx', '_components/sheet.tsx'])
+    assert.deepEqual(found.sort(), ['_components/sheet.tsx'])
   })
 })

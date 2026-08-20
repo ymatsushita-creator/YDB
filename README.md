@@ -17,6 +17,14 @@
 | 5 | [`AGENTS.md`](AGENTS.md) | **どう実装するか（実装規律の実体）** |
 | 6 | [`process.md`](process.md) | どう回すか |
 
+★ **触るディレクトリの `AGENTS.md` を先に読む**（2026-08-20。C-233。S14 が存在を強制する）。
+ルートの規律より近い物が優先する（`Hitler.md` §1）。
+
+```
+app/AGENTS.md   src/AGENTS.md   src/commands/AGENTS.md   src/queries/AGENTS.md
+db/AGENTS.md    scripts/AGENTS.md   tests/AGENTS.md   docs/AGENTS.md
+```
+
 **2026-08-19、多層の序列を廃止し、権限を `Hitler.md` の1段へ集約した**（依頼者指示。C-222）。
 それまでは `.audit/` > `.consultant/` > `SUPERVISOR.md` > … の8層だった。旧序列は Git 履歴に残る。
 
@@ -85,7 +93,7 @@ pnpm dev --port 3111
 pnpm verify
 ```
 
-型検査 → テスト（887件・約3分） → 設計判断の索引 → **構成基準** → ビルド を順に回す。
+**Lint** → 型検査 → テスト（899件・約4分） → **正典の組み立て** → 設計判断の索引 → **構成基準** → ビルド を順に回す。
 **同じものが CI（`.github/workflows/quality.yml`）でも走る。**
 以前は3つを手で打つ規約しか無く、強制する機械が1件も無かった。
 
@@ -95,9 +103,11 @@ pnpm verify
 pnpm verify:fast     # 型検査 + テストだけ（ビルドを省く）
 pnpm typecheck
 pnpm test
-pnpm decisions:index # DECISIONS.md に追記したら回す（生成物も一緒にコミットする）
-pnpm decisions:parts # 同上。番号ごとの1件1ファイル（db/decisions/）を作り直す
-pnpm structure       # 構成基準（.consultant/STRUCTURE.md の S1〜S12）だけを見る
+pnpm lint            # biome。規則を切って通さない（誤検知は現場ごとに理由を書く）
+pnpm decisions:canon # db/decisions-src/ から db/DECISIONS.md を組み立てる
+pnpm decisions:index # 追記したら回す（生成物も一緒にコミットする）
+pnpm decisions:parts # 番号ごとの1件1ファイル（db/decisions/）を作り直す
+pnpm structure       # 構成基準（.consultant/STRUCTURE.md の S1〜S14）だけを見る
 pnpm tokens          # app/tokens.css を作り直す（basic/DESIGN.md から生成）
 ```
 
@@ -137,8 +147,11 @@ pnpm decisions:missing           # 参照されているのに本文が無い番
 コード中の `C-121` のような番号は、これで本文へ辿れる。
 一覧は [`db/DECISIONS-INDEX.md`](db/DECISIONS-INDEX.md)（生成物。手で編集しない）。
 
-★ `db/decisions/` も生成物である。**記録を足すのは `db/DECISIONS.md`** で、
-そのあと `pnpm decisions:index && pnpm decisions:parts` を回す。CI がずれを落とす。
+★ **書くのは `db/decisions-src/` の側である**（2026-08-20。C-234）。
+`db/DECISIONS.md` は原稿284本の連結＝**生成物**になった（1本あたり最大95行）。
+パスは動かしていないので、番号の参照・索引・`decisions:show` は今までどおり効く。
+追記したら `pnpm decisions:canon && pnpm decisions:index && pnpm decisions:parts` を回す。
+`db/decisions/` も生成物。CI が3つのずれを落とす。
 
 **45件が「参照されているのに本文が無い」状態にある。** 実行⑯・⑰が報告書も
 設計判断も残さずに終わったためで、`pnpm decisions:missing` が参照元のコードから

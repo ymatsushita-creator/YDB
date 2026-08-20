@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ホーム — YouthDB proto</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar">
+  <div class="brand-mark">
+    <span class="brand-dot grad-spectrum" aria-hidden="true"></span>
+    <span class="brand-word">NEO ACADEMIA</span>
+  </div>
+
+  <nav class="nav" aria-label="主なナビゲーション">
+    <a class="nav-row nav-row-active" href="index.html" aria-current="page">ホーム</a>
+    <hr class="hairline" style="margin:6px 0">
+    <a class="nav-row" href="people.html">特別選考</a>
+    <a class="nav-row" href="#">通常選考</a>
+    <a class="nav-row" href="#">連携団体</a>
+    <a class="nav-row" href="#">面接</a>
+  </nav>
+
+  <nav class="nav" aria-label="編集">
+    <span class="sidebar-section-label" style="padding:0 var(--s-sm) 4px">edit</span>
+    <a class="nav-row" href="#">候補者を編集</a>
+    <a class="nav-row" href="#">連携団体を編集</a>
+    <a class="nav-row" href="#">イベントを編集</a>
+  </nav>
+
+  <form class="field" onsubmit="return false">
+    <label class="sidebar-section-label" for="q">名前で検索</label>
+    <div class="row" style="gap:var(--s-xxs)">
+      <input id="q" class="form-input-sm" type="search" placeholder="名前を入力..." style="flex:1">
+      <button class="btn btn-sm button-primary" type="submit">探す</button>
+    </div>
+  </form>
+
+  <div class="sidebar-foot">
+    <span class="sidebar-section-label">期</span>
+    <div class="tabs">
+      <span class="tab-active" style="height:28px">3期</span>
+      <span class="tab-ghost" style="height:28px">2期</span>
+      <span class="tab-ghost" style="height:28px">1期</span>
+    </div>
+    <p class="caption t-mute" style="margin:8px 0 0">デモ期 ・ 架空データ ・ 記録は残ります</p>
+    <button class="btn btn-sm button-secondary" style="justify-content:center">出る</button>
+  </div>
+</aside>
+
+  <div class="main">
+    <header class="nav-bar">
+      <div class="crumb"><b>3期</b><span class="sep">›</span><span>ホーム</span></div>
+      <div class="spacer"></div>
+      <button class="nav-cta nav-cta-ghost">やることを絞る</button>
+      <button class="nav-cta nav-cta-primary">接点を記録</button>
+    </header>
+
+    <main class="page">
+
+      <!-- hero-band（dark + decoration: brand-spectrum） -->
+      <section class="hero-band">
+        <span class="mesh grad-spectrum" aria-hidden="true"></span>
+        <p class="caption-mono" style="color:var(--mute);margin:0 0 var(--s-sm)">SEASON 3 ・ 2026</p>
+        <h1 class="display-lg" style="margin:0 0 var(--s-xs)">いま動かせるのは 24 件</h1>
+        <p class="body-md" style="color:var(--mute);margin:0;max-width:52ch">
+          担当が決まっていない候補者が 7 人、判定待ちが 5 件あります。上から順に片付けると詰まりが解けます。
+        </p>
+        <div class="row" style="margin-top:var(--s-lg)">
+          <button class="btn button-brand"><span>担当を決める（7）</span></button>
+          <button class="btn button-secondary" style="background:transparent;color:var(--on-primary);border-color:var(--hairline-dark-strong)">判定する（5）</button>
+        </div>
+      </section>
+
+      <!-- ファネル：林 → 木 → 幹（人を数える3段） -->
+      <div class="grid cols-4">
+        <section class="card-marketing">
+          <p class="caption-mono t-mute" style="margin:0 0 var(--s-xs)">CONTACTED</p>
+          <p class="display-md num" style="margin:0">1,284</p>
+          <p class="body-sm t-body" style="margin:var(--s-xxs) 0 var(--s-sm)">接点継続中</p>
+          <div class="meter"><i class="grad-cool" style="width:100%"></i></div>
+        </section>
+        <section class="card-marketing">
+          <p class="caption-mono t-mute" style="margin:0 0 var(--s-xs)">APPLIED</p>
+          <p class="display-md num" style="margin:0">312</p>
+          <p class="body-sm t-body" style="margin:var(--s-xxs) 0 var(--s-sm)">応募</p>
+          <div class="meter"><i style="width:24%;background:var(--primary)"></i></div>
+        </section>
+        <section class="card-marketing">
+          <p class="caption-mono t-mute" style="margin:0 0 var(--s-xs)">ACCEPTED</p>
+          <p class="display-md num" style="margin:0">48</p>
+          <p class="body-sm t-body" style="margin:var(--s-xxs) 0 var(--s-sm)">合格</p>
+          <div class="meter"><i style="width:4%;background:var(--primary)"></i></div>
+        </section>
+        <section class="card-marketing">
+          <p class="caption-mono t-mute" style="margin:0 0 var(--s-xs)">ZONES</p>
+          <p class="display-md num" style="margin:0">36</p>
+          <p class="body-sm t-body" style="margin:var(--s-xxs) 0 var(--s-sm)">アプローチ可能圏</p>
+          <p class="caption t-mute" style="margin:0">単位が違うため同じ段に並べない</p>
+        </section>
+      </div>
+
+      <!-- やること -->
+      <section class="section-head">
+        <h2 class="display-sm" style="margin:0">やること</h2>
+        <span class="badge badge-secondary">24</span>
+        <div class="spacer"></div>
+        <div class="tabs">
+          <span class="tab-active">全部</span>
+          <span class="tab-ghost">自分</span>
+          <span class="tab-ghost">チーム</span>
+          <span class="tab-ghost">担当なし</span>
+        </div>
+      </section>
+
+      <div class="table-wrap">
+        <div class="table-scroll">
+        <table class="data">
+          <thead>
+            <tr>
+              <th style="width:34%">person</th><th>action</th><th>owner</th>
+              <th>state</th><th style="text-align:right">last_contact</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b class="body-sm-strong">渡辺 蓮</b> <span class="caption t-mute">／ 東京大 ・ 学生団体A</span></td>
+              <td>担当を決める</td><td class="t-mute">—</td>
+              <td><span class="badge badge-warning">検討中</span></td>
+              <td class="n">08-14</td>
+              <td style="text-align:right"><button class="btn btn-sm button-primary">開く</button></td>
+            </tr>
+            <tr>
+              <td><b class="body-sm-strong">小林 芽依</b> <span class="caption t-mute">／ 早稲田大 ・ 紹介</span></td>
+              <td>判定する</td><td>佐藤</td>
+              <td><span class="badge badge-info">面談調整中</span></td>
+              <td class="n">08-18</td>
+              <td style="text-align:right"><button class="btn btn-sm button-secondary">開く</button></td>
+            </tr>
+            <tr>
+              <td><b class="body-sm-strong">川瀬 直樹</b> <span class="caption t-mute">／ 京都大 ・ イベントB</span></td>
+              <td>評価する</td><td>髙橋</td>
+              <td><span class="badge badge-success">アプローチ中</span></td>
+              <td class="n">08-19</td>
+              <td style="text-align:right"><button class="btn btn-sm button-secondary">開く</button></td>
+            </tr>
+            <tr>
+              <td><b class="body-sm-strong">森 千尋</b> <span class="caption t-mute">／ 慶應大 ・ 企業C</span></td>
+              <td>保留を解く</td><td>佐藤</td>
+              <td><span class="badge badge-error">見送り</span></td>
+              <td class="n">07-02</td>
+              <td style="text-align:right"><button class="btn btn-sm button-secondary">開く</button></td>
+            </tr>
+            <tr>
+              <td><b class="body-sm-strong">大野 結衣</b> <span class="caption t-mute">／ 一橋大 ・ 学生団体D</span></td>
+              <td>選考を始める</td><td class="t-mute">—</td>
+              <td><span class="badge badge-secondary">未アプローチ</span></td>
+              <td class="n">08-11</td>
+              <td style="text-align:right"><button class="btn btn-sm button-secondary">開く</button></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <!-- 予定（接点とは別） -->
+        <section class="card-marketing">
+          <div class="section-head" style="margin-bottom:var(--s-md)">
+            <h3 class="display-sm" style="margin:0">予定</h3>
+            <span class="caption t-mute">これから会う日時</span>
+          </div>
+          <ul style="list-style:none;margin:0;padding:0;display:grid;gap:var(--s-sm)">
+            <li class="row" style="justify-content:space-between">
+              <span class="body-sm">小林 芽依 ・ 一次面接</span>
+              <span class="caption-mono t-body">08-22 14:00</span>
+            </li>
+            <hr class="hairline">
+            <li class="row" style="justify-content:space-between">
+              <span class="body-sm">川瀬 直樹 ・ 面談</span>
+              <span class="caption-mono t-body">08-23 10:30</span>
+            </li>
+            <hr class="hairline">
+            <li class="row" style="justify-content:space-between">
+              <span class="body-sm">連携団体E ・ 説明会</span>
+              <span class="caption-mono t-body">08-27 18:00</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- card-brand-accent：spectrum は左の細線1本だけ -->
+        <section class="card-brand-accent">
+          <div class="row" style="margin-bottom:var(--s-sm)">
+            <span class="badge badge-brand"><span>注目</span></span>
+            <span class="caption-mono t-mute">SIGNAL</span>
+          </div>
+          <h3 class="display-sm" style="margin:0 0 var(--s-xs)">連携団体D からの接点が 3 週で 4 倍</h3>
+          <p class="body-sm t-body" style="margin:0 0 var(--s-md)">
+            この圏だけ応募転換率が 18% と全体の 2 倍です。次の期の配分を見直す価値があります。
+          </p>
+          <a class="link-inline body-sm-strong" href="#">圏の内訳を見る →</a>
+        </section>
+      </div>
+
+      <div class="toast">
+        <span class="body-sm-strong">保存しました</span>
+        <span class="body-sm t-body">渡辺 蓮 の担当を 佐藤 にしました。</span>
+        <div class="spacer"></div>
+        <button class="icon-button-circular" aria-label="閉じる">×</button>
+      </div>
+
+    </main>
+    <footer class="footer">
+      <div class="row" style="justify-content:space-between">
+        <span class="caption-mono t-mute">PROTO 01 ・ home / cockpit</span>
+        <span class="caption t-mute">DESIGN.md alpha ・ Iridescent-Black</span>
+      </div>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

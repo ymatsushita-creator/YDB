@@ -5640,7 +5640,7 @@ AA を満たすか検証し、満たせないならティントを上げよ」�
 （画面で「ぼかしを持つ要素 0 件」と出て初めて気づいた）。
 
 **同じ値を、プレフィックス付き → 無しの順で並べる。**
-`tests/46_glass.test.ts` が、2つの綴りの**値が一致していること**を見張る。
+当時の 46_glass（C-236 で退役）が、2つの綴りの**値が一致していること**を見張っていた。
 書いたのに効かない類の欠陥は、目で見て気づけない。
 
 #### `'use client'` が2つになった
@@ -5656,7 +5656,7 @@ AA を満たすか検証し、満たせないならティントを上げよ」�
 切れ 0 件・**混色で測ったコントラスト不足 0 件**・ぼかし同時可視 1 枚・
 ロゴと帯の一致・`corner-shape: squircle` が効いていることを確認。
 追従光は「1要素だけに座標が入り、離れると消える」ことを実測した。
-テスト … `tests/46_glass.test.ts`・`tests/45_home.test.ts`
+テスト … 46_glass（C-236 で退役。いまは `tests/46_design_discipline.test.ts`）・`tests/45_home.test.ts`
 
 ### C-105. 応募管理表を取り込んだ ―― 判断軸9つと、482人の期分け
 
@@ -8698,9 +8698,9 @@ DESIGN.md に書いていない仕様が生成物に生まれる。`--active-ind
 書かない（C-62）」が矛盾している。**どちらを残すかは依頼者の判断待ち**（`HANDOFF.md`）。
 
 検証: `pnpm tokens` → colors=67 typography=14 rounded=9 spacing=12 components=51。
-型検査通過。テスト 899件 / 207 suite 全pass（`tests/46_glass.test.ts` の
+型検査通過。テスト 899件 / 207 suite 全pass（当時の 46_glass の
 「生成物に手を入れていない」「ガラスのトークンを焼き込んでいない」を含む）。
-テスト … `tests/46_glass.test.ts`
+テスト … 46_glass（C-236 で退役。いまは `tests/46_design_discipline.test.ts`）
 
 ## C-222 多層序列を廃止し、権限を Hitler.md の1段へ集約した
 
@@ -9690,3 +9690,159 @@ AIは編集対象のディレクトリから読み始める。`src/queries/` を
   残るのは §0 が「事実が変わるまで」としている2件（履歴の鍵・required status check）である。
 
 テスト: `pnpm decisions:canon -- --check`（往復の一致）／`pnpm structure` の S1・S1b。
+
+
+## C-235 構成基準の本文も原稿の連結にした（§2 の最後の超過を閉じた）
+
+**2026-08-20。** `Hitler.md` §0 は「`.consultant/STRUCTURE.md`（244行）も超過している。
+S1〜S13 を1本で持つため」と逸脱を宣言していた。実測は302行だった。
+
+C-234 と同じ形で閉じた ―― 原稿を `.consultant/structure-src/`（節ごとに16本・最大45行）に置き、
+`.consultant/STRUCTURE.md` はその連結（生成物）にする。**パスを動かしていない**ので、
+S11（文書と実装の一致）・`README.md`・`.claude/commands/structure.md`・`Hitler.md` §0 の参照は切れない。
+
+- `pnpm structure:canon`（`-- --check` を `pnpm verify` と `quality.yml` に追加。S1・S1b が段を要求）
+- 原稿のファイル名は**検査ID**（`012-S11.md`）。節番号は本文中で入れ替わっており当てにならない
+  （実際 §8 が §7 の前に在る）。**節を足す位置は連番で決まる。**
+- 節を書かずに検査だけ足せない仕組み（S11）はそのまま効く ―― S11 は組み立て後の本文を読む。
+
+★ これで `Hitler.md` §2 の行数に関する逸脱は残っていない。
+  §0 の逸脱表に残るのは、依頼者が「事実が変わるまで」としている2件だけである。
+
+テスト: `pnpm structure:canon -- --check`（往復の一致）／`pnpm structure` の S1・S1b・S11。
+
+
+## C-236 画面の意匠を `basic/DESIGN.md` だけから作り直した（3枚の層を退役させた）
+
+**2026-08-21。依頼者の指示** ――「YouthDB の UI を design.md を使って改善したい」
+「今のプロダクトの UI を刷新して。今のフロントエンドからは何も引き継ぐ必要はない」
+「原稿の UI を残す必要はないからね。そこに引っ張られずに、design.md に従ってね」。
+
+### 何が在ったか
+
+意匠は**5枚**の層で出来ていた（`app/layout.tsx` の取り込み順）――
+
+```text
+tokens.css     basic/DESIGN.md からの生成物
+base.css       _styles/01〜10（3,900行）
+monochrome.css 白黒の土台。トークンを灰へ差し替える（実行⑩）
+brand.css      「色は線、面は黒」。ロゴから伸びる虹色の波（実行⑩〜⑫）
+glass.css      リキッドグラス。多段 inset の縁と追従光（実行⑫。仕様書を受領）
+```
+
+**後ろの3枚は `basic/DESIGN.md` に無い。** それぞれ当時の依頼者の指示で足したものだが、
+`DESIGN.md`（Iridescent-Black）が本文で禁じている作りと正面から食い違っていた ――
+
+| 旧版の作り | DESIGN.md の本文 |
+|---|---|
+| ロゴから画面幅いっぱいへ走る虹色の帯 | Avoid: **equal-width rainbow stripes** / hard colour boundaries |
+| 操作柱と帯を真っ黒の板にする | `nav-bar` は `{colors.canvas}`、`ex-app-shell-row` も canvas |
+| 札・チップを色の線で分ける（面は塗らない） | `badge-*` は **soft の面 + deep の字** |
+| 浮いた物をぼかしの縁で囲む（ガラス） | operational UI remains **restrained and technical** |
+| トークンを灰へ差し替える（白黒の土台） | **The spectrum itself is the brand** |
+
+そのうえ後ろの層が**同じ性質を二度決めていた** ―― `brand.css` の
+`.zoom-bar { position: relative }` が `base.css` の `sticky` を潰し、
+「送ると帯が流れる」形で画面に出ていた（C-154 で手当てした）。
+層を重ねる限り、この形の欠陥は作り続けられる。
+
+### どうしたか
+
+**意匠の層を2枚にした。** `tokens.css`（生成物）と `base.css`（`_styles/01〜06`）だけ。
+
+```text
+01-foundation  字・地・余白・補助の文・空のとき
+02-shell       操作柱・ロゴ・上の帯・評価基準の帯
+03-controls    ボタン・タブ・札・棒・環・顔
+04-tables      密な表・スプシ形式・暦
+05-forms       入力・面接シート・合言葉・ポップアップ
+06-cards       カード・運転席・ホーム・時系列
+```
+
+**色・余白・角丸・書体を、この下の階層で1つも作っていない。**
+`tests/46_design_discipline.test.ts`「⑥ 色は直値で書かない」が、
+合成後の1本に16進の色が残っていないことを見張る（`mask-image` の `#000` は
+色ではなく「抜くかどうか」なので除く）。
+
+意匠そのものは DESIGN.md の比率規定に従った ――
+**無彩色 85〜90% ／ スペクトラム 10〜15%。** 色が出るのは5箇所だけである。
+
+| 場所 | 形 |
+|---|---|
+| 現在地（操作柱の行・タブ・パンくずの末尾） | 幅 3px / 高さ 2px の線 |
+| focus | cyan の輪（DESIGN.md が focus に cyan を許す） |
+| 人の見出し・合言葉 | 黒い面の上の光。**周りに黒を残す** |
+| 画面ごと空のとき | 低不透明度の光の場（opacity .22 / blur 72px）を1枚 |
+| ファネル・KPI の図 | major visualization。系列色に7色のうち4色 |
+
+札（到達状態）と未記入の印は色を持つが、これは**記録の意味**であって装飾ではない。
+
+### 実装で判明したこと（2つ）
+
+**① 生成物のグラデーションは、明るい面に置けない。**
+`--gradient-brand-spectrum*` は最下層に `canvas-dark`（#050505）を敷いている ――
+DESIGN.md「黒との対比で明るさが出る」に従った正しい作りだが、**白いカードの上に
+置くと灰色の靄になる。** 実画面でそうなった。明るい面には黒を敷かない
+`--spectrum-field`（同じ7色）を `01-foundation.css` で持ち、暗い面では生成物を使う。
+**生成物は直さない。** `scripts/build-tokens.ts` を触れば全てのグラデーションの
+意味が変わるうえ、DESIGN.md の記述（黒を敷く）はそれ自体は正しい。
+
+**② 黒の上の光は、不透明度ではなく合成で出す。**
+`opacity` を下げると色まで一緒に沈む。`mix-blend-mode: screen` で重ねると
+**黒の上でだけ光り、周りは黒のまま**になる。合言葉の画面と人の見出しがこれである。
+
+### 一緒に退役したもの
+
+- `app/_components/glass.tsx`（追従光）。`'use client'` は**表だけ**に戻った（1つ減）。
+  規律の文（`AGENTS.md` / `app/AGENTS.md`）も「表だけ」に改めた。
+- 46_glass → `tests/46_design_discipline.test.ts`（同じ番号のまま名前を替えた）。
+  **検査を消したのではなく、対象を差し替えた。** 旧版が守っていた7項目
+  （4枚目の層・ぼかしの予算・多段 inset の縁ほか）は対象そのものが無くなったので、
+  代わりに DESIGN.md 本文が定める7項目を機械で見る。旧版の契約は Git 履歴に在る。
+- `.sidebar-region`。旧 `DESIGN.md` の生成クラスで、現行の `tokens.css` には無い
+  ―― **当たらないクラス名が画面に書いてあった。**
+- 図の系列色に使っていた旧トークン（`--color-brand-purple` など7つ）。
+  `monochrome.css` が定義していたので、外した瞬間に**線が消えた**（実画面で消えた）。
+  DESIGN.md のスペクトラムへ寄せた（接点継続中=periwinkle / 合格=lime-deep /
+  辞退控除後=cyan-deep / 辞退=coral-deep / 不合格=mute）。
+
+### 引き継いだもの（意匠ではなく挙動）
+
+**送り方・固定・収納・段の割り付けは変えていない。** どれも依頼者の指示か
+実画面の欠陥から出た判断であって、意匠の趣味ではない ――
+C-113 / C-136（段を等分に取る）/ C-142（骨組みは Shell と同じトークンを見る）/
+C-161（ホームは枠を使い切る・器は送らない）/ C-170・C-181・C-188（しまう／出す）/
+C-193（候補者一覧の列を潰さず横へ送る）/ C-205・C-206（柱ごと送る）/
+C-208（区切り線は相手が居るときだけ）。
+
+継ぎ目（C-192〜C-207）だけは**条件そのものが消えた。**
+浮いた黒い板を2枚突き合わせる形をやめ、canvas の面と hairline 1本にしたので、
+**丸める角が存在しない。** `tests/74_bar_seam.test.ts` は
+「板が戻っていないこと」と「厚みが1つのトークンから出ていること」を見張る形に改めた。
+
+### DESIGN.md に無くて、CSS 側で決めるしかなかったもの
+
+依頼者へ渡す一覧（`basic/` は変更しないので、ここに残す）――
+
+1. **影**。`ex-modal-card` / `ex-toast` に "restrained stacked shadow" と文章だけあり、
+   トークンが無い。近黒の2段を `--shadow-1〜3` として `01-foundation.css` に置いた。
+2. **hover / disabled**。`canvas-soft-2` が "hover surfaces" と書かれているだけで、
+   ボタン・行・タブそれぞれの指定が無い。
+3. **ダークモードの切替規則**。「黒面も白面もどちらも正当な canvas」とあるが、
+   どのトークンが入れ替わるかの対応が無い。**光面だけで組んだ。**
+4. **ボタンの高さ**。`padding` だけで `height` が無い（`nav-cta` の 28px を除く）。
+   40px / 28px の2段にした。
+5. **表の行の高さ・密度の段階**。`ex-data-table-cell` は padding と border だけ。
+6. **breakpoint**。900px で操作柱を畳み、1100px で2柱を1柱にした。
+7. **アイコン**。定義が1つも無いので、字だけで組んだ。
+
+検証: `pnpm lint`（警告1件。`scripts/build-decisions-canon.ts` の未使用変数で、
+本件と無関係）、`pnpm exec tsc --noEmit` 通過、`pnpm test` 905件全pass、`pnpm build` 通過。
+デモ経路（ホーム・人を探す・特別選考・通常選考・面接・ファネル・人の記録・合言葉）を
+1400×880 で実画面確認。**表が1文字ずつ縦に折れないこと**、
+**やることの札が全幅へ伸びないこと**、**空のときの字が光に隠れないこと**を目で見て直した。
+
+テスト … `tests/46_design_discipline.test.ts`・`tests/74_bar_seam.test.ts`・
+`tests/45_home.test.ts`・`tests/59_loading_skeleton.test.ts`・
+`tests/68_home_layout.test.ts`・`tests/73_candidate_list_columns.test.ts`・
+`tests/80_home_cockpit.test.ts`

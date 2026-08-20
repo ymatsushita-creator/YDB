@@ -1,15 +1,11 @@
 import type { ReactNode } from 'react'
 import './tokens.css'
+// ★ 意匠は `tokens.css`（`basic/DESIGN.md` の生成物）と `base.css` の2枚だけ
+//   （2026-08-20 の刷新。依頼者の指示）。
+//   白黒の土台（`monochrome.css`）・線に色を差すブランド層（`brand.css`）・
+//   リキッドグラス（`glass.css`）の3枚は**外した** ―― どれも DESIGN.md に無く、
+//   「面をスペクトラムで塗らない／操作面は無彩色」と食い違っていた。
 import './base.css'
-// ★ 白黒の土台（依頼者の指示）。**トークンの後に読む**ので、外せば元の色に戻る。
-import './monochrome.css'
-// ★ ブランド配色。ロゴのグラデーションから採った色を**線と文字にだけ**入れる。
-//   面は白と黒のまま（意匠規定「色は線、面は黒」）。外せば白黒に戻る。
-import './brand.css'
-// ★ リキッドグラス（依頼者の指示。実行⑫。仕様書を受領）。
-//   **浮いているボタンだけ**をガラスにする。外せば物理ボタン（実行⑨）に戻る。
-import './glass.css'
-import { GlassPointer } from './_components/glass.tsx'
 
 export const metadata = {
   title: 'YouthDB — TALENT INTELLIGENCE',
@@ -41,9 +37,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ja">
       <body>
         {children}
-        {/* ポインタの座標を CSS 変数へ書くだけ。光は `glass.css` が描く。
-            画面を1つも描かないので、ここに置いても外枠の作りは変わらない。 */}
-        <GlassPointer />
       </body>
     </html>
   )

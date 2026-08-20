@@ -67,6 +67,10 @@ jobs:
         # 原稿に書いて組み立て忘れると、正典だけが古くなる。
         run: pnpm decisions:canon -- --check
 
+      - name: 構成基準が原稿と一致しているか
+        # `.consultant/STRUCTURE.md` は `.consultant/structure-src/` の連結（生成物。C-235）。
+        run: pnpm structure:canon -- --check
+
       - name: 設計判断の索引が最新か
         # `db/DECISIONS.md` に C-番号を足して索引を更新し忘れると、
         # 次のセッションのAIが古い索引を根拠にする。生成物のずれを検知する。

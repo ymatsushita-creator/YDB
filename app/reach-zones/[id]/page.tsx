@@ -238,7 +238,7 @@ export default async function ReachZonePage({
                       <td className="num">{num(p.touchpoints)}</td>
                       <td className="num">
                         {Number(p.open_tasks) === 0 ? '—' : p.overdue ? (
-                          <strong style={{ color: 'var(--color-semantic-error)' }}>
+                          <strong style={{ color: 'var(--color-error-deep)' }}>
                             {num(p.open_tasks)}
                           </strong>
                         ) : num(p.open_tasks)}

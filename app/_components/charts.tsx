@@ -166,16 +166,16 @@ export function TimeSeries<T extends { as_of: Date }>({
       {ticks.map((t) => (
         <g key={t}>
           <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)}
-                stroke="var(--color-hairline-soft)" strokeWidth={1} />
+                stroke="var(--color-hairline)" strokeWidth={1} />
           <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end"
-                fontSize={11} fill="var(--color-stone)">{t}</text>
+                fontSize={11} fill="var(--color-mute)">{t}</text>
         </g>
       ))}
 
       {points.map((p, i) =>
         isLabelled(i) ? (
           <text key={md(p.as_of)} x={x(i)} y={height - 8} textAnchor="middle"
-                fontSize={11} fill="var(--color-stone)">
+                fontSize={11} fill="var(--color-mute)">
             {md(p.as_of)}
           </text>
         ) : null,
