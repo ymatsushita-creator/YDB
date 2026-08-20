@@ -231,3 +231,205 @@ allow:
     reason: テスト用のプレースホルダ（sk-ant-test… の29文字。実キーは108文字で形式が異なる）。依頼者がAPIキーの扱いを対応済みと確認
     approved_by: 'y_matsushita（2026-08-19 監査セッションで確認）'
     expires: 2027-08-19
+
+  # ── 2026-08-20 の分（監査 ac2a137。D6-01 の 32 件。★過去18回同じ指摘だった分）─────
+  #
+  # ★ **署名は依頼者が Claude へ代理を許可したものである**（2026-08-20 のセッションで明示）。
+  #   通常 `approved_by` は人間だけが行う（`.consultant/STRUCTURE.md` §7）。
+  #   実体の行は Claude が原本と1件ずつ突合し、指紋を
+  #   `docs/audit/2026-08-20-allowlist-candidates.md` に、行そのものを追跡外の
+  #   `.tmp/allowlist-evidence-2026-08-20.md` に残した（引用を追跡下に置くと、
+  #   その引用で PII 走査が落ちる ―― 実際に落ちた）。
+  #
+  # 確認した内容: 検出は全て「弱い日本語人名パターン」で、実体は
+  #   (a) 記録モデルの分類語 —— 選考段名・評価軸名・チャネル区分・学校区分。
+  #       SQL の照合条件（`WHERE ss.name = …`）と画面のラベルとして現れる
+  #   (b) 架空と明示された値 —— `架空…` の接頭辞、窓口担当の架空名、`検査用`
+  #   (c) 日付 —— テストのフィクスチャと監査記録の中の固定値。原典から取り込んだ値ではない
+  # 人名は1件も無い。
+  - path: app/borderline/page.tsx
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 選考段の分類語（タブのラベルと段名）。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/migrations/0023_person_optional_facts.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [38b9a3ff73609473]
+    reason: 学校区分の分類語（未記録を表す行の挿入）。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/seeds/0001_reference.example.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [1b6b1a6f89315f6e, 2f6bef03c9987150, 784471c932692631, a79dd86f591b2eda]
+    reason: 接点チャネルの分類語（参照マスタの例）。人名ではない（4件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/seeds/0004_channels.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5154b7cf78edfe9c, 6cdab45e422b5af2, 8092ea181101f149, 835e196c2424a5b7, b8f605046c636ce6, e547903f38794739]
+    reason: 接点チャネルの分類語（参照マスタ）。人名ではない（6件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/seeds/0005_season2_special_selection.production.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6]
+    reason: 選考段の分類語（段の登録）。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: docs/audit/2026-08-19-remediation.md
+    rules: [BIRTHDATE]
+    fingerprints: [0a8f26ac661667b4, fd5980de18813390]
+    reason: 監査記録の中の固定値（是正の経緯として引用した日付）。実在の候補者の生年月日ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: docs/audit/2026-08-20-allowlist-candidates.md
+    rules: [BIRTHDATE]
+    fingerprints: [dc2e4b0f1a61dc6e]
+    reason: 本一覧そのものが検出源になった分（`BIRTHDATE` の語と日付形式のパスが同じ行に並ぶため）。実データではない
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: docs/consultant/2026-08-19-state.md
+    rules: [BIRTHDATE]
+    fingerprints: [dc2e4b0f1a61dc6e]
+    reason: 診断の経緯として所見の文言を引用した箇所。実データではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: scripts/import-approach-2026.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 38b9a3ff73609473]
+    reason: 選考段名・学校区分による照合条件（SQL の WHERE 句）。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: scripts/import-legacy-2026.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/commands/ai_pre_assessment.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [2bad38da2dc42d6b, 9f6cc2d208e58339]
+    reason: 選考段名・評価軸名による照合条件。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/import/legacy_2026.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [52c411b19060afc4, 8cb84a59d28f2ace, b80c40ecce80ba69, c4f72a8d205283b1, e25a72b242de34a7]
+    reason: 評価軸名と列名の対応表（原典の列を現行の軸名へ写す定義）。人名ではない（5件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/queries/ai_pre_assessment.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/queries/document_screening.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/queries/tasks.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/21_decide.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [4641241e8a17c46d]
+    reason: 選考段名の期待値。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/22_reference_season.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 5639adba165a8aa6, 9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 選考段の並びの期待値。人名ではない（6件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/29_profile_editing.test.ts
+    rules: [BIRTHDATE]
+    fingerprints: [fd5980de18813390]
+    reason: テストのフィクスチャの日付（コード内の固定値）。実在の候補者の生年月日ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/33_borderline_scoring.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6, ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/34_legacy_import.test.ts
+    rules: [BIRTHDATE, JP_PERSON_NAME_WEAK]
+    fingerprints: [03b21bdcd76ba329, 0a8f26ac661667b4, de34c123a0670f0c]
+    reason: 取り込みのテスト。日付はフィクスチャの固定値、名前は `架空…` の架空値（9件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/35_interview_sheet.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/36_intake.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [59da9824925bb424, 646929766e105166, e265f06ab6ad4800, ea62cd5c0a72b746]
+    reason: 架空と明示された連携団体名（`架空…`）。実在の団体・人物ではない（6件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/41_sheet_bulk.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [ac9eb9fb32814dc8]
+    reason: 架空の団体名と架空の窓口担当名。実在の団体・人物ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/48_criteria_weighting.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/52_season3_alignment.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 5639adba165a8aa6, 7a022f86dc399a10, 9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（5件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/53_deploy_target.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [479d30ea77c304bd]
+    reason: 検査用のプロジェクト名（`検査用`）。人名ではない（3件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/54_list_weight.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/70_ai_pre_assessment.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名の更新（SQL の SET 句）。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/75_end_to_end_selection.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [2bad38da2dc42d6b]
+    reason: 評価軸名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/76_document_gate.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6, 9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（3件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/78_pilot_hirashain.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6, 9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 画面が段名でタブを引いていることの検査（段名の文字列）。人名ではない（3件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
