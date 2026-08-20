@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
  *   リダイレクトが `.env.localecho` を作り、完全一致指定の ignore を素通りして
  *   APIキーがコミットされた（監査 2026-08-19 / .audit/REMEDIATION.md）。
  *
- * 既定は `<リポジトリ>/../YouthDB-private`。別の場所に置くなら YOUTHDB_INTAKE_DIR で指す。
+ * **置き場は `YOUTHDB_INTAKE_DIR` で必ず指す。既定値は持たない**（2026-08-19 に廃止。C-229）。
  * ここは「どこを読むか」の指定であって、検査を外すための口ではない。
  * **リポジトリの中を指す指定は受け付けない**（下の `assertOutsideRepo`）。
  *
@@ -65,9 +65,25 @@ function assertOutsideRepo(dir: string): void {
 
 export function intakeDir(): string {
   const raw = process.env.YOUTHDB_INTAKE_DIR
-  // 既定もリポジトリ基準にする。cwd 基準だと、親ディレクトリから実行しただけで
-  // 見当違いの場所を既定にしてしまい、そこへ控えが黙って書かれる。
-  const dir = canonical(raw && raw.trim() !== '' ? raw : join(REPO, '..', 'YouthDB-private'))
+  // ★★ 既定値を廃止した（2026-08-19。C-229）★★
+  //   以前は `<リポジトリ>/../YouthDB-private` を既定にしていた。
+  //   2026-08-19 に実データを NEO の外（別ディレクトリ）へ移した結果、
+  //   **その既定は存在しない場所を指すようになった。**
+  //
+  //   「存在しないから安全」は成り立たない ――
+  //   **将来そのパスに誰かがディレクトリを作れば、intake は黙ってそこを使う。**
+  //   `.env.localecho` と同じ形である（設定を1つ間違えたまま、動いてしまう）。
+  //
+  //   ★ 設定を忘れた実行は、見当違いの場所を掴むのではなく**止まる。**
+  //     実在候補者の控えを書く先を、既定値に推測させない。
+  if (!raw || raw.trim() === '') {
+    console.error('受領データの置き場が指定されていない ―― YOUTHDB_INTAKE_DIR を設定すること。')
+    console.error('既定値は持たない（2026-08-19 に廃止）。実データの置き場を推測しない。')
+    console.error('例: YOUTHDB_INTAKE_DIR=/Volumes/KIOXIA_2TB/YouthDB-private')
+    console.error('リポジトリの中を指す指定は受け付けない（監査 D2-01）。')
+    process.exit(1)
+  }
+  const dir = canonical(raw)
   assertOutsideRepo(dir)
   return dir
 }

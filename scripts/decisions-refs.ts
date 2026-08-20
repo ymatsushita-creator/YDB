@@ -138,3 +138,27 @@ export function sliceEntry(lines: readonly string[], entry: Entry): string {
   while (body.length > 0 && /^(\s*|-{3,})$/.test(body[body.length - 1]!)) body.pop()
   return body.join('\n')
 }
+
+/**
+ * 欠番のラチェット（S13）。台帳と現状を突き合わせる。
+ *
+ * ★ **判定をここに置く理由**: 検査側（`check-structure.ts`）に埋めると、
+ *   条件を緩めたことをテストで捕まえられない
+ *   （文字列が含まれるかで見る検査は、独立レビューに素通りされた実績がある）。
+ *   純粋な関数にして、`tests/83_dangling_ratchet.test.ts` が**動作で**固定する。
+ *
+ * ★ 増えたら落とす。**減っても落とす** ―― 締め忘れた台帳は
+ *   「45件のままだ」と嘘をつき、次に増えた1件を隠す。
+ */
+export function ratchet(listed: Iterable<string>, current: Iterable<string>): {
+  ok: boolean; added: string[]; filled: string[]
+} {
+  const ledger = new Set(listed)
+  const now = [...current]
+  const nowSet = new Set(now)
+  const byId = (a: string, b: string) =>
+    a[0]!.localeCompare(b[0]!) || Number(a.slice(2)) - Number(b.slice(2))
+  const added = now.filter((id) => !ledger.has(id)).sort(byId)
+  const filled = [...ledger].filter((id) => !nowSet.has(id)).sort(byId)
+  return { ok: added.length === 0 && filled.length === 0, added, filled }
+}

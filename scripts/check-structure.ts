@@ -4,6 +4,8 @@ import { join, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
+import { collectRefs, findDangling, parseHeadings, ratchet } from './decisions-refs.ts'
+
 /**
  * 構成基準（`.consultant/STRUCTURE.md`）を機械で確かめる。
  *
@@ -99,8 +101,16 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
 
 // ── S2 ルート直下は着手時に読む物と、動かすのに要る物だけ ─────────────────
 {
-  const ALLOWED = ['README.md', 'AGENTS.md', 'SUPERVISOR.md', 'vision.md', 'director.md',
-    'domain.md', 'CLAUDE.md', 'process.md', 'HANDOFF.md']
+  // `Hitler.md` は唯一の権限（依頼者指示 2026-08-19）。着手時に読む物なのでここに列挙する。
+  // **原本は `../Hitler/Hitler.md`。このリポジトリの側で書き換えない。**
+  //
+  // ★ `SUPERVISOR.md` と `vision.md` は 2026-08-19 に畳んだ（C-222）。
+  //   多層序列を廃止して権限を `Hitler.md` へ一本化した結果、
+  //   `SUPERVISOR.md` は権限の条文が空になり、`vision.md` は序列上の枠を
+  //   確保する以外の中身を持っていなかった（内容は最後まで未受領）。
+  //   中身は `director.md`（原則・UX判断）と `process.md`（手順）に在る。
+  const ALLOWED = ['Hitler.md', 'README.md', 'AGENTS.md',
+    'director.md', 'domain.md', 'CLAUDE.md', 'process.md', 'HANDOFF.md']
   // 読み物の拡張子を広く見る。`.md` だけだと `TODO.txt` や `NOTES.mdx` で趣旨を破れる。
   const DOCEXT = /\.(md|mdx|markdown|txt|org|rst|adoc)$/i
   const found = readdirSync(ROOT).filter((f) => DOCEXT.test(f))
@@ -124,7 +134,7 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
       .filter((f) => !ALLOWED.includes(f) && !CONFIG.includes(f))
   } catch { /* git が無い。ルートの追跡状況は見られない */ }
 
-  check('S2', 'ルート直下は規律文書9本と設定だけ',
+  check('S2', 'ルート直下は規律文書8本と設定だけ',
     extra.length === 0 && gone.length === 0 && stray.length === 0,
     gone.length > 0 ? `規律文書が無い: ${gone.join(', ')}`
       : extra.length > 0 ? `着手時に読まない物がルートにある: ${extra.join(', ')} → docs/ へ`
@@ -259,7 +269,9 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
 
   // 正の対照 —— 正当な外部ディレクトリは**受理されねばならない**。
   // これが通らないなら探査系そのものが壊れており、上の3件が「落ちた」ことは何の根拠にもならない。
-  const outside = join(ROOT, '..', 'YouthDB-private')
+  // ★ 実データの実際の置き場を書かない。ここが見るのは「外なら受理するか」だけであり、
+  //   置き場を書くと、検査ファイルが個人情報の所在を指す索引になる（2026-08-19。C-229）。
+  const outside = join(ROOT, '..', '__intake_probe__')
   const positive = await attempt(outside)
   if (!positive.stdout.includes('ACCEPTED')) {
     problems.push(`探査系が壊れている（正当な外部 ${outside} すら受理されない: exit ${positive.code}）`
@@ -352,6 +364,8 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
 // ── S9 秘密が履歴に残っていない／公開先が増えていない ──────────────────────
 {
   const problems: string[] = []
+  // ★ 通ったときも黙らせない。据え置いている事実は毎回出力に載せる（下記のラチェット）。
+  const notes: string[] = []
 
   // ★ なぜ要るか（2026-08-19）:
   //   PII走査（`kurosaki scan`）も D6-02 も**作業ツリーしか見ない。**
@@ -362,17 +376,49 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   //
   //   これはパスを見る検査である。任意ファイルの中身までは見ていない ――
   //   「秘密が無いことの証明」ではない（`.audit/AUDIT_CHARTER.md` §1 と同じ立場）。
+  //
+  // ★★ ラチェットにした理由（2026-08-19。C-228）★★
+  //   S9 を緑にする手段は履歴の除去（`git filter-repo`）だけだが、
+  //   `Hitler.md` §4 は「履歴改変」を**人間の明示指示があっても実行しない**禁止事項に
+  //   している。**つまり S9 は永久に赤い。**
+  //   永久に赤い検査は、次に別の `.env` が履歴へ入っても出力を変えない ――
+  //   **赤が既定になった時点で、新しい漏洩を検知する力を失う。**
+  //   既知の分を台帳（`.consultant/SECRET-HISTORY-BASELINE.txt`）へ据え置き、
+  //   **増分だけを落とす**（S13 と同じ作り）。
+  //   ★ 緩めたのではない ―― 既知の1件は台帳に列挙されたまま消えず、
+  //     出力にも「据え置き」として必ず出る。条件そのものは消していない。
   const SECRET_PATH = /(^|\/)\.env(\.|$)/i
   const ALLOWED_ENV = new Set(['.env.example'])
+  const secretLedger = readIf('.consultant', 'SECRET-HISTORY-BASELINE.txt')
+  if (secretLedger === null) {
+    problems.push('`.consultant/SECRET-HISTORY-BASELINE.txt` が無い'
+      + '（履歴に在る秘密の台帳。人間の承認を伴うので自動生成しない）')
+  }
+  const listed = new Set((secretLedger ?? '').split('\n')
+    .map((l) => l.trim()).filter((l) => l !== '' && !l.startsWith('#')))
   try {
     const { stdout } = await run('git',
       ['log', '--all', '--diff-filter=A', '--pretty=format:', '--name-only'],
       { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 })
     const leaked = [...new Set(stdout.split('\n').map((f) => f.trim())
       .filter((f) => f !== '' && SECRET_PATH.test(f) && !ALLOWED_ENV.has(f)))]
-    if (leaked.length > 0) {
-      problems.push(`秘密を持ちうるファイルが履歴に在る: ${leaked.join(', ')}`
-        + '（作業ツリーから消しても履歴からは消えない。まず鍵を失効・再発行すること）')
+    const fresh = leaked.filter((f) => !listed.has(f))
+    // ★ 減ったときも落とす。履歴から除去したなら台帳を締め直す ――
+    //   締め忘れた台帳は「1件のままだ」と嘘をつき、次に増えた1件を隠す。
+    const gone = [...listed].filter((f) => !leaked.includes(f))
+    if (fresh.length > 0) {
+      problems.push(`秘密を持ちうるファイルが履歴に**増えた**: ${fresh.join(', ')}`
+        + '（作業ツリーから消しても履歴からは消えない。**まず鍵を失効・再発行すること。**'
+        + ' 据え置くなら台帳へ承認つきで足す）')
+    }
+    if (gone.length > 0) {
+      problems.push(`台帳に在るのに履歴から消えている: ${gone.join(', ')}`
+        + '（履歴を除去したなら台帳を締め直すこと）')
+    }
+    if (fresh.length === 0 && gone.length === 0 && leaked.length > 0) {
+      // ★ 黙って通さない。据え置いている事実は毎回出力に載せる。
+      notes.push(`履歴に在る秘密 ${leaked.length} 件は台帳に据え置き（${leaked.join(', ')}）`
+        + ' ―― 鍵の失効が対処であり、履歴からは消えていない')
     }
   } catch { problems.push('git 履歴を読めず、**履歴の秘密を検査していない**') }
 
@@ -388,8 +434,10 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     }
   } catch { /* git が無い。リモートは見られない */ }
 
-  check('S9', '秘密が履歴に無く、公開先が増えていない', problems.length === 0,
-    problems.length === 0 ? '履歴に .env 系の追加なし・リモートは origin のみ' : problems.join(' / '))
+  check('S9', '秘密が履歴に増えておらず、公開先が増えていない', problems.length === 0,
+    problems.length === 0
+      ? [...notes, 'リモートは origin のみ'].join(' / ')
+      : problems.join(' / '))
 }
 
 // ── S12 凍結文書には、凍結だと分かる但し書きが先頭にある ────────────────────
@@ -445,6 +493,42 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
       : missingImpl.length > 0
         ? `STRUCTURE.md にあるが実装が無い: ${missingImpl.join(', ')}（節を消すか実装する）`
         : `${implemented.length} 件が文書と一致`)
+}
+
+// ── S13 番号を導入したら、同じ差分で記録を足す（欠番のラチェット）─────────────
+{
+  // ★ なぜ要るか（欠番45件が生まれた経路。`.consultant/DIAGNOSIS.md` 所見2）:
+  //   CI は索引のずれを `--check` で落とせる。だが**最初から書かれなかった判断**は
+  //   検知しようがない ―― コードに `C-220` と書いた時点では、まだ何もコミットされていない。
+  //   実行⑯・⑰は、この穴を通って報告書も設計判断も残さずに終わった。
+  //
+  // ★★ 番号を「書くこと」は強制できないが、**「増えたのに記録が無い」ことは検知できる。** ★★
+  //   台帳（`.consultant/DANGLING-BASELINE.txt`）に既存の欠番を据え置き、
+  //   **そこに無い番号が現れたら落とす。** 既存分を据え置くのは、AIが埋められないからである。
+  //
+  // ★ ラチェットである。**減ったときも落とす** ―― 埋めたら台帳を締め直す。
+  //   締め忘れた台帳は「45件のままだ」と嘘をつき、次に増えた1件を隠す。
+  const ledger = readIf('.consultant', 'DANGLING-BASELINE.txt')
+  if (ledger === null) {
+    check('S13', '欠番が台帳より増えていない', false,
+      '`.consultant/DANGLING-BASELINE.txt` が無い（`pnpm decisions:baseline` で作る）')
+  } else {
+    const listed = new Set(ledger.split('\n')
+      .map((l) => l.trim()).filter((l) => /^[A-F]-\d+$/.test(l)))
+    const markdown = read('db', 'DECISIONS.md')
+    const current = findDangling(parseHeadings(markdown), await collectRefs()).map((d) => d.id)
+    // 判定は `decisions-refs.ts` の `ratchet` に置いてある ――
+    // ここに埋めると、条件を緩めたことをテストで捕まえられない。
+    const { ok, added, filled } = ratchet(listed, current)
+    check('S13', '欠番が台帳より増えていない', ok,
+      added.length > 0
+        ? `記録の無い番号が増えた: ${added.join(', ')}`
+          + ' ―― `db/DECISIONS.md` に見出しを足すこと（番号を書いたら記録も書く）'
+        : filled.length > 0
+          ? `埋まった番号が台帳に残っている: ${filled.join(', ')}`
+            + ' ―― `pnpm decisions:baseline` でラチェットを締める'
+          : `台帳と一致（欠番 ${current.length} 件。増えていない）`)
+  }
 }
 
 // ── C01〜C07 外部ツール（存在確認）──────────────────────────────────────────
