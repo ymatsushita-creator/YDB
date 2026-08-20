@@ -358,18 +358,23 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   //   （`audit-2026-08-19-remediation.md` / `personas.md` / `secret-in-history-*.md`）。
   //   ルートから追い出した物の行き先が無秩序なら、追い出した意味が薄れる。
   //   直下にファイルを置かず、必ず分類の下へ入れる。
-  const SECTIONS = ['audit', 'consultant', 'pilot', 'product', 'reports']
+  const SECTIONS = ['audit', 'consultant', 'pilot', 'product', 'reports', 'guides']
   const problems: string[] = []
   try {
     const { stdout } = await run('git', ['ls-files', 'docs'], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 })
     const files = stdout.split('\n').map((f) => f.trim()).filter((f) => f !== '')
-    const loose = files.filter((f) => f.split('/').length === 2)
+    // ★ `docs/AGENTS.md` は例外である（S14）。近傍の規約はそのディレクトリの直下に
+    //   在ることが要件で、分類の下へ入れると**編集対象から遠くなって届かない**。
+    //   `Hitler.md` §2（サブパッケージには各々 AGENTS.md）が本節より上位である。
+    const loose = files.filter((f) => f.split('/').length === 2 && f !== 'docs/AGENTS.md')
     if (loose.length > 0) {
       problems.push(`docs/ 直下にファイルがある: ${loose.join(', ')}`
         + `（${SECTIONS.map((x) => `docs/${x}/`).join(' / ')} のどれかへ）`)
     }
     const unknown = [...new Set(files.map((f) => f.split('/')[1]!))]
-      .filter((d) => !SECTIONS.includes(d) && !loose.some((l) => l.endsWith(`/${d}`)))
+      // 直下のファイル名は分類ではない（`docs/AGENTS.md` を分類として数えない）。
+      .filter((d) => !SECTIONS.includes(d) && d !== 'AGENTS.md'
+        && !loose.some((l) => l.endsWith(`/${d}`)))
     if (unknown.length > 0) {
       problems.push(`docs/ に未定義の分類がある: ${unknown.join(', ')}`
         + '（増やすなら `.consultant/STRUCTURE.md` §10 を先に直す）')
