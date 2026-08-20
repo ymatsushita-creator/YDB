@@ -1,5 +1,4 @@
 import { intakePath } from './intake-dir.ts'
-import { join } from 'node:path'
 import { openPostgres } from '../src/db/postgres.ts'
 import { Workbook } from '../src/import/xlsx.ts'
 import { EVENT_SHEET, planEvents } from '../src/import/events_2026.ts'

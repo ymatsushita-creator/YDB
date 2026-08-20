@@ -191,8 +191,8 @@ export default async function OperationsPage(
                   <tr><th>応募者</th><th>面接官</th><th>ステップ</th><th>種別</th><th>状態</th></tr>
                 </thead>
                 <tbody>
-                  {conflicts.map((c, i) => (
-                    <tr key={i}>
+                  {conflicts.map((c) => (
+                    <tr key={`${c.applicant_name}-${c.interviewer}-${c.step_name}-${c.conflict_type}`}>
                       <td>{c.applicant_name}</td>
                       <td>{c.interviewer}</td>
                       <td>{c.step_name}</td>

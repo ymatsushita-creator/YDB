@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import {
-  listSeasons, defaultSeason, getSeason, getSummary, ACTIVE_WINDOW_DAYS,
+  listSeasons, defaultSeason, getSeason, getSummary, 
 } from '../../src/queries/dashboard.ts'
 import { searchPersons, getSeasonLevelBreakdown } from '../../src/queries/drilldown.ts'
 import { Card, Empty, LevelBadge, num, jstDay } from '../_components/ui.tsx'
@@ -61,11 +61,11 @@ export default async function PeoplePage(
   const rows = truncated ? people.slice(0, LIMIT) : people
 
   const inWindow = breakdown.reduce((n, r) => n + Number(r.in_active_window), 0)
-  const grove = Number(summary?.identified_person ?? 0)
+  const _grove = Number(summary?.identified_person ?? 0)
   const total = breakdown.reduce((n, r) => n + Number(r.persons), 0)
   // ファネルの日次系列は応募開始日から始まる。まだ始まっていない年度では
   // 断面が存在せず 0 が返るので、比較そのものが成り立たない。
-  const comparable = new Date() >= new Date(season.application_open_date)
+  const _comparable = new Date() >= new Date(season.application_open_date)
 
   // ★ 層の判定は `canOpen` だけで行う（CLAUDE.md / C-84）。平社員（personal）は
   //   特別選考を開けない。開けない画面をパンくずと強調に置くと、押した瞬間に

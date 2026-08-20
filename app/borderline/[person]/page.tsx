@@ -8,7 +8,7 @@ import {
 } from '../../../src/queries/borderline.ts'
 import { parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE } from '../../../src/commands/score.ts'
 import { parseDecideCode, DECIDE_CODE_MESSAGE } from '../../../src/commands/decide.ts'
-import { jstDay, num, filled, NotDerived } from '../../_components/ui.tsx'
+import { jstDay, filled, NotDerived } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
 import { Avatar } from '../../_components/borderline.tsx'
 import { currentTier } from '../../../src/auth/current.ts'

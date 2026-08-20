@@ -36,7 +36,7 @@ let db: Db
 let fx: Fixture
 let season: Season
 let interviewerA: string
-let interviewerB: string
+let _interviewerB: string
 
 before(async () => {
   db = await freshDb()
@@ -53,7 +53,7 @@ before(async () => {
   interviewerA = await scalar<string>(db, `
     INSERT INTO staffs (display_name, email, is_active)
     VALUES ('面接官A', 'a81@example.test', true) RETURNING id`)
-  interviewerB = await scalar<string>(db, `
+  _interviewerB = await scalar<string>(db, `
     INSERT INTO staffs (display_name, email, is_active)
     VALUES ('面接官B', 'b81@example.test', true) RETURNING id`)
 })

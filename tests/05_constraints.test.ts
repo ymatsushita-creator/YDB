@@ -4,7 +4,7 @@ import { freshDb } from '../src/db/testing.ts'
 import { scalar, type Db } from '../src/db/client.ts'
 import {
   baseFixture, makeSeason, makePerson, makeApplication, makeVoidReason,
-  voidApplication, makeChannel, jst, type Season,
+  voidApplication, makeChannel, jst, 
 } from './support/fixtures.ts'
 
 const setup = async () => {

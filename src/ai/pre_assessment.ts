@@ -145,7 +145,7 @@ export async function assessApplication(input: {
   })
 
   const text = message.content.find((b) => b.type === 'text')
-  if (!text || text.type !== 'text') throw new Error('AIが何も返さなかった')
+  if (text?.type !== 'text') throw new Error('AIが何も返さなかった')
   const parsed = JSON.parse(text.text) as {
     label: string; rationale: string; viewpoints: ViewpointScore[]
   }

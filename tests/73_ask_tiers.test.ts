@@ -51,7 +51,7 @@ describe('記録に聞く ―― 層ごとの道具（C-201）', () => {
   test('行を丸ごと返す道具を置かない（上限がある）', async () => {
     const src = await readFile(SRC, 'utf8')
     // 個人を引く道具には必ず上限を付ける。
-    const findPerson = /find_person:[\s\S]*?\n  },/.exec(src)![0]
+    const findPerson = /find_person:[\s\S]*?\n {2}},/.exec(src)![0]
     assert.match(findPerson, /LIMIT \d+/, '個人を引く道具に上限が無い')
   })
 })

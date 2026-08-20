@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
-import { all, one, scalar, type Db } from '../src/db/client.ts'
+import { one, scalar, type Db } from '../src/db/client.ts'
 import { listCandidatesByStep, listAppointments } from '../src/queries/borderline.ts'
 
 /**

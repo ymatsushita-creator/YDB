@@ -174,7 +174,7 @@ export function TimeSeries<T extends { as_of: Date }>({
 
       {points.map((p, i) =>
         isLabelled(i) ? (
-          <text key={i} x={x(i)} y={height - 8} textAnchor="middle"
+          <text key={md(p.as_of)} x={x(i)} y={height - 8} textAnchor="middle"
                 fontSize={11} fill="var(--color-stone)">
             {md(p.as_of)}
           </text>

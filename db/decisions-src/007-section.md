@@ -1,0 +1,10 @@
+### A-6. 名寄せ判定が (A,B) と (B,A) の二重登録を許していた
+
+`UNIQUE (person_id, candidate_person_id)` は順序違いの重複を防がない。
+「AとBは別人」と「BとAは同一人物」を同時に登録できてしまい、
+同じ組を毎年候補に上げないという目的が崩れる。
+
+**対応**: `CHECK (person_id < candidate_person_id)` で組を正規化した。
+書き込み側は挿入前に2つの id をソートする必要がある。
+
+→ `tests/05_constraints.test.ts`「名寄せ判定の一意性」

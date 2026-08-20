@@ -391,7 +391,9 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     stats.persons += newIds.length
 
     const createdAt = new Map<string, string>()
-    newIds.forEach((id, i) => createdAt.set(id, personRows[i]![5]))
+    newIds.forEach((id, i) => {
+      createdAt.set(id, personRows[i]![5])
+    })
 
     // 接点
     const tpRows: Array<[string, string, string | null, string]> = []
@@ -882,8 +884,8 @@ async function seedSchedule(
   const monday = new Date(
     todayUtc.getTime() - ((todayUtc.getUTCDay() + 6) % 7) * 86_400_000)
   const at = (dayOffset: number, hour: number, minutes = 0) =>
-    new Date(monday.getTime() + dayOffset * 86_400_000)
-      .toISOString().slice(0, 10) + `T${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+09:00`
+    `${new Date(monday.getTime() + dayOffset * 86_400_000)
+      .toISOString().slice(0, 10)}T${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+09:00`
 
   const plan: Array<[string, number, number, number, string]> = [
     // 種別, 曜日(0=月), 開始時, 所要(時), 表題

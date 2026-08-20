@@ -154,8 +154,8 @@ export default async function FunnelPage(
                   </tr>
                 </thead>
                 <tbody>
-                  {targets.map((t, i) => (
-                    <tr key={`${t.category}-${t.course_label}-${i}`}>
+                  {targets.map((t) => (
+                    <tr key={`${t.category}-${t.course_label}-${t.segment_label ?? ''}`}>
                       <td>{t.category}</td>
                       <th scope="row">{t.course_label}</th>
                       <td>{t.segment_label ?? <span className="section-note">全体</span>}</td>

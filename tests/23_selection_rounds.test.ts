@@ -23,7 +23,10 @@ import { getOpenTasks } from '../src/queries/cockpit.ts'
  */
 
 /** 固定シードの疑似乱数。落ちた周を seed で再現できる。 */
-const rng = (seed: number) => () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+const rng = (seed: number) => () => {
+  seed = (seed * 1103515245 + 12345) % 2147483648
+  return seed / 2147483648
+}
 
 interface World {
   db: Db

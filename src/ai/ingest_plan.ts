@@ -106,7 +106,7 @@ reason は日本語で60字以内。`,
   })
 
   const text = message.content.find((b) => b.type === 'text')
-  if (!text || text.type !== 'text') throw new Error('AIが何も返さなかった')
+  if (text?.type !== 'text') throw new Error('AIが何も返さなかった')
   const parsed = JSON.parse(text.text) as { columns: Omit<ColumnPlan, 'header'>[] }
 
   // ★ 返ってきた割り当てを**こちら側で検証する。** 形式は保証されているが、

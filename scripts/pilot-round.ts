@@ -258,6 +258,6 @@ const counts = await all<{ label: string; n: number }>(db, `
 UNION ALL SELECT '点',         count(*) FROM evaluation_scores
 UNION ALL SELECT '状態の履歴', count(*) FROM status_histories
 UNION ALL SELECT '参加記録',   count(*) FROM event_attendances`)
-say('この周で積んだ記録: ' + counts.map((c) => `${c.label} ${Number(c.n)}`).join(' / '))
+say(`この周で積んだ記録: ${counts.map((c) => `${c.label} ${Number(c.n)}`).join(' / ')}`)
 
 await db.close()

@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
-import { one, all, scalar, type Db } from '../src/db/client.ts'
+import { one, all, scalar, } from '../src/db/client.ts'
 import {
   baseFixture, makeSeason, makePerson, makeApplication, addHistory, accept,
   makeChannel, makeTouchpoint, jst,
@@ -14,7 +14,7 @@ describe('生涯状態と年度別状態は別物', () => {
     const db = await freshDb()
     const base = await baseFixture(db)
     const s2025 = await makeSeason(db, { year: 2025 })
-    const s2026 = await makeSeason(db, { year: 2026 })
+    const _s2026 = await makeSeason(db, { year: 2026 })
     const p = await makePerson(db, base.schoolId, { createdAt: jst('2024-10-01T10:00:00') })
 
     const app = await makeApplication(db, p, s2025.id, jst('2024-11-10T09:00:00'))
@@ -60,8 +60,8 @@ describe('生涯状態と年度別状態は別物', () => {
   test('選考終了後に識別された Person は、その年度には現れない', async () => {
     const db = await freshDb()
     const base = await baseFixture(db)
-    const s2025 = await makeSeason(db, { year: 2025 })   // 選考終了 2025-02-28
-    const s2026 = await makeSeason(db, { year: 2026 })
+    const _s2025 = await makeSeason(db, { year: 2025 })   // 選考終了 2025-02-28
+    const _s2026 = await makeSeason(db, { year: 2026 })
     const p = await makePerson(db, base.schoolId, { createdAt: jst('2025-06-01T10:00:00') })
 
     const years = (await all<{ enrollment_year: number }>(

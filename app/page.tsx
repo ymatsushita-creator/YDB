@@ -529,8 +529,7 @@ export default async function Home(
           {picks.length === 0 ? (
             <Empty>確度がまだ記入されていない</Empty>
           ) : (
-            <>
-              <div className="pick-list">
+            <div className="pick-list">
                 {picks.map((p) => (
                   <Link key={p.person_id} className="pick-card"
                         href={`/people/${p.person_id}?season=${season.id}`}>
@@ -555,7 +554,6 @@ export default async function Home(
                   </Link>
                 ))}
               </div>
-            </>
           )}
         </Card>
         </div>

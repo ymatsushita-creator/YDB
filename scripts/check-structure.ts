@@ -66,7 +66,8 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   const pkg = JSON.parse(read('package.json')) as { scripts?: Record<string, string> }
   const verify = pkg.scripts?.verify ?? ''
   // `structure`（この検査自身）も必須にする。初版は自分を必須段から落としていた。
-  const stages = ['typecheck', 'test', 'decisions:index', 'structure', 'build']
+  // `lint` は `Hitler.md` §5-1 の完了ゲート（2026-08-20 に充足。C-231）。
+  const stages = ['lint', 'typecheck', 'test', 'decisions:canon', 'decisions:index', 'structure', 'build']
   const missing = stages.filter((s) => !verify.includes(s))
   // `;` で繋ぐと最後の段の終了コードしか残らず、型検査とテストの失敗が握り潰される。
   const segments = verify.split('&&').length
@@ -87,7 +88,8 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     // ★ `decisions:index` を落とさない。S1 は verify 側でこの段を要求しているのに、
     //   S1b は CI 側で要求していなかった。**CI からこの段だけ消しても S1b は ✔ のまま**で、
     //   `CLAUDE.md` の「同じものが CI で走る」が保証されていなかった（2026-08-19 再検証）。
-    const need = ['pnpm typecheck', 'pnpm test', 'pnpm decisions:index', 'pnpm structure', 'pnpm build']
+    const need = ['pnpm lint', 'pnpm typecheck', 'pnpm test', 'pnpm decisions:canon',
+      'pnpm decisions:index', 'pnpm structure', 'pnpm build']
     // `run:` の行だけを対象にする。ヘッダの説明文で通させない。
     const commands = live.split('\n').filter((l) => /^\s*(-\s*)?run:/.test(l) || /^\s{6,}\S/.test(l)).join('\n')
     const missing = need.filter((c) => !commands.includes(c))
@@ -124,8 +126,8 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   //   実データがリポジトリのルートに在る前提だった（監査 D2-01 の是正と正面から矛盾する）。
   //   S6 は実データの**存在**は見るが、実データをリポジトリ内に**要求するコード**は見ない。
   //   ここで塞ぐ。対象は追跡下のファイルだけ（生成物・無視対象を所見にしない）。
-  const CONFIG = ['.env.example', '.gitignore', '.vercelignore', 'next-env.d.ts', 'next.config.ts',
-    'package.json', 'pnpm-lock.yaml', 'proxy.ts', 'tsconfig.json', 'vercel.json']
+  const CONFIG = ['.env.example', '.gitignore', '.vercelignore', 'biome.json', 'next-env.d.ts',
+    'next.config.ts', 'package.json', 'pnpm-lock.yaml', 'proxy.ts', 'tsconfig.json', 'vercel.json']
   let stray: string[] = []
   try {
     const { stdout } = await run('git', ['ls-files'], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 })
@@ -147,7 +149,9 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
 // ── S3 番号で参照する物に索引がある ─────────────────────────────────────────
 {
   const body = readIf('db/DECISIONS-INDEX.md')
-  check('S3', '設計判断の索引が在る', body !== null && body.includes('生成物'),
+  // ★ `?.` は `boolean | undefined` を返す。`=== true` で潰す ――
+  //   undefined を真偽値として扱うと、索引が無いときの判定が型で守られない。
+  check('S3', '設計判断の索引が在る', body?.includes('生成物') === true,
     body === null ? 'db/DECISIONS-INDEX.md が無い（pnpm decisions:index）'
       : body.includes('生成物') ? '在る（生成物と明示されている）' : '生成物である旨の記載が無い')
 }
@@ -197,13 +201,28 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
   }
 }
 
-// ── S5 調査とレビューの役割が分かれている ───────────────────────────────────
+// ── S5 調査とレビューの役割が分かれ、AI資産が1系統である ──────────────────
 {
   const need = ['investigator.md', 'reviewer.md']
   const have = existsSync(at('.claude/agents')) ? readdirSync(at('.claude/agents')) : []
   const missing = need.filter((f) => !have.includes(f))
-  check('S5', '調査とレビューが分離されている', missing.length === 0,
-    missing.length === 0 ? `.claude/agents: ${have.join(', ')}` : `無い: ${missing.join(', ')}`)
+
+  // ★ 資産の置き場を `.claude/` の1系統に限る（2026-08-20。C-230）。
+  //   2026-08-20 に `.agents/skills/`（`.claude/commands/` の機械変換コピー5本）と
+  //   `.codex/agents/`（`.claude/agents/` のコピー2本）が現れた。
+  //   一括置換の跡が残っており、**`.Codex/settings.json` の deny で読めない** という
+  //   実在しない防壁を根拠に「個人情報は読めない」と書いていた。
+  //   `AGENTS.md` は「複製は必ず片方だけ古くなる」で29行のずれを畳んだ文書である。
+  //   同じ失敗が別の扉から入った。**写しを置かない。他のツールは AGENTS.md を読む。**
+  const COPIES = ['.agents', '.codex', '.gemini', '.windsurf', '.github/copilot-instructions.md']
+  const copies = COPIES.filter((d) => existsSync(at(d)))
+
+  const ok = missing.length === 0 && copies.length === 0
+  check('S5', '役割が分離され、AI資産が `.claude/` の1系統である', ok,
+    missing.length > 0 ? `無い: ${missing.join(', ')}`
+      : copies.length > 0
+        ? `資産の写しがある: ${copies.join(', ')} ―― 削除し、他ツールには AGENTS.md を読ませる`
+        : `.claude/agents: ${have.join(', ')} / 写しなし`)
 }
 
 // ── S6 実データがリポジトリの中に無い（全域＋防壁の実挙動）──────────────────
@@ -466,6 +485,28 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.pgdata', '.pgdata-pilot
     problems.length === 0 ? '凍結レポートは全て先頭で凍結を名乗っている'
       : `先頭5行に ${MARK} が無い: ${problems.slice(0, 5).join(', ')}`
         + `${problems.length > 5 ? ` ほか${problems.length - 5}件` : ''}`)
+}
+
+// ── S14 コードを持つディレクトリが、その場に AGENTS.md を持つ ────────────────
+{
+  // `Hitler.md` §2「サブパッケージには各々 AGENTS.md」「実行可能なコマンドを先頭に」。
+  // 2026-08-20 までルートに1本しか無く、`src/queries/` を触る相手に
+  // 「判定を書かない」が届いていなかった（C-233）。**届く場所に置く。**
+  const DIRS = ['app', 'src', 'src/commands', 'src/queries', 'db', 'scripts', 'tests', 'docs']
+  const problems: string[] = []
+  for (const d of DIRS) {
+    const body = readIf(d, 'AGENTS.md')
+    if (body === null) { problems.push(`${d}/AGENTS.md が無い`); continue }
+    const lines = body.split('\n')
+    // 散文から始めさせない。先頭30行以内にフェンス付きコマンドが要る。
+    if (!lines.slice(0, 30).some((l) => l.startsWith('```'))) {
+      problems.push(`${d}/AGENTS.md の先頭30行にコマンドが無い`)
+    }
+    // 長文は遵守率を下げる（`Hitler.md` §2）。近傍の規約は短く保つ。
+    if (lines.length > 60) problems.push(`${d}/AGENTS.md が ${lines.length} 行（60行以内）`)
+  }
+  check('S14', '近傍の AGENTS.md が在り、コマンドから始まる', problems.length === 0,
+    problems.length === 0 ? `${DIRS.length} 件すべて（コマンド先頭・60行以内）` : problems.join(' / '))
 }
 
 // ── S11 基準の文書と、実装されている検査が一致している ─────────────────────

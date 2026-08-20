@@ -36,7 +36,10 @@ import { unholdEvaluation } from '../src/commands/unhold.ts'
 // -------------------------------------------------------------
 function makeRng(seed: number) {
   let s = seed
-  return () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648
+  return () => {
+    s = (s * 1103515245 + 12345) % 2147483648
+    return s / 2147483648
+  }
 }
 const pick = <T,>(rand: () => number, xs: T[]) => xs[Math.floor(rand() * xs.length)]!
 const shuffled = <T,>(rand: () => number, xs: T[]) =>

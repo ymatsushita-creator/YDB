@@ -1,6 +1,5 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
 import { appCss } from './support/css.ts'
 
 /**

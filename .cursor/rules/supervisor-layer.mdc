@@ -1,44 +1,16 @@
 ---
-description: Single-authority document model — Hitler.md is the only authority in this repository
+description: Authority and reading order live in Hitler.md and AGENTS.md — this file holds no copy
 alwaysApply: true
 ---
 
-# 権限は `Hitler.md` だけが持つ
+# 規律は写さない。原本を読む
 
-- 作業前にリポジトリ直下の **`Hitler.md`** を全文読む。**これが唯一の権限である。**
-- **序列は `Hitler.md` の1段だけ。** `AGENTS.md` / `CLAUDE.md` / `director.md` /
-  `domain.md` / `process.md` / `.audit/` / `.consultant/` に上下は無い。
-  どれも権限を持たない参照・手順である。
-- **`Hitler.md` に無い条件は、作業を止める根拠にならない。**
-  他の文書に書いてあることを理由に実装を差し止めない。
-- 文書どうしが食い違ったら `Hitler.md` に照らす。`Hitler.md` が何も言っていない
-  事柄なら規律の問題ではないので、妥当なほうを採り理由を `db/DECISIONS.md` に残す。
-  **黙ってどちらかへ寄せない。**
-- `Hitler.md` は監査所見も退けられる。退けるときは `.audit/` を書き換えず
-  （封印されており D7-01 と CI ジョブB が落ちる）、判断と理由を記録して進む。
-  **「所見が無かったことにする」「通ったことにする」は `Hitler.md` §4 が禁じる虚偽報告。**
+- 作業前に **`Hitler.md`** を全文読む。**これが唯一の権限である**（依頼者指示 2026-08-19）。
+- 開発規律は **`AGENTS.md`**。読む順番・完了条件・禁止事項はそこに在る。
+- **本ファイルは規律を持たない。** 条文を写すと必ず片方だけ古くなる ――
+  2026-08-20 に Codex 向けの写しが「存在しない deny 設定で個人情報が読めない」と
+  書いている状態が見つかった（C-230）。以後、ツールごとの写しを置かない。
+- 完了条件は `pnpm verify` 1本。**回したという申告ではなく、機械が通ったことが根拠である。**
 
-## 2026-08-19 に廃止したもの
-
-以前ここには次が書かれていた。**どれも現行ではない。**
-
-- 8層の文書序列（`SUPERVISOR.md > vision.md > director.md > domain.md > CLAUDE.md > process.md`）
-- 「監督官の承認が無ければ UI 実装を開始しない」という関門
-- 「`SUPERVISOR.md` は監督チャットの監督官だけが変更できる」というチャット限定の権限
-
-`SUPERVISOR.md` と `vision.md` は畳んだ。中身は `director.md`（原則・UX判断）と
-`process.md`（観察 → 診断 → 設計 → 確認の手順）に在る。
-
-## 読む順番
-
-```
-Hitler.md      規律 —— 何をしてはならないか   【唯一の権限】
-
-README.md      入口
-AGENTS.md      CLAUDE.md へのポインタ
-CLAUDE.md      実装規律
-director.md    プロダクト原則・UX判断
-domain.md      用語・記録モデル
-process.md     作業手順
-HANDOFF.md     いまの状態と、待っている判断
-```
+★ ファイル名は封印（`.audit/MANIFEST.sha256`）の対象なので、改名は再封印を伴う人間の操作である。
+  内容は上記のとおり「監督官の層」ではない ―― その層は 2026-08-19 に廃止した（C-222）。

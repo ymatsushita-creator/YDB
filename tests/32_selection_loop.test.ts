@@ -105,7 +105,7 @@ describe('選考フローを回し続ける', () => {
       const rejectAtEnd = n % 5 === 0        // 最後に不合格で終える
 
       for (const [i, step] of steps.entries()) {
-        const evaluationId = await passStep(applicationId, step.id, n + i)
+        const _evaluationId = await passStep(applicationId, step.id, n + i)
 
         if (holdThisRound && i === 1) {
           // 確定済みは保留にできない（母集団の外）。新しい評価行で試す。

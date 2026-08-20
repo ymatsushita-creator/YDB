@@ -66,6 +66,13 @@ const BLANK_ROWS = 3
 const emptyValues = (columns: SheetColumn[]): Record<string, string> =>
   Object.fromEntries(columns.map((c) => [c.key, '']))
 
+/**
+ * 表の行の鍵。**行の同一性は位置そのものである** ―― 同じ候補者を2行に貼れるので
+ * `id` は一意でなく、誤りの印も `errors.has(rowIndex)` と位置で引いている。
+ * 位置以外の鍵にすると、印と行がずれる。鍵はここで1度だけ組む。
+ */
+const rowKey = (id: string, index: number) => `${id}-${index}`
+
 export function Sheet({
   columns, rows, action, hidden, leadLabel, addLabel = '行を追加', detail,
   photoColumn = false,
@@ -217,7 +224,8 @@ export function Sheet({
           </thead>
           <tbody>
             {data.map((row, rowIndex) => (
-              <tr key={`${row.id}-${rowIndex}`}
+              <tr
+                  key={rowKey(row.id, rowIndex)}
                   className={errors.has(rowIndex) ? 'sheet-row-bad' : ''}>
                 {photoColumn && (
                   <td className="sheet-photo">

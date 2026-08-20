@@ -1,4 +1,4 @@
-import { all, maybeOne, one, scalar, type Db } from '../db/client.ts'
+import { all, maybeOne, scalar, type Db } from '../db/client.ts'
 
 /**
  * 幻のデモ期（依頼者の指示。実行⑪）。

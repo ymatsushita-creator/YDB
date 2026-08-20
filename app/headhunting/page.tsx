@@ -175,7 +175,7 @@ export default async function HeadhuntingPage({
                   <div className="hh-person-identity">
                     {panel.photo_data_url
                       ? <img className="hh-photo" src={panel.photo_data_url} alt={`${panel.person_name}さんの顔写真`} />
-                      : <span className="hh-photo-placeholder" aria-label="顔写真未設定">
+                      : <span className="hh-photo-placeholder" role="img" aria-label="顔写真未設定">
                           {panel.family_name.slice(0, 1)}{panel.given_name.slice(0, 1)}
                         </span>}
                     <div>
@@ -205,8 +205,8 @@ export default async function HeadhuntingPage({
                   <p className="hh-empty">提出済みの評価がまだ無い。</p>
                 ) : (
                   <ul className="hh-criteria">
-                    {criteria.map((c, i) => (
-                      <li key={`${c.step_name}-${c.criteria_name}-${i}`}>
+                    {criteria.map((c) => (
+                      <li key={`${c.step_name}-${c.criteria_name}`}>
                         <span className="hh-criteria-name">{c.criteria_name}</span>
                         <Stars score={c.score} scaleMax={c.scale_max} />
                         <span className="hh-criteria-raw">{c.score} / {c.scale_max}</span>

@@ -1,0 +1,11 @@
+### C-4. `partners` を `touchpoints` より前に定義した
+
+原典は `touchpoints` を先に定義し、`ALTER TABLE` で外部キーを後付けしていた。
+依存順に並べ替えて `ALTER` を不要にした。
+
+当初これを「定義の位置以外に差はない」と書いていたが、誤りだった。
+原典は `ADD CONSTRAINT touchpoints_partner_fk` と制約名を明示している。
+インラインの `REFERENCES` に置き換えると PostgreSQL が
+`touchpoints_partner_id_fkey` と自動命名し、制約名で分岐するコード
+（このリポジトリのテストがまさにその書き方をしている）で挙動が変わる。
+インラインでも `CONSTRAINT touchpoints_partner_fk` と明示して名前を揃えた。

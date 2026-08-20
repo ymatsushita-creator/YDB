@@ -179,7 +179,9 @@ export async function Shell({
             </Fragment>
           ))}
         </nav>
-        <div className="hh-nav-add" aria-label="追加">
+        {/* ★ role を持たない div の aria-label は読み上げに届かない（無視される）。
+            中身がリンクの集まりなので nav にする。ラベル付きの nav は複数あってよい。 */}
+        <nav className="hh-nav-add" aria-label="追加">
           {addLinks.map((item) => (
             <Link
               key={item.href}
@@ -189,7 +191,7 @@ export async function Shell({
               <span>{item.label}</span>
             </Link>
           ))}
-        </div>
+        </nav>
 
         {/*
           名前で検索。素の <form> なので JS が無くても動く。
@@ -198,8 +200,12 @@ export async function Shell({
 
           ★ 一覧が開かない層には出さない（実行⑪）。押すと弾かれる窓を残さない。
         */}
+        {/* ★ `role="search"` ではなく `<search>` を使う。要素のほうが支援技術へ確実に届く。
+            class は `form` に残す ―― CSS は `.hh-search` と子孫指定だけを見ているので、
+            1段くるんでも意匠は変わらない（`.hh-search` 自身が flex 列を持つ）。 */}
         {opens('/people') && (
-        <form className="hh-search" action="/people" method="get" role="search">
+        <search>
+        <form className="hh-search" action="/people" method="get">
           {/* 検索も期を持ち回る。押した先で期が変わると、
               「2期を見ていたのに3期の結果が出る」ことになる。 */}
           {seasonId && <input type="hidden" name="season" value={seasonId} />}
@@ -212,6 +218,7 @@ export async function Shell({
             <button className="btn-physical hh-search-go" type="submit">探す</button>
           </div>
         </form>
+        </search>
         )}
 
         <div className="hh-sidebar-foot">
@@ -240,8 +247,10 @@ export async function Shell({
               実行⑬でいったん止めたが、依頼者の判断で戻した。
               流すには**同じ並びを2組**出して端をつなぐ（切れ目が見えないため）。
               2組目は写しなので `aria-hidden` を付ける ―― 読み上げが二度読まない。 */}
+        {/* ★ role の無い div の aria-label は届かない。横送りする領域なので region にする
+            （C-208 で「帯の高さは動かさない」と決めた帯そのもの）。 */}
         {criteria.length > 0 && (
-          <div className="hh-criteria-ref" aria-label="評価基準">
+          <section className="hh-criteria-ref" aria-label="評価基準">
             <div className="hh-criteria-scroll">
               <div className="hh-criteria-track">
                 {[false, true].map((copy) => (
@@ -272,7 +281,7 @@ export async function Shell({
                 ))}
               </div>
             </div>
-          </div>
+          </section>
         )}
         {children}
       </div>
@@ -341,7 +350,7 @@ export async function Breadcrumb({
         const isLast = i === segments.length - 1
         const isRoot = root !== undefined && i === 0
         return (
-          <span key={`${c.label}-${i}`} className="zoom-seg">
+          <span key={`${c.label}-${c.href ?? ''}`} className="zoom-seg">
             {i > 0 && <span className="zoom-sep" aria-hidden>›</span>}
             {isRoot
               ? <span className="zoom-root">{c.label}</span>

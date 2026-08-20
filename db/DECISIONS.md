@@ -9565,3 +9565,128 @@ R2 の条文は「別ボリューム、または暗号化ディスクへ」で�
 
 検証: 型検査。S6 が防壁3通りの拒否と正当な外部の受理を実演。テスト・ビルド。
 テスト … `tests/36_intake.test.ts`
+
+## C-230 AI資産の写しを畳み、置き場を `.claude/` の1系統にした
+
+**2026-08-20。依頼者の指示「Hitler に従って構成を AI 駆動向けに最適にする」への対処。**
+
+`.agents/skills/`（`.claude/commands/` の機械変換コピー5本）と
+`.codex/agents/`（`.claude/agents/` のコピー2本）が現れていた。どちらも未追跡である。
+
+**内容は置かれた時点で既にずれていた。**
+
+| 写し | ずれ |
+|---|---|
+| `.codex/agents/investigator.toml` | `.claude`→`.Codex` の一括置換で **`.Codex/settings.json` の deny で読めない** と書いていた。そのファイルは存在しない ―― 調査役に「個人情報は読めない」と誤って教える形である |
+| 同上 | テスト件数が「84ファイル」。実測は86 |
+| `.agents/skills/source-command-*` | `.claude/commands/*` に英語の定型文を足した写し。原本を直しても追随しない |
+
+`AGENTS.md` は「**複製は必ず片方だけ古くなる**」を理由に `CLAUDE.md` の複製をやめ、
+29行のずれを畳んだ文書である（C-45）。**同じ失敗が別のツールの扉から入った。**
+
+- 写しを削除した。Claude Code 以外のツールへは内容を写さず `AGENTS.md` を読ませる。
+- 再発を機械で止める。`.consultant/STRUCTURE.md` §5 に条文を足し、S5 が
+  `.agents/` `.codex/` `.gemini/` `.windsurf/` `.github/copilot-instructions.md` の
+  存在で落ちるようにした（`scripts/check-structure.ts`）。
+- 併せて S13 の誤検知を直した。`tests/83_dangling_ratchet.test.ts` の架空番号が
+  `C-` 接頭辞だったため、**フィクスチャ自身が「記録の無い C-番号」として拾われ、
+  `pnpm verify` が永久に赤かった。** `ratchet` は文字列の集合を比べるだけなので、
+  接頭辞を `A`〜`F` の外（`Z-900`）へ移した。**検査の側は緩めていない。**
+
+テスト: `tests/83_dangling_ratchet.test.ts`（架空番号の接頭辞）／`pnpm structure` の S5。
+
+## C-231 完了ゲートに Lint を足した（`Hitler.md` §5-1 の未充足を閉じた）
+
+**2026-08-20。** `Hitler.md` §5 の完了ゲートは第1段に Lint / Format を置いているが、
+`package.json` に `lint` も `format` も無く、`Hitler.md` §0 が
+「実行できるのは §5 の 2〜6 だけ」と未充足を明記していた。
+
+- `biome` は既に devDependencies に在り、`biome.json` が未追跡で置かれていた。
+  設定を追跡下に入れ、`pnpm lint`（`biome check .`）を `pnpm verify` の第1段に置いた。
+- `.github/workflows/quality.yml` にも同じ段を足した。**S1b が6段すべてを CI に要求する。**
+- `biome.json` はルート直下の設定11本目である。`.consultant/STRUCTURE.md` §2 の一覧を先に直した。
+- **書式（formatter）は有効にしない。** 既存コードの整形をこの差分で動かすと、
+  意匠と実装の差分が混ざって読めなくなる。有効化は別の判断で行う。
+
+初回の実行で12件が出た。**規則を切らずに現場を直した**（§7）。
+
+| 現場 | 直し方 |
+|---|---|
+| `key={i}` 5件（charts / funnel / headhunting / operations / パンくず） | 記録の値から鍵を組んだ |
+| `app/_components/sheet.tsx` の行の鍵 | **行の同一性は位置そのもの**（誤りの印も `errors.has(rowIndex)` で引く）。`rowKey(id, index)` として鍵を1度だけ組み、JSX へ index を持ち込まない形にした |
+| `role="search"` の `<form>` | `<search>` でくるんだ。class は `form` に残す ―― CSS は `.hh-search` と子孫指定しか見ていないので意匠は変わらない |
+| `role="region"` の `div`（評価基準の帯） | `<section>` にした |
+| 式の中の代入2件（固定シード乱数） | 文に分けた |
+| `forEach` の戻り値1件 | ブロックにした |
+| 未使用の束縛3件 | 落とした |
+
+**抑止コメントは1件も使っていない。** biome は JSX の属性位置にコメントを置けないため、
+抑止で通す形は取れなかった ―― 結果として全件が現場の修正になった。
+
+テスト: `pnpm lint`（緑）／`pnpm verify` の第1段。
+
+## C-232 `AGENTS.md` を実装規律の実体にした（`Hitler.md` §2 の逸脱を1件解消）
+
+**2026-08-20。依頼者の承認による**（`Hitler.md` §4「事前承認が必要 —— 本ファイルの変更」）。
+
+C-45 以来、実体は `CLAUDE.md`・`AGENTS.md` は一枚のポインタだった。
+理由は「複製は必ず片方だけ古くなる」であり、それは正しい。**向きが逆だった。**
+
+C-230 で分かったのは、`AGENTS.md` を読むツール（Codex / Cursor / その他）が増えると、
+ポインタ1枚では規律が届かず、**ツールごとの写しが作られる**ということである。
+実際に作られた写しは、置かれた時点で既に嘘（存在しない deny 設定）を含んでいた。
+
+- `AGENTS.md` を実体にし、`CLAUDE.md` を一枚のポインタにした。**複製は増えていない。**
+- `Hitler.md` §0 の逸脱表から1行を消した（**緩めたのではなく、§2 に合わせた**）。
+- `README.md` の導線と `.consultant/STRUCTURE.md` §2 の一覧を同じ差分で直した。
+- `.cursor/rules/` は写しをやめ、`Hitler.md` と `AGENTS.md` を読ませる4行にした。
+
+★ **これらは `.audit/MANIFEST.sha256` の封印対象である**（`AGENTS.md` / `CLAUDE.md` /
+  `Hitler.md` / `.cursor/rules/`）。AIは差分を用意できるが、適用と再封印は人間が行う ――
+  `.githooks/pre-push` は非対話セッションで確実に止まる（`AUDIT_CHARTER.md` §6-5。
+  AIが自分の制約文書を書き換えた事故が、この仕組みを作った理由である）。
+  差分は `.tmp/authority-reversal.patch` に置いた。`domain.md` のときと同じ形である。
+
+## C-233 近傍に `AGENTS.md` を置いた（`Hitler.md` §2 のもう1件を充足）
+
+**2026-08-20。** §2 は「サブパッケージには各々 `AGENTS.md`」「散文より**実行可能なコマンドを先頭**に」
+「1ファイル200行を超えたら分割」と定めているのに、**規律はルートに1本しか無かった。**
+
+AIは編集対象のディレクトリから読み始める。`src/queries/` を触る相手に
+「判定を書かない」「単位はクエリのコメントに書く（C-62）」が届いていなかった ――
+届いていない規律は、書かれていないのと同じである。
+
+8本を置いた（`app/` `src/` `src/commands/` `src/queries/` `db/` `scripts/` `tests/` `docs/`）。
+**各60行以内・先頭はコマンド・ルートの規律を写さない**（写しはずれる。C-45 / C-230）。
+
+- S14 として機械にした ―― 存在・先頭30行のコマンド・60行の上限を見る。
+- `docs/guides/` を新設し、`Hitler.md` §3 の「用語は1箇所に集約」を満たす1枚を置いた
+  （正典は封印下の `domain.md`。本書は引き当てのための表で、旧生態系比喩の対応を持つ）。
+  S10 の分類一覧を先に直した。
+
+★ 残る §2 の未充足は `db/DECISIONS.md` の行数だけである（理由は `Hitler.md` §0）。
+
+テスト: `pnpm structure` の S14 / S10 / S11。
+
+
+## C-234 正典を生成物にして、200行の上限を満たした（パスは動かさない）
+
+**2026-08-20。** `Hitler.md` §2 は「1ファイル200行を超えたら分割する」と定め、
+§0 は `db/DECISIONS.md`（9,600行）について**分割しないと逸脱を宣言していた** ――
+理由は「正典のパスを動かすと番号の参照先が全部切れる」。
+
+**パスを動かさずに分割できる。**
+
+- 原稿を `db/decisions-src/` に置いた（節と番号ごとに284本・最大95行）。**書くのはこちら。**
+- 正典 `db/DECISIONS.md` は**その連結（生成物）**になった。同じ場所に同じ内容で在り続けるので、
+  git 履歴・コード内コメント・`DECISIONS-INDEX.md`・`decisions:show`・`db/decisions/` の写し・
+  `tests/10_decisions_references.test.ts` の参照は**1つも切れていない。**
+- 連結はバイト単位で往復する（分割の境界をそのまま繋ぐ）。`pnpm decisions:canon -- --check` が
+  `pnpm verify` と CI で毎回それを確かめるので、原稿だけ直して組み立て忘れると赤くなる。
+- ディレクトリ名を `db/DECISIONS/` にしない ―― macOS の既定は大小文字を区別せず、
+  既存の写し `db/decisions/` と**同じ場所になる。**
+
+★ これで `Hitler.md` §0 の逸脱表に残っていた最後の1件（行数）が閉じた。
+  残るのは §0 が「事実が変わるまで」としている2件（履歴の鍵・required status check）である。
+
+テスト: `pnpm decisions:canon -- --check`（往復の一致）／`pnpm structure` の S1・S1b。

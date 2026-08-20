@@ -1,0 +1,14 @@
+### D-1. ファネルの開始日を `outreach_start_date` にするか
+
+`f_funnel_daily` は `application_open_date` から日次系列を作る。しかし林は
+集客期間（`outreach_start_date` 〜 `application_open_date`）に積み上がるため、
+その立ち上がりがチャートに映らない。
+
+`outreach_start_date` から始めれば集客期が見えるようになり、
+`relative_day` は応募開始前が負になる（D-30 のような読み方）。
+原典に指定がないため変更していない。
+
+**【2026-08-06 決定】現状維持。** ファネルの起点は `application_open_date` の
+まま。集客期の動きは(4)（流入元）の役割であり、(3)の3段ファネルには混ぜない。
+
+→ `tests/04_funnel.test.ts`「ファネルの単調性」（系列が応募開始日から始まることを含む）

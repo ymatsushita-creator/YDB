@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
-import { ACTIVE_WINDOW_DAYS } from '../../../src/queries/dashboard.ts'
 import {
   getPerson, getPersonSeasonStates, getPersonApplications, getPersonTouchpoints,
   OUTCOME_LABEL,

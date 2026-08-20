@@ -130,7 +130,7 @@ describe('掘っていっても行き着かない画面が無い（実行⑭）'
     //   こちらで勝手に作らない。**押せる形で出さない**ことだけを見張る。
     //   イベントの一覧は「イベントを追加」の下段に置いてある（同じ画面の中）。
     const all = await routes()
-    const ls = await links()
+    const _ls = await links()
     const missing: string[] = []
     for (const r of all) {
       const parts = r.split('/').filter(Boolean)

@@ -436,7 +436,10 @@ describe('評価基準（横バー）', () => {
     //   折り返しをやめて1行に並べ、**送るのは利用者**にした。
     //   （折り返していた頃は軸が15本になって**天端で1行目が切れていた**。C-65）
     const shell = await read('app/_components/shell.tsx')
-    const ref = shell.slice(shell.indexOf('<div className="hh-criteria-ref"'), shell.indexOf('{children}'))
+    // ★ 器の要素名で切り出さない（2026-08-20。C-231）。`div` + `role="region"` から
+    //   `<section>` へ変えた瞬間に、この切り出しが空を返して**中身の検査が全部素通り**した。
+    //   見るべきは帯そのものなので、class で位置を取る。
+    const ref = shell.slice(shell.indexOf('className="hh-criteria-ref"'), shell.indexOf('{children}'))
     assert.doesNotMatch(ref, />評価基準</)
     assert.doesNotMatch(ref, /hh-criteria-step-name/)
     // ★ **自動で流す**（依頼者の指示。実行⑮。C-139）。実行⑬でいったん止めたが、

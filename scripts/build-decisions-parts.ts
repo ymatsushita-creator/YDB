@@ -73,7 +73,7 @@ function renderPart(id: string, hits: Entry[], lines: readonly string[]): string
   for (const hit of hits) {
     out.push(sliceEntry(lines, hit), '')
   }
-  return out.join('\n').replace(/\n+$/, '') + '\n'
+  return `${out.join('\n').replace(/\n+$/, '')}\n`
 }
 
 const markdown = await readFile(SOURCE, 'utf8')
@@ -130,7 +130,7 @@ for (const [prefix, label] of Object.entries(SECTION_LABEL)) {
   }
   readme.push('')
 }
-files.set('README.md', readme.join('\n').replace(/\n+$/, '') + '\n')
+files.set('README.md', `${readme.join('\n').replace(/\n+$/, '')}\n`)
 
 const check = process.argv.includes('--check')
 

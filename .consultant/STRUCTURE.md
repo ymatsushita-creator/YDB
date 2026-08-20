@@ -9,10 +9,10 @@
 
 ```
 pnpm structure      # 単体で回す
-pnpm verify         # 完了条件の一部として回る（typecheck → test → 索引 → 構成 → build）
+pnpm verify         # 完了条件の一部として回る（lint → typecheck → test → 索引 → 構成 → build）
 ```
 
-実体は `scripts/check-structure.ts`。下の各節の見出しに付いた `S1`〜`S11` が検査IDで、
+実体は `scripts/check-structure.ts`。下の各節の見出しに付いた `S1`〜`S13` が検査IDで、
 1つでも破れば **exit 1** になる。CI（`.github/workflows/quality.yml`）でも走る。
 
 ★ 初版は全項目が「文字列が含まれるか」の判定で、独立レビュー（2026-08-19）に
@@ -24,7 +24,7 @@ deny を1件の長い文字列に潰しても ✔、`&&` を `;` に変えても
 外部ツール `consultant analyze`（C01〜C07）は解決できたときだけ走る。
 CI からは外部リポジトリを解決できないので**実行されない**。
 そのとき検査は「未実行」と明記して通す —— **「問題なし」とは言わない**（`CHARTER.md` §1）。
-CI が必ず強制するのは S1〜S11 である。
+CI が必ず強制するのは S1〜S13 である。
 **この一覧と実装のずれは S11 が落とす** —— 節を書かずに検査だけ足すことはできない。
 
 道具の位置は `.consultant/TOOL_PATH` に固定してある（`.audit/TOOL_PATH` と同じ形）。
@@ -32,13 +32,18 @@ CI が必ず強制するのは S1〜S11 である。
 ## 1. 完了条件は1本のコマンドである〔S1・S1b〕
 
 ```
-pnpm verify   =  typecheck → test → decisions:index --check → structure → build
+pnpm verify   =  lint → typecheck → test → decisions:canon/index/parts --check → structure → build
 ```
 
 - 完了条件を人間やAIが手で打つ規約にしない。**打ち忘れは必ず起きる。**
 - 同じものが CI（`.github/workflows/quality.yml`）で走る。
   **ローカルで通ったという申告は根拠にならない。**
-- S1b は **`verify` の5段すべて**を CI の `run:` に要求する。初版は `decisions:index` を
+- **`lint` は 2026-08-20 に足した**（C-231）。`Hitler.md` §5-1 は完了ゲートの第1段に
+  Lint / Format を置いているが、`package.json` に `lint` が無く、
+  `Hitler.md` §0 が「実行できるのは §5 の 2〜6 だけ」と未充足を明記していた。
+  biome を追跡下の `biome.json` で回す。**規則を切って通すことは §7 が禁じる** ――
+  誤検知は規則単位ではなく現場単位で理由を書いて抑止する。
+- S1b は **`verify` の6段すべて**を CI の `run:` に要求する。初版は `decisions:index` を
   要求から落としており、**CI からその段だけ消しても S1b は ✔ のまま**だった
   （2026-08-19 再検証）。「同じものが走る」を機械が保証していなかった。
 - `quality.yml` を `audit.yml` に合流させない。`audit.yml` は監査法人の管轄で
@@ -54,8 +59,8 @@ pnpm verify   =  typecheck → test → decisions:index --check → structure �
 ```
 Hitler.md      唯一の権限（依頼者指示 2026-08-19）。他の文書に序列は無い
 README.md      着手導線（ここから読む）
-AGENTS.md      CLAUDE.md へのポインタ
-CLAUDE.md      実装規律
+AGENTS.md      実装規律の実体（`Hitler.md` §2 どおり。C-232）
+CLAUDE.md      AGENTS.md へのポインタ
 director.md    プロダクト原則・UX判断
 domain.md      用語・記録モデル
 process.md     作業手順
@@ -68,15 +73,19 @@ HANDOFF.md     いまの状態
 **空の文書を序列のために置かない** —— 序列が無ければ枠も要らない。
 
 `Hitler.md` の原本は `../Hitler/Hitler.md`（NEO 全プロジェクト共通のテンプレート）。
-**このリポジトリの側で書き換えない。** テンプレートと現実の食い違い
-（`AGENTS.md` が実体・設計判断は `docs/adr/`）は `AGENTS.md` が吸収する。
+**このリポジトリの側で書き換えない**（§0 のプロジェクト固有節だけは依頼者の承認で書く）。
+2026-08-20 に「`AGENTS.md` が実体」という §2 の要求へそろえた（C-232。依頼者の承認済み）――
+`AGENTS.md` を読むツール（Codex / Cursor）へ写しを置かずに規律を届けるため。
+残る食い違いは設計判断の置き場だけで、`docs/adr/` ではなく `db/DECISIONS.md` である。
 
-追跡下に置ける読み物以外は、動かすのに要る設定10本に限る。
+追跡下に置ける読み物以外は、動かすのに要る設定11本に限る。
 
 ```
-.env.example  .gitignore  .vercelignore  next-env.d.ts  next.config.ts
+.env.example  .gitignore  .vercelignore  biome.json  next-env.d.ts  next.config.ts
 package.json  pnpm-lock.yaml  proxy.ts  tsconfig.json  vercel.json
 ```
+
+`biome.json` は 2026-08-20 に追加した11本目である（C-231）。**設定を増やすときはこの一覧を先に直す。**
 
 - 実行レポートは `docs/reports/`。**着手時に読む物ではない。**
   2026-08-19 時点で35本・7,733行あり、これがルートにあると
@@ -97,6 +106,11 @@ package.json  pnpm-lock.yaml  proxy.ts  tsconfig.json  vercel.json
 - ずれは CI が `--check` で落とす。追記したら索引も一緒にコミットする。
 - 番号の重複は**黙って振り直さない。** git 履歴側の参照は後から直せない。
   索引の先頭に掲げ、どちらを正とするかは人間が決める。
+- **正典 `db/DECISIONS.md` は生成物である**（2026-08-20。C-234）。原稿は `db/decisions-src/`
+  （節と番号ごとに284本・最大95行）で、**書くのは原稿の側**。`pnpm decisions:canon` で組み立てる。
+  ★ こうして `Hitler.md` §2 の「1ファイル200行」を、**正典のパスを動かさずに**満たした ――
+    連結はバイト単位で往復するので、git 履歴・コード内コメント・索引・`decisions:show` の
+    参照は1つも切れない。`--check` が CI で毎回それを確かめる。
 
 ## 4. 危険操作は設定で落とす〔S4〕
 
@@ -113,7 +127,7 @@ package.json  pnpm-lock.yaml  proxy.ts  tsconfig.json  vercel.json
 
 `ask` は、取り返しはつくが範囲が広い操作に使う（`git commit` / `db:reset` / `import:*`）。
 
-## 5. 役割を分ける〔S5〕
+## 5. 役割を分け、AI資産は `.claude/` の1系統に置く〔S5〕
 
 | 資産 | 役割 |
 |---|---|
@@ -126,6 +140,20 @@ package.json  pnpm-lock.yaml  proxy.ts  tsconfig.json  vercel.json
 | `.claude/commands/handoff.md` | `HANDOFF.md` を実測で書き直す |
 
 反復する手順を毎回自然言語から組み立て直さない。2回やったら資産にする。
+
+**資産の置き場は `.claude/` だけである**（2026-08-20。C-230）。
+`.agents/` `.codex/` `.gemini/` `.windsurf/` `.github/copilot-instructions.md` を置かない。
+S5 はこれらの存在で落ちる。
+
+- 2026-08-20 に `.agents/skills/`（`.claude/commands/` の機械変換コピー5本）と
+  `.codex/agents/`（`.claude/agents/` のコピー2本）が現れた。**内容は既にずれていた** ――
+  テスト件数が 84（実測86）のまま古く、`.claude`→`.Codex` の一括置換で
+  **`.Codex/settings.json` の deny で読めない**という実在しない防壁が書かれていた。
+  調査役に「個人情報は読めない」と誤って教える形である。
+- `AGENTS.md` は「**複製は必ず片方だけ古くなる**」を理由に、`CLAUDE.md` の複製をやめて
+  29行のずれを畳んだ文書である。**同じ失敗が別のツールの扉から入った。**
+- Claude Code 以外のツールへは、内容を写さず `AGENTS.md` を読ませる（各ツールが対応する）。
+  `.cursor/rules/` は封印対象なので、差し替えは人間が適用して再封印する。
 
 ## 6. 実データはリポジトリの外にある〔S6〕
 
@@ -209,6 +237,7 @@ docs/consultant/ 構成診断の経緯。着手時に読む物ではない（現
 docs/pilot/     Pilot 運用の文書（B-1〜B-7 の別番号体系を持つ）
 docs/product/   製品の参照資料（ペルソナ等）
 docs/reports/   実行①〜⑮の凍結レポート。着手時に読む物ではない
+docs/guides/    開発手順・用語（`Hitler.md` §3 の集約先。2026-08-20 追加。C-233）
 ```
 
 - **`docs/` 直下にファイルを置かない。** 必ずどれかの分類へ入れる。
@@ -241,6 +270,23 @@ docs/reports/   実行①〜⑮の凍結レポート。着手時に読む物で�
   （`CLAUDE.md`「記録にない値の創作」の禁止）。**新しい番号は素通りできない。**
 - ラチェットである。**減ったときも落ちる** ―― 埋めたら `pnpm decisions:baseline` で締める。
   締め忘れた台帳は「45件のままだ」と嘘をつき、次に増えた1件を隠す。
+
+## 14. コードを持つディレクトリは、その場に `AGENTS.md` を持つ〔S14〕
+
+`Hitler.md` §2 は「サブパッケージには各々 `AGENTS.md`」「散文より**実行可能なコマンドを先頭**に」と
+定めている。2026-08-20 まで**ルートに1本しか無かった**（C-233）。
+
+```
+app/  src/  src/commands/  src/queries/  db/  scripts/  tests/  docs/
+```
+
+- 上の各ディレクトリに `AGENTS.md` を置く。**編集対象に最も近い物が優先**する（`Hitler.md` §1）。
+- **先頭にコマンドを置く**（30行以内にフェンス付きブロックが1つ以上）。散文から始めない。
+- **1本 60行以内**に収める。ルートの規律を写さない ―― そこにしか無いことだけを書く
+  （複製は必ず片方だけ古くなる。C-45 / C-230）。
+- なぜ要るか: AIは編集対象のディレクトリから読み始める。`src/queries/` を触る相手に
+  「判定を書かない」「単位はコメントに書く」が届いていなかった。**届く場所に置く。**
+- S14 は存在・行数・先頭のコマンドを見る。**一覧を増やすときはこの節を先に直す。**
 
 ## 12. 凍結文書は、先頭で凍結を名乗る〔S12〕
 

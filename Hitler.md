@@ -152,18 +152,19 @@
 
 | §2/§3 の要求 | YouthDB の実体 | 理由 |
 |---|---|---|
-| `AGENTS.md` が実体、`CLAUDE.md` は差分 | **逆。** `CLAUDE.md` が実装規律、`AGENTS.md` は一枚のポインタ | 実行⑨以前に複製を持って29行ずれた。ポインタ1枚に寄せた（C-45） |
+| ~~`AGENTS.md` が実体、`CLAUDE.md` は差分~~ | **§2 どおりにした**（2026-08-20。C-232）。`AGENTS.md` が実装規律、`CLAUDE.md` は一枚のポインタ | 逸脱を解消した。Codex / Cursor など `AGENTS.md` を読むツールへ写しを置かずに規律を届けるには、実体が `AGENTS.md` に無いと届かない（写しがずれた事故は C-230） |
 | ADR は `docs/adr/NNNN-短い題.md` | `db/DECISIONS.md` の `C-nnn` / `D-n`（追記のみ） | 番号がコード内コメントと**コミットメッセージ**から参照されている。git 履歴は後から直せない |
 | `Status: Proposed \| Accepted \| Superseded by` | 節（A〜G）と本文で状態を表す | 同上。既存220件超の書式を変えると全参照が切れる |
-| `docs/specs/` `docs/api/` `docs/guides/` | 無い。仕様は `domain.md`、手順は `process.md` | 規模に対して階層が過剰。使われない枠を作らない |
+| `docs/specs/` `docs/api/` ~~`docs/guides/`~~ | `docs/guides/` は**置いた**（2026-08-20。C-233。§3「用語は1箇所に集約」の充足）。仕様は `domain.md`、手順は `process.md` | 残る2つは規模に対して階層が過剰。使われない枠を作らない |
 | `data/` | 無い。**リポジトリの外**（監査 D2-01 の是正） | 実データを中に置かない。`data/` を作ると受け入れ口に見える |
 | `.claude/skills/` `.claude/plans/` | 無い。`.claude/commands/` と `.claude/agents/` を使う | 反復手順はコマンド、役割はサブエージェントで足りている |
 
-**1ファイル200行の上限を、`db/DECISIONS.md` は満たしていない（9,351行）。**
-分割しない理由は上と同じ ―― 正典のパスを動かすと番号の参照先が全部切れる。
-緩和として `db/decisions/<番号>.md`（1件1ファイル・生成物）を置き、
-**AIも人もそちらを開く**（C-220）。`README.md` と `HANDOFF.md` がその導線を持つ。
-★ ただし**緩和であって解消ではない。** 正典は肥大したままである。
+~~**1ファイル200行の上限を、`db/DECISIONS.md` は満たしていない。**~~
+**解消した**（2026-08-20。C-234）。原稿を `db/decisions-src/`（節と番号ごとに284本・最大95行）に置き、
+正典 `db/DECISIONS.md` は**その連結＝生成物**にした。**パスを動かしていない**ので、
+git 履歴・コード内コメント・索引・`decisions:show` の参照は1つも切れていない。
+連結はバイト単位で往復し、`pnpm decisions:canon -- --check` が `verify` と CI で毎回確かめる。
+1件ずつ開く導線（`db/decisions/<番号>.md`。C-220）はこれまでどおり在る。
 
 **`.consultant/STRUCTURE.md`（244行）も超過している。** S1〜S13 を1本で持つため。
 
@@ -174,5 +175,8 @@
 **`quality.yml` が required status check に未設定。** CI が落ちてもマージできる。
 `NEO-AX/YDB` は private で、現在のプランではブランチ保護も ruleset も使えない（`HANDOFF.md`）。
 
-**Lint / Format（§5-1）を持たない。** `package.json` に `lint` も `format` も無い。
-完了ゲートで実行できるのは §5 の 2〜6 である。
+**Lint は 2026-08-20 に足した（C-231）。Format は持たない。**
+`pnpm lint`（biome）が `pnpm verify` の第1段と `.github/workflows/quality.yml` で走る。
+書式（formatter）は無効のままである —— 既存コードの整形をこの差分で動かすと、
+意匠の判断と実装の差分が混ざって読めなくなるため。有効化は別の判断で行う。
+したがって §5-1 は Lint のみ充足、§5 の 2〜6 は充足である。

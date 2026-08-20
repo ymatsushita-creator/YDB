@@ -2,7 +2,7 @@ import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
 import { all, maybeOne, scalar, type Db } from '../src/db/client.ts'
-import { baseFixture, makeSeason, makePerson, makeApplication } from './support/fixtures.ts'
+import { baseFixture, makePerson, makeApplication } from './support/fixtures.ts'
 import { assignInterviewer } from '../src/commands/assign.ts'
 import { saveScore } from '../src/commands/score.ts'
 import {

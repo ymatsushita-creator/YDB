@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import { getOpenTasks, type OpenTask } from '../../src/queries/cockpit.ts'
-import { Card, Empty, num } from '../_components/ui.tsx'
+import { Card, Empty, } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 import { Avatar } from '../_components/borderline.tsx'
 

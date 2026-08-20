@@ -1,10 +1,9 @@
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
-import { scalar, all, maybeOne, type Db } from '../src/db/client.ts'
+import { scalar, type Db } from '../src/db/client.ts'
 import {
-  baseFixture, makeSeason, makePerson, makeApplication,
-  makeEvaluation, jst,
+  baseFixture, makeSeason, makePerson, makeApplication,jst,
   type Fixture, type Season,
 } from './support/fixtures.ts'
 import { saveScore } from '../src/commands/score.ts'
@@ -137,7 +136,7 @@ describe('start_selection', () => {
   })
 
   test('0軸初段の評価がある応募は start_selection として出る', async () => {
-    const { app, evalId } = await applicationWithIntake()
+    const { app } = await applicationWithIntake()
     const tasks = tasksFor(await tasksAll(), app)
     assert.equal(tasks.length, 1, `${tasks.length} tasks instead of 1`)
     assert.equal(tasks[0]!.kind, 'start_selection')

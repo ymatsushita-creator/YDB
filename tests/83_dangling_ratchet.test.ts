@@ -21,9 +21,13 @@ const LEDGER = new URL('../.consultant/DANGLING-BASELINE.txt', import.meta.url)
 
 describe('欠番のラチェット（S13）', () => {
   test('★ 台帳に無い番号が現れたら落ちる（記録なしに番号を増やせない）', () => {
-    const r = ratchet(['C-1', 'C-2'], ['C-1', 'C-2', 'C-900'])
+    // ★ 架空の番号は接頭辞を `A`〜`F` の外に採る（2026-08-20。C-230）。
+    //   `C-` で始まる番号を書いていたため、**このフィクスチャ自身が「記録の無い C-番号」として
+    //   S13 に拾われ、検査が永久に赤かった。** `ratchet` は文字列の集合を比べるだけなので
+    //   接頭辞に意味は無い。検査の側を緩めずに済む直し方はこちらである。
+    const r = ratchet(['C-1', 'C-2'], ['C-1', 'C-2', 'Z-900'])
     assert.equal(r.ok, false, '新しい欠番を素通りさせている ―― 欠番45件と同じ穴が開く')
-    assert.deepEqual(r.added, ['C-900'])
+    assert.deepEqual(r.added, ['Z-900'])
   })
 
   test('★ 埋めて減ったときも落ちる（台帳の締め忘れを許さない）', () => {
