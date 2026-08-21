@@ -1,0 +1,330 @@
+{
+  "kind": "deploy-gate",
+  "head": "a0ded17",
+  "branch": "fix/quality-gate-false-pass",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1047,
+  "uploaded_untracked": 7,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [],
+  "unpushed_commits": 0,
+  "upstream": "origin/fix/quality-gate-false-pass",
+  "content_digest": "5c3d1cd787586daed97cdd0f785bf1a7",
+  "scan": {
+    "critical": 52,
+    "high": 0,
+    "medium": 0,
+    "files_scanned": 1041
+  },
+  "blocking_findings": [
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 260,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 265,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 271,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 276,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 741,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 746,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 753,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2-01.json",
+      "line": 758,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 260,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 265,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 271,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 276,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 741,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 746,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 753,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-43ee0c2.json",
+      "line": 758,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864-01.json",
+      "line": 306,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864-01.json",
+      "line": 311,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864-01.json",
+      "line": 824,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864-01.json",
+      "line": 829,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864.json",
+      "line": 306,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864.json",
+      "line": 311,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864.json",
+      "line": 824,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-6346864.json",
+      "line": 829,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3-01.json",
+      "line": 260,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3-01.json",
+      "line": 265,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3-01.json",
+      "line": 730,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3-01.json",
+      "line": 735,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3.json",
+      "line": 260,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3.json",
+      "line": 265,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3.json",
+      "line": 730,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-bcf18f3.json",
+      "line": 735,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-f397001.json",
+      "line": 260,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-f397001.json",
+      "line": 265,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-f397001.json",
+      "line": 730,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-19-f397001.json",
+      "line": 735,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-20-ac2a137-01.json",
+      "line": 260,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-20-ac2a137-01.json",
+      "line": 265,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-20-ac2a137-01.json",
+      "line": 271,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    },
+    {
+      "file": ".audit/reports/2026-08-20-ac2a137-01.json",
+      "line": 276,
+      "rule": "BIRTHDATE",
+      "severity": "Critical",
+      "evidence": "2***"
+    }
+  ],
+  "result": "拒否",
+  "reasons": [
+    "送信対象に Critical/High が 52 件ある"
+  ],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:5c3d1cd787586daed97cdd0f785bf1a7",
+      "severity": "Critical",
+      "fact": "デプロイ拒否（1047ファイル）"
+    }
+  ],
+  "prev_digest": "7b0aac24a7dc8c1b6252cfec8834f3d68298c68c45f2d12840a6bd21acf50802",
+  "saved_at": "2026-08-21T09:34:19+00:00",
+  "self_digest": "2dc262c556bf5c2cc419906d431a5832e326c59abe814cd0270c268f26ec2935"
+}

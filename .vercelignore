@@ -16,6 +16,10 @@ db/private
 scripts/sim-out
 Codexから移行した旧YouthDBデータ_*
 
+# 監査記録。アプリの実行には不要で、過去の所見をメタ記述した文言
+# （「BIRTHDATE が2件」等）が PII 走査の誤検知を起こす。リポジトリには残す。
+.audit
+
 # 秘密。**Vercel CLI は作業ディレクトリを送るので、.env 系も一緒に上がる。**
 # 本番の値は Vercel の Environment Variables で渡す（`vercel env ls` で確認できる）。
 # 送信物に秘密を混ぜない。
