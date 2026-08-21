@@ -29,7 +29,7 @@ const CANON = join(ROOT, 'db/DECISIONS.md')
 //   既存の `db/decisions/`（写し）と衝突する。
 const SRC = join(ROOT, 'db/decisions-src')
 
-const HEADER = '<!-- 生成物。手で編集しない。原稿は db/decisions-src/（pnpm decisions:canon で作る） -->\n'
+const _HEADER = '<!-- 生成物。手で編集しない。原稿は db/decisions-src/（pnpm decisions:canon で作る） -->\n'
 
 /** 節の境界は行頭 `## ` の最上位見出し。番号の見出し（`### A-1.`）では割らない。 */
 function split(): void {
