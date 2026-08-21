@@ -1,3 +1,4 @@
+import { APPLY_AI_LOGIC_MESSAGE } from '../../../src/commands/ai_pre_assessment.ts'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
@@ -7,9 +8,10 @@ import {
 } from '../../../src/queries/borderline.ts'
 import { parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE } from '../../../src/commands/score.ts'
 import { parseDecideCode, DECIDE_CODE_MESSAGE } from '../../../src/commands/decide.ts'
-import { jstDay, num, filled, NotDerived } from '../../_components/ui.tsx'
+import { jstDay, filled, NotDerived } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
 import { Avatar } from '../../_components/borderline.tsx'
+import { currentTier } from '../../../src/auth/current.ts'
 import { Confidence, ApproachChip } from '../../_components/headhunting.tsx'
 import { ScoreSheet } from '../../_components/scoring.tsx'
 
@@ -46,6 +48,7 @@ export default async function BorderlineScorePage({
   if (!UUID.test(person)) notFound()
 
   const db = await getDb()
+  const showAi = await currentTier() === 'all'
   const seasons = await listSeasons(db)
   const season = (await getSeason(db, sp.season))
     ?? defaultSeason(seasons)
@@ -78,11 +81,17 @@ export default async function BorderlineScorePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '個人アプローチ', href: backHref },
+          { label: '通常選考', href: backHref },
           { label: panel.person_name },
         ]}
       />
 
+      {/* ★ AIの点を入れた結果（C-211）。 */}
+      {typeof sp.ai === 'string' && APPLY_AI_LOGIC_MESSAGE[sp.ai] && (
+        <p className={`callout${sp.ai === 'applied' ? ' ok' : ''}`}>
+          {APPLY_AI_LOGIC_MESSAGE[sp.ai]}
+        </p>
+      )}
       {savedScore && (
         <p className={`callout${savedScore === 'saved' ? ' ok' : ''}`}>
           {SAVE_SCORE_CODE_MESSAGE[savedScore]}
@@ -134,6 +143,7 @@ export default async function BorderlineScorePage({
             <section className="card-base">
               <ScoreSheet
                 sheet={sheet}
+                showAi={showAi}
                 context={{
                   seasonId: season.id,
                   tab: tab ?? '',

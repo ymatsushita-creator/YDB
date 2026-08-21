@@ -1,4 +1,4 @@
-import { all, maybeOne, one, scalar, type Db } from '../db/client.ts'
+import { all, maybeOne, scalar, type Db } from '../db/client.ts'
 
 /**
  * 幻のデモ期（依頼者の指示。実行⑪）。
@@ -244,11 +244,3 @@ export async function seedDemoSeason(
     throw e
   }
 }
-
-/** デモ期があるか（画面の注意書きの判定に使う）。 */
-export const findDemoSeason = (db: Db) =>
-  maybeOne<{ id: string }>(db, `SELECT id FROM seasons WHERE is_demo LIMIT 1`)
-
-/** 参照だけの補助。`one` を使わせないための薄い包み。 */
-export const demoSeasonOrThrow = async (db: Db): Promise<string> =>
-  (await one<{ id: string }>(db, `SELECT id FROM seasons WHERE is_demo LIMIT 1`)).id

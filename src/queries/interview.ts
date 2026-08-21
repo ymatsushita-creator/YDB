@@ -252,6 +252,14 @@ export const listSeasonInterviews = (db: Db, seasonId: string | undefined) => {
       LEFT JOIN staffs stf ON stf.id = e.interviewer_staff_id
       LEFT JOIN interview_sheets s ON s.evaluation_id = e.id
      WHERE a.season_id = $1
+       -- ★★ 終わった応募の**空のシート**は出さない（C-216）。
+       --   判定を訂正して不合格にすると、先に作られていた次の段の評価行が
+       --   残る。それが「未割当・0/4・書く」として一覧に並び、押しても
+       --   採点できない（v_open_tasks に出ない）―― 平社員ペルソナ試験で
+       --   触れない幽霊行として現れた。
+       --   **書き終えたシートは残す** ―― 過去の面接の記録は読み返す対象である。
+       AND (s.id IS NOT NULL
+            OR EXISTS (SELECT 1 FROM v_active_applications v WHERE v.id = a.id))
      ORDER BY (s.id IS NOT NULL), ss.sort_order, e.assigned_at, p.id`,
   [seasonId])
 }

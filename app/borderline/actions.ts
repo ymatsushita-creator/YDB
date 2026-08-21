@@ -3,9 +3,12 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '../../src/db/server.ts'
-import { saveScore, type SaveScoreCode } from '../../src/commands/score.ts'
+import { applyAiLogicScore } from "../../src/commands/ai_pre_assessment.ts"
+import { saveScore, correctScore, type SaveScoreCode } from '../../src/commands/score.ts'
 import { submitEvaluation, type DecideCode } from '../../src/commands/decide.ts'
-import { addPersonNote, type AddNoteFailure } from '../../src/commands/note.ts'
+import {
+  addPersonNote, undoPersonNote, type AddNoteFailure, type NoteCode,
+} from '../../src/commands/note.ts'
 import {
   setEventAttendance, type SetAttendanceFailure,
 } from '../../src/commands/attend.ts'
@@ -55,6 +58,22 @@ function backTo(form: FormData, result: Record<string, string>): string {
   return `/borderline?${q}`
 }
 
+/**
+ * AIが出した論理力の点を、書類選考の「論理力」軸へ入れる（C-211）。
+ *
+ * ★ 依頼者の指示は「自動で入れろ」だが、**入れる瞬間は人が押す。**
+ *   応募が来た時点で勝手に成績が入ると、AIが分析する前の応募には
+ *   点が入らず、後から入った分析との差が分からなくなる。
+ *   押した時点で最新の分析を1件だけ写す。
+ * ★ 人が既に付けていれば上書きしない（コマンド側で見る）。
+ */
+export async function applyAiLogicScoreAction(formData: FormData): Promise<void> {
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const db = await getDb()
+  const result = await applyAiLogicScore(db, { applicationId })
+  redirect(backTo(formData, { ai: result.ok ? (result.applied ? 'applied' : 'kept') : result.reason }))
+}
+
 /** 1軸ぶんの点と根拠を保存する。全軸まとめてではない（記録層の単位に合わせる）。 */
 export async function scoreOnBorderlineAction(formData: FormData): Promise<void> {
   const evaluationId = String(formData.get('evaluationId') ?? '')
@@ -76,6 +95,36 @@ export async function scoreOnBorderlineAction(formData: FormData): Promise<void>
   revalidatePath('/borderline')
   revalidatePath(`/applications/${String(formData.get('applicationId') ?? '')}`)
   back('saved')
+}
+
+/**
+ * 付いている点と根拠を打ち直す（E4。実行⑮。C-133）。
+ *
+ * 判定は `src/commands/score.ts` の `correctScore`。ここは受け渡しだけ。
+ *
+ * ★ 保存と**別の入口**にしてある。同じ入口が「無ければ入れる・あれば直す」を
+ *   兼ねると、二度押しが訂正として通り、版だけが積まれる。
+ *
+ * ★ 直した人は残らない。**認証が無いので、ここで名簿を選ばせても
+ *   自己申告でしかない**（C-84 / C-85）。誰が直したかを記録できる形は、
+ *   認証が入ってからにする。
+ */
+export async function correctScoreOnBorderlineAction(formData: FormData): Promise<void> {
+  const evaluationId = String(formData.get('evaluationId') ?? '')
+  const criteriaId = String(formData.get('criteriaId') ?? '')
+  const rationale = String(formData.get('rationale') ?? '')
+  const score = Number(formData.get('score'))
+
+  const back = (code: SaveScoreCode) => redirect(backTo(formData, { score: code }))
+
+  const db = await getDb()
+  const result = await correctScore(db, { evaluationId, criteriaId, score, rationale })
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath('/borderline')
+  revalidatePath(`/applications/${String(formData.get('applicationId') ?? '')}`)
+  revalidatePath(`/interviews/${evaluationId}`)
+  back('corrected')
 }
 
 /** 評価を確定する。全軸そろっているかは `submitEvaluation` が確かめる。 */
@@ -108,6 +157,8 @@ export async function addNoteAction(formData: FormData): Promise<void> {
   const authorName = String(formData.get('authorName') ?? '')
   const notedAt = String(formData.get('notedAt') ?? '')
   const body = String(formData.get('body') ?? '')
+  // どう関わったか（0030。実行⑫）。任意なので空のまま来る。
+  const involvement = String(formData.get('involvement') ?? '')
 
   const back = (code: AddNoteFailure | 'saved') => redirect(backTo(formData, {
     note: code,
@@ -116,13 +167,47 @@ export async function addNoteAction(formData: FormData): Promise<void> {
   }))
 
   const db = await getDb()
-  const result = await addPersonNote(db, { personId, authorName, notedAt, body })
+  const result = await addPersonNote(db, {
+    personId, authorName, notedAt, body, involvement,
+  })
   if (!result.ok) return back(result.reason)
 
   // 同じメモがその人の記録にも出る。片方だけ古いままにしない。
   revalidatePath('/borderline')
   revalidatePath(`/people/${personId}`)
   back('saved')
+}
+
+/**
+ * メモを取り消す（実行⑮。C-131）。
+ *
+ * 判定は `src/commands/note.ts` の `undoPersonNote`。ここは受け渡しだけ。
+ *
+ * ★ 取り消す相手は**メモの ID だけ**を渡す。人はコマンドが記録から引く ――
+ *   画面が渡した人を信じると、取り違えたときに**別の人のメモを消す。**
+ *
+ * ★ 戻り先は追加と同じ（ポップアップを開いたまま）。取り消した結果が
+ *   並んだところを見せる ―― 消えたのか失敗したのかが分からないまま
+ *   一覧へ放り出さない。
+ */
+export async function undoNoteAction(formData: FormData): Promise<void> {
+  const personId = String(formData.get('personId') ?? '')
+  const noteId = String(formData.get('noteId') ?? '')
+  const authorName = String(formData.get('undoAuthorName') ?? '')
+  const reason = String(formData.get('undoReason') ?? '')
+
+  const back = (code: NoteCode) => redirect(backTo(formData, {
+    note: code,
+    ...(UUID.test(personId) ? { memo: personId } : {}),
+  }))
+
+  const db = await getDb()
+  const result = await undoPersonNote(db, { noteId, authorName, reason })
+  if (!result.ok) return back(result.reason)
+
+  revalidatePath('/borderline')
+  revalidatePath(`/people/${personId}`)
+  back('undone')
 }
 
 /**

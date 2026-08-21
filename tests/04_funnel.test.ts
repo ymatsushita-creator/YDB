@@ -1,7 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
-import { one, scalar } from '../src/db/client.ts'
 import {
   baseFixture, makeSeason, makePerson, makeApplication, addHistory, accept,
   makeChannel, makeTouchpoint, makeVoidReason, voidApplication, funnelOn, jst,

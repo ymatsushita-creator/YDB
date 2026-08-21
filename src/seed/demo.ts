@@ -1,4 +1,4 @@
-import type { Db } from '../db/client.ts'
+import { scalar, type Db } from '../db/client.ts'
 
 /**
  * デモ用のデータ生成。
@@ -391,7 +391,9 @@ export async function seedDemo(db: Db, opts: DemoOptions = {}): Promise<DemoStat
     stats.persons += newIds.length
 
     const createdAt = new Map<string, string>()
-    newIds.forEach((id, i) => createdAt.set(id, personRows[i]![5]))
+    newIds.forEach((id, i) => {
+      createdAt.set(id, personRows[i]![5])
+    })
 
     // 接点
     const tpRows: Array<[string, string, string | null, string]> = []
@@ -871,12 +873,19 @@ async function seedSchedule(
     `SELECT id, code FROM appointment_kinds`)).rows
   const kind = (code: string) => kinds.find((k) => k.code === code)!.id
 
-  // asOf の週の月曜を求める（JST の暦日で数える）。
-  const asOfDay = new Date(ctx.asOf + 9 * 3600_000)
-  const monday = new Date(ctx.asOf - ((asOfDay.getUTCDay() + 6) % 7) * 86_400_000)
+  // ★ 週の起点は **jst_today() から取る**（asOf ではない。実行⑫で直した）。
+  //   カレンダーの既定の週も tests/13 の範囲も `jst_today()` を見るので、
+  //   asOf 基準に置くと、asOf と実際の今日が離れるにつれて
+  //   今週に入る予定が1件ずつ減っていく ―― 実際 asOf の6日後に走らせたら
+  //   5件のはずが4件になって落ちた。**基準日は、それを読む側と揃える。**
+  //   すぐ下の「やること」は同じ理由で既に jst_today() を使っている。
+  const todayJst = await scalar<string>(db, `SELECT jst_today()::text`)
+  const todayUtc = new Date(`${todayJst}T00:00:00Z`)
+  const monday = new Date(
+    todayUtc.getTime() - ((todayUtc.getUTCDay() + 6) % 7) * 86_400_000)
   const at = (dayOffset: number, hour: number, minutes = 0) =>
-    new Date(monday.getTime() + dayOffset * 86_400_000)
-      .toISOString().slice(0, 10) + `T${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+09:00`
+    `${new Date(monday.getTime() + dayOffset * 86_400_000)
+      .toISOString().slice(0, 10)}T${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+09:00`
 
   const plan: Array<[string, number, number, number, string]> = [
     // 種別, 曜日(0=月), 開始時, 所要(時), 表題
@@ -1271,12 +1280,22 @@ async function seedPersonas(db: Db, ctx: PersonaContext): Promise<void> {
   // 順番に進むため1人につき開いている評価が1件しかなく、件と人が常に
   // 一致していた。常に一致するデータでは、画面が2つを混同していても
   // 気づけない。tests/13 がこの形の存在を検査する。
-  for (const interviewer of [staff(4), staff(5)]) {
+  // ★ 片方は**今日から数えて**割り当てる（C-206）。
+  //   固定日だけで作ると、日が進むにつれ全件が期限切れへ倒れ、
+  //   「期限内のやること」が1件も無いデータになる（実際そうなって落ちた）。
+  //   期限内と期限切れが**同時に在る**形を、日付が進んでも保つ。
+  for (const [i, interviewer] of [staff(4), staff(5)].entries()) {
     await db.query(
-      `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
-                                state, assigned_at)
-       VALUES ($1,$2,$3,'pending',$4)`,
-      [stalledApp, active.stepIds[2], interviewer, ts('2026-07-15', 10)])
+      i === 0
+        ? `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                    state, assigned_at)
+           VALUES ($1,$2,$3,'pending',$4)`
+        : `INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id,
+                                    state, assigned_at)
+           VALUES ($1,$2,$3,'pending', now() - interval '1 day')`,
+      i === 0
+        ? [stalledApp, active.stepIds[2], interviewer, ts('2026-07-15', 10)]
+        : [stalledApp, active.stepIds[2], interviewer])
     stats.evaluations++
   }
 

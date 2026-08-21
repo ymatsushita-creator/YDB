@@ -3,8 +3,9 @@ import Link from 'next/link'
 import type {
   Appointment, AppointmentDetail, AttendanceCandidate, PersonNote,
 } from '../../src/queries/borderline.ts'
-import { AUTHOR_MAX, BODY_MAX } from '../../src/commands/note.ts'
-import { addNoteAction, saveAttendanceAction } from '../borderline/actions.ts'
+import { AUTHOR_MAX, BODY_MAX, INVOLVEMENT_MAX } from '../../src/commands/note.ts'
+import { addNoteAction, undoNoteAction, saveAttendanceAction } from '../borderline/actions.ts'
+import { filled } from './ui.tsx'
 
 /**
  * 個人アプローチ画面の部品（実行⑨。表示名は実行⑪で変えた。URL は `/borderline`）。
@@ -245,6 +246,11 @@ export function Popup({
  *   3日前の面談が「今日」として積まれる。**打った人が決める。**
  *
  * ★ 書いた人は手入力の自己申告である（0027）。名簿から選ばせない。
+ *
+ * ★ 「どう関わったか」は**任意**（0030。実行⑫）。自由入力の1行で、
+ *   選択肢を出さない ―― 語を受け取っていないので、こちらで並べると
+ *   運営が使っていない語が既定になる。**未記入は「未記入」の札で出す**
+ *   （書けるのに空だから札が付く。C-56）。
  */
 export function MemoPopup({
   personName, notes, closeHref, message, ok, context,
@@ -279,6 +285,11 @@ export function MemoPopup({
           </label>
         </div>
         <label className="memo-field">
+          <span>どう関わったか</span>
+          <input name="involvement" type="text" maxLength={INVOLVEMENT_MAX}
+                 autoComplete="off" />
+        </label>
+        <label className="memo-field">
           <span>内容</span>
           <textarea name="body" required rows={4} maxLength={BODY_MAX} />
         </label>
@@ -295,9 +306,35 @@ export function MemoPopup({
                 <p className="memo-meta">
                   <strong>{n.author_name}</strong>
                   <span className="dim">{jstStamp(n.noted_at)}</span>
+                  {/* 関わり方は任意。書いてなければ札が出る（C-56）。 */}
+                  <span className="dim">{filled(n.involvement)}</span>
                 </p>
                 {/* 改行を残す。面談のメモは箇条書きで書かれる。 */}
                 <p className="memo-body">{n.body}</p>
+
+                {/*
+                  取り消し（実行⑮。C-131）。**消すのではなく打ち消す。**
+                  畳んで置く ―― 開いている必要が無いうえ、本文の隣に
+                  常時ボタンがあると、読むつもりで押す事故が起きる。
+                  `<details>` なので `'use client'` は増えない（C-95）。
+                */}
+                <details className="memo-undo">
+                  <summary>取り消す</summary>
+                  <form action={undoNoteAction} className="memo-undo-form">
+                    <input type="hidden" name="personId" value={context.personId} />
+                    <input type="hidden" name="seasonId" value={context.seasonId} />
+                    <input type="hidden" name="tab" value={context.tab} />
+                    <input type="hidden" name="week" value={context.week} />
+                    <input type="hidden" name="noteId" value={n.note_id} />
+                    {/* 名乗りと理由は必須。取り消しは記録を裏返す操作である。 */}
+                    <input name="undoAuthorName" type="text" required
+                           maxLength={AUTHOR_MAX} autoComplete="off"
+                           placeholder="取り消す人" />
+                    <input name="undoReason" type="text" required maxLength={BODY_MAX}
+                           autoComplete="off" placeholder="取り消す理由" />
+                    <button type="submit" className="button-secondary">取り消す</button>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>
@@ -341,7 +378,7 @@ export function AttendancePopup({
         <>
           {jstStamp(appointment.starts_at)} 〜 {jstTime(appointment.ends_at)}
           {' ・ '}{appointment.kind_label}
-          {' ・ '}担当 {appointment.owner_name}
+          {' ・ '}担当 {appointment.owner_name ?? '未記録'}
           {' ・ '}参加 {recorded} 人
         </>
       }

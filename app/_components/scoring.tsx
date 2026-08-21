@@ -1,7 +1,14 @@
 import Link from 'next/link'
 import type { ScoringSheet } from '../../src/queries/borderline.ts'
 import { num } from './ui.tsx'
-import { scoreOnBorderlineAction, submitOnBorderlineAction } from '../borderline/actions.ts'
+import { shownRationale } from '../../src/records/placeholder.ts'
+import {
+  gateOfScores, VERDICT_LABEL, DOCUMENT_SCREENING_PASS, DOCUMENT_SCREENING_STEP,
+} from '../../src/queries/document_screening.ts'
+import { applyAiLogicScoreAction } from '../borderline/actions.ts'
+import {
+  scoreOnBorderlineAction, correctScoreOnBorderlineAction, submitOnBorderlineAction,
+} from '../borderline/actions.ts'
 
 /**
  * 採点シート（実行⑩。依頼者の指示 ――「そこで採点入力する」）。
@@ -18,7 +25,11 @@ import { scoreOnBorderlineAction, submitOnBorderlineAction } from '../borderline
  *
  * 素の `<form action={...}>` である。`'use client'` は増やしていない。
  */
-export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: Record<string, string> }) {
+export function ScoreSheet({ sheet, context, showAi = false }: {
+  sheet: ScoringSheet
+  context: Record<string, string>
+  showAi?: boolean
+}) {
   const hidden = (
     <>
       {Object.entries(context).map(([k, v]) => (
@@ -28,6 +39,9 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
       <input type="hidden" name="evaluationId" value={sheet.evaluation_id} />
     </>
   )
+
+  // 合計と門。軸が1本も無い段では出さない（数える対象が無い）。
+  const gate = sheet.criteria.length > 0 ? gateOfScores(sheet.criteria) : null
 
   return (
     <>
@@ -44,6 +58,33 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
           ? '評価軸が未登録'
           : `残り ${num(sheet.unscored_count)} / ${num(sheet.criteria.length)} 軸`}
       </p>
+
+      {/* ★★ 合計と門（C-216。依頼者の指示 C-212 ――「10点満点で、7点以上を
+          通して。それ以外は要注意ラベル」）。
+          第1周のペルソナ試験で、数字担当が4軸に点を入れ切っても
+          **合計も閾値も画面に無く**、通るのかどうか分からなかった。
+          ★ 満点は**記録から数える**（軸の scale_max の和）。定数を書き写さない。
+          ★ 門を出すのは書類選考だけ。他の段に閾値の指示は無い。 */}
+      {!sheet.no_criteria && gate && (
+        <p className="hh-note" style={{ marginTop: 0 }}>
+          <span className="strong">
+            合計 {num(gate.score)}
+            <span className="section-note"> / {num(gate.scaleMax)}</span>
+          </span>
+          {sheet.step_name === DOCUMENT_SCREENING_STEP && (
+            <>
+              {' ・ '}
+              <span className={gate.verdict === 'pass' ? 'badge-tag-green'
+                : gate.verdict === 'watch' ? 'badge-tag-orange' : 'badge-tag-gray'}>
+                {VERDICT_LABEL[gate.verdict]}
+              </span>
+              <span className="section-note">
+                {' '}{DOCUMENT_SCREENING_PASS} 点以上で人が読む段へ通す
+              </span>
+            </>
+          )}
+        </p>
+      )}
 
       {sheet.no_criteria ? (
         // 軸が無いことを「採点済み」に見せない。足りないのは点ではなく軸である。
@@ -65,17 +106,56 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
                   {' '}{num(c.scale_max)} 点満点
                   {c.applies_to === 'reapplicant_only' && ' ・ 再応募者のみ'}
                 </span>
-                {/* 付いた点は根拠ごと残す。点だけ出すと後から誰も説明できない。 */}
-                {c.score !== null && (
+                {/* ★ 何を見る軸なのかを、点を付ける場所に出す（0042。C-160）。
+                    名前だけでは「何に対して4点なのか」が人によって変わる。
+                    文面は運営の基準表そのままで、こちらで要約していない。 */}
+                {c.criteria_description && (
+                  <span className="criteria-guide">{c.criteria_description}</span>
+                )}
+                {/* 付いた点は根拠ごと出す。点だけ出すと後から誰も説明できない。
+                    ★ ただし取り込みの埋め草は出さない（C-166。依頼者の指示）。 */}
+                {shownRationale(c.rationale) && (
                   <span className="section-note" style={{ display: 'block' }}>
-                    {c.rationale}
+                    {shownRationale(c.rationale)}
                   </span>
                 )}
               </span>
               {c.score !== null ? (
-                <span className="strong nowrap">
-                  {num(c.score)}
-                  <span className="section-note"> / {num(c.scale_max)}</span>
+                <span className="nowrap">
+                  <span className="strong">
+                    {num(c.score)}
+                    <span className="section-note"> / {num(c.scale_max)}</span>
+                  </span>
+                  {/*
+                    打ち直し（E4。実行⑮。C-133）。**確定前だけ出す** ――
+                    `can_score` は「担当が決まっていて、判断がまだ下りていない」
+                    と同じ門で、`correctScore` が見るものと一致する。
+                    畳んで置くのは、読むつもりで押す事故を避けるため。
+                  */}
+                  {sheet.can_score && (
+                    <details className="score-fix">
+                      <summary>直す</summary>
+                      <form action={correctScoreOnBorderlineAction}
+                            className="score-form editable-inline">
+                        {hidden}
+                        <input type="hidden" name="criteriaId" value={c.criteria_id} />
+                        <label className="visually-hidden" htmlFor={`bl-fix-${c.criteria_id}`}>
+                          直した点
+                        </label>
+                        <input id={`bl-fix-${c.criteria_id}`} name="score" type="number"
+                               min={0} max={c.scale_max} step={1} required
+                               defaultValue={c.score} className="score-input" />
+                        <label className="visually-hidden" htmlFor={`bl-fixwhy-${c.criteria_id}`}>
+                          直した根拠
+                        </label>
+                        <input id={`bl-fixwhy-${c.criteria_id}`} name="rationale" type="text"
+                               required defaultValue={c.rationale ?? ''}
+                               className="rationale-input"
+                               placeholder="何を見てその点にしたか（必須）" />
+                        <button type="submit" className="button-secondary">直す</button>
+                      </form>
+                    </details>
+                  )}
                 </span>
               ) : sheet.can_score ? (
                 <form action={scoreOnBorderlineAction} className="score-form editable-inline">
@@ -122,7 +202,30 @@ export function ScoreSheet({ sheet, context }: { sheet: ScoringSheet; context: R
       <Link href={`/applications/${sheet.application_id}`} className="hh-more">
         応募の経緯 ›
       </Link>
+      {showAi && sheet.step_name === '書類選考' && (
+        <>
+          {' 　'}
+          <Link
+            href={`/ai?${new URLSearchParams({
+              season: context.seasonId ?? '', person: sheet.person_id,
+            })}`}
+            className="hh-more">
+            AI分析 ›
+          </Link>
+          {/* ★ AIが出した論理力を、この段の「論理力」軸へ入れる（C-211）。
+              ★ 押した時点で最新の分析を1件だけ写す ―― 応募の時点で
+                勝手に入れると、分析より前の応募に点が入らない。
+              ★ 人が既に付けていれば上書きしない（コマンド側で見る）。 */}
+          {' 　'}
+          {/* ★ 戻り先に要る値は `hidden` がまとめて持っている ――
+              自分で並べると、期やタブが欠けて**打った場所へ戻れない**
+              （実画面でホームへ飛ばされて気づいた。C-211）。 */}
+          <form action={applyAiLogicScoreAction} className="editable-inline">
+            {hidden}
+            <button className="button-secondary" type="submit">AIの論理力を入れる</button>
+          </form>
+        </>
+      )}
     </>
   )
 }
-

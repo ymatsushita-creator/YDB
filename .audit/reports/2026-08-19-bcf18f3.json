@@ -1,0 +1,1072 @@
+{
+  "schema": "kurosaki.audit/1",
+  "tool": "kurosaki/0.1.0",
+  "repo": "/Volumes/KIOXIA_2TB/NEO/YouthDB",
+  "head": "bcf18f3",
+  "opinion": {
+    "verdict": "限定付適正",
+    "reason": "High 2 件。限定事項として列挙する。",
+    "scope_limited": false,
+    "procedures_registered": 18,
+    "tally": {
+      "critical": 0,
+      "high": 2,
+      "medium": 34,
+      "low": 1,
+      "procedures": 18,
+      "procedures_done": 17,
+      "procedures_unverifiable": 1
+    },
+    "unverifiable_ratio": 0.056,
+    "blocking": true
+  },
+  "procedures": [
+    {
+      "id": "D1-01",
+      "domain": "体制文書",
+      "title": "AI開発体制の規律文書が実在するか",
+      "status": "done",
+      "examined": "規律文書候補 7 件・上位文書候補 6 件の実在を確認（発見: 規律 ['CLAUDE.md', 'AGENTS.md', '.cursor/rules'] / 上位 ['SUPERVISOR.md', '.audit/AUDIT_CHARTER.md']）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D1-02",
+      "domain": "体制文書",
+      "title": "上位文書・規律文書が実装AIから書き換え可能でないか",
+      "status": "done",
+      "examined": "5 件の文書について、CODEOWNERS・監査マニフェスト・フック本文のいずれかで保護されているかを照合（CODEOWNERS=無 / MANIFEST=有 / フック 2 本）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D2-01",
+      "domain": "フォルダ構成",
+      "title": "実データ候補が git の外に置かれているか（.gitignore 単独防壁でないか）",
+      "status": "done",
+      "examined": "作業ツリー 478 ファイルを走査し、人物を示す語・機械検査できない形式を持つ未追跡ファイルを 0 件検出",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D2-02",
+      "domain": "フォルダ構成",
+      "title": "追跡してはならないものが追跡下に入っていないか",
+      "status": "done",
+      "examined": "追跡ファイル 423 件を5分類の禁止パターンへ突合",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D2-02",
+          "severity": "Medium",
+          "fact": "本番投入用データ（人物データは検出されず） が追跡下にある（8 件）",
+          "evidence": [
+            "db/seeds/0002_season_2026.production.sql",
+            "db/seeds/0003_season_2027.production.sql",
+            "db/seeds/0005_season2_special_selection.production.sql",
+            "db/seeds/0006_season3_align_to_season2.production.sql",
+            "db/seeds/0007_season3_target.production.sql",
+            "db/seeds/0008_group_interview_criteria.production.sql",
+            "db/seeds/0009_season3_partner_status.production.sql",
+            "db/seeds/0010_document_screening_criteria.production.sql"
+          ],
+          "remediation": "追跡から外し、必要なら履歴からの除去を人間の承認のもとで行う（.audit/IRREVERSIBLE_OPS.md）",
+          "key": "tracked-forbidden:本番投入用データ（人物データは検出されず）",
+          "fingerprint": "2f33c6d9c32cc5b5"
+        }
+      ]
+    },
+    {
+      "id": "D3-01",
+      "domain": "機械ゲート",
+      "title": "git が実行するフックが実在し、実行可能か",
+      "status": "done",
+      "examined": "`core.hooksPath`=.githooks を読み、.githooks 配下の pre-commit, pre-push の実在と実行権限を確認（実在 2 / 欠落 0 / 実行不可 0）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-02",
+      "domain": "機械ゲート",
+      "title": "フックが本ツールの検査を実際に呼んでいるか",
+      "status": "done",
+      "examined": "フック 2 本の本文を読み、4 種の呼び出し形を照合（呼んでいる: ['.githooks/pre-commit', '.githooks/pre-push'] / 呼んでいない: なし）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-03",
+      "domain": "機械ゲート",
+      "title": "CI 定義が実在し、その中で監査の検査が走るか",
+      "status": "done",
+      "examined": "CI 定義の置き場 6 箇所を確認し、見つかった 2 本の定義本文へ監査呼び出しを照合（定義: ['.github/workflows/audit.yml', '.github/workflows/quality.yml'] / 呼んでいる: ['.github/workflows/audit.yml']）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-04",
+      "domain": "機械ゲート",
+      "title": "監査を無効化する記述（continue-on-error 等）が混入していないか",
+      "status": "done",
+      "examined": "CI 定義・フック・package.json/Makefile を合わせた 6 本について、8 種の無効化パターンを行単位で照合（対象: ['.audit/allowlist.yml', '.githooks/pre-commit', '.githooks/pre-push', '.github/workflows/audit.yml', '.github/workflows/quality.yml', 'package.json']）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-05",
+      "domain": "機械ゲート",
+      "title": "既定ブランチが保護され、監査の合格が必須になっているか",
+      "status": "unverifiable",
+      "examined": "リモート 1 件（origin=NEO-AX/YDB@fix/quality-gate-false-pass）について GitHub のブランチ保護APIを照会。取得できた 0 件を判定",
+      "reason": "ブランチ保護を確認できないリモートがある（プラン制限・権限不足・未認証）: origin=NEO-AX/YDB: プラン制限または権限不足で確認できない（gh: Upgrade to GitHub Pro or make this repository public to ）",
+      "observations": []
+    },
+    {
+      "id": "D3-06",
+      "domain": "機械ゲート",
+      "title": "公開リモートの有無と、そこへ何が届く構造になっているか",
+      "status": "done",
+      "examined": "リモート 1 件を列挙し、GitHub の 1 件について公開状態を照会（公開: なし / 非公開: ['origin=NEO-AX/YDB'] / 不明: なし）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D5-01",
+      "domain": "不可逆操作",
+      "title": "不可逆操作の一覧と承認手順が文書として実在し、必須項目を網羅しているか",
+      "status": "done",
+      "examined": "`.audit/IRREVERSIBLE_OPS.md`（1285 文字）を読み、必須 6 項目の記載と承認者の明記を照合（欠落 0 項目 / 承認者記載 有）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D5-02",
+      "domain": "不可逆操作",
+      "title": "本番・不可逆へ到達する経路に人間ゲートがあるか（AIへ渡した権限も含む）",
+      "status": "done",
+      "examined": "package.json の scripts 29 件から本番到達候補 5 件を抽出。.claude/settings.local.json の allow 46 件を危険パターン 9 種へ突合。.claude/settings.json の allow 0 件を危険パターン 9 種へ突合",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D5-03",
+      "domain": "不可逆操作",
+      "title": "本番へ出した実体が記録され、リポジトリと一致しているか",
+      "status": "done",
+      "examined": "package.json から本番へ出す経路 1 件を抽出（['deploy:production']／ゲート済み ['deploy:production']）。`.audit/deploys` の記録 0 件、未pushコミット 1、作業ツリーの差分 7 件を確認",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D5-03",
+          "severity": "High",
+          "fact": "本番へ出した記録が1件も無い。いつ・どのコミット・どの未コミット差分を出したのかを事後に確認できない",
+          "evidence": [
+            ".audit/deploys"
+          ],
+          "remediation": "deploy-gate を通して記録を残す。過去分は復元できないので、以後の記録から始める",
+          "key": "no-deploy-record",
+          "fingerprint": "e3ead7ea6804288e"
+        },
+        {
+          "id": "D5-03",
+          "severity": "High",
+          "fact": "未pushのコミットが 1 件ある。この状態で本番へ出すと、**本番にしか存在しないコードができる**（リモートを見ても再現できない）",
+          "evidence": [
+            "origin/fix/quality-gate-false-pass..HEAD"
+          ],
+          "remediation": "push してから出す。出す必要があるなら、何がリモートに無いのかを記録して人間が承認する",
+          "key": "unpushed-vs-production",
+          "fingerprint": "9803cd57afdc67fe"
+        },
+        {
+          "id": "D5-03",
+          "severity": "Medium",
+          "fact": "作業ツリーに 7 件の差分がある。いま出せばリポジトリに存在しないファイルが本番へ入る",
+          "evidence": [
+            "git status --porcelain: 7 件"
+          ],
+          "remediation": "コミットしてから出す。または deploy-gate の記録に残したうえで人間が承認する",
+          "key": "dirty-tree-vs-production",
+          "fingerprint": "0980ff8e1d4c84c4"
+        }
+      ]
+    },
+    {
+      "id": "D6-01",
+      "domain": "データ取扱い",
+      "title": "個人情報が追跡下・履歴に混入していないか",
+      "status": "done",
+      "examined": "追跡ファイル（作業ツリー） を走査: 検査 422 件 / 除外 1 件 / 中身未検査 7 件。allowlist 除外 149 件",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`app/borderline/page.tsx` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "app/borderline/page.tsx: L65, L67"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:app/borderline/page.tsx:JP_PERSON_NAME_WEAK",
+          "fingerprint": "3d4aa43df019e3d1"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`db/migrations/0023_person_optional_facts.sql` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "db/migrations/0023_person_optional_facts.sql: L59"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:db/migrations/0023_person_optional_facts.sql:JP_PERSON_NAME_WEAK",
+          "fingerprint": "5847e657a15515c3"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`db/seeds/0001_reference.example.sql` に JP_PERSON_NAME_WEAK が 4 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "db/seeds/0001_reference.example.sql: L64, L70, L73, L75"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:db/seeds/0001_reference.example.sql:JP_PERSON_NAME_WEAK",
+          "fingerprint": "5b159eb0e0613c26"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`db/seeds/0004_channels.sql` に JP_PERSON_NAME_WEAK が 6 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "db/seeds/0004_channels.sql: L31, L32, L33, L35, L36, L37"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:db/seeds/0004_channels.sql:JP_PERSON_NAME_WEAK",
+          "fingerprint": "eed36f99a940c6c7"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`db/seeds/0005_season2_special_selection.production.sql` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "db/seeds/0005_season2_special_selection.production.sql: L55"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:db/seeds/0005_season2_special_selection.production.sql:JP_PERSON_NAME_WEAK",
+          "fingerprint": "e7898dc0373a18d6"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`docs/audit/2026-08-19-remediation.md` に BIRTHDATE が 2 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "docs/audit/2026-08-19-remediation.md: L163, L163"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:docs/audit/2026-08-19-remediation.md:BIRTHDATE",
+          "fingerprint": "12c2fcba9f5d1fde"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`scripts/import-approach-2026.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "scripts/import-approach-2026.ts: L110, L147"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:scripts/import-approach-2026.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "1fc24323d72d61d7"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`scripts/import-legacy-2026.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "scripts/import-legacy-2026.ts: L308"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:scripts/import-legacy-2026.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "76b8971475a23f21"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`src/commands/ai_pre_assessment.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "src/commands/ai_pre_assessment.ts: L193, L210"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:src/commands/ai_pre_assessment.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "cf2337f4e356eb95"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`src/import/legacy_2026.ts` に JP_PERSON_NAME_WEAK が 5 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "src/import/legacy_2026.ts: L313, L314, L315, L316, L317"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:src/import/legacy_2026.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "e54284d137a49a9e"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`src/queries/ai_pre_assessment.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "src/queries/ai_pre_assessment.ts: L24"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:src/queries/ai_pre_assessment.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "51a4d05477cd4374"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`src/queries/document_screening.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "src/queries/document_screening.ts: L103"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:src/queries/document_screening.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "46e428761d062d17"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`src/queries/tasks.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "src/queries/tasks.ts: L256"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:src/queries/tasks.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "8907b49da696d996"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/21_decide.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/21_decide.test.ts: L345"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/21_decide.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "48218fd60fa74816"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/22_reference_season.test.ts` に JP_PERSON_NAME_WEAK が 7 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/22_reference_season.test.ts: L161, L162, L163, L165, L232, L255 …ほか 1 箇所"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/22_reference_season.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "08f29bf3012b9029"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/29_profile_editing.test.ts` に BIRTHDATE が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/29_profile_editing.test.ts: L32"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/29_profile_editing.test.ts:BIRTHDATE",
+          "fingerprint": "1e315a7a3d6a3687"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/33_borderline_scoring.test.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/33_borderline_scoring.test.ts: L42, L206"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/33_borderline_scoring.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "269dd29a732e105f"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/34_legacy_import.test.ts` に BIRTHDATE が 10 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/34_legacy_import.test.ts: L34, L37, L44, L52, L61, L72 …ほか 4 箇所"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/34_legacy_import.test.ts:BIRTHDATE",
+          "fingerprint": "bdd9501527e48224"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/34_legacy_import.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/34_legacy_import.test.ts: L52, L60, L94"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/34_legacy_import.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "1c0dda8f1a5ca64e"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/35_interview_sheet.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/35_interview_sheet.test.ts: L44"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/35_interview_sheet.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "f45afa5a9ad4294b"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/36_intake.test.ts` に JP_PERSON_NAME_WEAK が 8 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/36_intake.test.ts: L304, L317, L321, L328, L341, L345 …ほか 2 箇所"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/36_intake.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "eab42f49f33f912e"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/41_sheet_bulk.test.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/41_sheet_bulk.test.ts: L316, L326"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/41_sheet_bulk.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "1900689dd37477f5"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/48_criteria_weighting.test.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/48_criteria_weighting.test.ts: L48, L89"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/48_criteria_weighting.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "ac54ad25f547ae36"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/52_season3_alignment.test.ts` に JP_PERSON_NAME_WEAK が 5 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/52_season3_alignment.test.ts: L28, L30, L33, L33, L90"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/52_season3_alignment.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "5c69f55f1ae8ce6e"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/53_deploy_target.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/53_deploy_target.test.ts: L29, L37, L55"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/53_deploy_target.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "2a5878401d714015"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/54_list_weight.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/54_list_weight.test.ts: L41"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/54_list_weight.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "46e8f299f856337c"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/70_ai_pre_assessment.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/70_ai_pre_assessment.test.ts: L204"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/70_ai_pre_assessment.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "add27257ededee3d"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/75_end_to_end_selection.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/75_end_to_end_selection.test.ts: L270"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/75_end_to_end_selection.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "35db984ebddb3ab1"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/76_document_gate.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/76_document_gate.test.ts: L47, L63, L71"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/76_document_gate.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "0fd81207cc350f9f"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "`tests/78_pilot_hirashain.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+          "evidence": [
+            "tests/78_pilot_hirashain.test.ts: L36, L38, L216"
+          ],
+          "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+          "key": "pii:tests/78_pilot_hirashain.test.ts:JP_PERSON_NAME_WEAK",
+          "fingerprint": "d6caa5fa78933d94"
+        },
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "中身を検査できなかったファイルが 7 件ある（安全だと言っていない）",
+          "evidence": [
+            "public/brand/icon_64.png",
+            "public/brand/logo_black.png",
+            "public/brand/logo_gradient.png",
+            "public/brand/logo_gradient_720.png",
+            "public/brand/logo_white.png",
+            "public/brand/logo_ydb.png"
+          ],
+          "remediation": "検査できる形式へ変換するか、リポジトリの外へ出す",
+          "key": "unchecked-files",
+          "fingerprint": "a7c866a6816ef3ec"
+        }
+      ]
+    },
+    {
+      "id": "D6-02",
+      "domain": "データ取扱い",
+      "title": "確定パターンのシークレットが追跡下に入っていないか",
+      "status": "done",
+      "examined": "追跡ファイル 423 件のうち 415 件を 11 種の確定パターンへ突合（8 件は形式・除外対象でスキップ）。汎用のシークレット検出は範囲外（gitleaks=未確認/無し）。allowlist で除外 1 件",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D6-02",
+          "severity": "Low",
+          "fact": "確定パターン 11 種では秘密を検出しなかった（これは秘密が無いことの証明ではない。独自形式のトークンは対象外）",
+          "evidence": [
+            "D6-02 の走査範囲"
+          ],
+          "remediation": "必要なら gitleaks / detect-secrets を併用する",
+          "key": "secret-scope-limit",
+          "fingerprint": "c1b181399d96f7b5"
+        }
+      ]
+    },
+    {
+      "id": "D7-01",
+      "domain": "監査の独立性",
+      "title": "配置済みの監査基盤が導入後に改変されていないか",
+      "status": "done",
+      "examined": "`.audit/MANIFEST.sha256` の 14 件について、現物のsha256を再計算し、さらにツール側 templates/ の雛形と突合（一致 13 / 改変 0 / 欠落 0 / 雛形差 1）",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D7-01",
+          "severity": "Medium",
+          "fact": "`.audit/allowlist.yml` は改変されていないが、ツール側の雛形と内容が違う（雛形が更新された）",
+          "evidence": [
+            ".audit/allowlist.yml"
+          ],
+          "remediation": "kurosaki install で最新の雛形へ更新する",
+          "key": "audit-file-stale:.audit/allowlist.yml",
+          "fingerprint": "acb31ac0292aa9b7"
+        }
+      ]
+    },
+    {
+      "id": "D7-02",
+      "domain": "監査の独立性",
+      "title": "allowlist が抜け道になっていないか",
+      "status": "done",
+      "examined": "`.audit/allowlist.yml` を読み、有効 36 件／無効 0 件を判定（広すぎるパス 0 / 全ルール除外 0 / 指紋指定なし 0 / 期限なし 0）。直近の変更者: Yuji Matsushita, Yuji Matsushita",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D7-03",
+      "domain": "監査の独立性",
+      "title": "過去の監査調書が改変されていないか（ハッシュ連鎖）",
+      "status": "done",
+      "examined": "`.audit/reports` の調書 11 件について、自己ハッシュと前後の連鎖を検証（不整合 0 件）",
+      "reason": null,
+      "observations": []
+    }
+  ],
+  "observations": [
+    {
+      "id": "D2-02",
+      "severity": "Medium",
+      "fact": "本番投入用データ（人物データは検出されず） が追跡下にある（8 件）",
+      "evidence": [
+        "db/seeds/0002_season_2026.production.sql",
+        "db/seeds/0003_season_2027.production.sql",
+        "db/seeds/0005_season2_special_selection.production.sql",
+        "db/seeds/0006_season3_align_to_season2.production.sql",
+        "db/seeds/0007_season3_target.production.sql",
+        "db/seeds/0008_group_interview_criteria.production.sql",
+        "db/seeds/0009_season3_partner_status.production.sql",
+        "db/seeds/0010_document_screening_criteria.production.sql"
+      ],
+      "remediation": "追跡から外し、必要なら履歴からの除去を人間の承認のもとで行う（.audit/IRREVERSIBLE_OPS.md）",
+      "key": "tracked-forbidden:本番投入用データ（人物データは検出されず）",
+      "fingerprint": "2f33c6d9c32cc5b5",
+      "repeat_count": 11
+    },
+    {
+      "id": "D5-03",
+      "severity": "High",
+      "fact": "本番へ出した記録が1件も無い。いつ・どのコミット・どの未コミット差分を出したのかを事後に確認できない",
+      "evidence": [
+        ".audit/deploys"
+      ],
+      "remediation": "deploy-gate を通して記録を残す。過去分は復元できないので、以後の記録から始める",
+      "key": "no-deploy-record",
+      "fingerprint": "e3ead7ea6804288e",
+      "repeat_count": 11
+    },
+    {
+      "id": "D5-03",
+      "severity": "High",
+      "fact": "未pushのコミットが 1 件ある。この状態で本番へ出すと、**本番にしか存在しないコードができる**（リモートを見ても再現できない）",
+      "evidence": [
+        "origin/fix/quality-gate-false-pass..HEAD"
+      ],
+      "remediation": "push してから出す。出す必要があるなら、何がリモートに無いのかを記録して人間が承認する",
+      "key": "unpushed-vs-production",
+      "fingerprint": "9803cd57afdc67fe",
+      "repeat_count": 2
+    },
+    {
+      "id": "D5-03",
+      "severity": "Medium",
+      "fact": "作業ツリーに 7 件の差分がある。いま出せばリポジトリに存在しないファイルが本番へ入る",
+      "evidence": [
+        "git status --porcelain: 7 件"
+      ],
+      "remediation": "コミットしてから出す。または deploy-gate の記録に残したうえで人間が承認する",
+      "key": "dirty-tree-vs-production",
+      "fingerprint": "0980ff8e1d4c84c4",
+      "repeat_count": 10
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`app/borderline/page.tsx` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "app/borderline/page.tsx: L65, L67"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:app/borderline/page.tsx:JP_PERSON_NAME_WEAK",
+      "fingerprint": "3d4aa43df019e3d1",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`db/migrations/0023_person_optional_facts.sql` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "db/migrations/0023_person_optional_facts.sql: L59"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:db/migrations/0023_person_optional_facts.sql:JP_PERSON_NAME_WEAK",
+      "fingerprint": "5847e657a15515c3",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`db/seeds/0001_reference.example.sql` に JP_PERSON_NAME_WEAK が 4 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "db/seeds/0001_reference.example.sql: L64, L70, L73, L75"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:db/seeds/0001_reference.example.sql:JP_PERSON_NAME_WEAK",
+      "fingerprint": "5b159eb0e0613c26",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`db/seeds/0004_channels.sql` に JP_PERSON_NAME_WEAK が 6 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "db/seeds/0004_channels.sql: L31, L32, L33, L35, L36, L37"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:db/seeds/0004_channels.sql:JP_PERSON_NAME_WEAK",
+      "fingerprint": "eed36f99a940c6c7",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`db/seeds/0005_season2_special_selection.production.sql` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "db/seeds/0005_season2_special_selection.production.sql: L55"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:db/seeds/0005_season2_special_selection.production.sql:JP_PERSON_NAME_WEAK",
+      "fingerprint": "e7898dc0373a18d6",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`docs/audit/2026-08-19-remediation.md` に BIRTHDATE が 2 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "docs/audit/2026-08-19-remediation.md: L163, L163"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:docs/audit/2026-08-19-remediation.md:BIRTHDATE",
+      "fingerprint": "12c2fcba9f5d1fde",
+      "repeat_count": 0
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`scripts/import-approach-2026.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "scripts/import-approach-2026.ts: L110, L147"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:scripts/import-approach-2026.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "1fc24323d72d61d7",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`scripts/import-legacy-2026.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "scripts/import-legacy-2026.ts: L308"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:scripts/import-legacy-2026.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "76b8971475a23f21",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`src/commands/ai_pre_assessment.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "src/commands/ai_pre_assessment.ts: L193, L210"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:src/commands/ai_pre_assessment.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "cf2337f4e356eb95",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`src/import/legacy_2026.ts` に JP_PERSON_NAME_WEAK が 5 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "src/import/legacy_2026.ts: L313, L314, L315, L316, L317"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:src/import/legacy_2026.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "e54284d137a49a9e",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`src/queries/ai_pre_assessment.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "src/queries/ai_pre_assessment.ts: L24"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:src/queries/ai_pre_assessment.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "51a4d05477cd4374",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`src/queries/document_screening.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "src/queries/document_screening.ts: L103"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:src/queries/document_screening.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "46e428761d062d17",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`src/queries/tasks.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "src/queries/tasks.ts: L256"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:src/queries/tasks.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "8907b49da696d996",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/21_decide.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/21_decide.test.ts: L345"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/21_decide.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "48218fd60fa74816",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/22_reference_season.test.ts` に JP_PERSON_NAME_WEAK が 7 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/22_reference_season.test.ts: L161, L162, L163, L165, L232, L255 …ほか 1 箇所"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/22_reference_season.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "08f29bf3012b9029",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/29_profile_editing.test.ts` に BIRTHDATE が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/29_profile_editing.test.ts: L32"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/29_profile_editing.test.ts:BIRTHDATE",
+      "fingerprint": "1e315a7a3d6a3687",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/33_borderline_scoring.test.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/33_borderline_scoring.test.ts: L42, L206"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/33_borderline_scoring.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "269dd29a732e105f",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/34_legacy_import.test.ts` に BIRTHDATE が 10 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/34_legacy_import.test.ts: L34, L37, L44, L52, L61, L72 …ほか 4 箇所"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/34_legacy_import.test.ts:BIRTHDATE",
+      "fingerprint": "bdd9501527e48224",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/34_legacy_import.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/34_legacy_import.test.ts: L52, L60, L94"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/34_legacy_import.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "1c0dda8f1a5ca64e",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/35_interview_sheet.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/35_interview_sheet.test.ts: L44"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/35_interview_sheet.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "f45afa5a9ad4294b",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/36_intake.test.ts` に JP_PERSON_NAME_WEAK が 8 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/36_intake.test.ts: L304, L317, L321, L328, L341, L345 …ほか 2 箇所"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/36_intake.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "eab42f49f33f912e",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/41_sheet_bulk.test.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/41_sheet_bulk.test.ts: L316, L326"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/41_sheet_bulk.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "1900689dd37477f5",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/48_criteria_weighting.test.ts` に JP_PERSON_NAME_WEAK が 2 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/48_criteria_weighting.test.ts: L48, L89"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/48_criteria_weighting.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "ac54ad25f547ae36",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/52_season3_alignment.test.ts` に JP_PERSON_NAME_WEAK が 5 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/52_season3_alignment.test.ts: L28, L30, L33, L33, L90"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/52_season3_alignment.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "5c69f55f1ae8ce6e",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/53_deploy_target.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/53_deploy_target.test.ts: L29, L37, L55"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/53_deploy_target.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "2a5878401d714015",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/54_list_weight.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/54_list_weight.test.ts: L41"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/54_list_weight.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "46e8f299f856337c",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/70_ai_pre_assessment.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/70_ai_pre_assessment.test.ts: L204"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/70_ai_pre_assessment.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "add27257ededee3d",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/75_end_to_end_selection.test.ts` に JP_PERSON_NAME_WEAK が 1 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/75_end_to_end_selection.test.ts: L270"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/75_end_to_end_selection.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "35db984ebddb3ab1",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/76_document_gate.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/76_document_gate.test.ts: L47, L63, L71"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/76_document_gate.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "0fd81207cc350f9f",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "`tests/78_pilot_hirashain.test.ts` に JP_PERSON_NAME_WEAK が 3 件（追跡ファイル（作業ツリー））",
+      "evidence": [
+        "tests/78_pilot_hirashain.test.ts: L36, L38, L216"
+      ],
+      "remediation": "実データを取り除き、ダミーは Faker(ja_JP) で生成する。既に push 済みなら履歴からの除去を不可逆操作として人間の承認のもとで行う",
+      "key": "pii:tests/78_pilot_hirashain.test.ts:JP_PERSON_NAME_WEAK",
+      "fingerprint": "d6caa5fa78933d94",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "中身を検査できなかったファイルが 7 件ある（安全だと言っていない）",
+      "evidence": [
+        "public/brand/icon_64.png",
+        "public/brand/logo_black.png",
+        "public/brand/logo_gradient.png",
+        "public/brand/logo_gradient_720.png",
+        "public/brand/logo_white.png",
+        "public/brand/logo_ydb.png"
+      ],
+      "remediation": "検査できる形式へ変換するか、リポジトリの外へ出す",
+      "key": "unchecked-files",
+      "fingerprint": "a7c866a6816ef3ec",
+      "repeat_count": 11
+    },
+    {
+      "id": "D6-02",
+      "severity": "Low",
+      "fact": "確定パターン 11 種では秘密を検出しなかった（これは秘密が無いことの証明ではない。独自形式のトークンは対象外）",
+      "evidence": [
+        "D6-02 の走査範囲"
+      ],
+      "remediation": "必要なら gitleaks / detect-secrets を併用する",
+      "key": "secret-scope-limit",
+      "fingerprint": "c1b181399d96f7b5",
+      "repeat_count": 11
+    },
+    {
+      "id": "D7-01",
+      "severity": "Medium",
+      "fact": "`.audit/allowlist.yml` は改変されていないが、ツール側の雛形と内容が違う（雛形が更新された）",
+      "evidence": [
+        ".audit/allowlist.yml"
+      ],
+      "remediation": "kurosaki install で最新の雛形へ更新する",
+      "key": "audit-file-stale:.audit/allowlist.yml",
+      "fingerprint": "acb31ac0292aa9b7",
+      "repeat_count": 11
+    }
+  ],
+  "prev_digest": "b7e6841ec628906a7459d78109078a009996d13ab75b492c76b0dd97e717fa6d",
+  "saved_at": "2026-08-19T06:48:14+00:00",
+  "self_digest": "b9d360b7b428e15d0fa2d5263472fa007d4fef55e12b6ae3b16703f5c1e88c9b"
+}

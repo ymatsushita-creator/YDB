@@ -1,0 +1,308 @@
+/* =============================================================
+   03 操作の部品 —— ボタン・タブ・札・星・棒・環・顔
+   -------------------------------------------------------------
+   `.button-primary` / `.button-secondary` / `.badge-*` / `.tab-*` の
+   **色と字面は `tokens.css`（DESIGN.md 生成）が持っている。**
+   ここで足すのは、生成物が持てないもの（高さ・境界・押した感じ・hover）だけ。
+
+   ★ 旧版の「物理ボタン」（多段の影で押し込む）と「リキッドグラス」
+     （backdrop-filter と多段 inset の縁）は**外した**（依頼者の指示
+     2026-08-20）。DESIGN.md はどちらも指示しておらず、
+     "Typography, spacing, geometry, and operational UI remain restrained
+     and technical" に反する。操作部品は**面と1本の線**で表す。
+   ============================================================= */
+
+/* -------------------------------------------------------------
+   ボタン
+   `btn-physical` は名前だけ残す（画面25箇所が呼んでいる）。
+   中身は**押し込む影ではなく、面の濃さが1段変わるだけ**にした。
+   ------------------------------------------------------------- */
+.btn-physical, .button-primary, .button-secondary,
+.hh-search-go, .hh-year-go, .hh-signout, .popup-close, .row-detail-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  /* ★ 押せる物は**内容の幅**で置く。器が flex/grid の子になったときに
+       伸び切らないよう、明示的に縮める（やることの札で全幅に伸びていた）。 */
+  align-self: flex-start; width: fit-content;
+  gap: var(--space-xxs);
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+}
+.btn-physical:hover, .button-primary:hover, .button-secondary:hover { text-decoration: none; }
+
+/* 主操作。DESIGN.md `button-primary` ―― 面は near-black、丸は pill。 */
+.button-primary {
+  height: 40px;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.button-primary:hover { background-color: var(--color-canvas-dark-2); }
+.button-primary:active { background-color: var(--color-canvas-dark-soft); }
+.button-primary[disabled], .button-secondary[disabled] {
+  background-color: var(--color-canvas-soft-2);
+  color: var(--color-mute);
+  border-color: var(--color-hairline);
+  cursor: not-allowed;
+}
+
+/* 副操作。白面＋hairline。 */
+.button-secondary {
+  height: 40px;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+.button-secondary:hover { background-color: var(--color-canvas-soft-2); border-color: var(--color-hairline-strong); }
+
+/* 小さい方（表の行・カードの中）。DESIGN.md `button-*-sm` の字面。 */
+.button-primary-sm, .button-secondary-sm, .row-detail-button, .zoom-back {
+  height: 28px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--rounded-pill);
+  font-size: var(--type-button-md-font-size);
+  font-weight: var(--type-button-md-font-weight);
+  line-height: var(--type-button-md-line-height);
+}
+.row-detail-button, .zoom-back {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+.row-detail-button:hover, .zoom-back:hover { background-color: var(--color-canvas-soft-2); }
+
+/* 表や一覧の中の主操作は、帯の主操作より小さくする。 */
+.task-item .button-primary, .criteria-row .button-primary,
+.score-form .button-primary, .row-action .button-primary,
+table .button-primary, table .button-secondary {
+  height: 28px;
+  font-size: var(--type-button-md-font-size);
+  line-height: var(--type-button-md-line-height);
+}
+
+/* 丸ボタン（閉じる）。DESIGN.md `icon-button-circular`。 */
+.popup-close {
+  width: 32px; height: 32px;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-full);
+  font-size: 16px; line-height: 1;
+}
+.popup-close:hover { background-color: var(--color-canvas-soft-2); }
+
+/* ★ 操作柱の行とパンくずの段は `btn-physical` を被っているが、
+     **面の幅いっぱいに置く行**である。上の指定を打ち消す。 */
+.hh-nav .btn-physical, .hh-nav-add .btn-physical, .sidebar-item, .sidebar-item-active {
+  justify-content: flex-start;
+  align-self: stretch;
+  width: auto;
+}
+.zoom-bar .btn-physical { align-self: center; }
+
+/* -------------------------------------------------------------
+   タブ（絞り込み） —— DESIGN.md `tab-ghost` / `tab-active`
+   ------------------------------------------------------------- */
+.bl-tabs, .owner-filter-tabs {
+  display: flex; flex-wrap: wrap; gap: var(--space-xxs);
+  padding-bottom: var(--space-sm);
+}
+.bl-tab, .owner-filter-tabs > a {
+  display: inline-flex; align-items: center;
+  height: 30px;
+  padding: 0 var(--space-md);
+  border-radius: var(--rounded-pill-sm);
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  font-size: var(--type-body-sm-font-size);
+  line-height: var(--type-body-sm-line-height);
+  letter-spacing: var(--type-body-sm-letter-spacing);
+}
+.bl-tab:hover, .owner-filter-tabs > a:hover {
+  background-color: var(--color-canvas-soft-2);
+  text-decoration: none;
+  color: var(--color-ink);
+}
+/* 選ばれている札。**面は near-black、下に細いスペクトラム。** */
+.bl-tab.is-on, .bl-tab[aria-current='page'], .owner-filter-tabs > a.active {
+  position: relative; overflow: hidden;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--type-body-sm-strong-font-weight);
+}
+.bl-tab.is-on::after, .bl-tab[aria-current='page']::after, .owner-filter-tabs > a.active::after {
+  content: '';
+  position: absolute; left: var(--space-md); right: var(--space-md); bottom: 3px; height: 2px;
+  background: var(--spectrum-line);
+}
+
+/* -------------------------------------------------------------
+   札（種別・到達状態） —— DESIGN.md `badge-*`
+   面を淡色で塗り、字を濃色にする。**スペクトラムは使わない**
+   （札は数が多い。1枚ずつ虹にすると 10〜15% を確実に超える）。
+   ------------------------------------------------------------- */
+.badge-tag-blue, .badge-tag-purple, .badge-tag-orange,
+.badge-tag-green, .badge-tag-gray,
+.chip-blue, .chip-green, .chip-amber, .chip-gray {
+  display: inline-flex; align-items: center;
+  height: 20px;
+  padding: 0 var(--space-xs);
+  border-radius: var(--rounded-full);
+  font-size: var(--type-caption-font-size);
+  line-height: var(--type-caption-line-height);
+  white-space: nowrap;
+}
+.badge-tag-green, .chip-green { background-color: var(--color-success-soft); color: var(--color-success-deep); }
+.badge-tag-blue, .chip-blue { background-color: var(--color-info-soft); color: var(--color-info-deep); }
+.badge-tag-purple { background-color: var(--color-brand-lavender-soft); color: var(--color-brand-lavender-deep); }
+.badge-tag-orange, .chip-amber { background-color: var(--color-warning-soft); color: var(--color-warning-deep); }
+.badge-tag-gray, .chip-gray { background-color: var(--color-canvas-soft-2); color: var(--color-body); }
+
+/* -------------------------------------------------------------
+   数・棒・環
+   可視化は DESIGN.md が「major visualization」でスペクトラムを許す唯一の場。
+   ただし**細い棒には使わない**（色が呼吸できない）。
+   ------------------------------------------------------------- */
+.kpi { display: flex; flex-direction: column; gap: var(--space-xxs); }
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  line-height: var(--type-caption-mono-line-height);
+  color: var(--color-mute);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: var(--type-display-md-font-size);
+  font-weight: var(--type-display-md-font-weight);
+  line-height: var(--type-display-md-line-height);
+  letter-spacing: var(--type-display-md-letter-spacing);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+.kpi-value.muted { color: var(--color-mute); }
+.kpi-value.alert { color: var(--color-error-deep); }
+
+.meter, .bar-track, .kpi-viz-track, .meter-fill {
+  appearance: none; border: 0;
+}
+.meter, .bar-track, .kpi-viz-track {
+  width: 100%; height: 6px;
+  border-radius: var(--rounded-full);
+  overflow: hidden;
+  background: var(--color-canvas-soft-2);
+}
+.meter { display: block; margin-top: var(--space-xxs); }
+.meter::-webkit-meter-bar { border: 0; border-radius: var(--rounded-full); background: var(--color-canvas-soft-2); }
+.meter::-webkit-meter-optimum-value { border-radius: var(--rounded-full); background: var(--color-primary); }
+.meter.over::-webkit-meter-optimum-value { background: var(--color-warning); }
+.meter.good::-webkit-meter-optimum-value { background: var(--color-success); }
+.bar-fill, .kpi-viz-bar, .meter-fill {
+  display: block; height: 100%;
+  border-radius: var(--rounded-full);
+  background: var(--color-primary);
+}
+.bar-list { display: flex; flex-direction: column; gap: var(--space-xs); }
+.bar-label { font-size: var(--type-body-sm-font-size); color: var(--color-ink); }
+.bar-value { font-family: var(--font-mono); font-size: var(--type-caption-mono-font-size); font-variant-numeric: tabular-nums; color: var(--color-body); }
+.bar-note { font-size: var(--type-caption-font-size); color: var(--color-mute); }
+
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--rounded-full); }
+.legend { display: flex; gap: var(--space-md); flex-wrap: wrap; font-size: var(--type-caption-font-size); color: var(--color-body); }
+.legend-item { display: flex; align-items: center; gap: var(--space-xxs); }
+
+/* 環（充足）。**大きい図なのでスペクトラムを許す。** */
+.ring-track { stroke: var(--color-canvas-soft-2); }
+.ring-fill { stroke: var(--color-primary); }
+.ring-value {
+  font-family: var(--font-mono);
+  font-size: var(--type-display-sm-font-size);
+  font-variant-numeric: tabular-nums;
+  fill: var(--color-ink);
+}
+.ring-label, .ring-caption { font-size: var(--type-caption-font-size); fill: var(--color-body); color: var(--color-body); }
+
+/* 積み上げ帯 */
+.stack-bar { display: flex; height: 24px; border-radius: var(--rounded-xs); overflow: hidden; background: var(--color-canvas-soft-2); }
+.stack-seg { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.stack-seg-text {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  color: var(--color-on-primary);
+  white-space: nowrap;
+}
+.stack-legend { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-top: var(--space-xs); font-size: var(--type-caption-font-size); color: var(--color-body); }
+.stack-key { display: inline-block; width: 10px; height: 10px; border-radius: var(--rounded-xs); margin-right: var(--space-xxs); }
+
+/* 星（評点）。金は使わない ―― DESIGN.md に無い色を作らない。
+   点いた星は ink、消えた星は hairline-strong。**形で読める。** */
+.stars-on { color: var(--color-ink); letter-spacing: 1px; }
+.stars-off { color: var(--color-hairline-strong); letter-spacing: 1px; }
+
+/* 確度 */
+.conf-row { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; }
+.conf-mark {
+  display: inline-flex; align-items: center;
+  height: 20px; padding: 0 var(--space-xs);
+  border-radius: var(--rounded-full);
+  background: var(--color-canvas-soft-2);
+  color: var(--color-body);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+}
+.conf-current { background: var(--color-primary); color: var(--color-on-primary); }
+.conf-none { color: var(--color-mute); font-size: var(--type-caption-font-size); }
+.conf-grades { display: flex; flex-wrap: wrap; gap: var(--space-xxs); }
+.conf-grade {
+  display: inline-flex; align-items: baseline; gap: var(--space-xxs);
+  padding: 2px var(--space-xs);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+  font-size: var(--type-caption-font-size);
+}
+.conf-grade-code { font-family: var(--font-mono); font-weight: 500; color: var(--color-ink); }
+.conf-grade-def { color: var(--color-body); }
+
+/* 順位。王冠は飾りなので、**数字を主役にする。** */
+.rank-number {
+  font-family: var(--font-mono);
+  font-size: var(--type-display-sm-font-size);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+/* 王冠は上位3位の飾り。**順位は必ず数字でも出す。**
+   金は使わない（DESIGN.md に無い色を作らない）―― 濃さだけで序列を出す。 */
+.rank-mark { display: inline-flex; align-items: baseline; gap: 2px; }
+.rank-crest { color: var(--color-body); font-size: 11px; line-height: 1; }
+.rank-delta {
+  margin-left: var(--space-xxs);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+}
+.rank-delta-up { color: var(--color-success-deep); }
+.rank-delta-down { color: var(--color-error-deep); }
+.rank-delta-flat { color: var(--color-mute); }
+
+/* 顔写真。DESIGN.md に指定は無い。**丸と hairline だけ。** */
+.avatar, .hh-photo, .hh-photo-placeholder, .avatar-fallback, .candidate-photo-cell img {
+  width: 32px; height: 32px;
+  border-radius: var(--rounded-full);
+  object-fit: cover;
+  background: var(--color-canvas-soft-2);
+  border: 1px solid var(--color-hairline);
+}
+.avatar-fallback, .hh-photo-placeholder {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  color: var(--color-body);
+  /* 2文字が 32px の丸に収まる大きさ。あふれると丸の外へ字が出る。 */
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: -.02em;
+  overflow: hidden;
+}
+.avatar, .hh-photo { flex: 0 0 auto; }

@@ -2,32 +2,38 @@ import Link from 'next/link'
 import { getDb } from '../../../src/db/server.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../../src/queries/dashboard.ts'
 import {
-  getIntakeOptions, listUnmatchedResponses, getFormResponse, listCandidateNumbers,
+  getIntakeOptions, listUnmatchedResponses, getFormResponse,
 } from '../../../src/queries/intake.ts'
-import { nextCandidateNumber, ADD_CANDIDATE_MESSAGE } from '../../../src/commands/intake.ts'
-import { addCandidateAction } from './actions.ts'
+import { listCandidateSheetRows } from '../../../src/queries/sheet.ts'
+import { nextCandidateNumber } from '../../../src/commands/intake.ts'
+import { saveCandidateSheetAction } from './sheet-actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../../_components/shell.tsx'
-import { Avatar } from '../../_components/borderline.tsx'
+import { Sheet, type SheetColumn, type SheetRowData } from '../../_components/sheet.tsx'
+import { all } from '../../../src/db/client.ts'
 
 export const dynamic = 'force-dynamic'
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
 /**
- * 候補者追加（依頼者の指示。実行⑩）。
+ * 候補者追加 ―― **表（スプシ形式）**（依頼者の指示。実行⑫）。
  *
- * ★ 保存すると、**5つの事実が同時に立つ**（`src/commands/intake.ts`）――
+ * 実行⑩からの縦長フォームを、依頼者の指示で表に置き換えた。
+ *   1行＝1人。**その期の既存行も同じ表に並ぶ**（追加と編集が1つの場所になる）
+ *   セルを直接直し、まとめて保存する。**通る行だけ入り、不正行は残る**
+ *
+ * ★ 保存すると、新規行では**5つの事実が同時に立つ**（`src/commands/intake.ts`）――
  *   人・候補者番号・接点・アプローチ状態・フォーム回答との接合。
- *   1つでも欠けると、その人は一覧に出ないか、番号の無い候補者になる。
+ *   だから「どこで知ったか」も同じ行の列に置いてある（依頼者の判断）。
  *
- * ★ 番号は**自動**。期ごとに1から振り、欠番は詰めない。
- *   画面には「次はこの番号」と出すが、**確定するのは保存のとき**である
- *   （出した番号を予約すると、書きかけで閉じた人のぶんが欠番になる）。
+ * ★ 表で直せないもの ――
+ *   番号     欠番を詰めない規則があるので、振り直しをここに置かない
+ *   接点     積む記録で、書き換えの置き場所が無い（既存行では読み取り）
+ *   顔写真   行から開いて入れる（依頼者の判断。表は文字と選択だけ）
  *
- * ★ フォーム回答から始められる。まだ誰にも結び付いていない回答を並べ、
- *   選ぶと氏名やメールが**初期値として入る**（上書きは自由）。
- *   Google フォームはまだ無い ―― **受け皿と接合の規則だけを先に置いてある。**
+ * ★ フォーム回答から始める道は残してある。「この回答から」を押すと、
+ *   表の先頭に**その回答の値を入れた行**が1つ増える。保存すると回答が結び付く。
  */
 export default async function NewCandidatePage({
   searchParams,
@@ -47,21 +53,102 @@ export default async function NewCandidatePage({
     )
   }
 
-  const [options, unmatched, picked, nextNumber, numbers] = await Promise.all([
+  const [options, unmatched, picked, nextNumber, rows, states] = await Promise.all([
     getIntakeOptions(db),
     listUnmatchedResponses(db),
     getFormResponse(db, one(sp.from)),
     nextCandidateNumber(db, season.id),
-    listCandidateNumbers(db, season.id),
+    listCandidateSheetRows(db, season.id),
+    all<{ id: string; label: string }>(db,
+      `SELECT id, label FROM approach_states WHERE is_active ORDER BY sort_order`),
   ])
-
-  const code = one(sp.add)
-  const message = code
-    ? ADD_CANDIDATE_MESSAGE[code as keyof typeof ADD_CANDIDATE_MESSAGE] ?? '登録できなかった。'
-    : null
 
   // フォーム回答を選んでいれば、その値を初期値にする。**上書きは自由。**
   const from = picked && !picked.person_id ? picked : null
+
+  const columns: SheetColumn[] = [
+    { key: 'familyName', label: '姓', type: 'text' },
+    { key: 'givenName', label: '名', type: 'text' },
+    { key: 'familyNameKana', label: '姓（かな）', type: 'text' },
+    { key: 'givenNameKana', label: '名（かな）', type: 'text' },
+    { key: 'birthDate', label: '生年月日', type: 'date' },
+    { key: 'schoolId', label: '学校', type: 'select', options: options.schools, width: 140 },
+    { key: 'faculty', label: '学部・学科', type: 'text', width: 140 },
+    { key: 'email', label: 'メール', type: 'email', width: 180 },
+    { key: 'phone', label: '電話番号', type: 'text', width: 130 },
+    { key: 'lineUserId', label: 'LINE ID', type: 'text' },
+    // ★ 接点は既存行でも入れられる（依頼者の指示。実行⑰。C-183）。
+    //   **書き換えではなく、接点を1件積む。** 2つ揃って初めて足す。
+    {
+      key: 'channelId', label: '流入元', type: 'select', width: 130,
+      options: options.channels.map((c) => ({ id: c.id, label: c.label })),
+    },
+    { key: 'contactedOn', label: '接点の日', type: 'date' },
+    // アプローチ状態は既存行だけ。新規行は登録時に「未アプローチ」が入る。
+    {
+      key: 'approachStateId', label: 'アプローチ状態', type: 'select',
+      options: states, existingOnly: true, width: 150,
+    },
+    { key: 'note', label: '担当者メモ', type: 'text', width: 220 },
+    // 入力者は行ごと（依頼者の指示）。名簿は「入力者を追加」から増やす。
+    { key: 'staffId', label: '入力者', type: 'select', options: options.staffs, width: 130 },
+    // ★ アーカイブ（依頼者の指示。実行⑰。C-184）。**一番右**に置く。
+    //   ★ 記録は消えない ―― 一覧から外れるだけで、応募も面接も点も残る。
+    //   ★ 新規行では選ばせない（作る前にしまうものが無い）。
+    {
+      key: 'archive', label: 'アーカイブ', type: 'select', width: 120,
+      existingOnly: true,
+      options: [{ id: 'archive', label: 'アーカイブする' }],
+    },
+  ]
+
+  const sheetRows: SheetRowData[] = [
+    ...(from
+      ? [{
+        id: '',
+        lead: '回答から',
+        values: {
+          familyName: from.respondent_name ?? '',
+          givenName: '', familyNameKana: '', givenNameKana: '', birthDate: '',
+          schoolId: '', faculty: '',
+          email: from.respondent_email ?? '',
+          phone: '', lineUserId: from.respondent_line ?? '',
+          channelId: '', contactedOn: '', approachStateId: '', note: '', staffId: '',
+          archive: '',
+        },
+        // 列にはしないが、この行と一緒に送る。保存で回答が結び付く。
+        extra: { formResponseId: from.form_response_id },
+      }]
+      : []),
+    ...rows.map((r) => ({
+      id: r.person_id,
+      lead: r.number === null ? '' : String(r.number),
+      photoSrc: r.has_photo ? `/people/new/photo/${r.person_id}` : undefined,
+      photoAlt: `${r.family_name} ${r.given_name}さんの顔写真`,
+      values: {
+        familyName: r.family_name,
+        givenName: r.given_name,
+        familyNameKana: r.family_name_kana ?? '',
+        givenNameKana: r.given_name_kana ?? '',
+        birthDate: r.birth_date ?? '',
+        schoolId: r.school_id,
+        faculty: r.faculty ?? '',
+        email: r.email ?? '',
+        phone: r.phone ?? '',
+        lineUserId: r.line_user_id ?? '',
+        // ★ 既存行は**空で出す**（C-183）。ここは「最初の流入元」を映す欄では
+        //   なくなり、**接点を1件足す欄**になった。前の値を置くと、
+        //   保存のたび同じ接点を足そうとしているように読める。
+        //   （最初の流入元は詳細画面の接点の一覧で読む。）
+        channelId: '',
+        contactedOn: '',
+        approachStateId: r.approach_state_id ?? '',
+        note: r.note ?? '',
+        staffId: '',
+        archive: '',
+      },
+    })),
+  ]
 
   return (
     <Shell
@@ -72,20 +159,30 @@ export default async function NewCandidatePage({
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: 'ヘッドハンティング', href: `/headhunting?season=${season.id}` },
-          { label: '候補者追加' },
+          { label: '特別選考', href: `/headhunting?season=${season.id}` },
+          { label: '候補者を編集' },
         ]}
       />
 
-      {message && (
-        <p className={`callout${code === 'saved' ? ' ok' : ''}`}>{message}</p>
-      )}
-
       <div className="page-head">
         <div>
-          <h1 className="page-title">候補者追加</h1>
+          <h1 className="page-title">候補者を編集</h1>
           <p className="page-sub">{seasonLabel(season)} ・ 次の番号 {num(nextNumber)}</p>
         </div>
+      </div>
+
+      <div className="section">
+        <Card title="候補者">
+          <Sheet
+            columns={columns}
+            rows={sheetRows}
+            action={saveCandidateSheetAction}
+            hidden={{ seasonId: season.id }}
+            leadLabel="番号"
+            photoColumn
+            detail={{ href: `/people/{id}/edit?season=${season.id}`, label: '写真・詳細' }}
+          />
+        </Card>
       </div>
 
       {/* --- フォーム回答から始める --- */}
@@ -133,115 +230,10 @@ export default async function NewCandidatePage({
         </Card>
       </div>
 
-      {/* --- 登録 --- */}
-      <form action={addCandidateAction} className="editable-region">
-        <input type="hidden" name="seasonId" value={season.id} />
-        {from && <input type="hidden" name="formResponseId" value={from.form_response_id} />}
-
-        <div className="section">
-          <Card title="この人のこと">
-            {from && (
-              <p className="callout ok">
-                フォームの回答から入れている。保存すると、この回答がこの人へ結び付く
-              </p>
-            )}
-            <div className="iv-grid">
-              <label className="iv-field">姓
-                <input name="familyName" required
-                       defaultValue={from?.respondent_name ?? ''} />
-              </label>
-              <label className="iv-field">名<input name="givenName" /></label>
-              <label className="iv-field">姓（かな）<input name="familyNameKana" /></label>
-              <label className="iv-field">名（かな）<input name="givenNameKana" /></label>
-              {/* 0023 で「無いこともある」になった。必須にしない。 */}
-              <label className="iv-field">生年月日<input name="birthDate" type="date" /></label>
-              <label className="iv-field">学校
-                <select name="schoolId" required defaultValue="">
-                  <option value="" disabled>選ぶ…</option>
-                  {options.schools.map((o) => (
-                    <option key={o.id} value={o.id}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="iv-field">学部・学科<input name="faculty" /></label>
-              <label className="iv-field">メール
-                <input name="email" type="email" defaultValue={from?.respondent_email ?? ''} />
-              </label>
-              <label className="iv-field">電話番号<input name="phone" /></label>
-              <label className="iv-field">LINE ID
-                <input name="lineUserId" defaultValue={from?.respondent_line ?? ''} />
-              </label>
-              <label className="iv-field">顔写真
-                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
-                <small>JPEG / PNG / WebP、2MB以下</small>
-              </label>
-            </div>
-            <label className="iv-field iv-field-wide">担当者メモ
-              <textarea name="note" rows={3} />
-            </label>
-          </Card>
-        </div>
-
-        <div className="section">
-          <Card title="どこで知ったか">
-            <div className="iv-grid">
-              <label className="iv-field">流入元
-                <select name="channelId" required defaultValue="">
-                  <option value="" disabled>選ぶ…</option>
-                  {options.channels.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.category === 'sns' ? `SNS ・ ${o.label}` : o.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="iv-field">接点の日
-                <input name="contactedOn" type="date" />
-              </label>
-              <label className="iv-field">記録した人
-                <select name="staffId" required defaultValue="">
-                  <option value="" disabled>選ぶ…</option>
-                  {options.staffs.map((o) => (
-                    <option key={o.id} value={o.id}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <button className="button-primary" type="submit">
-              登録する（{num(nextNumber)} 番）
-            </button>
-          </Card>
-        </div>
-      </form>
-
       <div className="section">
-        <Card title="この期の番号">
-          {numbers.length === 0 ? <Empty>まだ1人も登録されていない</Empty> : (
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr><th className="num">番号</th><th>氏名</th><th>登録</th></tr>
-                </thead>
-                <tbody>
-                  {numbers.slice(0, 20).map((n) => (
-                    <tr key={n.person_id}>
-                      <td className="num strong">{num(n.number)}</td>
-                      <td className="cell-name">
-                        <Link href={`/people/${n.person_id}?season=${season.id}`}>
-                          <span className="bl-person">
-                            <Avatar src={n.photo_data_url} name={n.person_name} />
-                            {n.person_name}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="nowrap">{jstDateTime(n.assigned_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+        <Link href={`/staff/new?season=${season.id}`} className="hh-more">
+          入力者を追加 ›
+        </Link>
       </div>
     </Shell>
   )

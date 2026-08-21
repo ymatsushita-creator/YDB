@@ -12,7 +12,8 @@ import type { Db } from './client.ts'
  *   `Db` は query/exec/close の3つしか無いので、**同じ口で PGlite にも繋がる。**
  *   おかげで**往復をテストで確かめられる**（本番を触らずに）。
  *
- * ★ 保存先は `db/private/`（gitignore 済み）。**両リモートは公開である。**
+ * ★ 保存先は**リポジトリの外**（`scripts/intake-dir.ts` が解決）。**公開リモートがある。**
+ *   `.gitignore` に守りを預ける形は監査 D2-01 で否定された。
  */
 
 export interface TableDump {

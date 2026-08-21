@@ -129,6 +129,23 @@ describe('マイグレーション', () => {
       'v_effective_person_notes',
       // 0028: 予定ごとの参加者（参加した事実そのものは touchpoints が持つ）
       'v_event_attendance',
+      // 0035: 推薦枠の訂正チェーンを解決した有効な出来事（0016 と同じ判定）
+      'v_effective_partner_recommendation_events',
+      // 0035: 団体×期の現在の推薦枠ステイタス。**期ごと**なので団体の列にしない
+      'v_partner_recommendation_state',
+      // 0038: 職員ごとの最後の入場と回数。合言葉を持っているかも出す
+      'v_staff_last_sign_in',
+      // 0039: 確度の記入の訂正チェーンを解決したもの（深さ偶数が有効）
+      'v_effective_person_confidence_events',
+      // 0039: 人 × 期の現在の確度（S/A/B/C）。**導出値ではなく記入値**
+      'v_person_confidence',
+      // 0044: AI分析の事前ステータス。**成績（evaluation_scores）とは別の層**
+      'v_effective_ai_pre_assessments',
+      'v_ai_pre_assessment',
+      'v_ai_pre_total',
+      'v_ai_pre_viewpoints',
+      // 0053: 判定可能ステップ。統合タスク一覧と getDecidableStep の共有ビュー
+      'v_decidable_steps',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

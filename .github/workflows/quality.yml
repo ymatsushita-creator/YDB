@@ -1,0 +1,91 @@
+# 品質ゲート —— 動くことを機械が確かめる
+#
+# なぜ audit.yml と分けるか:
+#   audit.yml は監査法人の管轄で、`.audit/MANIFEST.sha256` に封印されている。
+#   実装側の都合（テストの追加、ビルド設定の変更）でそこへ手を入れると、
+#   監査基盤の改変として CI ジョブB が落とす。だから品質側は別ファイルに置く。
+#
+# なぜ必要か（2026-08-19 の構成診断）:
+#   `CLAUDE.md` の「完了条件」は pnpm test / tsc --noEmit / pnpm build の3つだが、
+#   これを強制する機械がフックにも CI にも**1件も無かった**。
+#   887件のテストが1度も回らないままマージできる状態だった。
+#   個人情報の防御が pre-commit / pre-push / CI の三重なのに対し、
+#   「動くかどうか」は誰も見ていない —— この非対称を埋めるのが本ファイルである。
+#
+# 注意: これを required status check に設定するまで、マージは止まらない。
+#       設定は人間が行う（GitHub → Settings → Branches）。監査 D3-05 と同じ話である。
+name: quality
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read # 最小権限。audit.yml と同じ方針
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true # 品質検査は最新の状態だけ分かればよい
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # テストは約3分。10倍の余裕を見てなお暴走を止める
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: 依存を入れる
+        # `--frozen-lockfile` にする。ロックファイルとずれた依存で
+        # 「CI では通る」を作らない。
+        run: pnpm install --frozen-lockfile
+
+      # 段ごとに別ステップにする。まとめると、どれが落ちたかがログを読むまで分からない。
+      - name: Lint
+        # `Hitler.md` §5-1 の完了ゲート。`biome.json` は追跡下にあり、
+        # **規則を切って通すことは S7 が禁じる**（誤検知は現場ごとに理由を書いて抑止する）。
+        run: pnpm lint
+
+      - name: 型検査
+        run: pnpm typecheck
+
+      - name: テスト
+        run: pnpm test
+
+      - name: 正典が原稿と一致しているか
+        # `db/DECISIONS.md` は `db/decisions-src/` の連結（生成物。C-234）。
+        # 原稿に書いて組み立て忘れると、正典だけが古くなる。
+        run: pnpm decisions:canon -- --check
+
+      - name: 構成基準が原稿と一致しているか
+        # `.consultant/STRUCTURE.md` は `.consultant/structure-src/` の連結（生成物。C-235）。
+        run: pnpm structure:canon -- --check
+
+      - name: 設計判断の索引が最新か
+        # `db/DECISIONS.md` に C-番号を足して索引を更新し忘れると、
+        # 次のセッションのAIが古い索引を根拠にする。生成物のずれを検知する。
+        run: pnpm decisions:index -- --check
+
+      - name: 設計判断の1件1ファイルが本体と一致しているか
+        # `db/decisions/` は `db/DECISIONS.md` の写し（生成物）である。
+        # ずれると、AIが開くほうだけが古くなる ―― **索引より写しのほうが読まれる。**
+        run: pnpm decisions:parts -- --check
+
+      - name: 構成基準（.consultant/STRUCTURE.md）
+        # 外部ツール `consultant` は CI から解決できない。C01〜C07 は未実行になり、
+        # スクリプトはそれを「未実行」と明記して通す（「問題なし」とは言わない）。
+        # ここで必ず走るのは、このリポジトリ固有の条件 S1〜S13 である。
+        run: pnpm structure
+
+      - name: ビルド
+        run: pnpm build

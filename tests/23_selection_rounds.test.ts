@@ -23,7 +23,10 @@ import { getOpenTasks } from '../src/queries/cockpit.ts'
  */
 
 /** 固定シードの疑似乱数。落ちた周を seed で再現できる。 */
-const rng = (seed: number) => () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+const rng = (seed: number) => () => {
+  seed = (seed * 1103515245 + 12345) % 2147483648
+  return seed / 2147483648
+}
 
 interface World {
   db: Db
@@ -41,7 +44,7 @@ async function world(db: Db): Promise<World> {
     `SELECT id FROM seasons WHERE enrollment_year = 2026`)
   const steps = await all<{ id: string; name: string; sort_order: number }>(
     db, `SELECT id, name, sort_order FROM selection_steps
-          WHERE season_id = $1 ORDER BY sort_order`, [season.id])
+          WHERE season_id = $1 AND name <> '特別選考' ORDER BY sort_order`, [season.id])
   const schoolId = await scalar<string>(
     db, `INSERT INTO schools (name) VALUES ('架空高校') RETURNING id`)
   const staff = (await all<{ id: string }>(db, `
@@ -161,15 +164,19 @@ describe('選考を20周まわす（順序と分岐を毎周変える）', () =>
     const db = await freshDb({ seeds: 'production' })
     const w = await world(db)
     const rand = rng(20260807)
-    const last = w.steps.at(-1)!.sort_order
+    // ★ 落とす段・保留する段は、**実在する段の sort_order から選ぶ。**
+    //   1..last の連番を仮定すると、特別選考を先頭へ足して段が 2..5 へ
+    //   ずれた（0005）とき、どの段にも当たらない値を引いて「落としたはずが
+    //   通ってしまう」。w.steps は運用4段（特別選考を除く）。
+    const pickStep = () => w.steps[Math.floor(rand() * w.steps.length)]!.sort_order
 
     let expectedAccepted = 0
     for (let round = 1; round <= 20; round++) {
       const appId = await newApplication(w, `候補${round}`)
 
       // 周ごとに道を変える。どこで落ちるか / 保留を挟むか / 誰が見るか。
-      const rejectAt = rand() < 0.35 ? 1 + Math.floor(rand() * last) : null
-      const holdAt = rand() < 0.3 ? 1 + Math.floor(rand() * last) : null
+      const rejectAt = rand() < 0.35 ? pickStep() : null
+      const holdAt = rand() < 0.3 ? pickStep() : null
       const withdraw = rejectAt === null && rand() < 0.15
 
       if (withdraw) {
@@ -243,8 +250,10 @@ describe('評価の観点が0本の段（C-33）', () => {
     // ―― 「記録が実装より厳密に見える」を作らないため。
     const db = await freshDb({ seeds: 'production' })
     const w = await world(db)
-    // ★ 実行⑨で3期が入り、顔ぶれが増えた（3期は軸を1本も受け取っていない）。
-    //   期をまたぐので、どの期の段かまで書く。
+    // ★ 実行⑨で3期が入り、顔ぶれが増えた。
+    //   実行⑭で3期を2期にそろえたので（C-122）、**両期で同じ3段**が軸を持たない
+    //   ―― 書類選考とグループ面接の軸は応募管理表に呼び名が無く、
+    //   応募受付は関門であって採点しない。期をまたぐので、どの期の段かまで書く。
     const noCriteria = await all<{ cohort: number; name: string }>(db, `
       SELECT se.cohort_number AS cohort, ss.name
         FROM selection_steps ss
@@ -252,13 +261,15 @@ describe('評価の観点が0本の段（C-33）', () => {
        WHERE NOT EXISTS (SELECT 1 FROM evaluation_criteria ec
                           WHERE ec.selection_step_id = ss.id)
        ORDER BY se.cohort_number, ss.sort_order`)
+    // ★ グループ面接は 0008、書類選考は 0010 で軸が入った（C-187）。
+    //   残るは応募受付だけ ―― 関門であって採点しない。
     assert.deepEqual(noCriteria.map((r) => [r.cohort, r.name]), [
-      [2, '応募受付'], [2, '書類選考'], [2, 'グループ面接'],
-      [3, '書類審査'], [3, 'グループ面接'], [3, '最終面接'],
+      [2, '応募受付'],
+      [3, '応募受付'],
     ], '軸が0本の段の顔ぶれが変わった。画面の分岐（C-33）も見直すこと')
 
     const appId = await newApplication(w, '軸なし')
-    const step = w.steps[1]!                          // 書類選考
+    const step = w.steps[0]!                          // 応募受付（軸が0本）
     await work(w, appId, step, 0, false)              // 採点は0件のまま確定まで行く
     assert.equal(
       await scalar<number>(db, `SELECT count(*)::int FROM evaluation_scores`), 0,
@@ -277,7 +288,7 @@ describe('評価の観点が0本の段（C-33）', () => {
     const appId = await newApplication(w, '軸の総数')
     await db.query(`
       INSERT INTO evaluations (application_id, selection_step_id, interviewer_staff_id, assigned_at)
-      VALUES ($1, $2, $3, now())`, [appId, w.steps[1]!.id, w.staff[0]])
+      VALUES ($1, $2, $3, now())`, [appId, w.steps[0]!.id, w.staff[0]])
     // criteria_total はビューではなく getOpenTasks が組み立てている。
     const tasks = await getOpenTasks(db, w.seasonId)
     const t = tasks.find((x) => x.application_id === appId)

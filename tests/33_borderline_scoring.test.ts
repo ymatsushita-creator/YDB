@@ -278,7 +278,7 @@ describe('個人の採点レイヤー', () => {
     seasonId = await scalar<string>(db, `SELECT id FROM seasons WHERE cohort_number = 2`)
     steps = await all<{ id: string; sort_order: number }>(db, `
       SELECT id, sort_order FROM selection_steps
-       WHERE season_id = $1 ORDER BY sort_order`, [seasonId])
+       WHERE season_id = $1 AND name <> '特別選考' ORDER BY sort_order`, [seasonId])
     schoolId = await scalar<string>(db,
       `INSERT INTO schools (name) VALUES ('架空第二高校') RETURNING id`)
     staffId = await scalar<string>(db, `
@@ -320,7 +320,7 @@ describe('個人の採点レイヤー', () => {
     const otherSeason = await scalar<string>(db,
       `SELECT id FROM seasons WHERE cohort_number = 3`)
     const otherStep = await scalar<string>(db, `
-      SELECT id FROM selection_steps WHERE season_id = $1 ORDER BY sort_order LIMIT 1`,
+      SELECT id FROM selection_steps WHERE season_id = $1 AND name <> '特別選考' ORDER BY sort_order LIMIT 1`,
     [otherSeason])
     const personId = await scalar<string>(db, `
       INSERT INTO persons (family_name, given_name, birth_date, school_id, email)

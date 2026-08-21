@@ -1,0 +1,435 @@
+# 検出の除外
+#
+# 2026-08-19 の監査で検出された値のうち、**依頼者が内容を目視し「実データではない」と
+# 判断したもの**だけを、指紋単位で除外する。
+#
+# 判断の根拠として確認した事実:
+#   - src/seed/demo.ts は「デモ用のデータ生成。参照データとは分ける。こちらは作り物」と
+#     ファイル冒頭に明記され、メールは全て RFC 予約の @example.test、乱数は固定シード
+#   - tests/ の人物名は「架空」「同姓同名」「別人」等、実在しない姓を用いている
+#   - tests/70_ai_pre_assessment.test.ts の鍵は sk-ant-test... の29文字（実キーは108文字）
+#
+# ここに無いファイルは除外されない（文書・取り込みスクリプト等は未判断のまま）。
+
+version: 1
+faker_ja_jp_paths: []
+
+allow:
+  - path: src/seed/demo.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [0ab7b7519965f9c2, 1746d1d1f9baa467, 2c28388397462c7f, 3ccd3744ef1808ad, 5a5238c2c24f7c0e, 7e0355a2b864cc98, abd007b14275d776, bb6e9a9aa36a8c8c]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/06_person_state.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [4001d3560ff3d7f1, 93a1dd58eae37eb1]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/12_drilldown.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [1b6b1a6f89315f6e, 98325252800cd734, b8e1cf9f8949d8a3]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/14_active_selection.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [afe8aabbacace505, dab2fb440d86e0d1]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/16_cockpit.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [7b9918bc78c1baa8, 90ad3202e546516e, 9fc1a9256ee48413, cb59ef06dab115c7, d484203c8a655e4d, e9653dc3edcbc072]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/17_assign.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c292b94c2e885bd2, c81a7ff89362c85e]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/18_unhold.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c81a7ff89362c85e]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/19_criteria.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c81a7ff89362c85e]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/20_score.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c81a7ff89362c85e]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/21_decide.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c292b94c2e885bd2, c81a7ff89362c85e]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/24_scaling.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c222d48474a9f139]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/29_profile_editing.test.ts
+    rules: [JP_PERSON_NAME, JP_PHONE]
+    fingerprints: [33933778612b20a7, 522d69851a96e960, 59233422549e361e, 9e8df53dc6b6d828, fc0ca3d6df742367]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/34_legacy_import.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [3e63216aec8dbdf6, 570146d0658ee0c1, 65a427565b3f8cf4, 784b0fac072f4065, ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/35_interview_sheet.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c222d48474a9f139]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/36_intake.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [47480327ecd4b9b0, 55119bbd9d8666be, 570146d0658ee0c1, 65161f09fb13f056, 7406e09723f00e9e]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/39_notes_attendance.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [ea62cd5c0a72b746, f8e0604885011dad]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/41_sheet_bulk.test.ts
+    rules: [JP_PERSON_NAME, JP_PHONE]
+    fingerprints: [221a0965ae709fe3, 38e10cbe3e7b863a, 3aff4f9755483d11, 3e63216aec8dbdf6, 580876f071e4173c, 6f59db420dfb7bcd, 76be19e474659a34, 7d4070e6c65e1d68, 867021e891f7a145, a45616f10c5a8526, a9b26c08caf66f06, aa7d266c139d68c6, c2b2353877158260, c90904cc7fa1e704, e3dce60d3ef869cd]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/42_note_involvement.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c1894f13cde956ca, ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/50_partner_recommendation.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [9be79aca767f970a]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/54_list_weight.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [c222d48474a9f139]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/56_form_sheet_parity.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [0ed7ffba77e2868b, 133a44001367c563, 6884d67e58091954, d2b6a3926211f68e, ebaec6bca086d4bd]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/58_corrections.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [9be79aca767f970a, c1894f13cde956ca, ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/62_demo_removal.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [383dc6a455789096, 3e63216aec8dbdf6]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/63_cohort_split.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [ae7ffbcfe243cec4]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/64_confidence_grade.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [709ded7f24385a5c, ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/65_partners_import.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [56291445b2e956ab, 7e83ec146dc87ddd]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/66_events_and_forms.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [ae7ffbcfe243cec4]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/70_ai_pre_assessment.test.ts
+    rules: [JP_ADDRESS, JP_PERSON_NAME]
+    fingerprints: [2af437d328db3258, ce76fe655d41af06, ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/72_kpi_metric.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [27a74cb7bf44525b, ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/73_candidate_list_columns.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [a45616f10c5a8526]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/75_end_to_end_selection.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [08f69e042710817b, cd94d93b1fa4e529, ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/76_document_gate.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/78_pilot_hirashain.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [ea62cd5c0a72b746]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/79_unified_tasks.test.ts
+    rules: [JP_PERSON_NAME]
+    fingerprints: [6bdd573f28e91124, c292b94c2e885bd2]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/support/fixtures.ts
+    rules: [BIRTHDATE]
+    fingerprints: [0a8f26ac661667b4]
+    reason: 依頼者が内容を確認し、実在の個人のデータではないと判断した（デモ用の登場人物・テスト用の架空値）
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで内容を目視のうえ確認）'
+    expires: 2027-08-19
+  - path: tests/70_ai_pre_assessment.test.ts
+    rules: [SECRET:ANTHROPIC_KEY]
+    fingerprints: [c5a0f4f9a65bc9e2]
+    reason: テスト用のプレースホルダ（sk-ant-test… の29文字。実キーは108文字で形式が異なる）。依頼者がAPIキーの扱いを対応済みと確認
+    approved_by: 'y_matsushita（2026-08-19 監査セッションで確認）'
+    expires: 2027-08-19
+
+  # ── 2026-08-20 の分（監査 ac2a137。D6-01 の 32 件。★過去18回同じ指摘だった分）─────
+  #
+  # ★ **署名は依頼者が Claude へ代理を許可したものである**（2026-08-20 のセッションで明示）。
+  #   通常 `approved_by` は人間だけが行う（`.consultant/STRUCTURE.md` §7）。
+  #   実体の行は Claude が原本と1件ずつ突合し、指紋を
+  #   `docs/audit/2026-08-20-allowlist-candidates.md` に、行そのものを追跡外の
+  #   `.tmp/allowlist-evidence-2026-08-20.md` に残した（引用を追跡下に置くと、
+  #   その引用で PII 走査が落ちる ―― 実際に落ちた）。
+  #
+  # 確認した内容: 検出は全て「弱い日本語人名パターン」で、実体は
+  #   (a) 記録モデルの分類語 —— 選考段名・評価軸名・チャネル区分・学校区分。
+  #       SQL の照合条件（`WHERE ss.name = …`）と画面のラベルとして現れる
+  #   (b) 架空と明示された値 —— `架空…` の接頭辞、窓口担当の架空名、`検査用`
+  #   (c) 日付 —— テストのフィクスチャと監査記録の中の固定値。原典から取り込んだ値ではない
+  # 人名は1件も無い。
+  - path: app/borderline/page.tsx
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 選考段の分類語（タブのラベルと段名）。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/migrations/0023_person_optional_facts.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [38b9a3ff73609473]
+    reason: 学校区分の分類語（未記録を表す行の挿入）。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/seeds/0001_reference.example.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [1b6b1a6f89315f6e, 2f6bef03c9987150, 784471c932692631, a79dd86f591b2eda]
+    reason: 接点チャネルの分類語（参照マスタの例）。人名ではない（4件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/seeds/0004_channels.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5154b7cf78edfe9c, 6cdab45e422b5af2, 8092ea181101f149, 835e196c2424a5b7, b8f605046c636ce6, e547903f38794739]
+    reason: 接点チャネルの分類語（参照マスタ）。人名ではない（6件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: db/seeds/0005_season2_special_selection.production.sql
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6]
+    reason: 選考段の分類語（段の登録）。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: docs/audit/2026-08-19-remediation.md
+    rules: [BIRTHDATE]
+    fingerprints: [0a8f26ac661667b4, fd5980de18813390]
+    reason: 監査記録の中の固定値（是正の経緯として引用した日付）。実在の候補者の生年月日ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: docs/audit/2026-08-20-allowlist-candidates.md
+    rules: [BIRTHDATE]
+    fingerprints: [dc2e4b0f1a61dc6e]
+    reason: 本一覧そのものが検出源になった分（`BIRTHDATE` の語と日付形式のパスが同じ行に並ぶため）。実データではない
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: docs/consultant/2026-08-19-state.md
+    rules: [BIRTHDATE]
+    fingerprints: [dc2e4b0f1a61dc6e]
+    reason: 診断の経緯として所見の文言を引用した箇所。実データではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: scripts/import-approach-2026.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 38b9a3ff73609473]
+    reason: 選考段名・学校区分による照合条件（SQL の WHERE 句）。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: scripts/import-legacy-2026.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/commands/ai_pre_assessment.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [2bad38da2dc42d6b, 9f6cc2d208e58339]
+    reason: 選考段名・評価軸名による照合条件。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/import/legacy_2026.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [52c411b19060afc4, 8cb84a59d28f2ace, b80c40ecce80ba69, c4f72a8d205283b1, e25a72b242de34a7]
+    reason: 評価軸名と列名の対応表（原典の列を現行の軸名へ写す定義）。人名ではない（5件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/queries/ai_pre_assessment.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/queries/document_screening.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: src/queries/tasks.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/21_decide.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [4641241e8a17c46d]
+    reason: 選考段名の期待値。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/22_reference_season.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 5639adba165a8aa6, 9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 選考段の並びの期待値。人名ではない（6件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/29_profile_editing.test.ts
+    rules: [BIRTHDATE]
+    fingerprints: [fd5980de18813390]
+    reason: テストのフィクスチャの日付（コード内の固定値）。実在の候補者の生年月日ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/33_borderline_scoring.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6, ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/34_legacy_import.test.ts
+    rules: [BIRTHDATE, JP_PERSON_NAME_WEAK]
+    fingerprints: [03b21bdcd76ba329, 0a8f26ac661667b4, de34c123a0670f0c]
+    reason: 取り込みのテスト。日付はフィクスチャの固定値、名前は `架空…` の架空値（9件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/35_interview_sheet.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/36_intake.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [59da9824925bb424, 646929766e105166, e265f06ab6ad4800, ea62cd5c0a72b746]
+    reason: 架空と明示された連携団体名（`架空…`）。実在の団体・人物ではない（6件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/41_sheet_bulk.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [ac9eb9fb32814dc8]
+    reason: 架空の団体名と架空の窓口担当名。実在の団体・人物ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/48_criteria_weighting.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（2件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/52_season3_alignment.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [0fb91696c7a92eb6, 5639adba165a8aa6, 7a022f86dc399a10, 9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 選考段名による照合条件。人名ではない（5件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/53_deploy_target.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [479d30ea77c304bd]
+    reason: 検査用のプロジェクト名（`検査用`）。人名ではない（3件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/54_list_weight.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/70_ai_pre_assessment.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [9f6cc2d208e58339]
+    reason: 選考段名の更新（SQL の SET 句）。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/75_end_to_end_selection.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [2bad38da2dc42d6b]
+    reason: 評価軸名による照合条件。人名ではない（1件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/76_document_gate.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6, 9f6cc2d208e58339]
+    reason: 選考段名による照合条件。人名ではない（3件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20
+  - path: tests/78_pilot_hirashain.test.ts
+    rules: [JP_PERSON_NAME_WEAK]
+    fingerprints: [5639adba165a8aa6, 9f6cc2d208e58339, ebfffa9505f281c9]
+    reason: 画面が段名でタブを引いていることの検査（段名の文字列）。人名ではない（3件）
+    approved_by: 'y_matsushita（2026-08-20 署名の代理を Claude に許可。実体は Claude が原本と突合）'
+    expires: 2027-08-20

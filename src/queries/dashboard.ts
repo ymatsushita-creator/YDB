@@ -1,4 +1,4 @@
-import { all, maybeOne, type Db } from '../db/client.ts'
+import { all, maybeOne, scalar, type Db } from '../db/client.ts'
 
 /**
  * ダッシュボードが必要とする問い合わせ。
@@ -46,7 +46,9 @@ export interface Season {
 export const listSeasons = (db: Db) =>
   all<Season>(db, `
     SELECT s.*, (jst_today() BETWEEN s.outreach_start_date AND s.selection_end_date) AS is_live
-      FROM seasons s ORDER BY s.is_demo, s.enrollment_year DESC`)
+      FROM seasons s
+     WHERE NOT s.is_demo
+     ORDER BY s.enrollment_year DESC`)
 
 /**
  * 期の指定が無いときに開く期。
@@ -86,12 +88,50 @@ export const getSeason = (db: Db, seasonId: string | string[] | undefined) => {
   if (!id || !UUID.test(id)) return Promise.resolve(null)
   return maybeOne<Season>(db, `
     SELECT s.*, (jst_today() BETWEEN s.outreach_start_date AND s.selection_end_date) AS is_live
-      FROM seasons s WHERE s.id = $1`, [id])
+      FROM seasons s WHERE s.id = $1 AND NOT s.is_demo`, [id])
 }
 
 // -------------------------------------------------------------
 // (1) 全体サマリとファネル
 // -------------------------------------------------------------
+
+export interface SeasonCriterion {
+  step_name: string
+  step_order: number
+  name: string
+  scale_max: number
+  sort_order: number
+  /** 重み付け（応募管理表の「特別選考」シートの2段。0033）。
+   *  'required' 必須の前提 ／ 'strong' 加点 ／ 'standard' 段分け無し。 */
+  kind: 'standard' | 'required' | 'strong'
+}
+
+/**
+ * その期の評価基準（依頼者の指示。実行⑫）。
+ *
+ * 「期の項目の上に、エクセルから評価基準を持ってきて、参考にできるように貼って」。
+ *
+ * ★ **画面に写し書きしない。** 出すのは `evaluation_criteria`（記録層）で、
+ *   そこへは応募管理表の「特別選考」シートから取り込んである（C-105）。
+ *   画面に文字で置くと、**表を直しても画面が古いまま**になり、
+ *   同じ基準が2箇所に増える。
+ *
+ * ★ 段の順・軸の順のまま出す。**こちらで並べ替えない**
+ *   （運営が並べた順そのものが、見る順である）。
+ *
+ * ★ 軸を持たない段は出さない ―― 「軸が無い」ことは、
+ *   その段の画面（面接シート）が言う仕事である。
+ */
+export const listSeasonCriteria = (db: Db, seasonId: string | undefined) => {
+  if (!seasonId || !UUID.test(seasonId)) return Promise.resolve([])
+  return all<SeasonCriterion>(db, `
+    SELECT ss.name AS step_name, ss.sort_order AS step_order,
+           ec.name, ec.scale_max, ec.sort_order, ec.kind
+      FROM evaluation_criteria ec
+      JOIN selection_steps ss ON ss.id = ec.selection_step_id
+     WHERE ss.season_id = $1
+     ORDER BY ss.sort_order, ec.sort_order`, [seasonId])
+}
 
 export interface FunnelPoint {
   as_of: Date
@@ -115,6 +155,63 @@ export const getFunnel = (db: Db, seasonId: string, windowDays = ACTIVE_WINDOW_D
       FROM f_funnel_daily($2)
      WHERE season_id = $1 AND as_of <= jst_today()
      ORDER BY as_of`, [seasonId, windowDays])
+
+export interface HomeTrendPoint {
+  as_of: Date
+  candidates: number
+  partners: number
+  /**
+   * 確度が閾値以上の候補者。
+   *
+   * ★ **閾値 0.8 は受領していない。** 0017 が「点数と閾値は運用時に決定」と
+   *   書いたまま空で出荷しており、運営の基準は応募管理表
+   *   `003_2期生アプローチリスト` の「参加確度」――
+   *   **帯（020％／050％／080％／100％）と状態語（未計測・興味なし/対象外・応募完了）**
+   *   である。**同じ基準ではない**（C-127）。帯を受け取るまでの仮の線である。
+   * ★ 画面に「A」と名乗らせない ―― 記録に無い格付けで、応募管理表では
+   *   A〜C・D〜I が**特別選考の軸の記号**として別の意味を持つ。
+   */
+  high_confidence: number
+  special: number
+}
+
+/**
+ * 確度の算出規則が1件でも登録されているか。
+ *
+ * ★ 規則が無ければ確度は算出されない（0017）。**そのとき0を出さない** ――
+ *   「無いことを 0 と書くと、それは嘘の数字になる」（0017 のコメント）。
+ */
+export const hasScoringRules = async (db: Db): Promise<boolean> =>
+  Number(await scalar<string>(db, `SELECT count(*)::text FROM scoring_rules`)) > 0
+
+/** ホームで並べる4指標の日次累積。すべて同じ期・同じ暦日で数える。 */
+export const getHomeTrends = (db: Db, seasonId: string) =>
+  all<HomeTrendPoint>(db, `
+    WITH season AS (
+      SELECT *,
+             LEAST(outreach_start_date, jst_today() - 30) AS first_day,
+             LEAST(selection_end_date, jst_today()) AS last_day
+        FROM seasons WHERE id = $1
+    ), days AS (
+      SELECT generate_series(first_day, last_day, interval '1 day')::date AS as_of
+        FROM season
+    ), confidence AS (
+      SELECT sn.calculated_on, sn.person_id,
+             sn.total_points::numeric / NULLIF(mx.max_points, 0) AS ratio
+        FROM score_snapshots sn
+        JOIN v_scoring_rule_set_max mx ON mx.rule_set_id = sn.rule_set_id
+       WHERE sn.season_id = $1
+    )
+    SELECT d.as_of,
+      (SELECT count(*) FROM candidate_numbers n
+        WHERE n.season_id = $1 AND jst_date(n.assigned_at) <= d.as_of)::int AS candidates,
+      (SELECT count(DISTINCT pr.partner_id) FROM partner_reaches pr
+        WHERE pr.season_id = $1 AND pr.occurred_on <= d.as_of)::int AS partners,
+      (SELECT count(DISTINCT c.person_id) FROM confidence c
+        WHERE c.calculated_on <= d.as_of AND c.ratio >= .8)::int AS high_confidence,
+      (SELECT count(DISTINCT ae.person_id) FROM v_effective_approach_events ae
+        WHERE ae.season_id = $1 AND jst_date(ae.occurred_at) <= d.as_of)::int AS special
+      FROM days d ORDER BY d.as_of`, [seasonId])
 
 export interface SeasonSummary {
   identified_person: number
@@ -373,7 +470,13 @@ export const getPartnerReach = (db: Db, seasonId: string, windowDays = REACH_WIN
       FROM f_partner_reach_summary($2) r
       JOIN partners p ON p.id = r.partner_id
      WHERE r.season_id = $1
-     ORDER BY r.estimated_reach_total DESC NULLS LAST, r.identified_count DESC, p.name`,
+     -- ★ 並びは**直近の接触が新しい順**（依頼者の指示。実行⑫）。
+     --   実行⑪までは推定リーチの多い順だったが、旧データに推定リーチが
+     --   1件も無いため（作れば「届かなかった」が「届いた」に化ける。C-78）、
+     --   実データでは事実上ただの識別人数順になっていた。
+     --   日付が無い団体は後ろへ（NULLS LAST）、同日は名前で決める ――
+     --   並びが決まらないと、同じ問いに開くたび違う答えが出る。
+     ORDER BY r.last_reach_on DESC NULLS LAST, p.name`,
     [seasonId, windowDays])
 
 export interface ReachTotals {
@@ -632,3 +735,37 @@ export const getUnassignedSummary = (db: Db, seasonId: string) =>
       JOIN v_active_applications a ON a.id = e.application_id
      WHERE ss.season_id = $1 AND e.interviewer_staff_id IS NULL AND e.state = 'pending'`,
     [seasonId])
+
+/**
+ * KPI目標と実績（依頼者の指示。実行⑯〜⑰。C-179）。
+ *
+ * 依頼者の言葉 ――「要項やペルソナやKPIを持ってきて新規DBにも実装して」
+ * 「AスペースにKPIとかのリザルトが見れたら」。
+ *
+ * ★ 目標は 0043 に入っている（`recruitment_course_targets`。14件）。
+ *   **取り込んだのに、どの画面からも読んでいなかった。**
+ *
+ * ★ 実績は**まだ結びつけない。** 目標の側は「コース別」「施策別」の呼び名で、
+ *   記録の側にその区分が無い ―― `channels` とも `courses` とも一致しない。
+ *   無理に当てると、**違う母集団の割り算**になる（CLAUDE.md の禁止）。
+ *   ここでは目標だけを返し、実績の欄は空で出す。
+ */
+export interface CourseTargetRow {
+  category: string
+  course_label: string
+  segment_label: string | null
+  target_accepted: number | null
+  target_applicants: number | null
+  target_briefing: number | null
+  target_reach: number | null
+}
+
+export const listCourseTargets = (
+  db: Db, seasonId: string,
+): Promise<CourseTargetRow[]> =>
+  all<CourseTargetRow>(db, `
+    SELECT category, course_label, segment_label,
+           target_accepted, target_applicants, target_briefing, target_reach
+      FROM recruitment_course_targets
+     WHERE season_id = $1
+     ORDER BY sort_order`, [seasonId])

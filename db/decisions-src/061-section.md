@@ -1,0 +1,10 @@
+### E-5. `f_partner_reach_summary` の削除済み Person 除外 ★意味論の変更
+
+原典 `v_partner_reach_summary` の `identified_count` は `touchpoints` だけを見ており、
+削除済み Person を除外していない。実装では
+`JOIN persons p ON ... AND p.deleted_at IS NULL` を足した。
+
+**集計値が変わる変更**なのに C-2 には「窓を引数にした」「日付列を足した」しか
+書いていなかった。足した理由は、ファネルの林・生涯サマリ・チャネル別が
+すべて削除済みを除外しており、森だけ残すと個人情報削除の依頼（資料9-2）が
+そこから漏れるため。

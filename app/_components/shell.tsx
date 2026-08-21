@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { getDb, isDemoMode } from '../../src/db/server.ts'
-import { isDemoSeason, type Season } from '../../src/queries/dashboard.ts'
+import { isDemoSeason, listSeasonCriteria, type Season } from '../../src/queries/dashboard.ts'
 import { currentTier } from '../../src/auth/current.ts'
 import { canOpen } from '../../src/auth/tiers.ts'
 import { signOutAction } from '../login/actions.ts'
@@ -39,7 +39,7 @@ export { seasonLabel, type Crumb } from './labels.ts'
  *   「いまどの年度か」を知る手段が無くなり、年度の切替を操作柱に置けない。
  */
 
-export type Tab = 'headhunting' | 'borderline' | 'approach' | 'interview'
+export type Tab = 'home' | 'headhunting' | 'borderline' | 'approach' | 'interview'
 
 /**
  * ★ 表示名だけ変えた（依頼者の指示。実行⑪）。
@@ -53,17 +53,41 @@ export type Tab = 'headhunting' | 'borderline' | 'approach' | 'interview'
  *   `note` の列ごと消してある ―― 使わない値を残すと、次に触る人が
  *   「出し忘れ」と読んで戻す。
  */
+/**
+ * ★ 実行⑫で2つ変えた（依頼者の指示）――
+ *
+ *   ① ヘッドハンティング → **特別選考**。**画面に出る語だけ**である。
+ *      URL（`/headhunting`）・識別子（`headhunting`）・クエリ名・テストは据え置き。
+ *      **字が違うので定義は衝突しない** ―― 旧生態系比喩で踏んだ
+ *      「同じ言葉が2つの意味を持つ」（D-11）とは別の形である。
+ *   ② 一番上に **ホーム**を足した（既存4本の上。入れ子にはしない）。
+ */
 const TABS: Array<{ id: Tab; href: string; label: string }> = [
-  { id: 'headhunting', href: '/headhunting', label: 'ヘッドハンティング' },
-  { id: 'borderline', href: '/borderline', label: '個人アプローチ' },
-  { id: 'approach', href: '/approach', label: '団体アプローチ' },
+  { id: 'home', href: '/', label: 'ホーム' },
+  { id: 'headhunting', href: '/headhunting', label: '特別選考' },
+  { id: 'borderline', href: '/borderline', label: '通常選考' },
+  { id: 'approach', href: '/approach', label: '連携団体' },
   // 面接は団体アプローチの下（依頼者の指示。実行⑩）。
   { id: 'interview', href: '/interviews', label: '面接' },
 ]
 
+/**
+ * ★ 「入力者を追加」を足した（実行⑫）。
+ *   表の「記録した人」は職員を選ばせるのに、**選択肢を増やす画面が無かった**
+ *   ―― 取り込みが唯一の経路だった（C-75）。
+ */
+/*
+ * ★ 呼び名を「追加」から「編集」へ（依頼者の指示。実行⑰。C-168）。
+ *   この画面は前から**一覧して直せる表**で、追加はその一部でしかなかった。
+ *   「追加」と書いてあると、既にある行を直しに来る道が名前から見えない。
+ *   ★ 行き先は変えない ―― 貼られたURLを切らない。
+ */
 const ADD_LINKS = [
-  { href: '/people/new', label: '候補者を追加' },
-  { href: '/approach/new', label: '連携団体を追加' },
+  { href: '/people/new', label: '候補者を編集' },
+  { href: '/approach/new', label: '連携団体を編集' },
+  // ★ 依頼者の指示（実行⑯）――「連携団体を追加タブの下に、イベントを追加タブ」。
+  //   並びは指示のとおり、連携団体の**すぐ下**に置く。
+  { href: '/events/new', label: 'イベントを編集' },
 ]
 
 export async function Shell({
@@ -98,45 +122,75 @@ export async function Shell({
   // ★ デモ期を開いていることを、**どの画面でも**言う（0029）。
   //   期の呼び名（「デモ期」）だけだと、帯の隅の1語である。
   //   架空の数字を実在の数字として読ませないために、札も出す。
-  const demoSeason = seasonId ? await isDemoSeason(await getDb(), seasonId) : false
+  const db = await getDb()
+  const demoSeason = seasonId ? await isDemoSeason(db, seasonId) : false
+  // 期の上に貼る評価基準（依頼者の指示。実行⑫）。**その期のものだけ。**
+  const criteria = seasonId ? await listSeasonCriteria(db, seasonId) : []
 
   return (
     <div className="hh-frame">
-      <aside className="sidebar-region hh-sidebar">
-        <div className="hh-brand">
+      {/*
+        ★ 収納の切り替え（依頼者の指示。実行⑰。C-170）――
+        「ロゴの下を押したら縦バーを収納、右端を押したら横バーを収納、
+          もう一度押したら復活」。
+
+        ★ `'use client'` を増やさない（AGENTS.md：いまは表だけ）。
+          チェックボックスを隠して置き、`:has()` で枠の形を変える。
+          JS が無くても動く。**状態は画面が持ち、記録層には触らない。**
+
+        ★ 開閉の札は枠の**直下**に置く。中に入れると、収納した側と一緒に
+          隠れてしまい、**戻す手段が消える。**
+      */}
+      {/* ★ 札は1つだけ（依頼者の指示。実行⑰。C-181）――
+          「端を押して収納するアクションは消せ。タブを押して縦横同時収縮、
+            ロゴは残して、もう一度押したら戻る」。
+          縦と横で別々の札を持たせていたのが間違いだった ―― 片方だけ畳んだ
+          中途半端な状態が作れてしまい、戻し方も2箇所になっていた。 */}
+      <input type="checkbox" id="rail-collapse" className="collapse-flag" />
+
+      <aside className="hh-sidebar">
+        {/* ★ ロゴ全体がボタン（依頼者の指示。実行⑰。C-188）。
+            帯を別に置くのをやめ、ロゴの面そのもので開閉する。 */}
+        <label htmlFor="rail-collapse" className="hh-brand collapse-grip"
+               title="タブをしまう / 出す">
           {/* グラデーション版（依頼者の指示。実行⑩）。
               **ロゴを変形・着色・装飾しない。** 比は 1283:305 で固定し、
-              高さは `--logo-h` に反映してある。 */}
+              高さは `--bar-h` に合わせてある。 */}
           <img
             className="hh-brand-logo"
-            src="/brand/logo_gradient.png"
+            src="/brand/logo_gradient_720.png"
             width={1283} height={305}
             alt="NEO ACADEMIA"
           />
-        </div>
+          <span className="visually-hidden">タブをしまう、または出す</span>
+        </label>
 
         <nav className="hh-nav" aria-label="主なナビゲーション">
           {tabs.map((t) => (
+            <Fragment key={t.id}>
+              <Link
+                href={tabHref(t.href)}
+                className={t.id === active ? 'sidebar-item-active btn-physical' : 'sidebar-item btn-physical'}
+                aria-current={t.id === active ? 'page' : undefined}
+              >
+                <span>{t.label}</span>
+              </Link>
+              {t.id === 'home' && <span className="hh-nav-divider" aria-hidden />}
+            </Fragment>
+          ))}
+        </nav>
+        {/* ★ role を持たない div の aria-label は読み上げに届かない（無視される）。
+            中身がリンクの集まりなので nav にする。ラベル付きの nav は複数あってよい。 */}
+        <nav className="hh-nav-add" aria-label="追加">
+          {addLinks.map((item) => (
             <Link
-              key={t.id}
-              href={tabHref(t.href)}
-              className={t.id === active ? 'sidebar-item-active btn-physical' : 'sidebar-item btn-physical'}
-              aria-current={t.id === active ? 'page' : undefined}
+              key={item.href}
+              href={tabHref(item.href)}
+              className="sidebar-item btn-physical"
             >
-              <span>{t.label}</span>
+              <span>{item.label}</span>
             </Link>
           ))}
-          <div className="hh-nav-add" aria-label="追加">
-            {addLinks.map((item) => (
-              <Link
-                key={item.href}
-                href={tabHref(item.href)}
-                className="sidebar-item btn-physical"
-              >
-                <span>{item.label}</span>
-              </Link>
-            ))}
-          </div>
         </nav>
 
         {/*
@@ -146,8 +200,12 @@ export async function Shell({
 
           ★ 一覧が開かない層には出さない（実行⑪）。押すと弾かれる窓を残さない。
         */}
+        {/* ★ `role="search"` ではなく `<search>` を使う。要素のほうが支援技術へ確実に届く。
+            class は `form` に残す ―― CSS は `.hh-search` と子孫指定だけを見ているので、
+            1段くるんでも意匠は変わらない（`.hh-search` 自身が flex 列を持つ）。 */}
         {opens('/people') && (
-        <form className="hh-search" action="/people" method="get" role="search">
+        <search>
+        <form className="hh-search" action="/people" method="get">
           {/* 検索も期を持ち回る。押した先で期が変わると、
               「2期を見ていたのに3期の結果が出る」ことになる。 */}
           {seasonId && <input type="hidden" name="season" value={seasonId} />}
@@ -160,6 +218,7 @@ export async function Shell({
             <button className="btn-physical hh-search-go" type="submit">探す</button>
           </div>
         </form>
+        </search>
         )}
 
         <div className="hh-sidebar-foot">
@@ -181,7 +240,51 @@ export async function Shell({
         </div>
       </aside>
 
-      <div className="hh-main">{children}</div>
+      <div className="hh-main">
+        {/* 評価基準は横バーの右側へ重ねる（依頼者の指示。実行⑬）。
+            値は引き続き記録層から読み、画面へ写し書きしない。
+            ★ **自動で流す**（依頼者の指示。実行⑮。C-139）――「横スクロールは自動で」。
+              実行⑬でいったん止めたが、依頼者の判断で戻した。
+              流すには**同じ並びを2組**出して端をつなぐ（切れ目が見えないため）。
+              2組目は写しなので `aria-hidden` を付ける ―― 読み上げが二度読まない。 */}
+        {/* ★ role の無い div の aria-label は届かない。横送りする領域なので region にする
+            （C-208 で「帯の高さは動かさない」と決めた帯そのもの）。 */}
+        {criteria.length > 0 && (
+          <section className="hh-criteria-ref" aria-label="評価基準">
+            <div className="hh-criteria-scroll">
+              <div className="hh-criteria-track">
+                {[false, true].map((copy) => (
+                  <span key={String(copy)} className="hh-criteria-run"
+                        aria-hidden={copy || undefined}>
+                    {/* ★ 段ごとに塊にする（実行⑭）。3期を2期にそろえて軸が15本になり、
+                        **通し番号 1〜15 が段をまたいで地続きに見えていた** ――
+                        9番までが特別選考、10番からが最終面接である。
+                        ★ 番号そのものをやめた ―― **記録に無い通し番号を画面が作っていた。**
+                          並びは記録の順（step_order, sort_order）のままで、
+                          境目は区切り線で見せる（**見出しは出さない。** 依頼者の指示）。 */}
+                    {[...new Map(criteria.map((c) => [c.step_name, c.step_order])).keys()]
+                      .map((step) => (
+                        <span key={step} className="hh-criteria-group">
+                          {criteria.filter((c) => c.step_name === step).map((c) => (
+                            <span key={c.sort_order} className="hh-criteria-axis" title={c.name}>
+                              {/* ★ 重み付けの札（必須／加点）は**出さない**（依頼者の指示。実行⑮）――
+                                  「かてんとかどうでもいいんだよ。消せよ」。
+                                  ここに出るのは**軸の名前だけ**である。重み付けは記録層
+                                  （`evaluation_criteria.kind`）に残っており、消したのは
+                                  画面の札だけ ―― 集計も判定もそのまま効く（C-134）。 */}
+                              {c.name}
+                            </span>
+                          ))}
+                        </span>
+                      ))}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+        {children}
+      </div>
     </div>
   )
 }
@@ -247,7 +350,7 @@ export async function Breadcrumb({
         const isLast = i === segments.length - 1
         const isRoot = root !== undefined && i === 0
         return (
-          <span key={`${c.label}-${i}`} className="zoom-seg">
+          <span key={`${c.label}-${c.href ?? ''}`} className="zoom-seg">
             {i > 0 && <span className="zoom-sep" aria-hidden>›</span>}
             {isRoot
               ? <span className="zoom-root">{c.label}</span>
@@ -281,24 +384,29 @@ export function YearSwitch({
   return (
     <div className="hh-years">
       <span className="sidebar-section-label">期</span>
-      <div className="hh-years-row">
-        {seasons.map((s) => (
-          <Link
-            key={s.id}
-            href={`${basePath}?season=${s.id}`}
-            className={[
-              'hh-year',
-              s.id === currentId ? 'is-on' : '',
-              // デモ期は実在の期と同じ顔で並べない（0029）。
-              s.is_demo ? 'is-demo' : '',
-            ].filter(Boolean).join(' ')}
-            aria-current={s.id === currentId ? 'page' : undefined}
-          >
-            {/* 募集中の点（`is_live`）は出さない。依頼者の指示で外した。 */}
-            {seasonLabel(s)}
-          </Link>
-        ))}
-      </div>
+      {/*
+        ★ 札を横に並べるのをやめ、**選択にする**（依頼者の指示。実行⑰。C-169）――
+        「3,4、5期と作っていくことを考えれば、ボタンはこの形式ではなく選択に」。
+        期が増えるほど札は横に伸び、狭い画面から溢れる。選択なら増えても幅が変わらない。
+
+        ★ `'use client'` を増やさない（AGENTS.md：いまは表だけ）。
+        だから onChange で飛ばさず、**GETフォーム**にする。
+        JS が無くても動き、`?season=` の形も今までと同じ。
+      */}
+      <form action={basePath} method="get" className="hh-years-row">
+        <label className="visually-hidden" htmlFor="season-switch">期を選ぶ</label>
+        <select id="season-switch" name="season" defaultValue={currentId}
+                className="hh-year-select">
+          {seasons.map((s) => (
+            <option key={s.id} value={s.id}>
+              {/* デモ期は実在の期と同じ顔で並べない（0029）。
+                  色を付けられないので、語で分ける。 */}
+              {seasonLabel(s)}{s.is_demo ? '（デモ）' : ''}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="btn-physical hh-year-go">切替</button>
+      </form>
     </div>
   )
 }

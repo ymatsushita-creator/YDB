@@ -272,9 +272,10 @@ describe('流入元の画面が読む数', () => {
     await makeTouchpoint(db, only, channel, jst('2025-09-13T10:00:00'), a)
 
     const rows = await getPartnerReach(db, season.id)
+    // 並びは直近の接触が新しい順（実行⑫）。ここは同じ日なので名前で決まる。
     assert.deepEqual(
       rows.map((r) => [r.partner_name, Number(r.estimated_reach_total), Number(r.identified_count)]),
-      [['NPO みどり', 200, 1], ['NPO あお', 100, 2]],
+      [['NPO あお', 100, 2], ['NPO みどり', 200, 1]],
     )
 
     const totals = await getReachTotals(db, season.id)
@@ -282,6 +283,25 @@ describe('流入元の画面が読む数', () => {
     assert.equal(Number(totals!.contact_occasions), 2)
     assert.equal(Number(totals!.partners), 2)
     assert.equal(Number(totals!.identified_persons), 2, '団体別の合計 3 ではなく、実人数 2')
+    await db.close()
+  })
+
+  test('団体の並びは、直近の接触が新しい順（実行⑫。依頼者の指示）', async () => {
+    // ★ 推定リーチの多い順ではない。旧データに推定リーチが1件も無いので
+    //   （作れば「届かなかった」が「届いた」に化ける。C-78）、
+    //   多い順は実データで機能していなかった。**いま動いている団体を上に出す。**
+    const { db, season, partner, reach } = await setup()
+    const old = await partner('NPO むかし')
+    const recent = await partner('NPO いま')
+    // 推定リーチは「古い団体のほうが多い」状態にしておく ――
+    // 並びが推定リーチに引っぱられていないことを確かめるため。
+    await reach(old, '2025-09-10', 9999)
+    await reach(recent, '2025-12-01', 1)
+
+    assert.deepEqual(
+      (await getPartnerReach(db, season.id)).map((r) => r.partner_name),
+      ['NPO いま', 'NPO むかし'],
+    )
     await db.close()
   })
 

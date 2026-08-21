@@ -1,13 +1,16 @@
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
-import { scalar, maybeOne, type Db } from '../src/db/client.ts'
+import { all, scalar, maybeOne, type Db } from '../src/db/client.ts'
 import {
   baseFixture, makeSeason, makePerson, makeApplication, jst,
   type Fixture, type Season,
 } from './support/fixtures.ts'
-import { saveScore, SAVE_SCORE_CODE_MESSAGE, parseSaveScoreCode } from '../src/commands/score.ts'
+import {
+  saveScore, correctScore, SAVE_SCORE_CODE_MESSAGE, parseSaveScoreCode,
+} from '../src/commands/score.ts'
 import { getApplicationEvaluations } from '../src/queries/drilldown.ts'
+import { submitEvaluation } from '../src/commands/decide.ts'
 
 /**
  * E2「1軸だけ保存する」の検証。
@@ -304,9 +307,11 @@ describe('点を付けられない状態', () => {
 
 describe('画面へ返すコード', () => {
   test('すべてのコードに文言がある', () => {
+    // 打ち直し（E4。C-133）で3語増えた ―― 訂正できた／まだ点が無い／
+    // 直した人が名簿に無い。**数を合わせておく**（言葉の付け忘れが出る）。
     const codes = ['saved', 'evaluation_not_found', 'not_evaluatable',
       'criteria_not_applicable', 'already_scored', 'score_out_of_range',
-      'rationale_blank'] as const
+      'rationale_blank', 'corrected', 'not_scored_yet', 'staff_not_found'] as const
     for (const c of codes) assert.ok(SAVE_SCORE_CODE_MESSAGE[c]?.length > 0, c)
     assert.equal(Object.keys(SAVE_SCORE_CODE_MESSAGE).length, codes.length,
       '文言の数とコードの数が合っていない')
@@ -315,5 +320,132 @@ describe('画面へ返すコード', () => {
   test('知らないコードは捨てる', () => {
     assert.equal(parseSaveScoreCode('nope'), null)
     assert.equal(parseSaveScoreCode('saved'), 'saved')
+  })
+})
+
+describe('点の訂正（E4。実行⑮。C-133）', () => {
+  const revisions = (evaluationId: string, criteriaId: string) =>
+    all<{ revision_number: number; score: number; rationale: string }>(db, `
+      SELECT revision_number, score, rationale
+        FROM evaluation_score_revisions
+       WHERE evaluation_id = $1 AND criteria_id = $2
+       ORDER BY revision_number`, [evaluationId, criteriaId])
+
+  test('打ち直すと現在値が変わり、版が積まれる（版は変更後の値）', async () => {
+    const { evaluationId } = await evaluatable()
+    await saveScore(db, { evaluationId, criteriaId: criteriaA, score: 4, rationale: RATIONALE })
+
+    const first = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 2, rationale: '聞き間違いだった',
+    })
+    assert.equal(first.ok, true, '打ち直せない')
+    assert.equal(first.ok && first.revisionNumber, 1)
+    assert.equal((await scoreRow(evaluationId, criteriaA))?.score, 2)
+
+    const second = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 3, rationale: '録音を聞き直した',
+    })
+    assert.equal(second.ok && second.revisionNumber, 2, '版が積まれていない')
+
+    // ★ 版に入るのは**変更後**の値（0032 と同じ作法）。
+    assert.deepEqual((await revisions(evaluationId, criteriaA)).map((r) => r.score), [2, 3])
+  })
+
+  test('★ 確定した評価の点は直せない（判定の根拠を後から動かさない）', async () => {
+    const { evaluationId } = await evaluatable()
+    await saveScore(db, { evaluationId, criteriaId: criteriaA, score: 4, rationale: RATIONALE })
+    await saveScore(db, { evaluationId, criteriaId: criteriaB, score: 4, rationale: RATIONALE })
+    // 確定はコマンドで通す（`evaluations_submitted_pair` が時刻も要求する）。
+    assert.equal((await submitEvaluation(db, { evaluationId })).ok, true)
+
+    const result = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 1, rationale: 'やっぱり低い',
+    })
+    assert.equal(result.ok, false, '確定後に点が動いた')
+    if (result.ok) throw new Error('unreachable')
+    assert.equal(result.reason, 'not_evaluatable')
+    assert.equal((await scoreRow(evaluationId, criteriaA))?.score, 4)
+  })
+
+  test('保留中は直せない（保存と同じ門を通る）', async () => {
+    const { evaluationId } = await evaluatable()
+    await saveScore(db, { evaluationId, criteriaId: criteriaA, score: 4, rationale: RATIONALE })
+    await db.query(`
+      UPDATE evaluations SET state = 'held', hold_reason = '日程を再調整中' WHERE id = $1`,
+    [evaluationId])
+
+    const result = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 1, rationale: '直す',
+    })
+    assert.equal(result.ok, false)
+    if (result.ok) throw new Error('unreachable')
+    assert.equal(result.reason, 'not_evaluatable')
+  })
+
+  test('まだ点が無い軸は「訂正」にならない（保存へ回す）', async () => {
+    const { evaluationId } = await evaluatable()
+    const result = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 3, rationale: RATIONALE,
+    })
+    assert.equal(result.ok, false)
+    if (result.ok) throw new Error('unreachable')
+    assert.equal(result.reason, 'not_scored_yet')
+    assert.equal(await scoreRow(evaluationId, criteriaA), null, '訂正が点を作っている')
+  })
+
+  test('★ 満点を超える打ち直しは拒まれ、現在値も版も動かない', async () => {
+    // トリガ（evaluation_scores_validity）は UPDATE でも効く。
+    // 版と現在値は1つの取引なので、**まとめて戻る**。
+    const { evaluationId } = await evaluatable()
+    await saveScore(db, { evaluationId, criteriaId: criteriaA, score: 4, rationale: RATIONALE })
+
+    const result = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 99, rationale: '押し間違い',
+    })
+    assert.equal(result.ok, false)
+    if (result.ok) throw new Error('unreachable')
+    assert.equal(result.reason, 'score_out_of_range')
+    assert.equal((await scoreRow(evaluationId, criteriaA))?.score, 4)
+    assert.deepEqual(await revisions(evaluationId, criteriaA), [], '版だけが残っている')
+  })
+
+  test('根拠が空白だけの打ち直しは拒まれる（全角スペースも空）', async () => {
+    const { evaluationId } = await evaluatable()
+    await saveScore(db, { evaluationId, criteriaId: criteriaA, score: 4, rationale: RATIONALE })
+
+    const result = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 3, rationale: '　',
+    })
+    assert.equal(result.ok, false)
+    if (result.ok) throw new Error('unreachable')
+    assert.equal(result.reason, 'rationale_blank')
+    assert.equal((await scoreRow(evaluationId, criteriaA))?.rationale, RATIONALE)
+  })
+
+  test('直した人が名簿に無ければ止まる（自己申告でも、名簿は見る）', async () => {
+    const { evaluationId } = await evaluatable()
+    await saveScore(db, { evaluationId, criteriaId: criteriaA, score: 4, rationale: RATIONALE })
+
+    const result = await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 3, rationale: '直す',
+      staffId: '00000000-0000-4000-8000-000000000000',
+    })
+    assert.equal(result.ok, false)
+    if (result.ok) throw new Error('unreachable')
+    assert.equal(result.reason, 'staff_not_found')
+  })
+
+  test('版は追記専用（書き換えも削除もできない）', async () => {
+    const { evaluationId } = await evaluatable()
+    await saveScore(db, { evaluationId, criteriaId: criteriaA, score: 4, rationale: RATIONALE })
+    await correctScore(db, {
+      evaluationId, criteriaId: criteriaA, score: 2, rationale: '直した',
+    })
+    await assert.rejects(db.query(`
+      UPDATE evaluation_score_revisions SET score = 5 WHERE evaluation_id = $1`,
+    [evaluationId]), /append-only/)
+    await assert.rejects(db.query(`
+      DELETE FROM evaluation_score_revisions WHERE evaluation_id = $1`,
+    [evaluationId]), /append-only/)
   })
 })

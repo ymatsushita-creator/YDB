@@ -1,4 +1,6 @@
 import { maybeOne, all, type Db } from '../db/client.ts'
+import { getDecidableStep, type DecidableStep } from '../queries/decidable.ts'
+export { getDecidableStep, type DecidableStep }
 
 /**
  * 評価の確定（E3）と、選考の判定（D1）。
@@ -85,58 +87,6 @@ export async function submitEvaluation(
 // -------------------------------------------------------------
 // D1. 選考の判定（通過 / 不合格）
 // -------------------------------------------------------------
-
-export interface DecidableStep {
-  application_id: string
-  selection_step_id: string
-  step_name: string
-  step_order: number
-  /** 次のステップ。無ければ null（最終ステップ = 通過させると合格）。 */
-  next_step_id: string | null
-  next_step_name: string | null
-  /** そのステップに提出済みの評価が何件あるか。 */
-  submitted_evaluations: number
-}
-
-/**
- * いま判定できるステップ。
- *
- * 成り立つ条件は3つ。**どれも事実の有無で見る。**
- *
- *   1. 応募が動いている（`v_active_applications`）
- *   2. そのステップの評価がすべて提出済み（判断待ち・保留が残っていない）
- *   3. そのステップの遷移がまだ記録されていない（二重に判定しない）
- *
- * 面接官が2人いるステップは、**2人とも提出してから**判定できる。
- */
-export const getDecidableStep = (db: Db, applicationId: string) => {
-  if (!UUID.test(applicationId)) return Promise.resolve(null)
-  return maybeOne<DecidableStep>(db, `
-    SELECT a.id AS application_id,
-           ss.id AS selection_step_id, ss.name AS step_name, ss.sort_order AS step_order,
-           nx.id AS next_step_id, nx.name AS next_step_name,
-           count(e.id) AS submitted_evaluations
-      FROM v_active_applications a
-      JOIN evaluations e ON e.application_id = a.id
-      JOIN selection_steps ss ON ss.id = e.selection_step_id
-      LEFT JOIN selection_steps nx
-             ON nx.season_id = ss.season_id AND nx.sort_order = ss.sort_order + 1
-     WHERE a.id = $1
-       -- そのステップに、まだ判断が下りていない評価が無い
-       AND NOT EXISTS (
-           SELECT 1 FROM evaluations o
-            WHERE o.application_id = a.id
-              AND o.selection_step_id = ss.id
-              AND o.state <> 'submitted')
-       -- そのステップの遷移がまだ無い（打ち消されたものは除く）
-       AND NOT EXISTS (
-           SELECT 1 FROM v_effective_status_histories sh
-            WHERE sh.application_id = a.id
-              AND sh.selection_step_id = ss.id)
-     GROUP BY a.id, ss.id, ss.name, ss.sort_order, nx.id, nx.name
-     ORDER BY ss.sort_order
-     LIMIT 1`, [applicationId])
-}
 
 export type DecideResult =
   | {
@@ -233,7 +183,10 @@ export type DecideCode =
 
 export const DECIDE_CODE_MESSAGE: Record<DecideCode, string> = {
   submitted: '評価を確定した。次は選考の判定である。',
-  advanced: 'このステップを通過にした。次のステップの担当決めが「今日やること」に出る。',
+  // ★ 「今日やること」という画面は**無い**（C-216。平社員ペルソナ試験で探して
+  //   見つからなかった）。実在する場所を言う ―― この応募の画面の下と、
+  //   通常選考のその段のタブである。**無い場所へ人を送らない。**
+  advanced: 'このステップを通過にした。次の段の担当決めは、この画面の下と、通常選考のその段のタブに出る。',
   accepted: '最終選考を通過にした。合格である。',
   rejected: '不合格にした。この応募の選考は終わった。',
   evaluation_not_found: 'その評価は見つからなかった。画面を読み直す。',
@@ -399,4 +352,53 @@ export async function correctDecision(
     createdNextStep,
     accepted: flipped === 'advance' && current.next_step_id === null,
   }
+}
+
+/**
+ * 応募を受け付けて、**選考を始める**（依頼者の指示。実行⑰。C-210）。
+ *
+ * ★★ **ここが無かった。** ★★
+ *   応募（`applications`）を入れても、最初の段の評価行は誰も作っていなかった。
+ *   `decideStep` は「次の段」を作るが、**1段目は誰の担当でもなかった** ――
+ *   だから書類選考から最終選考までの道が、入口で切れていた
+ *   （通しの検査で見つけた）。
+ *
+ * ★ 作るのは**1段目だけ**。先の段は、その段を通したときに `decideStep` が作る。
+ * ★ 冪等 ―― 既に評価行があれば何もしない（二度押しで2行にしない）。
+ * ★ 担当は付けない（`pending`）。誰が見るかは後で決める。
+ */
+export type StartSelectionResult =
+  | { ok: true; evaluationId: string | null }
+  | { ok: false; reason: 'application_not_found' | 'no_steps' }
+
+export async function startSelection(
+  db: Db, applicationId: string,
+): Promise<StartSelectionResult> {
+  if (!UUID.test(applicationId)) return { ok: false, reason: 'application_not_found' }
+
+  const app = await maybeOne<{ season_id: string }>(db, `
+    SELECT season_id FROM applications
+     WHERE id = $1 AND voided_at IS NULL AND deleted_at IS NULL`, [applicationId])
+  if (!app) return { ok: false, reason: 'application_not_found' }
+
+  // 既に始まっていれば何もしない。
+  const started = await maybeOne<{ id: string }>(db,
+    `SELECT id FROM evaluations WHERE application_id = $1 LIMIT 1`, [applicationId])
+  if (started) return { ok: true, evaluationId: null }
+
+  /**
+   * ★ 1段目は**特別選考を飛ばす**（0005）。
+   *   特別選考は通常の応募が通る道ではなく、別の入口である。
+   *   通常の応募が最初に当たるのは「応募受付」。
+   */
+  const first = await maybeOne<{ id: string }>(db, `
+    SELECT id FROM selection_steps
+     WHERE season_id = $1 AND name <> '特別選考'
+     ORDER BY sort_order LIMIT 1`, [app.season_id])
+  if (!first) return { ok: false, reason: 'no_steps' }
+
+  const row = await maybeOne<{ id: string }>(db, `
+    INSERT INTO evaluations (application_id, selection_step_id, state, assigned_at)
+    VALUES ($1, $2, 'pending', now()) RETURNING id`, [applicationId, first.id])
+  return { ok: true, evaluationId: row?.id ?? null }
 }

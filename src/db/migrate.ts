@@ -85,16 +85,59 @@ export async function loadSeeds(opts: { includeExamples?: boolean } = {}) {
 /** SQL 文字列リテラルとして安全に埋め込む。 */
 const quote = (s: string) => `'${s.replaceAll("'", "''")}'`
 
+export interface LedgerTail {
+  name: string
+  /** JST の 'YYYY-MM-DD HH24:MI:SS'。 */
+  at: string
+  /** 適用した接続の名乗り。空文字は「名乗っていない」。 */
+  by: string
+}
+
+/**
+ * 帳簿の末尾を1件返す。行が無い（または帳簿そのものが無い）ときは null。
+ *
+ * ★ **列がまだ無い DB でも読めること**が要件である。適用前の状態を読む
+ *   場面では applied_by がまだ足されていない（足すのは migrate() の中）。
+ *   素直に `SELECT applied_by` と書くと「列が無い」で落ち、呼び出し側は
+ *   それを「帳簿が無い」と読み違える ―― 実行⑭で実際に出力を1回間違えた。
+ *   `to_jsonb(m)->>'applied_by'` は列が無ければ NULL を返す。
+ *
+ * ★ 行数を数えて段数を推測しない（C-121）。**末尾の名前をそのまま返す。**
+ */
+export async function ledgerTail(db: Db): Promise<LedgerTail | null> {
+  try {
+    const { rows } = await db.query<{ name: string; at: string; by: string | null }>(`
+      SELECT m.name,
+             to_char(m.applied_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD HH24:MI:SS') AS at,
+             to_jsonb(m)->>'applied_by' AS by
+        FROM schema_migrations m ORDER BY m.name DESC LIMIT 1`)
+    const r = rows[0]
+    if (r === undefined) return null
+    return { name: r.name, at: r.at, by: r.by ?? '' }
+  } catch {
+    return null
+  }
+}
+
 export async function migrate(
   db: Db,
-  opts: { verbose?: boolean; migrationsDir?: string } = {},
+  opts: { verbose?: boolean; migrationsDir?: string; actor?: string } = {},
 ): Promise<string[]> {
+  // applied_by は「この接続が名乗った名前」（application_name）である。
+  // ★ 帳簿そのものはマイグレーション番号で育てられない ―― 新しい DB では
+  //   帳簿を作ってから 0001 を流すので、番号で足すと列が無いまま INSERT が走る。
+  //   したがって足すのは起動処理のここで、既存の DB には ALTER で追いつかせる。
+  // ★ NOT NULL DEFAULT '' にしてある。名乗りは接続側の善意であって
+  //   記録層の必須条件ではない（名乗らない経路を止めない）。
   await db.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
         name        text PRIMARY KEY,
         checksum    text        NOT NULL,
-        applied_at  timestamptz NOT NULL DEFAULT now()
+        applied_at  timestamptz NOT NULL DEFAULT now(),
+        applied_by  text        NOT NULL DEFAULT ''
     );
+    ALTER TABLE schema_migrations
+      ADD COLUMN IF NOT EXISTS applied_by text NOT NULL DEFAULT '';
   `)
 
   const applied = new Map<string, string>()
@@ -147,9 +190,16 @@ export async function migrate(
       // PostgreSQL は複数文を1回で受け取ると暗黙のトランザクションで包むが、
       // それに頼らず BEGIN / COMMIT を明示する。ドライバが文を分割して
       // 送る実装に替わったときに、原子性だけが静かに失われるのを避けたい。
+      // ★ 名乗りは**呼び出し側から渡す**（C-145）。接続の `application_name` に
+      //   頼っていたが、**本番のプーラ（Supavisor）が上書きしていた** ――
+      //   道具の名前が残らず、記録は「Supavisor」だけを覚えていた。
+      //   経路の途中にあるものが書き換えられる値を、記録の当てにしない。
+      const by = opts.actor ?? ''
       await db.exec(
-        `BEGIN;\n${m.sql}\n;\nINSERT INTO schema_migrations (name, checksum) ` +
-          `VALUES (${quote(m.name)}, ${quote(m.checksum)});\nCOMMIT;`,
+        `BEGIN;\n${m.sql}\n;\nINSERT INTO schema_migrations (name, checksum, applied_by) ` +
+          `VALUES (${quote(m.name)}, ${quote(m.checksum)}, ` +
+          `coalesce(nullif(${quote(by)}, ''), ` +
+          `current_setting('application_name', true), ''));\nCOMMIT;`,
       )
     } catch (e) {
       // 明示 BEGIN の中で失敗すると、トランザクションは**中断状態のまま開いている**。

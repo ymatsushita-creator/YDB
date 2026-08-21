@@ -2,6 +2,7 @@ import { getDb } from '../../src/db/server.ts'
 import {
   listSeasons, defaultSeason, getSeason, getFunnel, getSummary, getStepFlow,
   getChannelPerformance, getWithdrawReasons, getReachConversion, ACTIVE_WINDOW_DAYS,
+  listCourseTargets,
 } from '../../src/queries/dashboard.ts'
 import { Card, Kpi, Empty, num, pct, ymd } from '../_components/ui.tsx'
 import { TimeSeries, Legend, FunnelStages } from '../_components/charts.tsx'
@@ -11,15 +12,15 @@ export const dynamic = 'force-dynamic'
 
 const SERIES = [
   { key: 'applicant_cum', label: '応募', color: 'var(--color-primary)' },
-  { key: 'accepted_cum', label: '合格', color: 'var(--color-brand-green)' },
-  { key: 'net_accepted_cum', label: '辞退控除後の合格', color: 'var(--color-brand-teal)', dashed: true },
-  { key: 'rejected_cum', label: '不合格', color: 'var(--color-stone)' },
-  { key: 'withdrawn_cum', label: '辞退', color: 'var(--color-brand-orange)' },
+  { key: 'accepted_cum', label: '合格', color: 'var(--color-brand-lime-deep)' },
+  { key: 'net_accepted_cum', label: '辞退控除後の合格', color: 'var(--color-brand-cyan-deep)', dashed: true },
+  { key: 'rejected_cum', label: '不合格', color: 'var(--color-mute)' },
+  { key: 'withdrawn_cum', label: '辞退', color: 'var(--color-brand-coral-deep)' },
 ] as const
 
 const GROVE = [
   { key: 'identified_person_cum', label: `接点継続中（直近${ACTIVE_WINDOW_DAYS}日に接点のある人）`,
-    color: 'var(--color-brand-purple)' },
+    color: 'var(--color-brand-periwinkle)' },
 ] as const
 
 export default async function FunnelPage(
@@ -35,13 +36,15 @@ export default async function FunnelPage(
     (await getSeason(db, (await searchParams).season)) ??
     defaultSeason(seasons)!
 
-  const [summary, funnel, steps, channels, withdrawals, reach] = await Promise.all([
+  const [summary, funnel, steps, channels, withdrawals, reach, targets] = await Promise.all([
     getSummary(db, season.id),
     getFunnel(db, season.id),
     getStepFlow(db, season.id),
     getChannelPerformance(db, season.id),
     getWithdrawReasons(db, season.id),
     getReachConversion(db, season.id),
+    // KPI目標（0043。C-179）。取り込んであったのに読んでいなかった。
+    listCourseTargets(db, season.id),
   ])
 
   const s = summary ?? {
@@ -57,7 +60,7 @@ export default async function FunnelPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '団体アプローチ', href: '/approach' },
+          { label: '連携団体', href: '/approach' },
           { label: 'ファネル' },
         ]}
       />
@@ -91,15 +94,15 @@ export default async function FunnelPage(
         <Card title="段">
           <FunnelStages stages={[
             { label: '接点継続中', value: s.identified_person,
-              note: '（人）', color: 'var(--color-brand-purple)' },
+              note: '（人）', color: 'var(--color-brand-periwinkle)' },
             // 接点継続中（人）→ 応募（件）は単位が違い、日次では母集団も違う。
             // 割り算を出さない。年度単位の転換率は下のカードで出す。
             { label: '応募 applicant', value: s.applicant,
               note: '（応募）', color: 'var(--color-primary)', showRatio: false },
             { label: '合格 accepted', value: s.accepted,
-              note: '（応募）', color: 'var(--color-brand-green)' },
+              note: '（応募）', color: 'var(--color-brand-lime-deep)' },
             { label: '辞退控除後の合格 net accepted', value: s.net_accepted,
-              note: '（辞退控除後）', color: 'var(--color-brand-teal)' },
+              note: '（辞退控除後）', color: 'var(--color-brand-cyan-deep)' },
           ]} />
           <p className="section-note" style={{ marginTop: 16 }}>
             不合格 {num(s.rejected)} ・ 辞退 {num(s.withdrawn)} ・ 再応募 {num(s.reapplicant)}
@@ -133,6 +136,41 @@ export default async function FunnelPage(
           )}
         </Card>
       </div>
+
+      {/* ★ KPI目標（0043。C-179。依頼者の指示）。
+          応募管理表から取り込んだ目標を、初めて画面に出す。
+          ★ 実績の列は**作らない** ―― 目標の区分（コース別・施策別）に
+            対応する区分が記録の側に無い。当てると違う母集団の割り算になる。 */}
+      {targets.length > 0 && (
+        <div className="section">
+          <Card title={`募集の目標（${num(targets.length)} 束）`}>
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>区分</th><th>コース／施策</th><th>対象</th>
+                    <th className="num">合格</th><th className="num">応募</th>
+                    <th className="num">説明会</th><th className="num">リーチ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {targets.map((t) => (
+                    <tr key={`${t.category}-${t.course_label}-${t.segment_label ?? ''}`}>
+                      <td>{t.category}</td>
+                      <th scope="row">{t.course_label}</th>
+                      <td>{t.segment_label ?? <span className="section-note">全体</span>}</td>
+                      <td className="num">{t.target_accepted ?? '—'}</td>
+                      <td className="num">{t.target_applicants ?? '—'}</td>
+                      <td className="num">{t.target_briefing ?? '—'}</td>
+                      <td className="num">{t.target_reach ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="section">
         <Card

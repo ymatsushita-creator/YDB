@@ -1,7 +1,7 @@
 /**
  * 旧 NEO-Youth から 2期（2026年度）を取り込む（実行⑩。依頼者の指示）。
  *
- * 原本は `db/private/legacy-youthdb-2026-08-07/`（gitignore 済み）。
+ * 原本は**リポジトリの外**（`<受領ディレクトリ>/db-private/legacy-youthdb-2026-08-07/`）。
  * **ここには実データを1行も書かない。** 形の変換と、足りないものの数え上げだけを置く。
  *
  * ★ このモジュールは DB に触らない。
@@ -340,4 +340,4 @@ export const toRecommendation = (overall: string | null): string => {
  *   （`evaluation_scores_rationale_not_blank`）ので、
  *   **無いことをそのまま書く。** 評価の文言を作らない。
  */
-export const NO_RATIONALE = '旧システムから移した（軸ごとの根拠は記録が無い）'
+export { NO_RATIONALE } from '../records/placeholder.ts'

@@ -63,6 +63,41 @@ export const getFormResponse = (db: Db, id: string | undefined) => {
      WHERE r.id = $1`, [id])
 }
 
+export interface PersonFormResponse {
+  form_response_id: string
+  source: string
+  submitted_at: Date
+  channel_name: string | null
+  channel_answer: string | null
+  /** 回答の全体。届く形が決まっていないので丸ごと持ってある（0025）。 */
+  raw: Record<string, unknown>
+}
+
+/**
+ * その人に結び付いたフォーム回答（実行⑫。依頼者の指示）。
+ *
+ * 依頼者の指示は「面接タブから提出された書類を閲覧可能にする」で、
+ * 書類の実体は**応募フォームの回答**（依頼者の回答）。記録層は 0025 のままで、
+ * 足したものは無い。
+ *
+ * ★ **未接合の回答は出さない**（`person_id IS NULL`）。
+ *   誰の回答か決まっていないものを人の画面に出すと、取り違えが起きる。
+ *
+ * ★ 回答そのものは書き換えられない（0025 のトリガ）。**読み取り専用である。**
+ *
+ * ★ 並びは送信の新しい順。同じ人が2回答えれば2件出る（畳まない）。
+ */
+export const listPersonFormResponses = (db: Db, personId: string | undefined) => {
+  if (!personId || !UUID.test(personId)) return Promise.resolve([])
+  return all<PersonFormResponse>(db, `
+    SELECT r.id AS form_response_id, r.source, r.submitted_at,
+           c.name AS channel_name, r.channel_answer, r.raw
+      FROM form_responses r
+      LEFT JOIN channels c ON c.id = r.channel_id
+     WHERE r.person_id = $1
+     ORDER BY r.submitted_at DESC, r.id`, [personId])
+}
+
 export interface ChannelCount {
   channel_name: string | null
   channel_category: string | null
@@ -117,10 +152,38 @@ export const listCandidateNumbers = (db: Db, seasonId: string | undefined) => {
      ORDER BY n.number DESC`, [seasonId])
 }
 
-/** その人の候補者番号（期ごと）。 */
-export const getCandidateNumber = (db: Db, personId: string, seasonId: string) => {
-  if (!UUID.test(personId) || !UUID.test(seasonId)) return Promise.resolve(null)
-  return maybeOne<{ number: number }>(db, `
-    SELECT number FROM candidate_numbers
-     WHERE person_id = $1 AND season_id = $2`, [personId, seasonId])
+/**
+ * 担当者メモの履歴（依頼者の指示。実行⑰。C-177）。
+ *
+ * 依頼者の言葉 ――「このメモは蓄積していって、過去のものまで見れるように」。
+ *
+ * ★ **記録層は既に持っていた**（`person_profile_revisions`。0001）。
+ *   直すたびに1版が積まれる作りで、消えてはいない。
+ *   足りなかったのは**読む口と画面**だけである。
+ *
+ * ★ 変わった版だけを返す。同じ文が並ぶと、何が起きたのか読めない
+ *   ―― メモ以外（電話番号など）を直しただけの版も1件に数えてしまう。
+ *   `lag()` で1つ前と比べ、**メモが動いた版だけ**を残す。
+ *
+ * ★ 空にした（消した）ことも1件として残す。「消した」も履歴である。
+ */
+export interface NoteHistoryRow {
+  revision_number: number
+  note: string | null
+  changed_at: Date
 }
+
+export const listNoteHistory = (
+  db: Db, personId: string,
+): Promise<NoteHistoryRow[]> =>
+  all<NoteHistoryRow>(db, `
+    WITH v AS (
+      SELECT revision_number, note, changed_at,
+             lag(note) OVER (ORDER BY revision_number) AS prev
+        FROM person_profile_revisions
+       WHERE person_id = $1
+    )
+    SELECT revision_number, note, changed_at
+      FROM v
+     WHERE note IS DISTINCT FROM prev
+     ORDER BY revision_number DESC`, [personId])

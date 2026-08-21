@@ -38,7 +38,7 @@ export default async function OperationsPage(
       <Breadcrumb
         root={seasonLabel(season)}
         crumbs={[
-          { label: '個人アプローチ', href: '/borderline' },
+          { label: '通常選考', href: '/borderline' },
           { label: '選考オペレーション' },
         ]}
       />
@@ -96,7 +96,9 @@ export default async function OperationsPage(
                   </tr>
                 </thead>
                 <tbody>
-                  {pending.slice(0, 40).map((p) => (
+                  {/* ★ 40 件で黙って切っていた（実行⑫で直した）。
+                      全件出す ―― カードの中で送れるので、切る理由が無い。 */}
+                  {pending.map((p) => (
                     <tr key={p.evaluation_id}>
                       <td>{p.applicant_name}</td>
                       <td className="nowrap">{p.step_order}. {p.step_name}</td>
@@ -107,7 +109,7 @@ export default async function OperationsPage(
                       </td>
                       <td className="num">
                         {p.over_sla ? (
-                          <strong style={{ color: 'var(--color-semantic-error)' }}>
+                          <strong style={{ color: 'var(--color-error-deep)' }}>
                             {num(p.waiting_days)} 日
                           </strong>
                         ) : `${num(p.waiting_days)} 日`}
@@ -189,8 +191,8 @@ export default async function OperationsPage(
                   <tr><th>応募者</th><th>面接官</th><th>ステップ</th><th>種別</th><th>状態</th></tr>
                 </thead>
                 <tbody>
-                  {conflicts.map((c, i) => (
-                    <tr key={i}>
+                  {conflicts.map((c) => (
+                    <tr key={`${c.applicant_name}-${c.interviewer}-${c.step_name}-${c.conflict_type}`}>
                       <td>{c.applicant_name}</td>
                       <td>{c.interviewer}</td>
                       <td>{c.step_name}</td>

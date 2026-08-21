@@ -1,4 +1,4 @@
-import { all, maybeOne, type Db } from '../db/client.ts'
+import { all, maybeOne, scalar, type Db } from '../db/client.ts'
 
 /**
  * ボーダーライン画面の問い合わせ（実行⑨）。
@@ -50,21 +50,9 @@ export interface BorderlineTask {
   waiting_days: number | null
 }
 
-export const listManualTasks = (db: Db, seasonId: string) =>
-  all<{
-    manual_task_id: string; title: string; person_id: string | null
-    person_name: string | null; owner_name: string | null
-    urgency: 'in_progress' | 'due' | 'later'; is_overdue: boolean
-    due_on: Date; due_time: string | null
-  }>(db, `
-    SELECT t.manual_task_id, t.title, t.person_id,
-           p.family_name || ' ' || p.given_name AS person_name,
-           t.owner_name, t.urgency, t.is_overdue, t.due_on, t.due_time
-      FROM v_manual_tasks t
-      LEFT JOIN persons p ON p.id = t.person_id
-     WHERE t.season_id = $1
-     ORDER BY t.is_overdue DESC, t.due_on, t.due_time NULLS LAST, t.title`,
-  [seasonId])
+/* ★ `listManualTasks` は消した（C-209）。手で足すやることの画面は無く、
+   **どこからも呼ばれていなかった。** 呼ばれない読み取りが残ると、
+   次に触る人が「使われている経路がある」と読む。 */
 
 export const listDerivedTasks = (db: Db, seasonId: string) =>
   all<{
@@ -106,11 +94,23 @@ export interface TaskTotals {
 
 export interface CandidateRow {
   person_id: string
+  number: number | null
+  family_name: string
+  given_name: string
+  family_name_kana: string | null
+  given_name_kana: string | null
+  birth_date: string | null
   person_name: string
   person_kana: string | null
-  photo_data_url: string | null
+  has_photo: boolean
   school: string
   faculty: string | null
+  email: string | null
+  phone: string | null
+  line_user_id: string | null
+  note: string | null
+  first_channel_name: string | null
+  first_contacted_on: string | null
   /** 確度。規則が未登録なら null（0 ではない）。 */
   confidence_ratio: number | null
   rank_in_season: number | null
@@ -140,23 +140,37 @@ export async function listCandidatesByConfidence(
   db: Db, seasonId: string, opts: { limit: number; offset: number },
 ): Promise<CandidatePage> {
   const rows = await all<CandidateRow>(db, `
-    SELECT h.person_id,
+    SELECT h.person_id, n.number,
+           p.family_name, p.given_name, p.family_name_kana, p.given_name_kana,
+           to_char(p.birth_date, 'YYYY-MM-DD') AS birth_date,
            p.family_name || ' ' || p.given_name AS person_name,
            nullif(btrim(coalesce(p.family_name_kana, '') || ' '
                         || coalesce(p.given_name_kana, '')), '') AS person_kana,
-           p.photo_data_url,
-           sc.name AS school, p.faculty,
+           (p.photo_data_url IS NOT NULL) AS has_photo,
+           sc.name AS school, p.faculty, p.email, p.phone, p.line_user_id, p.note,
            c.confidence_ratio, c.rank_in_season, c.rank_delta,
            coalesce(c.has_previous_run, false) AS has_previous_run,
            (SELECT max(jst_date(t.occurred_at)) FROM v_touchpoint_season t
              WHERE t.person_id = h.person_id AND t.season_id = h.season_id)
              AS last_touchpoint_on,
+           first_touch.channel_name AS first_channel_name,
+           to_char(first_touch.occurred_on, 'YYYY-MM-DD') AS first_contacted_on,
            h.approach_code, h.approach_label
       FROM v_headhunting_list h
       JOIN persons p ON p.id = h.person_id
       JOIN schools sc ON sc.id = p.school_id
+      LEFT JOIN candidate_numbers n
+             ON n.person_id = h.person_id AND n.season_id = h.season_id
       LEFT JOIN v_candidate_confidence_latest c
              ON c.person_id = h.person_id AND c.season_id = h.season_id
+      LEFT JOIN LATERAL (
+        SELECT ch.name AS channel_name, jst_date(t.occurred_at) AS occurred_on
+          FROM touchpoints t
+          JOIN channels ch ON ch.id = t.channel_id
+         WHERE t.person_id = h.person_id
+         ORDER BY t.occurred_at, t.id
+         LIMIT 1
+      ) first_touch ON true
      WHERE h.season_id = $1
      ORDER BY c.rank_in_season NULLS LAST, h.state_since DESC, p.id
      LIMIT $2 OFFSET $3`, [seasonId, opts.limit, opts.offset])
@@ -264,9 +278,33 @@ export const listCandidatesByStep = (db: Db, seasonId: string, stepId: string) =
      ORDER BY a.id, e.assigned_at`,
   [seasonId, stepId])
 
+/**
+ * その段で**確定済み・判定待ち**の応募の数（C-216）。
+ *
+ * ★ 段の一覧は `e.state <> 'submitted'`、つまり**採点する対象**しか出さない。
+ *   採点を確定した応募はその瞬間に一覧から消えるが、**判定はまだ残っている。**
+ *   平社員ペルソナ試験で「6人採点したのに、どこにも居ない」となった。
+ *   一覧から消すのは変えない（採点の場である）が、**黙って消さない** ――
+ *   件数を出して、判定はその応募の画面だと言う。
+ */
+export const countAwaitingDecision = (db: Db, seasonId: string, stepId: string) =>
+  scalar<number>(db, `
+    SELECT count(*)::int
+      FROM v_active_applications a
+      JOIN evaluations e ON e.application_id = a.id
+                        AND e.selection_step_id = $2
+                        AND e.state = 'submitted'
+     WHERE a.season_id = $1
+       AND NOT EXISTS (
+             SELECT 1 FROM v_effective_status_histories h
+              WHERE h.application_id = a.id
+                AND h.selection_step_id = $2)`, [seasonId, stepId])
+
 export interface ScoringCriterion {
   criteria_id: string
   criteria_name: string
+  /** 何を見る軸なのか（0042）。表の基準表の文面。未登録なら null。 */
+  criteria_description: string | null
   scale_max: number
   applies_to: string
   /** まだ付いていなければ null。 */
@@ -339,7 +377,8 @@ export const getScoringSheet = async (
   // 適用の規則（applies_to と再応募）はトリガ evaluation_scores_applicability
   // と同じもので、tests/19 が両者の一致を固定している。
   const criteria = await all<ScoringCriterion>(db, `
-    SELECT ec.id AS criteria_id, ec.name AS criteria_name, ec.scale_max, ec.applies_to,
+    SELECT ec.id AS criteria_id, ec.name AS criteria_name,
+           ec.description AS criteria_description, ec.scale_max, ec.applies_to,
            es.score, es.rationale
       FROM evaluations e
       JOIN applications a ON a.id = e.application_id
@@ -419,7 +458,7 @@ export interface Appointment {
   starts_at: Date
   ends_at: Date
   starts_on: Date
-  owner_name: string
+  owner_name: string | null
 }
 
 /**
@@ -506,6 +545,11 @@ export interface PersonNote {
   /** 行が記録された時刻（自動）。手入力の日時とは別物。 */
   created_at: Date
   body: string
+  /**
+   * どう関わったか（0030。実行⑫）。自由入力の1行で、任意。
+   * **マスタではないので数えられない**（表記が揺れる）。
+   */
+  involvement: string | null
 }
 
 /**
@@ -516,7 +560,8 @@ export interface PersonNote {
  */
 export const listPersonNotes = (db: Db, personId: string) =>
   all<PersonNote>(db, `
-    SELECT n.id AS note_id, n.author_name, n.noted_at, n.created_at, n.body
+    SELECT n.id AS note_id, n.author_name, n.noted_at, n.created_at, n.body,
+           n.involvement
       FROM v_effective_person_notes n
      WHERE n.person_id = $1
      ORDER BY n.noted_at DESC, n.created_at DESC, n.id DESC`, [personId])
@@ -532,7 +577,7 @@ export interface AppointmentDetail {
   kind_label: string
   starts_at: Date
   ends_at: Date
-  owner_name: string
+  owner_name: string | null
   person_name: string | null
   cancelled: boolean
 }
@@ -545,7 +590,7 @@ export const getAppointmentDetail = (db: Db, appointmentId: string, seasonId: st
            (a.cancelled_at IS NOT NULL) AS cancelled
       FROM appointments a
       JOIN appointment_kinds k ON k.id = a.kind_id
-      JOIN staffs s ON s.id = a.owner_staff_id
+      LEFT JOIN staffs s ON s.id = a.owner_staff_id
       LEFT JOIN persons p ON p.id = a.person_id
      WHERE a.id = $1 AND a.season_id = $2`, [appointmentId, seasonId])
 

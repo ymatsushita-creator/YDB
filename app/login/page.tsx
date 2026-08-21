@@ -21,11 +21,17 @@ export default async function LoginPage({
   return (
     <main className="login-frame">
       <form action={signInAction} className="login-card">
-        <img className="login-logo" src="/brand/logo_gradient.png"
-             width={1283} height={305} alt="NEO ACADEMIA" />
+        <img className="login-logo" src="/brand/logo_gradient_720.png"
+             width={720} height={171} alt="NEO ACADEMIA" />
 
         <input type="hidden" name="next" value={next} />
+        {/* ★ 欄は**合言葉1つだけ**（依頼者の判断。C-146）――
+            「経営層と平社員の2個あればいい」。名前を聞かない。
+            誰が入ったかは記録できない（C-84 の穴は開いたまま）。 */}
         <label className="login-label" htmlFor="password">合言葉</label>
+        {/* biome-ignore lint/a11y/noAutofocus: 入力欄が1つだけの専用ログイン画面である。
+            autofocus が読み上げ利用者を迷わせるのは「他にも読む物がある画面」の話で、
+            ここは合言葉を入れる以外にすることが無い。外すと毎回クリックが1回増える。 */}
         <input id="password" name="password" type="password" required autoFocus
                autoComplete="current-password" className="login-input" />
         <button className="button-primary login-button" type="submit">入る</button>

@@ -1,4 +1,5 @@
 import { maybeOne, one, all, type Db } from '../db/client.ts'
+import { BLANK_CHARS, blank as blankText } from './text.ts'
 
 /**
  * 候補者とアプローチを足す（依頼者の指示。実行⑩）。
@@ -18,7 +19,8 @@ import { maybeOne, one, all, type Db } from '../db/client.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DAY = /^\d{4}-\d{2}-\d{2}$/
-const blank = (v: string | null | undefined) => ((v ?? '').trim() || null)
+/** 空白だけなら null。集合の定義は text.ts（C-126）。 */
+const blank = blankText
 const PHOTO = /^data:image\/(jpeg|png|webp);base64,/
 
 export interface NewCandidateInput {
@@ -356,10 +358,13 @@ export async function autoMatchFormResponse(db: Db, id: string): Promise<boolean
       FROM form_responses WHERE id = $1`, [id])
   if (!r || r.person_id) return false
 
+  // ★ 落とす空白は**書き込み側と同じ集合**にする（C-126）。既定の `btrim` は
+  //   半角空白だけなので、全角空白が付いたまま入っていた古い値と
+  //   突き合わせられない ―― **同じ人が別人に見える。**
   const attempts: Array<[string, string | null, string]> = [
-    ['auto_email', r.respondent_email, 'lower(btrim(p.email)) = lower(btrim($1))'],
-    ['auto_line', r.respondent_line, 'btrim(p.line_user_id) = btrim($1)'],
-    ['auto_phone', r.respondent_phone, 'btrim(p.phone) = btrim($1)'],
+    ['auto_email', r.respondent_email, 'lower(btrim(p.email, $2)) = lower(btrim($1, $2))'],
+    ['auto_line', r.respondent_line, 'btrim(p.line_user_id, $2) = btrim($1, $2)'],
+    ['auto_phone', r.respondent_phone, 'btrim(p.phone, $2) = btrim($1, $2)'],
   ]
 
   for (const [method, value, where] of attempts) {
@@ -367,7 +372,7 @@ export async function autoMatchFormResponse(db: Db, id: string): Promise<boolean
     const hits = await all<{ id: string }>(db, `
       SELECT p.id FROM persons p
        WHERE p.deleted_at IS NULL AND ${where}
-       LIMIT 2`, [value])
+       LIMIT 2`, [value, BLANK_CHARS])
     // 2人以上に当たったら結び付けない。**手で選ばせる。**
     if (hits.length !== 1) continue
     await db.query(`

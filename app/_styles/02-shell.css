@@ -1,0 +1,341 @@
+/* =============================================================
+   02 外枠 —— 操作柱・ロゴ・上の帯・評価基準の帯
+   -------------------------------------------------------------
+   典拠は DESIGN.md の `nav-bar` / `ex-app-shell-row` / `footer`。
+
+   ★ 意匠は刷新した（依頼者の指示 2026-08-20）。
+     旧版は**真っ黒の操作柱と、ロゴから伸びる虹色の帯**だった。
+     DESIGN.md はどちらも指示していない ――
+       ・操作面は canvas（白）に hairline。`nav-bar` の指定そのまま。
+       ・現在地は**行を塗らず、3px のスペクトラムの線**で示す
+         （`ex-app-shell-row` の activeIndicator）。
+       ・虹の帯は「等幅の帯にするな」「面を塗るな」に正面から反する。
+     黒は面ではなく**主操作と identity の面**（`hero-band` / `button-primary`）
+     に回した。
+
+   ★ 送り方・固定・収納の**挙動は変えていない**（C-113 / C-161 /
+     C-198 / C-205〜208）。意匠だけを差し替えている。
+   ============================================================= */
+
+/* 枠。柱と本体の2列。**器は送らない**（送るのは中の面）。 */
+.hh-frame {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-canvas-soft);
+}
+.hh-frame > * { min-height: 0; }
+
+/* -------------------------------------------------------------
+   操作柱
+   ------------------------------------------------------------- */
+.hh-sidebar {
+  position: sticky; top: 0;
+  display: flex; flex-direction: column; gap: var(--space-lg);
+  height: 100vh;
+  min-height: 0;
+  /* 入りきらないときは柱ごと送る（C-206）。 */
+  overflow-y: auto;
+  padding: 0 var(--space-sm) var(--space-md);
+  background: var(--rail-face);
+  /* 面の切り替えは線1本で示す。影を落とさない ―― 操作柱は浮いていない。 */
+  border-right: 1px solid var(--color-hairline);
+}
+/* 柱を送る器にしても、天端のロゴは切り抜かれない（角丸を持たせない）。 */
+.hh-brand {
+  position: sticky; top: 0; z-index: 2;
+  flex: 0 0 auto;
+  display: flex; align-items: center;
+  height: var(--bar-h);
+  margin: 0 calc(var(--space-sm) * -1);
+  padding: 0 var(--space-md);
+  background: var(--rail-face);
+  border-bottom: 1px solid var(--color-hairline);
+  cursor: pointer;
+}
+/* ロゴは変形も着色もしない（意匠の資産）。高さだけ器に合わせる。 */
+.hh-brand-logo { display: block; width: 100%; max-width: 156px; height: auto; }
+
+.hh-nav { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+/* DESIGN.md `ex-app-shell-row` ―― 行を色で塗らない。 */
+.hh-nav a, .sidebar-item, .sidebar-item-active {
+  position: relative;
+  display: flex; align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--rounded-sm);
+  color: var(--color-body);
+  font-size: var(--type-body-sm-font-size);
+  line-height: var(--type-body-sm-line-height);
+  letter-spacing: var(--type-body-sm-letter-spacing);
+}
+.hh-nav a:hover, .sidebar-item:hover { background: var(--color-canvas-soft-2); text-decoration: none; color: var(--color-ink); }
+.sidebar-item-active {
+  background: var(--color-canvas-soft-2);
+  color: var(--color-ink);
+  font-weight: var(--type-body-sm-strong-font-weight);
+}
+/* 現在地の印。**細い線だけ。** */
+.sidebar-item-active::before {
+  content: '';
+  position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+  border-radius: var(--rounded-full);
+  background: var(--spectrum-line-v);
+}
+.hh-nav-divider {
+  display: block; height: 1px;
+  margin: var(--space-xs) var(--space-sm);
+  background: var(--color-hairline);
+}
+.hh-nav:has(> :only-child) .hh-nav-divider,
+.hh-nav-divider:last-child { display: none; }
+
+.hh-nav-add {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 2px;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.sidebar-section-label {
+  display: block;
+  padding: 0 var(--space-sm) var(--space-xxs);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  line-height: var(--type-caption-mono-line-height);
+  color: var(--color-mute);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* 名前で検索。素の form なので JS 無しで動く。 */
+.hh-search { display: flex; flex-direction: column; gap: var(--space-xxs); }
+.hh-search-row { display: flex; gap: var(--space-xxs); }
+.hh-search-input {
+  flex: 1 1 auto; min-width: 0; height: 32px;
+  padding: 0 var(--space-sm);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+  font-size: var(--type-body-sm-font-size);
+}
+.hh-search-input::placeholder { color: var(--color-mute); }
+.hh-search-input:focus {
+  outline: none;
+  border-color: var(--color-brand-cyan);
+  box-shadow: 0 0 0 3px var(--color-brand-cyan-soft);
+}
+.hh-search-go { flex: 0 0 auto; height: 32px; padding: 0 var(--space-sm); white-space: nowrap; }
+
+.hh-sidebar-foot {
+  flex: 0 0 auto;
+  margin-top: auto;
+  display: flex; flex-direction: column; gap: var(--space-xs);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-hairline);
+}
+.hh-years { display: flex; flex-direction: column; gap: var(--space-xxs); }
+.hh-years-row { display: flex; gap: var(--space-xxs); }
+.hh-year-select {
+  flex: 1 1 auto; min-width: 0; height: 32px;
+  padding: 0 var(--space-xs);
+  background: var(--color-canvas); color: var(--color-ink);
+  border: 1px solid var(--color-hairline); border-radius: var(--rounded-sm);
+  font-size: var(--type-body-sm-font-size);
+}
+.hh-year-go { flex: 0 0 auto; height: 32px; padding: 0 var(--space-sm); }
+
+/* 運用中かデモか。**色ではなく語で分ける**（0029）。
+   デモだけ warning の濃い字を当てる ―― 架空の数字を実在として読ませない。 */
+.hh-demo, .hh-live {
+  padding: 0 var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  line-height: var(--type-caption-mono-line-height);
+}
+.hh-demo { color: var(--color-warning-deep); }
+.hh-live { color: var(--color-mute); }
+.hh-signout {
+  height: 32px; padding: 0 var(--space-sm);
+  background: var(--color-canvas); color: var(--color-body);
+  border: 1px solid var(--color-hairline); border-radius: var(--rounded-pill);
+  font-size: var(--type-button-md-font-size);
+  font-weight: var(--type-button-md-font-weight);
+  cursor: pointer;
+}
+.hh-signout:hover { background: var(--color-canvas-soft-2); color: var(--color-ink); }
+
+/* -------------------------------------------------------------
+   しまう / 出す（C-170 / C-181 / C-188）
+   ロゴの面そのものが札。JS を使わない（`:has()` で枠の形を変える）。
+   ------------------------------------------------------------- */
+.collapse-flag { position: absolute; opacity: 0; pointer-events: none; }
+.hh-frame:has(#rail-collapse:checked) { grid-template-columns: var(--bar-h) minmax(0, 1fr); }
+.hh-frame:has(#rail-collapse:checked) .hh-sidebar { padding-left: 0; padding-right: 0; }
+.hh-frame:has(#rail-collapse:checked) .hh-brand {
+  height: var(--bar-h); margin: 0; padding: 0; justify-content: center;
+}
+.hh-frame:has(#rail-collapse:checked) .hh-brand-logo { max-width: 40px; }
+.hh-frame:has(#rail-collapse:checked) .hh-nav,
+.hh-frame:has(#rail-collapse:checked) .hh-nav-add,
+.hh-frame:has(#rail-collapse:checked) .hh-search,
+.hh-frame:has(#rail-collapse:checked) .hh-sidebar-foot { display: none; }
+
+/* -------------------------------------------------------------
+   本体
+   ------------------------------------------------------------- */
+.hh-main {
+  position: relative;
+  display: flex; flex-direction: column;
+  min-width: 0; height: 100%; min-height: 0;
+  overflow: hidden;
+  padding: 0 var(--space-lg) var(--space-lg);
+}
+/* 一覧画面（`.hh-grid` を持たない画面）は外枠を送る。 */
+.hh-main:not(:has(> .hh-grid)) { overflow-y: auto; }
+.hh-main:not(:has(> .hh-grid)) > .section { flex: 0 0 auto; min-height: 0; overflow: visible; }
+
+.hh-main > .page-head, .hh-main > .cockpit-head { flex: 0 0 auto; }
+.hh-main > .grid, .hh-main > .callout { flex: 0 0 auto; }
+.hh-main > .section { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.hh-main > .section-fixed { flex: 0 0 auto; overflow: visible; }
+
+/* -------------------------------------------------------------
+   上の帯 —— いま開いている階層（DESIGN.md `nav-bar`）
+   ------------------------------------------------------------- */
+.zoom-bar {
+  position: sticky; top: 0; z-index: 4;
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--space-xs);
+  height: var(--bar-h);
+  margin: 0 calc(var(--space-lg) * -1) var(--space-md);
+  padding: 0 var(--space-lg);
+  background: var(--rail-face);
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  font-size: var(--type-body-sm-font-size);
+  line-height: var(--type-body-sm-line-height);
+}
+.zoom-seg { display: inline-flex; align-items: center; gap: var(--space-xs); min-width: 0; }
+.zoom-sep { color: var(--color-hairline-strong); }
+/* 根（期）。押せない ―― ドライブ名と同じ。 */
+.zoom-root {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  color: var(--color-ink);
+  padding: 2px var(--space-xs);
+  border: 1px dashed var(--color-hairline-strong);
+  border-radius: var(--rounded-xs);
+}
+.zoom-crumb {
+  padding: 2px var(--space-xs);
+  border-radius: var(--rounded-xs);
+  color: var(--color-body);
+}
+.zoom-crumb:hover { background: var(--color-canvas-soft-2); color: var(--color-ink); text-decoration: none; }
+/* 末尾（いま居る場所）。**面を塗らず、下に細い線**を通す。 */
+.zoom-crumb-current {
+  position: relative;
+  padding: 2px var(--space-xs) 4px;
+  color: var(--color-ink);
+  font-weight: var(--type-body-sm-strong-font-weight);
+  white-space: nowrap;
+}
+.zoom-crumb-current::after {
+  content: '';
+  position: absolute; left: var(--space-xxs); right: var(--space-xxs); bottom: 0; height: 2px;
+  background: var(--spectrum-line);
+}
+.zoom-back { margin-right: var(--space-xs); }
+
+/* -------------------------------------------------------------
+   評価基準の帯（C-134 / C-208）
+   横バーの右側に重ね、自動で流す。**高さは動かさない。**
+   ------------------------------------------------------------- */
+.hh-criteria-ref {
+  position: absolute; top: 0; right: var(--space-lg); left: 40%;
+  z-index: 5;
+  height: var(--bar-h);
+  display: flex; align-items: center;
+  pointer-events: none;
+}
+.hh-criteria-scroll {
+  display: flex; align-items: center; justify-content: safe center;
+  width: 100%;
+  overflow: hidden;
+  /* 右端で溶かす。切り落とすと「続きがある」ことが読めない。 */
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+}
+.hh-criteria-track {
+  flex: 0 0 auto;
+  width: max-content;
+  display: flex; align-items: center;
+  animation: criteria-marquee 90s linear infinite;
+}
+.hh-criteria-run { display: flex; align-items: center; flex-wrap: nowrap; }
+.hh-criteria-group {
+  display: flex; align-items: center; flex-wrap: nowrap;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  border-right: 1px solid var(--color-hairline);
+}
+.hh-criteria-axis {
+  white-space: nowrap;
+  color: var(--color-body);
+  font-size: 13px;
+  line-height: var(--type-body-sm-line-height);
+}
+.hh-criteria-ref:hover .hh-criteria-track { animation-play-state: paused; }
+@keyframes criteria-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hh-criteria-track { animation: none; }
+  .hh-criteria-scroll { overflow-x: auto; }
+  .hh-criteria-ref { pointer-events: auto; }
+}
+
+/* -------------------------------------------------------------
+   本体の2柱（一覧＋詳細）
+   ------------------------------------------------------------- */
+.hh-grid {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+  gap: var(--space-md);
+  align-items: stretch;
+  overflow: hidden;
+}
+.hh-col-main, .hh-col-side {
+  display: grid;
+  gap: var(--space-md);
+  min-height: 0;
+  overflow: hidden;
+}
+.hh-col-main { grid-template-rows: minmax(0, 0.6fr) minmax(0, 1.4fr); }
+/* ★ 右柱は段数が画面ごとに違う（人の板＋一覧、など）。
+     明示の1段にすると2枚目が暗黙の段へ落ち、1枚目が潰れる
+     （実画面で人の板が帯の高さまで潰れた）。**段は等分で自動に取る。** */
+.hh-col-side { grid-auto-rows: minmax(0, 1fr); }
+.hh-col-main > *, .hh-col-side > * { min-height: 0; overflow: hidden; }
+.hh-col-main:has(> :only-child), .hh-col-side:has(> :only-child) { grid-template-rows: minmax(0, 1fr); }
+.hh-col-main:has(> :nth-child(3)), .hh-col-side:has(> :nth-child(3)) {
+  grid-auto-rows: minmax(0, auto);
+  grid-template-rows: none;
+  overflow-y: auto;
+}
+
+@media (max-width: 1100px) {
+  .hh-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, auto); overflow-y: auto; }
+  .hh-col-main { grid-template-rows: none; grid-auto-rows: minmax(0, auto); }
+}
+@media (max-width: 900px) {
+  .hh-frame { grid-template-columns: minmax(0, 1fr); }
+  .hh-sidebar { display: none; }
+  .hh-criteria-ref { display: none; }
+}

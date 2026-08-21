@@ -1,7 +1,9 @@
+import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getDb } from '../../../src/db/server.ts'
 import { getInterviewSheet, listInterviewRevisions } from '../../../src/queries/interview.ts'
+import { listPersonFormResponses } from '../../../src/queries/intake.ts'
 import { listDecidingStaff } from '../../../src/commands/decide.ts'
 import {
   RECOMMENDATIONS, RECOMMENDATION_LABEL, INTERVIEW_FIELDS,
@@ -10,6 +12,7 @@ import {
 import { parseSaveScoreCode, SAVE_SCORE_CODE_MESSAGE } from '../../../src/commands/score.ts'
 import { saveInterviewAction, saveInterviewScoreAction } from './actions.ts'
 import { jstDay, num, jstDateTime } from '../../_components/ui.tsx'
+import { shownRationale } from '../../../src/records/placeholder.ts'
 import { Shell, Breadcrumb, seasonLabel } from '../../_components/shell.tsx'
 import { Avatar } from '../../_components/borderline.tsx'
 
@@ -47,9 +50,12 @@ export default async function InterviewPage({
   const sheet = await getInterviewSheet(db, evaluation)
   if (!sheet) notFound()
 
-  const [revisions, staffs] = await Promise.all([
+  const [revisions, staffs, responses] = await Promise.all([
     listInterviewRevisions(db, evaluation),
     listDecidingStaff(db),
+    // 提出された書類＝応募フォームの回答（実行⑫。依頼者の指示）。
+    // **未接合の回答は出ない**（誰の回答か決まっていない）。
+    listPersonFormResponses(db, sheet.person_id),
   ])
 
   const savedSheet = parseSaveInterviewCode(sp.sheet)
@@ -120,9 +126,12 @@ export default async function InterviewPage({
                       {' '}1〜{num(c.scale_max)}
                       {c.applies_to === 'reapplicant_only' && ' ・ 再応募者のみ'}
                     </span>
-                    {c.score !== null && (
+                    {/* ★ 取り込みの埋め草は出さない（C-166。依頼者の指示）。
+                        記録には残るが、6軸すべてに同じ文が並ぶと
+                        中身のある根拠の場所を潰す。 */}
+                    {shownRationale(c.rationale) && (
                       <span className="section-note" style={{ display: 'block' }}>
-                        {c.rationale}
+                        {shownRationale(c.rationale)}
                       </span>
                     )}
                   </span>
@@ -218,6 +227,52 @@ export default async function InterviewPage({
           </section>
         </div>
       </form>
+
+      {/* --- 提出された書類（フォームの回答）。実行⑫。依頼者の指示 ---
+
+          ★ **読み取り専用である。** 回答そのものは書き換えられない（0025 のトリガ）。
+            書き換えてよいのは「誰に結び付けたか」だけで、それはこの画面の仕事ではない。
+
+          ★ 項目名は**届いたまま**出す。こちらで訳さない・畳まない ――
+            フォームがまだ無く、どんな項目が来るか受け取っていない（C-79）。
+
+          ★ 並びは送信の新しい順。**同じ人が2回答えれば2件出る**（畳まない）。 */}
+      <div className="section">
+        <section className="card-base">
+          <h2 className="section-title">提出された書類</h2>
+          {responses.length === 0 ? (
+            <p className="hh-empty">この人に結び付いたフォームの回答はまだ無い。</p>
+          ) : (
+            responses.map((r) => {
+              // jsonb はキーを並べ替えて返す（届いた順ではない）。
+              // **ここで更に並べ替えない** ―― 出す順を作ると、
+              // 「フォームのこの順で聞いた」という別の事実に見える。
+              const entries = Object.entries(r.raw ?? {})
+              return (
+                <div key={r.form_response_id} className="section">
+                  <p className="section-note">
+                    {jstDateTime(r.submitted_at)} ・ {r.source}
+                    {' ・ '}
+                    {r.channel_name ?? r.channel_answer ?? '流入元は未記入'}
+                  </p>
+                  {entries.length === 0 ? (
+                    <p className="hh-empty">回答の中身が空で届いている。</p>
+                  ) : (
+                    <dl className="hh-facts">
+                      {entries.map(([key, val]) => (
+                        <Fragment key={key}>
+                          <dt>{key}</dt>
+                          <dd>{typeof val === 'string' ? val : JSON.stringify(val)}</dd>
+                        </Fragment>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </section>
+      </div>
 
       {/* --- 変更ログ --- */}
       <div className="section">

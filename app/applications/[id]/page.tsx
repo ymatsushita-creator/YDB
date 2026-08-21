@@ -18,7 +18,8 @@ import {
 } from '../../../src/commands/assign.ts'
 import { parseUnholdCode, UNHOLD_CODE_MESSAGE } from '../../../src/commands/unhold.ts'
 import {
-  saveScoreAction, submitEvaluationAction, decideAction, editDecisionAction, holdAction,
+  saveScoreAction, correctScoreAction, submitEvaluationAction, decideAction,
+  editDecisionAction, holdAction,
   assignAction, unholdAction, reassignAction,
 } from './actions.ts'
 import { Card, Empty, num, jstDateTime } from '../../_components/ui.tsx'
@@ -73,6 +74,46 @@ function ScoreForm({
              placeholder="何を見てその点にしたか（必須）" />
       <button type="submit" className="button-secondary">保存</button>
     </form>
+  )
+}
+
+/**
+ * 付いている点を打ち直すフォーム（E4。実行⑮。C-133）。
+ *
+ * ★ 保存と**別の入口**にしてある（`correctScore`）。同じ入口が
+ *   「無ければ入れる・あれば直す」を兼ねると、二度押しが訂正として通る。
+ *
+ * ★ 出すのは**確定前だけ。** 判定は `can_score`（`v_open_tasks` の
+ *   `'evaluate'`）で、コマンドが見る門と同じものである。
+ */
+function ScoreFixForm({
+  applicationId, evaluationId, criteriaId, scaleMax, score, rationale,
+}: {
+  applicationId: string
+  evaluationId: string
+  criteriaId: string
+  scaleMax: number
+  score: number
+  rationale: string
+}) {
+  return (
+    <details className="score-fix">
+      <summary>直す</summary>
+      <form action={correctScoreAction} className="score-form editable-inline">
+        <input type="hidden" name="applicationId" value={applicationId} />
+        <input type="hidden" name="evaluationId" value={evaluationId} />
+        <input type="hidden" name="criteriaId" value={criteriaId} />
+        <label className="visually-hidden" htmlFor={`fix-${criteriaId}`}>直した点</label>
+        <input id={`fix-${criteriaId}`} name="score" type="number"
+               min={0} max={scaleMax} step={1} required defaultValue={score}
+               className="score-input" />
+        <label className="visually-hidden" htmlFor={`fixwhy-${criteriaId}`}>直した根拠</label>
+        <input id={`fixwhy-${criteriaId}`} name="rationale" type="text" required
+               defaultValue={rationale} className="rationale-input"
+               placeholder="何を見てその点にしたか（必須）" />
+        <button type="submit" className="button-secondary">直す</button>
+      </form>
+    </details>
   )
 }
 
@@ -194,7 +235,7 @@ export default async function ApplicationPage({
       <Breadcrumb
         root={seasonLabel(app)}
         crumbs={[
-          { label: '個人アプローチ', href: `/borderline?season=${app.season_id}` },
+          { label: '通常選考', href: `/borderline?season=${app.season_id}` },
           { label: app.applicant_name, href: `/borderline/${app.person_id}?season=${app.season_id}` },
           { label: '応募' },
         ]}
@@ -480,7 +521,7 @@ export default async function ApplicationPage({
                         </thead>
                         <tbody>
                           {e.scores.map((s) => (
-                            <tr key={s.criteria_name}>
+                            <tr key={s.criteria_id}>
                               <td className="nowrap">
                                 {s.criteria_name}
                                 {s.applies_to === 'reapplicant_only' && (
@@ -493,7 +534,20 @@ export default async function ApplicationPage({
                                 {num(s.score)}
                                 <span className="section-note"> / {num(s.scale_max)}</span>
                               </td>
-                              <td>{s.rationale}</td>
+                              <td>
+                                {s.rationale}
+                                {/* 打ち直しは確定前だけ（E4。C-133）。 */}
+                                {e.can_score && (
+                                  <ScoreFixForm
+                                    applicationId={app.application_id}
+                                    evaluationId={e.evaluation_id}
+                                    criteriaId={s.criteria_id}
+                                    scaleMax={Number(s.scale_max)}
+                                    score={Number(s.score)}
+                                    rationale={s.rationale}
+                                  />
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

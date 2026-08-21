@@ -31,7 +31,7 @@ async function world(db: Db): Promise<World> {
     `SELECT id FROM seasons WHERE enrollment_year = 2026`)
   const steps = await all<{ id: string; name: string; sort_order: number }>(
     db, `SELECT id, name, sort_order FROM selection_steps
-          WHERE season_id = $1 ORDER BY sort_order`, [season.id])
+          WHERE season_id = $1 AND name <> '特別選考' ORDER BY sort_order`, [season.id])
   const schoolId = await scalar<string>(
     db, `INSERT INTO schools (name) VALUES ('架空高校') RETURNING id`)
   const staff = (await all<{ id: string }>(db, `
@@ -131,8 +131,8 @@ describe('保留にする（C-35）', () => {
   test('動いていない応募の評価は保留にできない', async () => {
     const db = await freshDb({ seeds: 'production' })
     const w = await world(db)
-    const { appId, evalId } = await pendingEvaluation(w, '不合格ずみ', 1)
-    // 書類選考は軸が0本なので、点を付けずに確定できる（C-33）。
+    // ★ 書類選考には 0010 で4軸が入った（C-187）。軸が0本なのは応募受付。
+    const { appId, evalId } = await pendingEvaluation(w, '不合格ずみ', 0)
     assert.ok((await submitEvaluation(db, { evaluationId: evalId })).ok)
     assert.ok((await decideStep(db, {
       applicationId: appId, decision: 'reject', staffId: w.staff[0]!,

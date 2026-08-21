@@ -8,6 +8,7 @@ import {
 import {
   getInterviewSheet, listInterviewRevisions, listPersonInterviews,
 } from '../src/queries/interview.ts'
+import { listPersonFormResponses } from '../src/queries/intake.ts'
 import { saveScore } from '../src/commands/score.ts'
 import { reassignInterviewer } from '../src/commands/assign.ts'
 
@@ -329,6 +330,42 @@ describe('面接シート', () => {
     const rows = await listPersonInterviews(db, c.personId)
     assert.equal(rows.length, 2)
     assert.deepEqual(rows.map((r) => r.cohort_number), [3, 2], '新しい期が先')
+  })
+
+  /**
+   * 提出された書類（実行⑫。依頼者の指示）。
+   *
+   * 「面接タブから提出された書類を閲覧可能にする」。書類の実体は
+   * **応募フォームの回答**（依頼者の回答）で、記録層は 0025 のままである。
+   */
+  test('その人に結び付いたフォーム回答が読める。未接合の回答は出ない', async () => {
+    const c = await makeEvaluation()
+    const channelId = await scalar<string>(db, `SELECT id FROM channels WHERE name = 'LINE'`)
+
+    // 結び付いた回答（2件。新しい順に並ぶこと）
+    for (const [key, day] of [['r1', '2026-03-01'], ['r2', '2026-03-05']] as const) {
+      await db.query(`
+        INSERT INTO form_responses
+          (source, form_key, response_key, submitted_at, channel_id, raw,
+           person_id, matched_at, match_method)
+        VALUES ('google', 'f1', $1, $2::timestamptz, $3, $4::jsonb, $5, now(), 'manual')`,
+      [`${key}-${seq}`, `${day}T10:00:00+09:00`, channelId,
+        JSON.stringify({ 志望動機: `理由 ${key}` }), c.personId])
+    }
+    // 誰にも結び付いていない回答（**出てはいけない**）
+    await db.query(`
+      INSERT INTO form_responses (source, form_key, response_key, submitted_at, raw)
+      VALUES ('google', 'f1', $1, now(), '{"志望動機":"未接合"}'::jsonb)`,
+    [`unmatched-${seq}`])
+
+    const rows = await listPersonFormResponses(db, c.personId)
+    assert.equal(rows.length, 2, '未接合の回答は混ざらない')
+    assert.deepEqual(rows.map((r) => (r.raw as { 志望動機: string }).志望動機),
+      ['理由 r2', '理由 r1'], '送信の新しい順')
+
+    // 回答そのものは書き換えられない（0025 のトリガ）。画面も読み取り専用である。
+    await assert.rejects(() => db.query(
+      `UPDATE form_responses SET raw = '{}'::jsonb WHERE person_id = $1`, [c.personId]))
   })
 
   test('担当を替えても、シートは古い面接官を指したままにならない', async () => {

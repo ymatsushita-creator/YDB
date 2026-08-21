@@ -73,7 +73,10 @@ export default async function InterviewsPage({
                     <th>段</th>
                     <th>面接官</th>
                     <th>面接日</th>
-                    <th className="num">点</th>
+                    {/* ★ ここに出るのは**点が付いた軸の数**である（`scored_criteria`）。
+                        「点」と書くと 4/4 が満点に見える ―― 実際の得点は 8/10 でも
+                        4/4 と出る（C-216。平社員ペルソナ試験でそう読んだ）。 */}
+                    <th className="num">採点した軸</th>
                     <th>所見</th>
                     <th></th>
                   </tr>

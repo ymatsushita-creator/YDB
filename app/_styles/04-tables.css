@@ -1,0 +1,220 @@
+/* =============================================================
+   04 表 —— DESIGN.md `ex-data-table-cell`
+   -------------------------------------------------------------
+   「Dense table chrome. Header uses mono technical typography.
+     Brand colour is excluded from ordinary table cells.」
+
+   ★ 表の中に色を入れない。入れてよいのは**札**（到達状態）と
+     **未記入の印**だけで、どちらも意味を持つ記録である。
+   ============================================================= */
+
+.table-wrap {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  overflow: hidden;
+}
+/* 表は自分の器の中で横に送る。**ページを横に送らせない。** */
+.table-wrap > table, .scroll-pane > table { width: 100%; }
+.scroll-pane { flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+table.data, table.hh-table, table.bl-table, table.candidate-unified-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-body-sm-font-size);
+  line-height: var(--type-body-sm-line-height);
+  letter-spacing: var(--type-body-sm-letter-spacing);
+}
+
+/* 見出しは mono。**単位や母集団を書かない**（C-62）。 */
+table.data th, table.hh-table th, table.bl-table th, table.candidate-unified-table th {
+  position: sticky; top: 0; z-index: 1;
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-canvas-soft);
+  color: var(--color-body);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  font-weight: 400;
+  line-height: var(--type-caption-mono-line-height);
+  letter-spacing: 0;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-hairline);
+}
+table.data td, table.hh-table td, table.bl-table td, table.candidate-unified-table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--color-hairline);
+  vertical-align: middle;
+  /* ★ 密な表は**畳まずに横へ送る**（器が `.scroll-pane` / `.table-wrap`）。
+       畳むと、列が狭いときに校名が1文字ずつ縦に割れる（実画面で割れた）。 */
+  white-space: nowrap;
+}
+/* 記録の本文が入る欄だけは畳む。 */
+table td .hh-memo, table td .memo-body, table td .task-detail,
+table td.wrap, table td .section-note { white-space: normal; }
+table.data tbody tr:last-child td,
+table.hh-table tbody tr:last-child td,
+table.bl-table tbody tr:last-child td,
+table.candidate-unified-table tbody tr:last-child td { border-bottom: 0; }
+
+table.data tbody tr:hover,
+table.hh-table tbody tr:hover,
+table.bl-table tbody tr:hover,
+table.candidate-unified-table tbody tr:hover { background: var(--color-canvas-soft-2); }
+
+table.data tfoot th {
+  position: static;
+  background: var(--color-canvas-soft);
+  border-top: 1px solid var(--color-hairline);
+  border-bottom: 0;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-sm-font-size);
+  text-transform: none;
+}
+
+td.num, th.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cell-name { font-weight: var(--type-body-sm-strong-font-weight); color: var(--color-ink); }
+.row-link { color: var(--color-ink); font-weight: var(--type-body-sm-strong-font-weight); }
+.row-link:hover { color: var(--color-brand-cyan-deep); }
+.row-detail { color: var(--color-body); font-size: var(--type-caption-font-size); }
+.candidate-row-actions { display: flex; gap: var(--space-xxs); justify-content: flex-end; }
+.candidate-photo-cell { width: 44px; }
+
+/* ★ 候補者一覧（編集できる全件表）は**列を潰さない**（C-193）。
+     カード幅へ押し込むと、校名や見出しが1文字ずつ縦に折れる。
+     器（`.scroll-pane` / `.table-wrap`）へ横送りを渡す。 */
+table.candidate-unified-table { width: max-content; min-width: 100%; }
+table.candidate-unified-table th { white-space: nowrap; }
+
+/* 一覧（表ではない縦の並び） */
+.hh-list { display: flex; flex-direction: column; }
+.hh-list > li, .hh-list > a {
+  display: flex; align-items: center; gap: var(--space-xs);
+  flex-wrap: nowrap;
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--color-hairline);
+}
+.hh-list > li:last-child, .hh-list > a:last-child { border-bottom: 0; }
+/* 顔写真と名前がひと組の押せる帯。**折り返させない。** */
+.bl-person {
+  display: inline-flex; align-items: center; gap: var(--space-xs);
+  min-width: 0;
+  color: var(--color-ink);
+  /* 顔と名前はひと組。**間で折り返さない**（実画面で2段に割れた）。 */
+  white-space: nowrap;
+}
+.bl-person > span:not(.avatar), .hh-list-name { overflow: hidden; text-overflow: ellipsis; }
+.bl-person:hover { color: var(--color-brand-cyan-deep); text-decoration: none; }
+.hh-list > li.is-current { background: var(--color-canvas-soft-2); }
+.hh-list-name { flex: 1 1 auto; min-width: 0; color: var(--color-ink); font-weight: var(--type-body-sm-strong-font-weight); }
+.hh-list-conf { flex: 0 0 auto; }
+/* ★ ランキングの段は**中身なりにしない**（C-136）。
+     片方が空のとき、下に灰色の余白が残る。段を等分で取る。 */
+.hh-rankings { display: grid; grid-auto-rows: minmax(0, 1fr); gap: var(--space-md); min-height: 0; }
+.hh-more {
+  display: inline-flex; align-items: center; gap: var(--space-xxs);
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-link);
+  font-size: var(--type-body-sm-font-size);
+}
+.hh-more:hover { color: var(--color-brand-cyan-deep); }
+
+/* -------------------------------------------------------------
+   スプレッドシート形式の表（`sheet.tsx`）
+   見出しと先頭列を固定する。**入力の面は白のまま。**
+   ------------------------------------------------------------- */
+.sheet-wrap {
+  max-height: 70vh;
+  overflow: auto;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+}
+.sheet-form { display: flex; flex-direction: column; gap: var(--space-md); }
+.sheet-wrap th { position: sticky; top: 0; z-index: 2; }
+.sheet-lead {
+  position: sticky; left: 0; z-index: 1;
+  background: var(--color-canvas);
+  border-right: 1px solid var(--color-hairline);
+  text-align: left;
+  font-weight: var(--type-body-sm-strong-font-weight);
+}
+.sheet-lead-new { color: var(--color-mute); font-family: var(--font-mono); }
+.sheet-photo { width: 48px; min-width: 48px; text-align: center; }
+.sheet-photo .avatar { margin: 0 auto; }
+.sheet-fixed {
+  display: block;
+  padding: var(--space-xxs) var(--space-xs);
+  color: var(--color-body);
+  font-size: var(--type-body-sm-font-size);
+}
+/* 直せない行。**面を赤くしない** ―― 左に線を1本立てるだけ。 */
+.sheet-row-bad th.sheet-lead { box-shadow: inset 3px 0 0 0 var(--color-error); }
+.sheet-result { white-space: nowrap; font-family: var(--font-mono); font-size: var(--type-caption-mono-font-size); color: var(--color-ink); }
+.sheet-errors {
+  margin: 0; padding: var(--space-sm) var(--space-md);
+  border-left: 3px solid var(--color-error);
+  background: var(--color-canvas);
+  color: var(--color-error-deep);
+  font-size: var(--type-body-sm-font-size);
+}
+.sheet-errors li { margin-bottom: 2px; }
+.sheet-actions { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
+
+/* -------------------------------------------------------------
+   週の予定（暦）
+   ------------------------------------------------------------- */
+.cal-wrap { overflow: auto; }
+.cal-head {
+  display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+  position: sticky; top: 0; z-index: 1;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  color: var(--color-body);
+}
+.cal-head > * { padding: var(--space-xxs) var(--space-xs); }
+.cal-corner { color: var(--color-mute); }
+.cal-head .is-today { color: var(--color-ink); font-weight: 500; }
+.cal-cell {
+  display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--color-hairline);
+  min-height: 28px;
+}
+.cal-hour {
+  padding: var(--space-xxs) var(--space-xs);
+  color: var(--color-mute);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  border-right: 1px solid var(--color-hairline);
+}
+.cal-event {
+  display: flex; align-items: center; gap: var(--space-xxs);
+  margin: 1px;
+  padding: 2px var(--space-xxs);
+  border-radius: var(--rounded-xs);
+  background: var(--color-canvas-soft-2);
+  color: var(--color-ink);
+  font-size: var(--type-caption-font-size);
+  overflow: hidden;
+}
+.cal-dot { width: 6px; height: 6px; border-radius: var(--rounded-full); background: var(--color-primary); flex: 0 0 auto; }
+.appt-internal .cal-dot { background: var(--color-brand-cyan); }
+.cal-list { display: flex; flex-direction: column; }
+.cal-list > li {
+  display: flex; align-items: baseline; gap: var(--space-xs);
+  padding: var(--space-xxs) 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+.cal-list-when { font-family: var(--font-mono); font-size: var(--type-caption-mono-font-size); color: var(--color-body); white-space: nowrap; }
+.cal-list-who { color: var(--color-ink); font-weight: var(--type-body-sm-strong-font-weight); }
+.cal-list-kind, .cal-list-out { color: var(--color-mute); font-size: var(--type-caption-font-size); }
+.cal-list-link { color: var(--color-link); font-size: var(--type-caption-font-size); }
+.bl-week-nav { display: flex; align-items: center; gap: var(--space-xs); }

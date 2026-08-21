@@ -1,0 +1,15 @@
+### C-9. 参照データを本番用とサンプルに分けた
+
+集計に関わるマスタは追加と非活性化でしか運用できない（原則3）。
+つまり**最初に入った値が事実上の初期値として固定化される**。
+サンプルと本番が同じ入口から入る構造だと、誰かが一度流した時点で
+創作物が正式なマスタになる。
+
+- `db/seeds/0001_reference.example.sql` … 動作確認用。創作。本番では読まない
+- `db/seeds/0001_reference.sql` … 本番用。`channels` と `void_reasons` は
+  **0件**、`withdraw_reasons` は `unconfirmed` の1件のみ
+
+`*.example.sql` はシードローダが本番モードで除外する
+（`src/db/migrate.ts` の `loadSeeds`）。
+
+→ `tests/09_definition_fidelity.test.ts`「本番の参照データ」

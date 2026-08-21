@@ -87,32 +87,47 @@ describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
     await db.close()
   })
 
-  test('選考は3本。受け取った語をそのまま置いてある', async () => {
-    // ★ 2期との違いを**黙って揃えていない。**
-    //   2期は4本で先頭に「応募受付」があり、1本目の呼び名も「書類選考」。
-    //   3期の指定は3本で「書類審査」から始まる。
-    //   同じものを指しているかは確認していないので、受け取った語で置く
-    //   （運営の言葉をこちらの語に翻訳しない。Pilot Rule）。
+  test('選考は5本。2期と同じ並び・同じ呼び名になっている（0006）', async () => {
+    // ★ C-55 では**受け取った語のまま**3本で置いていた（「書類審査」から始まる）。
+    //   2期との違いは2つ ―― 段が1本少ないこと、1本目の呼び名。
+    //   どちらも「同じものを指すか確認していない」ので揃えなかった。
+    //
+    // ★ 実行⑭で依頼者に確かめた（2026-08-13）――
+    //   「書類審査は書類選考と同じ関門。揃えろ」「応募受付も足せ」。
+    //   **確認したら直すのも規律である**（0006）。
     const db = await productionDb()
     const steps = await all<{ sort_order: number; name: string }>(db, `
       SELECT st.sort_order, st.name FROM selection_steps st
         JOIN seasons se ON se.id = st.season_id
        WHERE se.cohort_number = 3 ORDER BY st.sort_order`)
     assert.deepEqual(steps.map((x) => [x.sort_order, x.name]), [
-      [1, '書類審査'],
-      [2, 'グループ面接'],
-      [3, '最終面接'],
+      [1, '特別選考'],
+      [2, '応募受付'],
+      [3, '書類選考'],
+      [4, 'グループ面接'],
+      [5, '最終面接'],
     ])
     await db.close()
   })
 
-  test('3期の評価軸は入れていない（前期の6軸を写さない）', async () => {
+  test('3期の軸は2期と同じ顔ぶれ・同じ重み付けである（0006）', async () => {
+    // ★ C-55 は「3期の軸は未受領だから写さない」としていた。
+    //   その保留を依頼者が解いた（実行⑭。2026-08-13）。
+    //   **保留を解けるのは依頼者だけである。**
     const db = await productionDb()
-    assert.equal(await scalar<number>(db, `
-      SELECT count(*)::int FROM evaluation_criteria ec
-        JOIN selection_steps st ON st.id = ec.selection_step_id
-        JOIN seasons se ON se.id = st.season_id
-       WHERE se.cohort_number = 3`), 0)
+    const shape = async (cohort: number) => (await all<{ step: string; name: string; kind: string }>(
+      db, `
+      SELECT ss.name AS step, ec.name, ec.kind
+        FROM evaluation_criteria ec
+        JOIN selection_steps ss ON ss.id = ec.selection_step_id
+        JOIN seasons se ON se.id = ss.season_id
+       WHERE se.cohort_number = $1 ORDER BY ss.sort_order, ec.sort_order`, [cohort]))
+      .map((r) => [r.step, r.name, r.kind])
+
+    assert.deepEqual(await shape(3), await shape(2), '3期の軸が2期と食い違っている')
+    // 特別選考9 ＋ 最終面接6 ＋ グループ面接6（0008 で最終面接から写した）
+    assert.equal((await shape(3)).length, 25,
+      '特別選考9 ＋ 最終面接6 ＋ グループ面接6 ＋ 書類選考4（C-187）')
     await db.close()
   })
 
@@ -130,7 +145,10 @@ describe('本番シードの 3期＝2027年度（実行⑨で追加）', () => {
 })
 
 describe('本番シードの選考ステップ', () => {
-  test('ステップは4つで、この順番である', async () => {
+  test('ステップは5つで、この順番である（特別選考が先頭。0005）', async () => {
+    // 応募管理表 013_選考フロー の特別選考フローは、事前面談を応募より
+    // 前に置く。事前面談は応募より前の関門なので sort_order は先頭。
+    // 最終面接は最後のまま（合格の定義を動かさない）。
     const db = await productionDb()
     const rows = await all<{ sort_order: number; name: string }>(
       db,
@@ -140,10 +158,11 @@ describe('本番シードの選考ステップ', () => {
     )
 
     assert.deepEqual(rows, [
-      { sort_order: 1, name: '応募受付' },
-      { sort_order: 2, name: '書類選考' },
-      { sort_order: 3, name: 'グループ面接' },
-      { sort_order: 4, name: '最終面接' },
+      { sort_order: 1, name: '特別選考' },
+      { sort_order: 2, name: '応募受付' },
+      { sort_order: 3, name: '書類選考' },
+      { sort_order: 4, name: 'グループ面接' },
+      { sort_order: 5, name: '最終面接' },
     ])
     await db.close()
   })
@@ -178,28 +197,39 @@ describe('本番シードの選考ステップ', () => {
     await db.close()
   })
 
-  test('SLA と通過基準は入れていない（運用時に決める値で、旧システムに記録が無い）', async () => {
+  test('SLA は入れていない（運用時に決める値で、旧システムに記録が無い）', async () => {
     const db = await productionDb()
-    const filled = await scalar<number>(
+    const sla = await scalar<number>(
+      db,
+      `SELECT count(*)::int FROM selection_steps WHERE sla_days IS NOT NULL`,
+    )
+    assert.equal(sla, 0, '推測の SLA が入ると、根拠のない日数で超過が鳴る')
+
+    // 通過基準（pass_criteria）は「決定者への参考情報」で自動判定には使わない。
+    // 特別選考だけ、応募管理表の枠の目的をそのまま持つ（0005）。
+    // 運用の4段（応募受付・書類選考・グループ面接・最終面接）は推測を入れない。
+    const guessed = await scalar<number>(
       db,
       `SELECT count(*)::int FROM selection_steps
-        WHERE sla_days IS NOT NULL OR pass_criteria IS NOT NULL`,
+        WHERE pass_criteria IS NOT NULL AND name <> '特別選考'`,
     )
-
-    assert.equal(filled, 0, '推測の SLA が入ると、根拠のない日数で超過が鳴る')
+    assert.equal(guessed, 0, '運用段に根拠のない通過基準を入れない')
     await db.close()
   })
 })
 
 describe('本番シードの評価の観点', () => {
-  test('最終面接に6軸があり、運営の言葉のまま入っている', async () => {
+  test('最終面接に6軸があり、運営の言葉のまま入っている（期ごとに数える）', async () => {
     const db = await productionDb()
     const rows = await all<{ name: string; scale_max: number }>(
       db,
+      // ★ 0006 で3期にも同じ6軸が入った。**期で絞らないと2期分が混ざる。**
+      //   「1件しかない」を前提にしない（C-54 で22件落ちたのと同じ罠）。
       `SELECT c.name, c.scale_max
          FROM evaluation_criteria c
          JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = '最終面接'
+         JOIN seasons se ON se.id = s.season_id
+        WHERE s.name = '最終面接' AND se.cohort_number = 2
         ORDER BY c.sort_order`,
     )
 
@@ -221,44 +251,56 @@ describe('本番シードの評価の観点', () => {
       `SELECT sum(c.scale_max)::int
          FROM evaluation_criteria c
          JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = '最終面接'`,
+         JOIN seasons se ON se.id = s.season_id
+        WHERE s.name = '最終面接' AND se.cohort_number = 2`,
     )
 
     assert.equal(total, 24)
     await db.close()
   })
 
-  test('書類選考の軸は入れていない（満点16は確定。呼び名が未確認）', async () => {
+  test('★ 書類選考は4軸10点（C-212。依頼者が満点を変更）', async () => {
     const db = await productionDb()
-    // 実測の最大が満点ではない、の実例がここにある。
-    // doc_score は実測13・満点16だった。実測から満点を推定していたら間違えていた。
-    const n = await scalar<number>(
-      db,
-      `SELECT count(*)::int
-         FROM evaluation_criteria c
-         JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = '書類選考'`,
-    )
-
-    assert.equal(
-      n,
-      0,
-      '軸を足すときは呼び名を確認してから。名付けるとマスタとして固定化する（原則3）',
-    )
+    const rows = await all<{ name: string; scale_max: number; sort_order: number }>(db, `
+      SELECT c.name, c.scale_max, c.sort_order
+        FROM evaluation_criteria c
+        JOIN selection_steps s ON s.id = c.selection_step_id
+        JOIN seasons se ON se.id = s.season_id AND NOT se.is_demo
+       WHERE s.name = '書類選考' AND se.cohort_number = 2
+       ORDER BY c.sort_order`)
+    assert.deepEqual(rows.map((r) => r.name),
+      ['論理力', 'NEOとの親和性', 'やり遂げた実績', 'コミットする意志'],
+      '軸の呼び名は依頼者が決めたもの。こちらで言い換えない')
+    assert.deepEqual(rows.map((r) => Number(r.scale_max)), [4, 2, 2, 2])
+    assert.equal(rows.reduce((n, r) => n + Number(r.scale_max), 0), 10)
+    // ★ 1本目が論理力（AIが付け、この順で並べる）。
+    assert.equal(rows[0]!.name, '論理力', '並べ替えの基準が1本目に来ていない')
     await db.close()
   })
 
-  test('グループ面接の軸も入れていない（旧データに点が無い）', async () => {
+  /**
+   * ★ 0008 で入れた（依頼者の指示。実行⑯）。
+   *
+   *   長らく空だった ―― 旧データに点が無かったため（`sec2_group` は
+   *   A〜E の組分けで、評価ではない）。**軸の呼び名を受け取っていなかった。**
+   *   依頼者が「二次選考の軸はこれだ」「最終と同じでいいから」と示したので入れた。
+   *
+   * ★ 最終面接から**読んで**入れる（名前をシードに書き写さない）ので、
+   *   本数と満点は最終面接と必ず一致する。ずれたら写し方が壊れている。
+   */
+  test('グループ面接の軸は、最終面接と同じ（0008）', async () => {
     const db = await productionDb()
-    const n = await scalar<number>(
-      db,
-      `SELECT count(*)::int
-         FROM evaluation_criteria c
-         JOIN selection_steps s ON s.id = c.selection_step_id
-        WHERE s.name = 'グループ面接'`,
-    )
-
-    assert.equal(n, 0, 'sec2_group は A〜E の組分けであって評価ではない')
+    const rows = await all<{ step: string; n: number; total: number }>(db, `
+      SELECT s.name AS step, count(*)::int AS n, sum(c.scale_max)::int AS total
+        FROM evaluation_criteria c
+        JOIN selection_steps s ON s.id = c.selection_step_id
+       WHERE s.name IN ('グループ面接', '最終面接')
+       GROUP BY s.name`)
+    const grp = rows.filter((r) => r.step === 'グループ面接')
+    const fin = rows.filter((r) => r.step === '最終面接')
+    assert.ok(grp.length > 0, 'グループ面接に軸が入っていない')
+    assert.deepEqual(grp.map((r) => [r.n, r.total]), fin.map((r) => [r.n, r.total]),
+      '最終面接と本数・満点が一致しない（写し方が壊れている）')
     await db.close()
   })
 })
@@ -268,10 +310,12 @@ describe('シードは何度流しても増えない', () => {
     const db = await productionDb()
     await seed(db)
 
-    // 期は2つ。ステップは 2期の4本＋3期の3本＝7本。軸を持つのは2期だけ。
+    // 期は2つ。ステップは 2期5本＋3期5本＝10本（0006 で3期を2期にそろえた）。
+    // 軸は期ごとに 最終面接6 ＋ 特別選考9 ＋ グループ面接6（0008）＝ 21、
+    // 2期と3期で42。2回流しても増えない。
     assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM seasons`), 2)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 7)
-    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 6)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM selection_steps`), 10)
+    assert.equal(await scalar<number>(db, `SELECT count(*)::int FROM evaluation_criteria`), 50)
     await db.close()
   })
 })

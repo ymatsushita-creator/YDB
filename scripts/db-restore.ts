@@ -1,5 +1,7 @@
+import { confirmDestructive } from './confirm-destructive.ts'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { join, isAbsolute } from 'node:path'
+import { intakeWritePath } from './intake-dir.ts'
 import { openPostgres } from '../src/db/postgres.ts'
 import { dump, restore, verify, type Dump } from '../src/db/backup.ts'
 
@@ -13,8 +15,8 @@ import { dump, restore, verify, type Dump } from '../src/db/backup.ts'
  *   2. `--yes` が無ければ**何もせず終わる**（下見だけ）
  *   3. 戻す前に、**いまの状態を必ず取る**（戻す操作を戻せるようにする）
  *
- *   pnpm db:restore db/private/backups/<いつ>          下見（書かない）
- *   pnpm db:restore db/private/backups/<いつ> --yes    実行
+ *   pnpm db:restore <受領ディレクトリ>/db-private/backups/<いつ>        下見（書かない）
+ *   pnpm db:restore <受領ディレクトリ>/db-private/backups/<いつ> --yes  実行
  */
 
 const args = process.argv.slice(2)
@@ -26,7 +28,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 if (!target) {
-  console.error('戻すものを指定する ―― pnpm db:restore db/private/backups/<いつ> [--yes]')
+  console.error('戻すものを指定する ―― pnpm db:restore <受領ディレクトリ>/db-private/backups/<いつ> [--yes]')
   process.exit(1)
 }
 
@@ -36,6 +38,11 @@ const snapshot = JSON.parse(await readFile(join(dir, 'dump.json'), 'utf8')) as D
 const url = new URL(process.env.DATABASE_URL)
 console.log(`戻す先 ―― ${url.hostname} / ${url.pathname.slice(1)}`)
 console.log(`戻すもの ―― ${snapshot.takenAt}（表 ${snapshot.tables.length}）`)
+
+// ★ 復元は現在のデータを上書きする。不可逆なので人間の承認を取る。
+if (!(await confirmDestructive('本番DBの復元（現在のデータを上書き）', url.hostname))) {
+  process.exit(1)
+}
 
 const db = await openPostgres(process.env.DATABASE_URL)
 
@@ -57,10 +64,10 @@ if (!go) {
 console.log('\n戻す前に、いまの状態を取る ――')
 const safety = await dump(db)
 const stamp = `before-restore-${safety.takenAt.replace(/[:.]/g, '-')}`
-const safetyDir = join(process.cwd(), 'db', 'private', 'backups', stamp)
+const safetyDir = intakeWritePath('db-private', 'backups', stamp)
 await mkdir(safetyDir, { recursive: true })
 await writeFile(join(safetyDir, 'dump.json'), JSON.stringify(safety), 'utf8')
-console.log(`  db/private/backups/${stamp}/`)
+console.log(`  ${safetyDir}/`)
 
 const t0 = performance.now()
 await restore(db, snapshot)

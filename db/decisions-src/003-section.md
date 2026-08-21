@@ -1,0 +1,27 @@
+### A-2. `void_reasons.counts_as_application` が誰にも読まれていなかった ★影響大
+
+原典の `v_application_state` と `f_funnel_daily` は `voided_at IS NOT NULL` の
+応募を無条件に除外していた。一方 `void_reasons` には
+
+> `counts_as_application` は「この無効化に対応する代替の Application が
+> 生まれるか」で決まる。名寄せ誤り → false（付け替え先で1件数える）、
+> 取り下げ → true。
+
+とある。代替が生まれない無効化（取り下げ）は、応募が起きた事実として
+木に数えなければならない。無条件除外だと応募数が実態より少なく出て、
+`counts_as_application` カラムは一度も参照されないまま残る。
+
+**対応**: `v_countable_applications` を新設し、集計対象の定義を1箇所に置いた。
+
+```sql
+WHERE a.deleted_at IS NULL
+  AND (a.voided_at IS NULL OR vr.counts_as_application)
+```
+
+`deleted_at`（個人情報削除）は性質が違うため無条件に除外を維持する。
+
+なお原則7「事実の有無で判定し、理由で分岐しない」に反しないかを検討した。
+この原則が禁じているのは理由テキストによる場当たりの分岐であり、
+ここはマスタに宣言された真偽値を読んでいるだけなので抵触しない。
+
+→ `tests/04_funnel.test.ts`「無効化された応募の扱い」

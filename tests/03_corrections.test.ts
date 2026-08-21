@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { freshDb } from '../src/db/testing.ts'
-import { all, one, scalar, type Db } from '../src/db/client.ts'
+import { all, type Db } from '../src/db/client.ts'
 import {
   baseFixture, makeSeason, makePerson, makeApplication, addHistory, jst,
   type Season,
