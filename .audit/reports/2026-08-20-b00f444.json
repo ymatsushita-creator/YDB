@@ -1,0 +1,501 @@
+{
+  "schema": "kurosaki.audit/1",
+  "tool": "kurosaki/0.1.0",
+  "repo": "/Volumes/KIOXIA_2TB/NEO/YouthDB",
+  "head": "b00f444",
+  "opinion": {
+    "verdict": "不適正",
+    "reason": "Critical 1 件。構造的な欠陥が現に残っている。",
+    "scope_limited": false,
+    "procedures_registered": 18,
+    "tally": {
+      "critical": 1,
+      "high": 6,
+      "medium": 4,
+      "low": 1,
+      "procedures": 18,
+      "procedures_done": 18,
+      "procedures_unverifiable": 0
+    },
+    "unverifiable_ratio": 0.0,
+    "blocking": true
+  },
+  "procedures": [
+    {
+      "id": "D1-01",
+      "domain": "体制文書",
+      "title": "AI開発体制の規律文書が実在するか",
+      "status": "done",
+      "examined": "規律文書候補 7 件・上位文書候補 6 件の実在を確認（発見: 規律 ['CLAUDE.md', 'AGENTS.md', '.cursor/rules'] / 上位 ['.audit/AUDIT_CHARTER.md']）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D1-02",
+      "domain": "体制文書",
+      "title": "上位文書・規律文書が実装AIから書き換え可能でないか",
+      "status": "done",
+      "examined": "4 件の文書について、CODEOWNERS・監査マニフェスト・フック本文のいずれかで保護されているかを照合（CODEOWNERS=無 / MANIFEST=有 / フック 2 本）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D2-01",
+      "domain": "フォルダ構成",
+      "title": "実データ候補が git の外に置かれているか（.gitignore 単独防壁でないか）",
+      "status": "done",
+      "examined": "作業ツリー 1102 ファイルを走査し、人物を示す語・機械検査できない形式を持つ未追跡ファイルを 1 件検出",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D2-01",
+          "severity": "High",
+          "fact": "実データ候補 1 件が作業ツリーにあり、追跡外である（＝`.gitignore` の1行が唯一の防壁。ignore を1行崩せば公開される）",
+          "evidence": [
+            "app/people/.DS_Store"
+          ],
+          "remediation": "実データはリポジトリの外（別ディレクトリ・別ボリューム）へ移し、リポジトリ内には受け入れ口を置かない。ignore に依存した保護をやめる",
+          "key": "realdata-in-worktree",
+          "fingerprint": "c9b0d88a7637ac2f"
+        }
+      ]
+    },
+    {
+      "id": "D2-02",
+      "domain": "フォルダ構成",
+      "title": "追跡してはならないものが追跡下に入っていないか",
+      "status": "done",
+      "examined": "追跡ファイル 1034 件を5分類の禁止パターンへ突合",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D2-02",
+          "severity": "Medium",
+          "fact": "本番投入用データ（人物データは検出されず） が追跡下にある（8 件）",
+          "evidence": [
+            "db/seeds/0002_season_2026.production.sql",
+            "db/seeds/0003_season_2027.production.sql",
+            "db/seeds/0005_season2_special_selection.production.sql",
+            "db/seeds/0006_season3_align_to_season2.production.sql",
+            "db/seeds/0007_season3_target.production.sql",
+            "db/seeds/0008_group_interview_criteria.production.sql",
+            "db/seeds/0009_season3_partner_status.production.sql",
+            "db/seeds/0010_document_screening_criteria.production.sql"
+          ],
+          "remediation": "追跡から外し、必要なら履歴からの除去を人間の承認のもとで行う（.audit/IRREVERSIBLE_OPS.md）",
+          "key": "tracked-forbidden:本番投入用データ（人物データは検出されず）",
+          "fingerprint": "2f33c6d9c32cc5b5"
+        }
+      ]
+    },
+    {
+      "id": "D3-01",
+      "domain": "機械ゲート",
+      "title": "git が実行するフックが実在し、実行可能か",
+      "status": "done",
+      "examined": "`core.hooksPath`=.githooks を読み、.githooks 配下の pre-commit, pre-push の実在と実行権限を確認（実在 2 / 欠落 0 / 実行不可 0）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-02",
+      "domain": "機械ゲート",
+      "title": "フックが本ツールの検査を実際に呼んでいるか",
+      "status": "done",
+      "examined": "フック 2 本の本文を読み、4 種の呼び出し形を照合（呼んでいる: ['.githooks/pre-commit', '.githooks/pre-push'] / 呼んでいない: なし）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-03",
+      "domain": "機械ゲート",
+      "title": "CI 定義が実在し、その中で監査の検査が走るか",
+      "status": "done",
+      "examined": "CI 定義の置き場 6 箇所を確認し、見つかった 2 本の定義本文へ監査呼び出しを照合（定義: ['.github/workflows/audit.yml', '.github/workflows/quality.yml'] / 呼んでいる: ['.github/workflows/audit.yml']）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-04",
+      "domain": "機械ゲート",
+      "title": "監査を無効化する記述（continue-on-error 等）が混入していないか",
+      "status": "done",
+      "examined": "CI 定義・フック・package.json/Makefile を合わせた 6 本について、8 種の無効化パターンを行単位で照合（対象: ['.audit/allowlist.yml', '.githooks/pre-commit', '.githooks/pre-push', '.github/workflows/audit.yml', '.github/workflows/quality.yml', 'package.json']）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D3-05",
+      "domain": "機械ゲート",
+      "title": "既定ブランチが保護され、監査の合格が必須になっているか",
+      "status": "done",
+      "examined": "リモート 1 件（origin=ymatsushita-creator/YDB@fix/quality-gate-false-pass）について GitHub のブランチ保護APIを照会。取得できた 1 件を判定",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D3-05",
+          "severity": "High",
+          "fact": "`ymatsushita-creator/YDB`（公開）の `fix/quality-gate-false-pass` にブランチ保護が無い（保護APIは公開リポジトリで利用可能。応答は未保護を意味する）",
+          "evidence": [
+            "GitHub ブランチ保護設定"
+          ],
+          "remediation": "監査ジョブを required status check にし、人間のレビューを必須にする",
+          "key": "unprotected-branch:ymatsushita-creator/YDB",
+          "fingerprint": "0b18504613100db4"
+        }
+      ]
+    },
+    {
+      "id": "D3-06",
+      "domain": "機械ゲート",
+      "title": "公開リモートの有無と、そこへ何が届く構造になっているか",
+      "status": "done",
+      "examined": "リモート 1 件を列挙し、GitHub の 1 件について公開状態を照会（公開: ['origin=ymatsushita-creator/YDB'] / 非公開: なし / 不明: なし）",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D3-06",
+          "severity": "High",
+          "fact": "公開リモート `origin=ymatsushita-creator/YDB` がある。ここへ push されたものは即時に公開される（履歴に入れば削除しても公開済みの事実は消えない）",
+          "evidence": [
+            "git remote -v"
+          ],
+          "remediation": "公開先を持つ必要があるなら、公開先へ push する前段に監査の合格を必須にする。不要なら公開リモートを外す（リポジトリ設定の変更は人間が行う）",
+          "key": "public-remote:origin=ymatsushita-creator/YDB",
+          "fingerprint": "8de71aca6fd7339b"
+        }
+      ]
+    },
+    {
+      "id": "D5-01",
+      "domain": "不可逆操作",
+      "title": "不可逆操作の一覧と承認手順が文書として実在し、必須項目を網羅しているか",
+      "status": "done",
+      "examined": "`.audit/IRREVERSIBLE_OPS.md`（1285 文字）を読み、必須 6 項目の記載と承認者の明記を照合（欠落 0 項目 / 承認者記載 有）",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D5-02",
+      "domain": "不可逆操作",
+      "title": "本番・不可逆へ到達する経路に人間ゲートがあるか（AIへ渡した権限も含む）",
+      "status": "done",
+      "examined": "package.json の scripts 35 件から本番到達候補 5 件を抽出。.claude/settings.local.json の allow 46 件を危険パターン 9 種へ突合。.claude/settings.json の allow 0 件を危険パターン 9 種へ突合",
+      "reason": null,
+      "observations": []
+    },
+    {
+      "id": "D5-03",
+      "domain": "不可逆操作",
+      "title": "本番へ出した実体が記録され、リポジトリと一致しているか",
+      "status": "done",
+      "examined": "package.json から本番へ出す経路 1 件を抽出（['deploy:production']／ゲート済み ['deploy:production']）。`.audit/deploys` の記録 0 件、未pushコミット 2、作業ツリーの差分 10 件を確認",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D5-03",
+          "severity": "High",
+          "fact": "本番へ出した記録が1件も無い。いつ・どのコミット・どの未コミット差分を出したのかを事後に確認できない",
+          "evidence": [
+            ".audit/deploys"
+          ],
+          "remediation": "deploy-gate を通して記録を残す。過去分は復元できないので、以後の記録から始める",
+          "key": "no-deploy-record",
+          "fingerprint": "e3ead7ea6804288e"
+        },
+        {
+          "id": "D5-03",
+          "severity": "High",
+          "fact": "未pushのコミットが 2 件ある。この状態で本番へ出すと、**本番にしか存在しないコードができる**（リモートを見ても再現できない）",
+          "evidence": [
+            "origin/fix/quality-gate-false-pass..HEAD"
+          ],
+          "remediation": "push してから出す。出す必要があるなら、何がリモートに無いのかを記録して人間が承認する",
+          "key": "unpushed-vs-production",
+          "fingerprint": "9803cd57afdc67fe"
+        },
+        {
+          "id": "D5-03",
+          "severity": "Medium",
+          "fact": "作業ツリーに 10 件の差分がある。いま出せばリポジトリに存在しないファイルが本番へ入る",
+          "evidence": [
+            "git status --porcelain: 10 件"
+          ],
+          "remediation": "コミットしてから出す。または deploy-gate の記録に残したうえで人間が承認する",
+          "key": "dirty-tree-vs-production",
+          "fingerprint": "0980ff8e1d4c84c4"
+        }
+      ]
+    },
+    {
+      "id": "D6-01",
+      "domain": "データ取扱い",
+      "title": "個人情報が追跡下・履歴に混入していないか",
+      "status": "done",
+      "examined": "追跡ファイル（作業ツリー） を走査: 検査 1033 件 / 除外 1 件 / 中身未検査 7 件。allowlist 除外 236 件",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D6-01",
+          "severity": "Medium",
+          "fact": "中身を検査できなかったファイルが 7 件ある（安全だと言っていない）",
+          "evidence": [
+            "public/brand/icon_64.png",
+            "public/brand/logo_black.png",
+            "public/brand/logo_gradient.png",
+            "public/brand/logo_gradient_720.png",
+            "public/brand/logo_white.png",
+            "public/brand/logo_ydb.png"
+          ],
+          "remediation": "検査できる形式へ変換するか、リポジトリの外へ出す",
+          "key": "unchecked-files",
+          "fingerprint": "a7c866a6816ef3ec"
+        }
+      ]
+    },
+    {
+      "id": "D6-02",
+      "domain": "データ取扱い",
+      "title": "確定パターンのシークレットが追跡下に入っていないか",
+      "status": "done",
+      "examined": "追跡ファイル 1034 件のうち 1026 件を 11 種の確定パターンへ突合（8 件は形式・除外対象でスキップ）。汎用のシークレット検出は範囲外（gitleaks=未確認/無し）。allowlist で除外 1 件",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D6-02",
+          "severity": "Low",
+          "fact": "確定パターン 11 種では秘密を検出しなかった（これは秘密が無いことの証明ではない。独自形式のトークンは対象外）",
+          "evidence": [
+            "D6-02 の走査範囲"
+          ],
+          "remediation": "必要なら gitleaks / detect-secrets を併用する",
+          "key": "secret-scope-limit",
+          "fingerprint": "c1b181399d96f7b5"
+        }
+      ]
+    },
+    {
+      "id": "D7-01",
+      "domain": "監査の独立性",
+      "title": "配置済みの監査基盤が導入後に改変されていないか",
+      "status": "done",
+      "examined": "`.audit/MANIFEST.sha256` の 14 件について、現物のsha256を再計算し、さらにツール側 templates/ の雛形と突合（一致 12 / 改変 1 / 欠落 0 / 雛形差 1）",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D7-01",
+          "severity": "Critical",
+          "fact": "`AGENTS.md` が導入時のハッシュと一致しない（導入後に書き換えられている）",
+          "evidence": [
+            "AGENTS.md"
+          ],
+          "remediation": "改変を戻す（kurosaki install --force で正本から再配置）。改変が意図的なら人間のコミットとして記録し、マニフェストを更新する",
+          "key": "audit-file-modified:AGENTS.md",
+          "fingerprint": "95ce3870bd91b711"
+        },
+        {
+          "id": "D7-01",
+          "severity": "Medium",
+          "fact": "`.audit/allowlist.yml` は改変されていないが、ツール側の雛形と内容が違う（雛形が更新された）",
+          "evidence": [
+            ".audit/allowlist.yml"
+          ],
+          "remediation": "kurosaki install で最新の雛形へ更新する",
+          "key": "audit-file-stale:.audit/allowlist.yml",
+          "fingerprint": "acb31ac0292aa9b7"
+        }
+      ]
+    },
+    {
+      "id": "D7-02",
+      "domain": "監査の独立性",
+      "title": "allowlist が抜け道になっていないか",
+      "status": "done",
+      "examined": "`.audit/allowlist.yml` を読み、有効 67 件／無効 0 件を判定（広すぎるパス 0 / 全ルール除外 0 / 指紋指定なし 0 / 期限なし 0）。直近の変更者: Yuji Matsushita, Yuji Matsushita, Yuji Matsushita",
+      "reason": null,
+      "observations": [
+        {
+          "id": "D7-02",
+          "severity": "High",
+          "fact": "allowlist が人間以外の名義で変更されている（`Yuji Matsushita`）。AIが自分に対する例外を書ける状態",
+          "evidence": [
+            ".audit/allowlist.yml @ 1ad2d97"
+          ],
+          "remediation": "allowlist の変更は人間のコミットに限る（CODEOWNERS とレビュー必須で強制する）",
+          "key": "allowlist-ai-authored:1ad2d97",
+          "fingerprint": "d1b12adac088ffb7"
+        }
+      ]
+    },
+    {
+      "id": "D7-03",
+      "domain": "監査の独立性",
+      "title": "過去の監査調書が改変されていないか（ハッシュ連鎖）",
+      "status": "done",
+      "examined": "`.audit/reports` の調書 19 件について、自己ハッシュと前後の連鎖を検証（不整合 0 件）",
+      "reason": null,
+      "observations": []
+    }
+  ],
+  "observations": [
+    {
+      "id": "D2-01",
+      "severity": "High",
+      "fact": "実データ候補 1 件が作業ツリーにあり、追跡外である（＝`.gitignore` の1行が唯一の防壁。ignore を1行崩せば公開される）",
+      "evidence": [
+        "app/people/.DS_Store"
+      ],
+      "remediation": "実データはリポジトリの外（別ディレクトリ・別ボリューム）へ移し、リポジトリ内には受け入れ口を置かない。ignore に依存した保護をやめる",
+      "key": "realdata-in-worktree",
+      "fingerprint": "c9b0d88a7637ac2f",
+      "repeat_count": 2
+    },
+    {
+      "id": "D2-02",
+      "severity": "Medium",
+      "fact": "本番投入用データ（人物データは検出されず） が追跡下にある（8 件）",
+      "evidence": [
+        "db/seeds/0002_season_2026.production.sql",
+        "db/seeds/0003_season_2027.production.sql",
+        "db/seeds/0005_season2_special_selection.production.sql",
+        "db/seeds/0006_season3_align_to_season2.production.sql",
+        "db/seeds/0007_season3_target.production.sql",
+        "db/seeds/0008_group_interview_criteria.production.sql",
+        "db/seeds/0009_season3_partner_status.production.sql",
+        "db/seeds/0010_document_screening_criteria.production.sql"
+      ],
+      "remediation": "追跡から外し、必要なら履歴からの除去を人間の承認のもとで行う（.audit/IRREVERSIBLE_OPS.md）",
+      "key": "tracked-forbidden:本番投入用データ（人物データは検出されず）",
+      "fingerprint": "2f33c6d9c32cc5b5",
+      "repeat_count": 19
+    },
+    {
+      "id": "D3-05",
+      "severity": "High",
+      "fact": "`ymatsushita-creator/YDB`（公開）の `fix/quality-gate-false-pass` にブランチ保護が無い（保護APIは公開リポジトリで利用可能。応答は未保護を意味する）",
+      "evidence": [
+        "GitHub ブランチ保護設定"
+      ],
+      "remediation": "監査ジョブを required status check にし、人間のレビューを必須にする",
+      "key": "unprotected-branch:ymatsushita-creator/YDB",
+      "fingerprint": "0b18504613100db4",
+      "repeat_count": 0
+    },
+    {
+      "id": "D3-06",
+      "severity": "High",
+      "fact": "公開リモート `origin=ymatsushita-creator/YDB` がある。ここへ push されたものは即時に公開される（履歴に入れば削除しても公開済みの事実は消えない）",
+      "evidence": [
+        "git remote -v"
+      ],
+      "remediation": "公開先を持つ必要があるなら、公開先へ push する前段に監査の合格を必須にする。不要なら公開リモートを外す（リポジトリ設定の変更は人間が行う）",
+      "key": "public-remote:origin=ymatsushita-creator/YDB",
+      "fingerprint": "8de71aca6fd7339b",
+      "repeat_count": 0
+    },
+    {
+      "id": "D5-03",
+      "severity": "High",
+      "fact": "本番へ出した記録が1件も無い。いつ・どのコミット・どの未コミット差分を出したのかを事後に確認できない",
+      "evidence": [
+        ".audit/deploys"
+      ],
+      "remediation": "deploy-gate を通して記録を残す。過去分は復元できないので、以後の記録から始める",
+      "key": "no-deploy-record",
+      "fingerprint": "e3ead7ea6804288e",
+      "repeat_count": 19
+    },
+    {
+      "id": "D5-03",
+      "severity": "High",
+      "fact": "未pushのコミットが 2 件ある。この状態で本番へ出すと、**本番にしか存在しないコードができる**（リモートを見ても再現できない）",
+      "evidence": [
+        "origin/fix/quality-gate-false-pass..HEAD"
+      ],
+      "remediation": "push してから出す。出す必要があるなら、何がリモートに無いのかを記録して人間が承認する",
+      "key": "unpushed-vs-production",
+      "fingerprint": "9803cd57afdc67fe",
+      "repeat_count": 9
+    },
+    {
+      "id": "D5-03",
+      "severity": "Medium",
+      "fact": "作業ツリーに 10 件の差分がある。いま出せばリポジトリに存在しないファイルが本番へ入る",
+      "evidence": [
+        "git status --porcelain: 10 件"
+      ],
+      "remediation": "コミットしてから出す。または deploy-gate の記録に残したうえで人間が承認する",
+      "key": "dirty-tree-vs-production",
+      "fingerprint": "0980ff8e1d4c84c4",
+      "repeat_count": 18
+    },
+    {
+      "id": "D6-01",
+      "severity": "Medium",
+      "fact": "中身を検査できなかったファイルが 7 件ある（安全だと言っていない）",
+      "evidence": [
+        "public/brand/icon_64.png",
+        "public/brand/logo_black.png",
+        "public/brand/logo_gradient.png",
+        "public/brand/logo_gradient_720.png",
+        "public/brand/logo_white.png",
+        "public/brand/logo_ydb.png"
+      ],
+      "remediation": "検査できる形式へ変換するか、リポジトリの外へ出す",
+      "key": "unchecked-files",
+      "fingerprint": "a7c866a6816ef3ec",
+      "repeat_count": 19
+    },
+    {
+      "id": "D6-02",
+      "severity": "Low",
+      "fact": "確定パターン 11 種では秘密を検出しなかった（これは秘密が無いことの証明ではない。独自形式のトークンは対象外）",
+      "evidence": [
+        "D6-02 の走査範囲"
+      ],
+      "remediation": "必要なら gitleaks / detect-secrets を併用する",
+      "key": "secret-scope-limit",
+      "fingerprint": "c1b181399d96f7b5",
+      "repeat_count": 19
+    },
+    {
+      "id": "D7-01",
+      "severity": "Critical",
+      "fact": "`AGENTS.md` が導入時のハッシュと一致しない（導入後に書き換えられている）",
+      "evidence": [
+        "AGENTS.md"
+      ],
+      "remediation": "改変を戻す（kurosaki install --force で正本から再配置）。改変が意図的なら人間のコミットとして記録し、マニフェストを更新する",
+      "key": "audit-file-modified:AGENTS.md",
+      "fingerprint": "95ce3870bd91b711",
+      "repeat_count": 6
+    },
+    {
+      "id": "D7-01",
+      "severity": "Medium",
+      "fact": "`.audit/allowlist.yml` は改変されていないが、ツール側の雛形と内容が違う（雛形が更新された）",
+      "evidence": [
+        ".audit/allowlist.yml"
+      ],
+      "remediation": "kurosaki install で最新の雛形へ更新する",
+      "key": "audit-file-stale:.audit/allowlist.yml",
+      "fingerprint": "acb31ac0292aa9b7",
+      "repeat_count": 18
+    },
+    {
+      "id": "D7-02",
+      "severity": "High",
+      "fact": "allowlist が人間以外の名義で変更されている（`Yuji Matsushita`）。AIが自分に対する例外を書ける状態",
+      "evidence": [
+        ".audit/allowlist.yml @ 1ad2d97"
+      ],
+      "remediation": "allowlist の変更は人間のコミットに限る（CODEOWNERS とレビュー必須で強制する）",
+      "key": "allowlist-ai-authored:1ad2d97",
+      "fingerprint": "d1b12adac088ffb7",
+      "repeat_count": 0
+    }
+  ],
+  "prev_digest": "2d98fbd118032ba42b19278e7bad95745b5eb2507cd0be26a25186b47d298faa",
+  "saved_at": "2026-08-20T23:26:45+00:00",
+  "self_digest": "5ee632be2974ecf8f4d8ea1809a4f7951797b16b59009f7295e9aa4ac2e327f2"
+}
