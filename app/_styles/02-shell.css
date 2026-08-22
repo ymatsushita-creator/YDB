@@ -25,7 +25,7 @@
   column-gap: 0;
   height: 100vh;
   overflow: hidden;
-  background: var(--color-canvas-soft);
+  background: var(--color-canvas-dark);
 }
 .hh-frame > * { min-height: 0; }
 

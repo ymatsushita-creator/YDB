@@ -63,8 +63,8 @@
 html, body {
   margin: 0;
   padding: 0;
-  /* 既定の面は canvas-soft（DESIGN.md「Default soft page surface」）。 */
-  background: var(--color-canvas-soft);
+  /* ログイン画面と同じダーク背景（--color-canvas-dark : #050505） */
+  background: var(--color-canvas-dark);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--type-body-sm-font-size);
