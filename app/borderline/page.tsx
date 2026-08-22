@@ -43,11 +43,13 @@ export default async function BorderlinePage({
 }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams
   const db = await getDb()
-  const showAi = await currentTier() === 'all'
-
-  const seasons = await listSeasons(db)
-  const season = (await getSeason(db, sp.season))
-    ?? defaultSeason(seasons)
+  const [tier, seasons, seasonByParam] = await Promise.all([
+    currentTier(),
+    listSeasons(db),
+    sp.season ? getSeason(db, sp.season) : Promise.resolve(null),
+  ])
+  const showAi = tier === 'all'
+  const season = seasonByParam ?? defaultSeason(seasons)
 
   if (!season) {
     return (

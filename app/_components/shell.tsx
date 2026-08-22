@@ -156,6 +156,7 @@ export async function Shell({
             <Fragment key={t.id}>
               <Link
                 href={tabHref(t.href)}
+                prefetch={true}
                 className={t.id === active ? 'sidebar-item-active btn-physical' : 'sidebar-item btn-physical'}
                 aria-current={t.id === active ? 'page' : undefined}
               >
@@ -278,6 +279,7 @@ export async function Shell({
           <Link
             key={t.id}
             href={tabHref(t.href)}
+            prefetch={true}
             className={t.id === active ? 'mobile-nav-item active' : 'mobile-nav-item'}
             aria-current={t.id === active ? 'page' : undefined}
           >

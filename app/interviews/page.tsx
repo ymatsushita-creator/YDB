@@ -28,9 +28,11 @@ export default async function InterviewsPage({
   const sp = await searchParams
   const db = await getDb()
 
-  const seasons = await listSeasons(db)
-  const season = (await getSeason(db, sp.season))
-    ?? defaultSeason(seasons)
+  const [seasons, seasonByParam] = await Promise.all([
+    listSeasons(db),
+    sp.season ? getSeason(db, sp.season) : Promise.resolve(null),
+  ])
+  const season = seasonByParam ?? defaultSeason(seasons)
 
   if (!season) {
     return (

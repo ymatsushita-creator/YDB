@@ -24,14 +24,14 @@ export default async function ApproachPage(
 ) {
   const sp = await searchParams
   const db = await getDb()
-  const seasons = await listSeasons(db)
+  const [seasons, seasonByParam] = await Promise.all([
+    listSeasons(db),
+    sp.season ? getSeason(db, sp.season) : Promise.resolve(null),
+  ])
   if (seasons.length === 0) {
     return <Shell active="approach"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
-
-  const season =
-    (await getSeason(db, sp.season)) ??
-    defaultSeason(seasons)!
+  const season = seasonByParam ?? defaultSeason(seasons)!
 
   const [partners, totals, attribution, partnerRows, options] = await Promise.all([
     getPartnerReach(db, season.id),
