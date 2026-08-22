@@ -15,8 +15,8 @@
      **欄でないものを除く**書き方にする。 */
 /* ★ 入力欄の既定寸法。ゆとりある縦幅と快適な余白 */
 input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='image']):not([type='range']):not([type='color']),
-select, textarea,
-.text-input, .score-input, .rationale-input, .memo-field, .iv-field, .iv-field-wide {
+select,
+.text-input, .score-input, .rationale-input, .memo-field {
   width: auto;
   max-width: 100%;
   min-width: 0;
@@ -24,7 +24,7 @@ select, textarea,
   padding: 0 14px;
   background-color: #ffffff;
   color: #202124;
-  border: 1px solid #dadce0;
+  border: 1px solid #e5e7eb;
   border-radius: 20px;
   font-size: var(--type-body-sm-font-size);
   line-height: var(--type-body-sm-line-height);
@@ -45,16 +45,18 @@ input:focus, select:focus, textarea:focus, .text-input:focus {
 .kpi-add-form input:not([type='hidden']), .kpi-add-form select,
 .kpi-edit-form input:not([type='hidden']), .kpi-edit-form select,
 .conf-form input:not([type='hidden']), .attend-form input:not([type='hidden']),
-.iv-field, .iv-field-wide, .memo-field, .login-input, textarea {
+.memo-field, .login-input, textarea {
   width: 100%;
 }
 
 textarea, .memo-field {
-  height: auto;
-  min-height: 84px;
-  padding: var(--space-xs) 14px;
+  height: auto !important;
+  min-height: 90px;
+  padding: 10px 14px !important;
   resize: vertical;
-  line-height: var(--type-body-md-line-height);
+  border-radius: 12px !important;
+  border: 1px solid #e5e7eb;
+  line-height: 1.5;
 }
 
 input::placeholder, textarea::placeholder { color: var(--color-mute); }
@@ -108,11 +110,56 @@ label { color: var(--color-body); font-size: var(--type-caption-font-size); font
 .decide-form select { width: auto; height: 30px; }
 
 /* 面接シート */
-.iv-grid { display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.iv-field-wide { grid-column: 1 / -1; }
-.iv-radios { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
-.iv-radio { display: inline-flex; align-items: center; gap: var(--space-xxs); font-size: var(--type-body-sm-font-size); color: var(--color-ink); }
-.iv-radio input { width: auto; height: auto; }
+.iv-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: var(--space-md);
+}
+.iv-field, .iv-field-wide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: auto !important;
+  min-height: 0;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.iv-field-wide {
+  grid-column: 1 / -1;
+}
+.iv-radios {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-sm);
+}
+.iv-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 6px 12px;
+  background: var(--color-canvas-soft-2);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+}
+.iv-radio input[type='radio'] {
+  width: 16px !important;
+  height: 16px !important;
+  accent-color: #1a73e8;
+}
 
 /* メモの履歴 */
 .memo-list, .note-history-list { display: flex; flex-direction: column; }
