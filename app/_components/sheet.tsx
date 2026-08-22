@@ -200,7 +200,7 @@ export function Sheet({
 
       {/* スプレッドシートツールバー（検索バー＋保存アクション） */}
       <div className="sheet-filter-bar">
-        <div style={{ display: 'flex', gap: 'var(--space-xs)', alignItems: 'center' }}>
+        <div className="sheet-tool-group">
           <input
             type="text"
             className="text-input"
@@ -210,19 +210,19 @@ export function Sheet({
             style={{ maxWidth: '240px' }}
           />
           {filterText && (
-            <button type="button" className="button-secondary-sm" onClick={() => setFilterText('')}>
+            <button type="button" className="button-secondary" onClick={() => setFilterText('')}>
               クリア
             </button>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 'var(--space-xs)', alignItems: 'center' }}>
+        <div className="sheet-tool-group">
           {isDirty && (
             <span style={{ fontSize: '12px', color: 'var(--color-brand-cyan-deep)', fontWeight: 600 }}>
               ● 未保存の変更
             </span>
           )}
-          <button type="button" className="btn-physical" onClick={addRow}>{addLabel}</button>
+          <button type="button" className="button-secondary" onClick={addRow}>{addLabel}</button>
           <button type="submit" className="button-primary" disabled={pending}>
             {pending ? '保存中…' : 'まとめて保存'}
           </button>
@@ -330,7 +330,7 @@ export function Sheet({
       )}
 
       <div className="sheet-actions">
-        <button type="button" className="btn-physical" onClick={addRow}>{addLabel}</button>
+        <button type="button" className="button-secondary" onClick={addRow}>{addLabel}</button>
         <button type="submit" className="button-primary" disabled={pending}>
           {pending ? '保存している…' : 'まとめて保存'}
         </button>
