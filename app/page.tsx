@@ -5,6 +5,7 @@ import { currentTier } from '../src/auth/current.ts'
 import { canOpen, type Tier } from '../src/auth/tiers.ts'
 import {
   listSeasons, defaultSeason, getSeason, getHomeTrends, hasScoringRules, getSummary,
+  listAcceptedCandidates,
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
 import { listKpis } from '../src/queries/kpi.ts'
@@ -91,13 +92,14 @@ export default async function Home(
     )
   }
 
-  const [trends, picks, hasRules, summary, kpis, kpiMetrics] = await Promise.all([
+  const [trends, picks, hasRules, summary, kpis, kpiMetrics, accepted] = await Promise.all([
     getHomeTrends(db, season.id),
     listConfidence(db, season.id, 3),
     hasScoringRules(db),
     getSummary(db, season.id),
     listKpis(db, season.id),
     listKpiMetrics(db),
+    listAcceptedCandidates(db, season.id, 5),
   ])
   const canEditKpi = tier === 'all'
 
@@ -219,6 +221,30 @@ export default async function Home(
                     <small>{kpi.variable}</small>
                     {kpi.memo && <p>{kpi.memo}</p>}
                   </article>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div className="section">
+          <Card title={`合格者 (${accepted.length})`} titleHref={to('/people')}>
+            {accepted.length === 0 ? (
+              <Empty>この年度の合格者はまだ居ない</Empty>
+            ) : (
+              <div className="accepted-list">
+                {accepted.map((a) => (
+                  <Link key={a.person_id} className="accepted-card"
+                        href={`/people/${a.person_id}?season=${season.id}`}>
+                    <span className="accepted-head">
+                      <Avatar src={a.photo_data_url} name={a.person_name} />
+                      <span className="accepted-info">
+                        <span className="accepted-name">{a.person_name}</span>
+                        <span className="accepted-school">{a.school}</span>
+                      </span>
+                    </span>
+                    <span className="badge-tag badge-tag-green">合格</span>
+                  </Link>
                 ))}
               </div>
             )}

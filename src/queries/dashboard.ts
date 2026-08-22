@@ -769,3 +769,28 @@ export const listCourseTargets = (
       FROM recruitment_course_targets
      WHERE season_id = $1
      ORDER BY sort_order`, [seasonId])
+
+export interface AcceptedCandidateRow {
+  person_id: string
+  application_id: string
+  person_name: string
+  photo_data_url: string | null
+  school: string
+}
+
+export const listAcceptedCandidates = (
+  db: Db, seasonId: string, limit = 5,
+): Promise<AcceptedCandidateRow[]> =>
+  all<AcceptedCandidateRow>(db, `
+    SELECT p.id AS person_id,
+           a.id AS application_id,
+           p.name AS person_name,
+           p.photo_data_url,
+           p.school
+      FROM applications a
+      JOIN persons p ON p.id = a.person_id
+      JOIN v_application_outcome o ON o.application_id = a.id
+     WHERE a.season_id = $1 AND o.outcome = 'accepted'
+     ORDER BY p.name ASC
+     LIMIT $2`, [seasonId, limit])
+
