@@ -13,14 +13,15 @@
      `input[type='text']` だけを狙うと、その欄だけ枠が消えて
      下線1本のように見えた（KPI を追加する画面で実際にそうなった）。
      **欄でないものを除く**書き方にする。 */
+/* ★ 入力欄の既定寸法。ゆとりある縦幅と快適な余白 */
 input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='image']):not([type='range']):not([type='color']),
 select, textarea,
 .text-input, .score-input, .rationale-input, .memo-field, .iv-field, .iv-field-wide {
   width: auto;
   max-width: 100%;
   min-width: 0;
-  height: 36px;
-  padding: 0 16px;
+  height: 40px;
+  padding: 0 14px;
   background-color: #ffffff;
   color: #202124;
   border: 1px solid #dadce0;
@@ -50,16 +51,12 @@ input:focus, select:focus, textarea:focus, .text-input:focus {
 
 textarea, .memo-field {
   height: auto;
-  min-height: 72px;
-  padding: var(--space-xs) var(--space-sm);
+  min-height: 84px;
+  padding: var(--space-xs) 14px;
   resize: vertical;
   line-height: var(--type-body-md-line-height);
 }
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--color-brand-cyan);
-  box-shadow: 0 0 0 3px var(--color-brand-cyan-soft);
-}
+
 input::placeholder, textarea::placeholder { color: var(--color-mute); }
 input[disabled], select[disabled], textarea[disabled] {
   background-color: var(--color-canvas-soft-2);
@@ -68,23 +65,23 @@ input[disabled], select[disabled], textarea[disabled] {
 
 input[type='hidden'] { display: none; }
 /* ラベルが欄をくるむ形（`<label>題名<input></label>`）が多い。
-   縦に積んで、字を上に置く。 */
+   縦に積んで、字を上に置く。ラベルと欄の間隔をゆったり確保する。 */
 .kpi-add-form label, .kpi-edit-form label, .profile-edit-form label,
 .memo-form label, .conf-form label, .attend-form label, .iv-grid label {
-  display: flex; flex-direction: column; gap: var(--space-xxs);
+  display: flex; flex-direction: column; gap: var(--space-xs);
 }
-label { color: var(--color-body); font-size: var(--type-caption-font-size); line-height: var(--type-caption-line-height); }
+label { color: var(--color-body); font-size: var(--type-caption-font-size); font-weight: 500; line-height: var(--type-caption-line-height); }
 
 /* 直せる場所。**面を塗らず、破線の枠で囲む。** */
 .editable-region {
   position: relative;
-  display: flex; flex-direction: column; gap: var(--space-sm);
+  display: flex; flex-direction: column; gap: var(--space-md);
 }
 .editable-region::before {
   display: none !important;
 }
 .editable-inline input, .editable-inline select, .editable-inline textarea {
-  height: 30px;
+  height: 34px;
   padding: 0 var(--space-xs);
   font-size: var(--type-body-sm-font-size);
 }
@@ -95,7 +92,7 @@ label { color: var(--color-body); font-size: var(--type-caption-font-size); line
   font-size: var(--type-body-sm-font-size);
 }
 .profile-edit-form, .kpi-edit-form, .kpi-add-form, .conf-form, .attend-form, .memo-form {
-  display: flex; flex-direction: column; gap: var(--space-sm);
+  display: flex; flex-direction: column; gap: var(--space-md);
 }
 .memo-fields { display: grid; gap: var(--space-xs); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 
