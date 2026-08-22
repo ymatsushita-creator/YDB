@@ -25,7 +25,7 @@
   column-gap: 0;
   height: 100vh;
   overflow: hidden;
-  background: var(--color-canvas-dark);
+  background: var(--color-canvas-soft);
 }
 .hh-frame > * { min-height: 0; }
 
@@ -213,13 +213,14 @@
   min-width: 0; height: 100%; min-height: 0;
   overflow: hidden;
   padding: 0 var(--space-lg) var(--space-lg);
+  gap: 20px;
 }
 /* 一覧画面（`.hh-grid` を持たない画面）は外枠を送る。 */
 .hh-main:not(:has(> .hh-grid)) { overflow-y: auto; }
-.hh-main:not(:has(> .hh-grid)) > .section { flex: 0 0 auto; min-height: 0; overflow: visible; }
+.hh-main:not(:has(> .hh-grid)) > .section { flex: 0 0 auto; min-height: 0; overflow: visible; margin-bottom: 8px; }
 
-.hh-main > .page-head, .hh-main > .cockpit-head { flex: 0 0 auto; }
-.hh-main > .grid, .hh-main > .callout { flex: 0 0 auto; }
+.hh-main > .page-head, .hh-main > .cockpit-head { flex: 0 0 auto; margin-bottom: 4px; }
+.hh-main > .grid, .hh-main > .callout { flex: 0 0 auto; margin-bottom: 8px; }
 .hh-main > .section { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 .hh-main > .section-fixed { flex: 0 0 auto; overflow: visible; }
 
