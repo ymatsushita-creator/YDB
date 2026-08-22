@@ -162,17 +162,34 @@ const PARTNER_CATEGORY_OPTIONS = [
       </div>
 
       <div className="section section-fixed" style={{ marginTop: 'var(--space-md)' }}>
-        <div className="bl-tabs">
-          <Link href={tabHref('list')}
-                className={view !== 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
-                aria-current={view !== 'partner' ? 'page' : undefined}>
-            連携団体一覧・編集
-          </Link>
-          <Link href={tabHref('partner')}
-                className={view === 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
-                aria-current={view === 'partner' ? 'page' : undefined}>
-            団体別のリーチ
-          </Link>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="bl-tabs">
+            <Link href={tabHref('list')}
+                  className={view !== 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
+                  aria-current={view !== 'partner' ? 'page' : undefined}>
+              連携団体一覧・編集
+            </Link>
+            <Link href={tabHref('partner')}
+                  className={view === 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
+                  aria-current={view === 'partner' ? 'page' : undefined}>
+              団体別のリーチ
+            </Link>
+          </div>
+          <form method="get" action="/approach" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input type="hidden" name="season" value={season.id} />
+            <input type="hidden" name="view" value={view} />
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              placeholder="団体名・区分で検索..."
+              className="text-input"
+              style={{ height: 36, fontSize: 13, minWidth: 200 }}
+            />
+            <button type="submit" className="button-secondary" style={{ height: 36, padding: '0 12px', fontSize: 13 }}>
+              検索
+            </button>
+          </form>
         </div>
       </div>
 

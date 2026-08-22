@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import {
   listSeasons, defaultSeason, getSeason, getPendingEvaluations, getHeldEvaluations,
@@ -9,7 +10,7 @@ import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell
 export const dynamic = 'force-dynamic'
 
 export default async function OperationsPage(
-  { searchParams }: { searchParams: Promise<{ season?: string }> },
+  { searchParams }: { searchParams: Promise<{ season?: string; filter?: string }> },
 ) {
   const db = await getDb()
   const seasons = await listSeasons(db)
@@ -17,9 +18,11 @@ export default async function OperationsPage(
     return <Shell active="borderline"><Empty>年度が登録されていない。<code>pnpm db:reset</code> を実行する。</Empty></Shell>
   }
 
+  const params = await searchParams
   const season =
-    (await getSeason(db, (await searchParams).season)) ??
+    (await getSeason(db, params.season)) ??
     defaultSeason(seasons)!
+  const filter = params.filter ?? 'all'
 
   const [pending, held, load, conflicts, unassigned] = await Promise.all([
     getPendingEvaluations(db, season.id),
@@ -31,6 +34,12 @@ export default async function OperationsPage(
 
   const overSla = pending.filter((p) => p.over_sla)
   const unassignedCount = Number(unassigned?.count ?? 0)
+
+  const filteredPending = pending.filter((p) => {
+    if (filter === 'over_sla') return p.over_sla
+    if (filter === 'unassigned') return !p.interviewer
+    return true
+  })
 
   return (
     <Shell active="borderline" seasonId={season.id}
@@ -82,8 +91,27 @@ export default async function OperationsPage(
       )}
 
       <div className="section">
-        <Card title="判断待ちの評価">
-          {pending.length === 0 ? <Empty>判断待ちの評価はない</Empty> : (
+        <Card title={`判断待ちの評価（${num(filteredPending.length)} 件）`}>
+          {pending.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+              <Link href={`/operations?season=${season.id}&filter=all`}
+                    className={filter === 'all' ? 'badge-tag-purple' : 'badge-tag-gray'}
+                    style={{ textDecoration: 'none', padding: '4px 10px', fontSize: 12 }}>
+                すべて ({num(pending.length)})
+              </Link>
+              <Link href={`/operations?season=${season.id}&filter=over_sla`}
+                    className={filter === 'over_sla' ? 'badge-tag-purple' : 'badge-tag-gray'}
+                    style={{ textDecoration: 'none', padding: '4px 10px', fontSize: 12 }}>
+                SLA超過 ({num(overSla.length)})
+              </Link>
+              <Link href={`/operations?season=${season.id}&filter=unassigned`}
+                    className={filter === 'unassigned' ? 'badge-tag-purple' : 'badge-tag-gray'}
+                    style={{ textDecoration: 'none', padding: '4px 10px', fontSize: 12 }}>
+                担当未割当 ({num(unassignedCount)})
+              </Link>
+            </div>
+          )}
+          {filteredPending.length === 0 ? <Empty>該当する評価はありません</Empty> : (
             <div className="table-wrap">
               <table className="data">
                 <thead>
@@ -96,9 +124,7 @@ export default async function OperationsPage(
                   </tr>
                 </thead>
                 <tbody>
-                  {/* ★ 40 件で黙って切っていた（実行⑫で直した）。
-                      全件出す ―― カードの中で送れるので、切る理由が無い。 */}
-                  {pending.map((p) => (
+                  {filteredPending.map((p) => (
                     <tr key={p.evaluation_id}>
                       <td>{p.applicant_name}</td>
                       <td className="nowrap">{p.step_order}. {p.step_name}</td>
