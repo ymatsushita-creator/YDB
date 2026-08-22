@@ -271,6 +271,20 @@ export async function Shell({
         )}
         {children}
       </div>
+
+      {/* モバイル用ボトムナビゲーションバー */}
+      <nav className="mobile-bottom-nav" aria-label="モバイルナビゲーション">
+        {tabs.map((t) => (
+          <Link
+            key={t.id}
+            href={tabHref(t.href)}
+            className={t.id === active ? 'mobile-nav-item active' : 'mobile-nav-item'}
+            aria-current={t.id === active ? 'page' : undefined}
+          >
+            <span>{t.label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }
