@@ -15,18 +15,27 @@ export default async function KpisPage({ searchParams }: {
 }) {
   const tier = await currentTier()
   const db = await getDb()
-  const seasons = await listSeasons(db)
   const params = await searchParams
-  const season = (await getSeason(db, params.season)) ?? defaultSeason(seasons)
+  const [seasons, seasonByParam] = await Promise.all([
+    listSeasons(db),
+    params.season ? getSeason(db, params.season) : Promise.resolve(null),
+  ])
+  const season = seasonByParam ?? defaultSeason(seasons)
   if (!season) return <Shell active="home"><Empty>期が登録されていない</Empty></Shell>
-  const kpis = await listKpis(db, season.id)
-  const metrics = await listKpiMetrics(db)
+
+  const [kpis, metrics] = await Promise.all([
+    listKpis(db, season.id),
+    listKpiMetrics(db),
+  ])
+
   // ★ 変数ごとの実績を、その期の記録から数える（0049。C-199）。
   //   数え方は `src/queries/kpi_metrics.ts` の1箇所だけにある。
-  const actuals = new Map<string, number | null>()
-  for (const m of new Set(kpis.map((k) => k.metric_key).filter(Boolean))) {
-    actuals.set(m!, await countKpiMetric(db, m, season.id))
-  }
+  // ★ Promise.all で並列にカウントを行い速度向上
+  const metricKeys = Array.from(new Set(kpis.map((k) => k.metric_key).filter(Boolean))) as string[]
+  const actualEntries = await Promise.all(
+    metricKeys.map(async (m) => [m, await countKpiMetric(db, m, season.id)] as const)
+  )
+  const actuals = new Map<string, number | null>(actualEntries)
   const editable = tier === 'all'
 
   return (

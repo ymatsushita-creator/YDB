@@ -36,9 +36,8 @@ export async function openPostgres(connectionString: string): Promise<Db> {
     // ★ 1本にしていたが、**それは画面の `Promise.all` を直列に戻していた**（C-147）。
     //   各ページは問い合わせを5〜6本まとめて投げる作りで、接続が1本なら
     //   1本ずつ順番に流れる。本番DBへの実測で、6往復が 114 ms → 50 ms。
-    //   3本にする理由は「速いから」ではなく、**画面が並列に投げているという
-    //   事実に接続の側を合わせるため**である。上限にはまだ充分遠い。
-    max: 3,
+    // 画面が並列に投げる Promise.all (5〜10件) の問い合わせを即時処理するため接続枠を10本にする。
+    max: 10,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
     allowExitOnIdle: true,

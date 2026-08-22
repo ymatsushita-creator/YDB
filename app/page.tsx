@@ -48,8 +48,11 @@ export default async function Home(
   if (tier === null) redirect('/headhunting')
 
   const db = await getDb()
-  const seasons = await listSeasons(db)
-  const season = (await getSeason(db, params.season)) ?? defaultSeason(seasons)
+  const [seasons, seasonByParam] = await Promise.all([
+    listSeasons(db),
+    params.season ? getSeason(db, params.season) : Promise.resolve(null),
+  ])
+  const season = seasonByParam ?? defaultSeason(seasons)
 
   if (tier === 'input') {
     return (
