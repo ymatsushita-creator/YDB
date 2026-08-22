@@ -46,10 +46,15 @@ const cache = globalThis as unknown as { __youthdb?: Promise<Db> }
  * Pilot に必要なもの（バックアップ・認証・DB の分離）は
  * docs/pilot/DEPLOY-READINESS.md にあり、どれも満たしていない。
  */
-export const isDemoMode = (): boolean =>
-  process.env.YOUTHDB_DEMO !== undefined
-    ? process.env.YOUTHDB_DEMO === '1'
-    : process.env.VERCEL === '1'
+export const isDemoMode = (): boolean => {
+  if (process.env.YOUTHDB_DEMO !== undefined) {
+    return process.env.YOUTHDB_DEMO === '1'
+  }
+  if (process.env.DATABASE_URL) {
+    return false
+  }
+  return process.env.VERCEL === '1'
+}
 
 /**
  * 使い捨ての DB を1つ組み立てる。
