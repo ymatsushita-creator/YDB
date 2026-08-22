@@ -150,8 +150,12 @@ table.candidate-unified-table th { white-space: nowrap; }
   background: var(--color-canvas-soft-2);
   border: 1px solid var(--color-hairline);
   border-radius: 12px;
-  margin-bottom: var(--space-xs);
+  margin-bottom: 16px !important;
   flex-wrap: wrap;
+}
+
+.sheet-wrap {
+  margin-bottom: 16px !important;
 }
 
 .sheet-tool-group {
@@ -289,7 +293,14 @@ table.data.sheet td textarea:focus {
   font-size: var(--type-body-sm-font-size);
 }
 .sheet-errors li { margin-bottom: 2px; }
-.sheet-actions { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
+.sheet-actions {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 16px !important;
+  margin-bottom: 8px !important;
+}
 
 
 
