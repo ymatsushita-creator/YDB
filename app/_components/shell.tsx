@@ -6,7 +6,6 @@ import { currentTier } from '../../src/auth/current.ts'
 import { canOpen } from '../../src/auth/tiers.ts'
 import { signOutAction } from '../login/actions.ts'
 import { backHref, seasonLabel, type Crumb } from './labels.ts'
-import { ThemeSwitcher } from './theme_switcher.tsx'
 
 // 画面はこの2つを `shell.tsx` から読んでいる。置き場所が変わっただけなので、
 // 呼び出し側は触らない（判定は `.ts` にある。テストで固定するため）。
@@ -210,7 +209,6 @@ export async function Shell({
         )}
 
         <div className="hh-sidebar-foot">
-          <ThemeSwitcher />
           {years}
           {/*
             デモかどうかは、URL を渡された人には確かめる手段が無い。
