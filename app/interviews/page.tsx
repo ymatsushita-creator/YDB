@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { getDb } from '../../src/db/server.ts'
 import { listSeasons, defaultSeason, getSeason } from '../../src/queries/dashboard.ts'
 import { listSeasonInterviews } from '../../src/queries/interview.ts'
-import { RECOMMENDATION_LABEL } from '../../src/commands/interview.ts'
 import { Card, Empty, num, jstDay } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
 import { Avatar } from '../_components/borderline.tsx'
@@ -21,6 +20,8 @@ export const dynamic = 'force-dynamic'
  * ★ 並びは「まだ書いていないものが先」。書き終えたシートは読み返す用で、
  *   この画面で急ぐのは**空いているシート**である。
  */
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
+
 export default async function InterviewsPage({
   searchParams,
 }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -40,7 +41,52 @@ export default async function InterviewsPage({
   }
 
   const rows = await listSeasonInterviews(db, season.id)
-  const unwritten = rows.filter((r) => !r.has_sheet).length
+  
+  // フィルター
+  const tab = one(sp.tab) ?? 'all'
+  const query = (one(sp.q) ?? '').trim().toLowerCase()
+  const stepFilter = one(sp.step) ?? ''
+
+  // 集計 KPI
+  const totalCount = rows.length
+  const unwrittenCount = rows.filter((r) => !r.has_sheet).length
+  const writtenCount = rows.filter((r) => r.has_sheet).length
+  const passCount = rows.filter((r) => r.recommendation === 'pass').length
+  const borderCount = rows.filter((r) => r.recommendation === 'border').length
+  const failCount = rows.filter((r) => r.recommendation === 'fail').length
+
+  // ステップ一覧
+  const steps = Array.from(new Set(rows.map((r) => r.step_name)))
+
+  // 絞り込み適用
+  let filtered = rows
+  if (tab === 'unwritten') {
+    filtered = filtered.filter((r) => !r.has_sheet)
+  } else if (tab === 'written') {
+    filtered = filtered.filter((r) => r.has_sheet)
+  }
+
+  if (stepFilter) {
+    filtered = filtered.filter((r) => r.step_name === stepFilter)
+  }
+
+  if (query) {
+    filtered = filtered.filter((r) => 
+      r.person_name.toLowerCase().includes(query) ||
+      r.school.toLowerCase().includes(query) ||
+      (r.interviewer_name?.toLowerCase().includes(query) ?? false)
+    )
+  }
+
+  const tabUrl = (t: string) => {
+    const params = new URLSearchParams()
+    if (season.id) params.set('season', season.id)
+    if (t !== 'all') params.set('tab', t)
+    if (stepFilter) params.set('step', stepFilter)
+    if (query) params.set('q', query)
+    const str = params.toString()
+    return `/interviews${str ? `?${str}` : ''}`
+  }
 
   return (
     <Shell
@@ -50,49 +96,120 @@ export default async function InterviewsPage({
     >
       <Breadcrumb
         root={seasonLabel(season)}
-        crumbs={[{ label: '面接' }]}
+        crumbs={[{ label: '面接・評価' }]}
       />
 
-      <div className="page-head">
+      <div className="page-head" style={{ marginBottom: 'var(--space-md)' }}>
         <div>
-          <h1 className="page-title">面接</h1>
+          <h1 className="page-title">面接・評価ダッシュボード</h1>
           <p className="page-sub">
-            {num(rows.length)} 件 ・ 未記入 {num(unwritten)} 件
+            {seasonLabel(season)} の面接進捗とシート記入状況の一覧
           </p>
         </div>
       </div>
 
+      {/* トップ KPI サマリーカード */}
+      <div className="grid grid-4" style={{ marginBottom: 'var(--space-md)' }}>
+        <div className="kpi-result-card">
+          <div className="kpi-label">総面接件数</div>
+          <div className="kpi-val">{num(totalCount)} <span className="kpi-unit">件</span></div>
+          <div className="section-note">配属された全評価シート</div>
+        </div>
+
+        <div className="kpi-result-card">
+          <div className="kpi-label">未記入（要対応）</div>
+          <div className="kpi-val" style={{ color: unwrittenCount > 0 ? '#d93025' : '#1f1f1f' }}>
+            {num(unwrittenCount)} <span className="kpi-unit">件</span>
+          </div>
+          <div className="section-note">{unwrittenCount > 0 ? '早めの記入を推奨' : 'すべて記入完了'}</div>
+        </div>
+
+        <div className="kpi-result-card">
+          <div className="kpi-label">評価記入済み</div>
+          <div className="kpi-val" style={{ color: '#188038' }}>
+            {num(writtenCount)} <span className="kpi-unit">件</span>
+          </div>
+          <div className="section-note">完了率 {totalCount ? Math.round((writtenCount / totalCount) * 100) : 0}%</div>
+        </div>
+
+        <div className="kpi-result-card">
+          <div className="kpi-label">判定内訳</div>
+          <div className="kpi-val" style={{ fontSize: '18px', gap: '8px', display: 'flex', alignItems: 'center' }}>
+            <span style={{ color: '#188038' }}>合格 {passCount}</span>
+            <span style={{ color: '#e37400' }}>保留 {borderCount}</span>
+            <span style={{ color: '#d93025' }}>見送 {failCount}</span>
+          </div>
+          <div className="section-note">面接官の最終所見</div>
+        </div>
+      </div>
+
       <div className="section">
-        <Card title="面接シート">
-          {rows.length === 0 ? <Empty>この期の面接はまだ無い</Empty> : (
+        <Card title={`面接シート一覧 (${filtered.length} 件)`}>
+          {/* 絞り込みタブ ＆ 検索バー */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+            <div className="bl-tabs">
+              <Link href={tabUrl('all')} className={`bl-tab ${tab === 'all' ? 'is-on' : ''}`}>
+                すべて ({totalCount})
+              </Link>
+              <Link href={tabUrl('unwritten')} className={`bl-tab ${tab === 'unwritten' ? 'is-on' : ''}`}>
+                未記入 ({unwrittenCount})
+              </Link>
+              <Link href={tabUrl('written')} className={`bl-tab ${tab === 'written' ? 'is-on' : ''}`}>
+                記入済み ({writtenCount})
+              </Link>
+            </div>
+
+            <form method="get" action="/interviews" className="conf-row" style={{ margin: 0, gap: 'var(--space-xs)' }}>
+              <input type="hidden" name="season" value={season.id} />
+              {tab !== 'all' && <input type="hidden" name="tab" value={tab} />}
+              
+              {steps.length > 0 && (
+                <select name="step" defaultValue={stepFilter} className="text-input" style={{ height: '34px', fontSize: '13px' }}>
+                  <option value="">すべてのステップ</option>
+                  {steps.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              )}
+
+              <input
+                className="text-input"
+                name="q"
+                defaultValue={query}
+                placeholder="候補者名・学校名で検索..."
+                style={{ width: '200px', height: '34px', fontSize: '13px' }}
+              />
+              <button type="submit" className="button-secondary button-secondary-sm" style={{ height: '34px' }}>検索</button>
+            </form>
+          </div>
+
+          {filtered.length === 0 ? <Empty>条件に該当する面接シートはありません</Empty> : (
             <div className="table-wrap">
               <table className="data">
                 <thead>
                   <tr>
                     <th>候補者</th>
-                    <th>段</th>
-                    <th>面接官</th>
+                    <th>選考ステップ</th>
+                    <th>担当面接官</th>
+                    <th>シート状態</th>
                     <th>面接日</th>
-                    {/* ★ ここに出るのは**点が付いた軸の数**である（`scored_criteria`）。
-                        「点」と書くと 4/4 が満点に見える ―― 実際の得点は 8/10 でも
-                        4/4 と出る（C-216。平社員ペルソナ試験でそう読んだ）。 */}
                     <th className="num">採点した軸</th>
-                    <th>所見</th>
+                    <th>面接官所見</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {filtered.map((r) => (
                     <tr key={r.evaluation_id}>
                       <td>
-                        <Link href={`/interviews/${r.evaluation_id}`} className="bl-person">
+                        <Link href={`/interviews/${r.evaluation_id}`} className="bl-person" style={{ fontWeight: 600 }}>
                           <Avatar src={r.photo_data_url} name={r.person_name} />
                           {r.person_name}
                         </Link>
                         <div className="section-note">{r.school}</div>
                       </td>
                       <td className="nowrap">
-                        {r.step_name}
+                        <span style={{ fontWeight: 500 }}>{r.step_name}</span>
                         {r.attempt > 1 && (
                           <span className="badge-tag-purple" style={{ marginLeft: 6 }}>
                             {r.attempt} 回目
@@ -102,22 +219,50 @@ export default async function InterviewsPage({
                       <td>{r.interviewer_name ?? (
                         <span className="badge-tag-orange">未割当</span>
                       )}</td>
+                      <td>
+                        {r.has_sheet ? (
+                          <span className="badge-tag-cyan" style={{ background: '#e6f4ea', color: '#137333', border: '1px solid #ceebe1' }}>
+                            記入完了
+                          </span>
+                        ) : (
+                          <span className="badge-tag-orange" style={{ background: '#fef7e0', color: '#b06000', border: '1px solid #fce8b2' }}>
+                            未記入
+                          </span>
+                        )}
+                      </td>
                       <td className="nowrap">
-                        {r.interviewed_on ? jstDay(r.interviewed_on) : '—'}
+                        {r.interviewed_on ? jstDay(r.interviewed_on) : <span className="section-note">未定</span>}
                       </td>
                       <td className="num">
-                        {num(r.scored_criteria)}
-                        <span className="section-note"> / {num(r.total_criteria)}</span>
+                        <span style={{ fontWeight: 600 }}>{num(r.scored_criteria)}</span>
+                        <span className="section-note"> / {num(r.total_criteria)} 軸</span>
                       </td>
                       <td>
-                        {r.recommendation
-                          ? RECOMMENDATION_LABEL[
-                            r.recommendation as keyof typeof RECOMMENDATION_LABEL]
-                          : <span className="section-note">—</span>}
+                        {r.recommendation ? (
+                          r.recommendation === 'pass' ? (
+                            <span className="badge-tag-cyan" style={{ background: '#e6f4ea', color: '#137333', border: '1px solid #ceebe1', fontWeight: 600 }}>
+                              合格
+                            </span>
+                          ) : r.recommendation === 'border' ? (
+                            <span className="badge-tag-orange" style={{ background: '#fef7e0', color: '#b06000', border: '1px solid #fce8b2', fontWeight: 600 }}>
+                              ボーダー
+                            </span>
+                          ) : (
+                            <span className="badge-tag-orange" style={{ background: '#fce8e6', color: '#c5221f', border: '1px solid #fad2cf', fontWeight: 600 }}>
+                              不合格
+                            </span>
+                          )
+                        ) : (
+                          <span className="section-note">未判定</span>
+                        )}
                       </td>
                       <td>
-                        <Link href={`/interviews/${r.evaluation_id}`}>
-                          {r.has_sheet ? '開く' : '書く'}
+                        <Link
+                          href={`/interviews/${r.evaluation_id}`}
+                          className={r.has_sheet ? 'button-secondary button-secondary-sm' : 'button-primary button-primary-sm'}
+                          style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+                        >
+                          {r.has_sheet ? '開く ›' : 'シートを書く ›'}
                         </Link>
                       </td>
                     </tr>

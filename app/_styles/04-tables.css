@@ -9,9 +9,9 @@
    ============================================================= */
 
 .table-wrap {
-  background: var(--color-canvas);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-md);
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
   overflow: hidden;
 }
 /* 表は自分の器の中で横に送る。**ページを横に送らせない。** */
@@ -26,28 +26,29 @@ table.data, table.hh-table, table.bl-table, table.candidate-unified-table {
   letter-spacing: var(--type-body-sm-letter-spacing);
 }
 
-/* 見出しは mono。**単位や母集団を書かない**（C-62）。 */
+/* 見出しは mono。Google Workspace Style Header */
 table.data th, table.hh-table th, table.bl-table th, table.candidate-unified-table th {
   position: sticky; top: 0; z-index: 1;
   text-align: left;
   padding: var(--space-xs) var(--space-sm);
-  background: var(--color-canvas-soft);
-  color: var(--color-body);
+  background: #f8f9fa;
+  color: #5f6368;
   font-family: var(--font-mono);
   font-size: var(--type-caption-mono-font-size);
-  font-weight: 400;
+  font-weight: 600;
   line-height: var(--type-caption-mono-line-height);
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-  border-bottom: 1px solid var(--color-hairline);
+  border-bottom: 1px solid #dadce0;
 }
 table.data td, table.hh-table td, table.bl-table td, table.candidate-unified-table td {
   padding: var(--space-xs) var(--space-sm);
-  border-bottom: 1px solid var(--color-hairline);
+  border-bottom: 1px solid #e8eaed;
   vertical-align: middle;
-  /* ★ 密な表は**畳まずに横へ送る**（器が `.scroll-pane` / `.table-wrap`）。
-       畳むと、列が狭いときに校名が1文字ずつ縦に割れる（実画面で割れた）。 */
   white-space: nowrap;
+}
+table.data tr:hover, table.hh-table tr:hover, table.bl-table tr:hover, table.candidate-unified-table tr:hover {
+  background-color: #f8f9fa;
 }
 /* 記録の本文が入る欄だけは畳む。 */
 table td .hh-memo, table td .memo-body, table td .task-detail,
@@ -83,7 +84,8 @@ td.num, th.num {
 .row-link { color: var(--color-ink); font-weight: var(--type-body-sm-strong-font-weight); }
 .row-link:hover { color: var(--color-brand-cyan-deep); }
 .row-detail { color: var(--color-body); font-size: var(--type-caption-font-size); }
-.candidate-row-actions { display: flex; gap: var(--space-xxs); justify-content: flex-end; }
+.candidate-row-actions { text-align: right; white-space: nowrap; vertical-align: middle; }
+.row-actions-wrap { display: inline-flex; align-items: center; gap: var(--space-xxs); justify-content: flex-end; }
 .candidate-photo-cell { width: 44px; }
 
 /* ★ 候補者一覧（編集できる全件表）は**列を潰さない**（C-193）。
@@ -126,37 +128,122 @@ table.candidate-unified-table th { white-space: nowrap; }
 .hh-more:hover { color: var(--color-brand-cyan-deep); }
 
 /* -------------------------------------------------------------
-   スプレッドシート形式の表（`sheet.tsx`）
-   見出しと先頭列を固定する。**入力の面は白のまま。**
+   スプレッドシート形式の表（`sheet.tsx`）―― Google Sheets / Excel 準拠
    ------------------------------------------------------------- */
 .sheet-wrap {
   max-height: 70vh;
   overflow: auto;
   background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-sm);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.sheet-form { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+.sheet-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--color-canvas-soft-2);
   border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-md);
+  border-radius: var(--rounded-sm);
+  margin-bottom: var(--space-xxs);
 }
-.sheet-form { display: flex; flex-direction: column; gap: var(--space-md); }
-.sheet-wrap th { position: sticky; top: 0; z-index: 2; }
-.sheet-lead {
-  position: sticky; left: 0; z-index: 1;
+
+table.data.sheet {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 13px;
   background: var(--color-canvas);
-  border-right: 1px solid var(--color-hairline);
-  text-align: left;
-  font-weight: var(--type-body-sm-strong-font-weight);
 }
-.sheet-lead-new { color: var(--color-mute); font-family: var(--font-mono); }
-.sheet-photo { width: 48px; min-width: 48px; text-align: center; }
+
+/* ヘッダー：Google Sheets 風のグレー塗り＋格子境界線 */
+table.data.sheet th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-canvas-soft-2);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-hairline-strong);
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* 行見出し (1, 2, 3 / 新規) : Excel の行番号カラム */
+table.data.sheet th.sheet-lead {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--color-canvas-soft-2);
+  border: 1px solid var(--color-hairline-strong);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-body);
+  font-weight: 500;
+  padding: 0 var(--space-xs);
+  min-width: 48px;
+}
+
+.sheet-lead-new { color: var(--color-mute); font-family: var(--font-mono); font-size: 11px; }
+
+table.data.sheet td {
+  padding: 0 !important;
+  border: 1px solid var(--color-hairline) !important;
+  background: var(--color-canvas);
+  vertical-align: middle;
+  position: relative;
+}
+
+/* セル内の入力欄：丸丸のボタン風ではなく、格子セルいっぱいに広がるシームレス入力 */
+table.data.sheet td input:not([type='checkbox']):not([type='hidden']),
+table.data.sheet td select {
+  width: 100%;
+  height: 36px;
+  margin: 0 !important;
+  padding: 0 var(--space-xs) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 13px;
+  color: var(--color-ink);
+  outline: none;
+}
+
+/* セルフォーカス時：Google Sheets 相当のアクティブな 青/Cyan 単色枠 ＋ 上層レイヤー表示 */
+table.data.sheet td:focus-within {
+  z-index: 10;
+}
+
+table.data.sheet td input:focus,
+table.data.sheet td select:focus,
+table.data.sheet td textarea:focus {
+  position: relative;
+  z-index: 20;
+  outline: 2px solid var(--color-brand-cyan-deep) !important;
+  outline-offset: -2px;
+  background-color: var(--color-canvas) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+}
+
+.sheet-photo { width: 44px; min-width: 44px; text-align: center; }
 .sheet-photo .avatar { margin: 0 auto; }
 .sheet-fixed {
   display: block;
-  padding: var(--space-xxs) var(--space-xs);
+  padding: var(--space-xs);
   color: var(--color-body);
-  font-size: var(--type-body-sm-font-size);
+  font-size: 13px;
 }
-/* 直せない行。**面を赤くしない** ―― 左に線を1本立てるだけ。 */
 .sheet-row-bad th.sheet-lead { box-shadow: inset 3px 0 0 0 var(--color-error); }
-.sheet-result { white-space: nowrap; font-family: var(--font-mono); font-size: var(--type-caption-mono-font-size); color: var(--color-ink); }
+.sheet-result { padding: 0 var(--space-xs) !important; white-space: nowrap; font-family: var(--font-mono); font-size: var(--type-caption-mono-font-size); color: var(--color-ink); }
 .sheet-errors {
   margin: 0; padding: var(--space-sm) var(--space-md);
   border-left: 3px solid var(--color-error);
@@ -166,6 +253,8 @@ table.candidate-unified-table th { white-space: nowrap; }
 }
 .sheet-errors li { margin-bottom: 2px; }
 .sheet-actions { display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
+
+
 
 /* -------------------------------------------------------------
    週の予定（暦）

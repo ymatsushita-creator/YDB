@@ -11,6 +11,18 @@ import { Sheet, type SheetColumn, type SheetRowData } from '../../_components/sh
 export const dynamic = 'force-dynamic'
 
 /** 候補者編集と同じく、新規と既存の連携団体を1枚の表で扱う（実行⑱）。 */
+const PARTNER_CATEGORY_OPTIONS = [
+  { id: 'アプローチ対象', label: 'アプローチ対象' },
+  { id: '提携団体', label: '提携団体' },
+  { id: '大学', label: '大学' },
+  { id: '専門学校', label: '専門学校' },
+  { id: '高校', label: '高校' },
+  { id: 'NPO・社協', label: 'NPO・社協' },
+  { id: '自治体・行政', label: '自治体・行政' },
+  { id: 'パートナー企業', label: 'パートナー企業' },
+  { id: 'その他', label: 'その他' },
+]
+
 export default async function NewPartnerPage({ searchParams }: {
   searchParams: Promise<{ season?: string }>
 }) {
@@ -31,19 +43,19 @@ export default async function NewPartnerPage({ searchParams }: {
   const columns: SheetColumn[] = [
     // 団体名は同一性なので、新規行だけ入力でき、既存行では読み取り専用。
     { key: 'name', label: '団体名', type: 'text', newOnly: true, width: 180 },
-    { key: 'category', label: '分類', type: 'text', width: 120 },
-    { key: 'contactName', label: '窓口', type: 'text', width: 120 },
-    { key: 'contactDepartment', label: '担当部署', type: 'text', width: 180 },
-    { key: 'contactEmail', label: '窓口のメール', type: 'email', width: 190 },
-    { key: 'internalOwner', label: '社内担当', type: 'text', width: 110 },
+    { key: 'category', label: '団体区分', type: 'select', options: PARTNER_CATEGORY_OPTIONS, width: 140 },
+    { key: 'contactName', label: '先方担当者名', type: 'text', width: 130 },
+    { key: 'contactDepartment', label: '先方部署名', type: 'text', width: 160 },
+    { key: 'contactEmail', label: '窓口メール', type: 'email', width: 180 },
+    { key: 'internalOwner', label: '社内担当者', type: 'text', width: 120 },
     { key: 'recommendationSeats', label: '推薦可能人数', type: 'number', width: 110 },
     { key: 'partneredOn', label: '提携期日', type: 'date', width: 130 },
     { key: 'bestContactPeriod', label: '最適連絡時期', type: 'text', width: 150 },
     { key: 'location', label: '所在地', type: 'text', width: 140 },
-    { key: 'engagement', label: 'NEO としての関わり', type: 'text', width: 220 },
+    { key: 'engagement', label: '関わり・連携メモ', type: 'text', width: 220 },
     { key: 'recommendationStateId', label: '推薦枠', type: 'select', width: 150,
       options: recommendationStates },
-    { key: 'staffId', label: '入力者', type: 'select', options: options.staffs, width: 130 },
+    { key: 'staffId', label: '記録担当者', type: 'select', options: options.staffs, width: 130 },
   ]
 
   const sheetRows: SheetRowData[] = rows.map((p) => ({

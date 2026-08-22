@@ -15,9 +15,9 @@ import { parseDecideCode, DECIDE_CODE_MESSAGE } from '../../src/commands/decide.
 import { parseAddNoteCode, NOTE_MESSAGE } from '../../src/commands/note.ts'
 import { parseAttendanceCode, ATTENDANCE_MESSAGE } from '../../src/commands/attend.ts'
 import { ScoreSheet } from '../_components/scoring.tsx'
-import { jstDay, num, filled, NotDerived } from '../_components/ui.tsx'
+import { num, NotDerived } from '../_components/ui.tsx'
 import { Shell, Breadcrumb, YearSwitch, seasonLabel } from '../_components/shell.tsx'
-import { ApproachChip, Confidence, RankDelta } from '../_components/headhunting.tsx'
+import { ApproachChip, Confidence, RankDelta, PersonHoverCard } from '../_components/headhunting.tsx'
 import {
   WeekCalendar, mondayOf, addDays, Rank, Avatar, MemoPopup, AttendancePopup,
 } from '../_components/borderline.tsx'
@@ -29,37 +29,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 
-/**
- * 一覧は**全件出す**（依頼者の指示）。
- *
- * かつては1ページ5行で送っていた。48人の期で**10ページ**になり、
- * 「確度順の候補者リスト」なのに**上位5人しか一覧できなかった。**
- * 表はカードの中で送れる（`.scroll-pane`）ので、ページに割る理由が無い。
- */
-/**
- * 一覧の上限。**表示を切るためではなく、暴走を止めるための数である。**
- *
- * ★ 500 だと、実データ（1期で 294 人）はまだ入るが、
- *   期をまたいで積み上がれば黙って切れる。**切るなら言う**（下）。
- */
 const LIST_LIMIT = 2000
 
-/**
- * ★ タブは画像の4つで固定する（依頼者の判断）。
- *
- * 実際の選考ステップは年度ごとの登録で、名前も数も違う。
- * 固定すると**タブに載らないステップが出る**ので、その分は
- * 一覧の下に件数付きで明示する。**黙って隠さない。**
- *
- * ★★ **段は名前で引く。並び順（`sort_order`）で引かない**（C-216）。
- *   0005 が特別選考を先頭へ入れて 0002 の段を1つずつ後ろへずらしたとき、
- *   ここの番号だけが取り残され、**3つのタブすべてが別の段を指していた** ――
- *   「書類選考」タブに特別選考、「2次選考」タブに書類選考が出て、
- *   最終面接はどのタブにも出なかった。平社員ペルソナ試験で踏んだ。
- *   並び順は期の編成で動く。**動かないのは段の呼び名である。**
- *
- * ★ `id`（`step1` など）は据え置く ―― 外に配ったリンクが切れる。
- */
 const FIXED_TABS: Array<{ id: string; label: string; stepName: string | null }> = [
   { id: 'confidence', label: '1. 確度順候補者リスト', stepName: null },
   { id: 'step1', label: '2. 書類選考', stepName: '書類選考' },
@@ -88,7 +59,6 @@ export default async function BorderlinePage({
 
   const stepTabs = await listStepTabs(db, season.id)
 
-  // --- 一覧のタブ ---
   const tabId = one(sp.tab) ?? 'confidence'
   const tab = FIXED_TABS.find((t) => t.id === tabId) ?? FIXED_TABS[0]!
   const step = tab.stepName === null
@@ -104,44 +74,38 @@ export default async function BorderlinePage({
     step ? listCandidatesByStep(db, season.id, step.selection_step_id) : Promise.resolve(null),
   ])
 
-  // その段で確定済み・判定待ちの件数（C-216）。一覧から消えた分をここで言う。
+  // 検索クエリ適用
+  const query = (one(sp.q) ?? '').trim().toLowerCase()
+  const filteredCandidateRows = candidates && query
+    ? candidates.rows.filter((r) => r.person_name.toLowerCase().includes(query) || r.school?.toLowerCase().includes(query))
+    : candidates?.rows
+  const filteredStepRows = stepRows && query
+    ? stepRows.filter((r) => r.person_name.toLowerCase().includes(query) || r.school?.toLowerCase().includes(query))
+    : stepRows
+
   const awaitingDecision = step
     ? await countAwaitingDecision(db, season.id, step.selection_step_id)
     : 0
 
-  // タブに載っていないステップ。件数ごと出して、隠れていないことを示す。
   const shownNames = FIXED_TABS.flatMap((t) => (t.stepName === null ? [] : [t.stepName]))
   const hiddenSteps = stepTabs.filter((s) => !shownNames.includes(s.step_name))
 
-  // --- 右のパネル。指定が無ければ一覧の先頭 ---
-  // ★ メモを開いているなら、その人をパネルにも出す。
-  //   別の人のパネルを横に置いたままメモを開くと、どちらの人の話か分からなくなる。
   const memoParam = one(sp.memo)
   const memoPersonId = memoParam && UUID.test(memoParam) ? memoParam : null
   const requested = memoPersonId ?? one(sp.person)
   const personId = requested && UUID.test(requested)
     ? requested
-    : (candidates?.rows[0]?.person_id ?? stepRows?.[0]?.person_id ?? null)
+    : (filteredCandidateRows?.[0]?.person_id ?? filteredStepRows?.[0]?.person_id ?? null)
   const panel = personId ? await getBorderlinePanel(db, personId, season.id) : null
-
-  // 名前を押した人。押すとその行に「メモ」と「採点」が出る（実行⑪）。
-  const openParam = one(sp.open)
-  const openPersonId = openParam && UUID.test(openParam) ? openParam : memoPersonId
 
   const notes = memoPersonId ? await listPersonNotes(db, memoPersonId) : []
 
-  // --- 採点シート（実行⑩）---
-  // 選考タブに居るときだけ。**一覧の行が名指しした評価をそのまま渡す。**
-  // ここで「この人のこのステップの評価」を引き直すと、面接官が2人のときに
-  // 一覧が畳んだのとは別の評価へ点が入りうる（src/queries/borderline.ts）。
-  const scoringRow = stepRows?.find((r) => r.person_id === personId) ?? null
+  const scoringRow = filteredStepRows?.find((r) => r.person_id === personId) ?? null
   const sheet = scoringRow ? await getScoringSheet(db, scoringRow.evaluation_id) : null
 
-  // 直前の保存の結果。知らないコードは「何も起きていない」として捨てる。
   const savedScore = parseSaveScoreCode(sp.score)
   const savedDecide = parseDecideCode(sp.decide)
 
-  // --- 週の日程 ---
   const weekParam = one(sp.week)
   const anchor = weekParam && DAY.test(weekParam)
     ? weekParam
@@ -151,7 +115,6 @@ export default async function BorderlinePage({
   const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
   const appointments = await listAppointments(db, season.id, monday, sunday)
 
-  // --- 予定の参加者（実行⑪）---
   const apptParam = one(sp.appt)
   const apptId = apptParam && UUID.test(apptParam) ? apptParam : null
   const appointment = apptId ? await getAppointmentDetail(db, apptId, season.id) : null
@@ -162,17 +125,14 @@ export default async function BorderlinePage({
   const href = (q: Record<string, string>) =>
     `/borderline?${new URLSearchParams({ season: season.id, tab: tab.id, ...q })}`
 
-  /** 見ている週を落とさずに戻る先。ポップアップの開閉で週が今週へ戻らない。 */
   const hereHref = (q: Record<string, string>) =>
     `/borderline?${new URLSearchParams({
       season: season.id, tab: tab.id, week: monday, ...q,
     })}`
 
-  /** 氏名を押したときの行き先 ―― 採点レイヤー。どのタブから来たかを持たせる。 */
   const scoreHref = (personId: string) =>
     `/borderline/${personId}?${new URLSearchParams({ season: season.id, tab: tab.id })}`
 
-  // 直前の保存の結果（メモ・参加者）。
   const savedNote = parseAddNoteCode(sp.note)
   const savedAttend = parseAttendanceCode(sp.attend)
 
@@ -190,15 +150,26 @@ export default async function BorderlinePage({
         ]}
       />
 
-      {/* ★ 試運転の手順（`/pilot`）へ入る道。**その画面は「通常選考 › 試運転」と
-          名乗っているのに、どこからもリンクされていなかった**（実行⑬で数えて分かった）。
-          名乗った親から繋ぐ ―― 手打ちのURLでしか開けない画面は、無いのと同じである。
-          Pilot は HOLD のままで、これは足場である（観測が取れたら消してよい）。 */}
-      <p className="pilot-entry">
-        <Link href={`/pilot?season=${season.id}`} className="hh-more">
-          試運転の手順（30 分）›
-        </Link>
-      </p>
+      {/* 検索・絞り込みフォーム */}
+      <div className="section" style={{ marginTop: 'var(--space-xs)', marginBottom: 'var(--space-xs)' }}>
+        <form method="get" action="/borderline" className="conf-row">
+          <input type="hidden" name="season" value={season.id} />
+          <input type="hidden" name="tab" value={tab.id} />
+          <input
+            className="text-input"
+            name="q"
+            defaultValue={query}
+            placeholder="氏名・学校名で絞り込み..."
+            style={{ maxWidth: '300px' }}
+          />
+          <button type="submit" className="button-secondary">絞り込む</button>
+          {query && (
+            <Link href={`/borderline?season=${season.id}&tab=${tab.id}`} className="button-secondary-sm">
+              クリア
+            </Link>
+          )}
+        </form>
+      </div>
 
       <div className="hh-grid">
         <div className="hh-col-main">
@@ -212,7 +183,7 @@ export default async function BorderlinePage({
               {FIXED_TABS.map((t) => (
                 <Link
                   key={t.id}
-                  href={`/borderline?season=${season.id}&tab=${t.id}`}
+                  href={`/borderline?season=${season.id}&tab=${t.id}${query ? `&q=${encodeURIComponent(query)}` : ''}`}
                   className={t.id === tab.id ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
                   aria-current={t.id === tab.id ? 'page' : undefined}
                 >
@@ -221,7 +192,6 @@ export default async function BorderlinePage({
               ))}
             </div>
 
-            {/* 書類選考の中の採点からAI分析へ進む。左の操作柱には置かない。 */}
             {tab.id === 'step1' && showAi && (
               <p className="pilot-entry">
                 採点 ›{' '}
@@ -233,16 +203,18 @@ export default async function BorderlinePage({
               <p className="hh-empty">この期にこの選考は無い。</p>
             )}
 
-            {candidates && (
-              candidates.rows.length === 0 ? (
+            {filteredCandidateRows && (
+              candidates?.rows.length === 0 ? (
                 <p className="hh-empty">この年度の対象者がまだ1人も登録されていない。</p>
+              ) : filteredCandidateRows.length === 0 ? (
+                <p className="hh-empty">該当する候補者がありません。</p>
               ) : (
                 <div className="scroll-pane">
                   <table className="hh-table bl-table candidate-unified-table">
                     <thead>
                       <tr>
                         <th>顔写真</th><th>番号</th><th className="num">確度</th><th>順位</th>
-                        <th>姓</th><th>名</th><th>姓（かな）</th><th>名（かな）</th>
+                        <th>氏名</th>
                         <th>生年月日</th><th>学校</th><th>学部・学科</th>
                         <th>メール</th><th>電話番号</th><th>LINE ID</th>
                         <th>流入元</th><th>接点の日</th><th>アプローチ状態</th>
@@ -250,7 +222,7 @@ export default async function BorderlinePage({
                       </tr>
                     </thead>
                     <tbody>
-                      {candidates.rows.map((r) => (
+                      {filteredCandidateRows.map((r) => (
                         <tr key={r.person_id}
                           className={`row-link${r.person_id === personId ? ' is-current' : ''}`}>
                           <td className="candidate-photo-cell">
@@ -267,18 +239,16 @@ export default async function BorderlinePage({
                           </td>
                           <td><Rank rank={r.rank_in_season} /></td>
                           <td>
-                            {/* 姓を押すと、その行に「メモ」と「採点」が出る
-                                （実行⑪。依頼者の指示）。押しただけでは何も起きず、
-                                行き先は出てきたボタンが決める。
-                                右の「›」はその人の記録。 */}
-                            <Link href={hereHref({ person: r.person_id, open: r.person_id })}
-                                  className="bl-person">
-                              {r.family_name}
-                            </Link>
+                            <PersonHoverCard
+                              personId={r.person_id}
+                              seasonId={season.id}
+                              name={r.person_name}
+                              photoUrl={r.has_photo ? `/people/new/photo/${r.person_id}` : null}
+                              confidenceRatio={r.confidence_ratio}
+                            >
+                              {r.person_name}
+                            </PersonHoverCard>
                           </td>
-                          <td>{r.given_name}</td>
-                          <td className="dim">{r.family_name_kana ?? '—'}</td>
-                          <td className="dim">{r.given_name_kana ?? '—'}</td>
                           <td className="nowrap dim">{r.birth_date ?? '—'}</td>
                           <td>{r.school}</td>
                           <td className="dim">{r.faculty ?? '—'}</td>
@@ -294,10 +264,10 @@ export default async function BorderlinePage({
                           </td>
                           <td>{r.note ?? '—'}</td>
                           <td className="candidate-row-actions">
-                            <Link href={`/people/${r.person_id}?season=${season.id}`}
-                                  className="row-detail"
-                                  aria-label={`${r.person_name} の記録を開く`}>›</Link>
-                            {openPersonId === r.person_id && (
+                            <div className="row-actions-wrap">
+                              <Link href={`/people/${r.person_id}?season=${season.id}`}
+                                    className="row-detail"
+                                    aria-label={`${r.person_name} の記録を開く`}>›</Link>
                               <span className="row-actions">
                                 <Link className="row-action btn-physical"
                                       href={hereHref({
@@ -307,7 +277,7 @@ export default async function BorderlinePage({
                                 <Link className="row-action btn-physical"
                                       href={scoreHref(r.person_id)}>採点</Link>
                               </span>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -317,51 +287,53 @@ export default async function BorderlinePage({
               )
             )}
 
-            {stepRows && (
-              stepRows.length === 0 ? (
-                /* ★ 行き止まりにしない（C-216。平社員ペルソナ試験）――
-                   応募があっても、選考を始めていなければこの段は空になる。
-                   **始める口はこの画面に無い**ので、どこにあるかを言う。 */
+            {filteredStepRows && (
+              stepRows?.length === 0 ? (
                 <p className="hh-empty">
                   このステップで動いている応募は無い。
                   選考は「1. 確度順候補者リスト」で人を選び、
                   右の「詳細を見る」→「選考を始める」から始まる。
                 </p>
+              ) : filteredStepRows.length === 0 ? (
+                <p className="hh-empty">該当する候補者がありません。</p>
               ) : (
                 <div className="scroll-pane">
                   <table className="hh-table bl-table">
                     <thead>
                       <tr>
-                        <th className="num">100点換算</th><th className="num">軸</th><th>名前</th>
+                        <th className="num">100点換算</th><th className="num">軸</th><th>名前（ホバーで概要/クリックで詳細）</th>
                         <th>学校・学部</th><th className="num">待ち</th><th>担当</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {stepRows.map((r) => (
+                      {filteredStepRows.map((r) => (
                         <tr key={r.application_id}
                           className={`row-link${r.person_id === personId ? ' is-current' : ''}`}>
                           <td className="num strong">{r.score_100 ?? <NotDerived />}</td>
                           <td className="num dim">{r.scored_criteria}</td>
                           <td>
-                            <Link href={hereHref({ person: r.person_id, open: r.person_id })}
-                                  className="bl-person">
+                            <PersonHoverCard
+                              personId={r.person_id}
+                              seasonId={season.id}
+                              name={r.person_name}
+                              photoUrl={r.photo_data_url}
+                              score100={r.score_100}
+                            >
                               <Avatar src={r.photo_data_url} name={r.person_name} />
                               {r.person_name}
-                            </Link>
+                            </PersonHoverCard>
                             <Link href={`/applications/${r.application_id}`}
                                   className="row-detail"
                                   aria-label={`${r.person_name} の応募を開く`}>›</Link>
-                            {openPersonId === r.person_id && (
-                              <span className="row-actions">
-                                <Link className="row-action btn-physical"
-                                      href={hereHref({
-                                        person: r.person_id, open: r.person_id,
-                                        memo: r.person_id,
-                                      })}>メモ</Link>
-                                <Link className="row-action btn-physical"
-                                      href={scoreHref(r.person_id)}>採点</Link>
-                              </span>
-                            )}
+                            <span className="row-actions">
+                              <Link className="row-action btn-physical"
+                                    href={hereHref({
+                                      person: r.person_id, open: r.person_id,
+                                      memo: r.person_id,
+                                    })}>メモ</Link>
+                              <Link className="row-action btn-physical"
+                                    href={scoreHref(r.person_id)}>採点</Link>
+                            </span>
                           </td>
                           <td className="dim">{r.school}{r.faculty && <> ・ {r.faculty}</>}</td>
                           <td className="num dim">{r.waiting_days} 日</td>
@@ -374,9 +346,6 @@ export default async function BorderlinePage({
               )
             )}
 
-            {/* ★ 一覧は**採点する対象**しか出さない（確定した評価は消える）。
-                消えたものが宙に浮かないよう、**判定待ちの件数を言う**（C-216）――
-                平社員ペルソナ試験で「6人採点したのに、どこにも居ない」となった。 */}
             {step && awaitingDecision > 0 && (
               <p className="section-note">
                 この段で確定済み・判定待ちが {num(awaitingDecision)} 件ある。
@@ -384,119 +353,81 @@ export default async function BorderlinePage({
               </p>
             )}
 
-            {/* ★ タブに載らない段を**黙って隠さない**（この一覧の元からの決めごと）。
-                件数を出す。ここは実装が抜けていて、どこにも出ていなかった。 */}
             {hiddenSteps.length > 0 && (
               <p className="section-note">
                 タブに無い段:{' '}
                 {hiddenSteps.map((s) => `${s.step_name} ${num(s.open_applications)} 件`).join(' / ')}
               </p>
             )}
+
+            <p className="section-note" style={{ marginTop: 'var(--space-xs)' }}>
+              <Link href={`/pilot?season=${season.id}`} className="section-note">
+                試運転の手順
+              </Link>
+            </p>
           </section>
         </div>
 
         <div className="hh-col-side">
-          {/* --- 候補者パネル --- */}
-          <section className="panel-card">
-            {!panel ? (
-              /* ★ 段のタブでは、候補者が居ても「この段には居ない」だけで空になる。
-                 「1人も居ない」と書くと、確度順に15人居るのに0人だと読める
-                 （C-216。平社員ペルソナ試験で実際にそう読んだ）。 */
-              candidates ? (
-                <p className="hh-empty">候補者がまだ1人も居ない。</p>
-              ) : (
-                <p className="hh-empty">
-                  この段に候補者が居ない。「1. 確度順候補者リスト」から人を選ぶ。
-                </p>
-              )
-            ) : (
-              <>
-                <header className="hh-person-head">
-                  <div className="bl-person-head">
-                    <Avatar src={panel.photo_data_url} name={panel.person_name} />
-                    <div>
-                      <h2 className="hh-person-name">{panel.person_name}</h2>
-                      {panel.person_kana && <p className="hh-person-kana">{panel.person_kana}</p>}
-                    </div>
+          {!candidates && !panel && (
+            <section className="panel-card">
+              <p className="hh-empty">
+                この段に候補者が居ない。「1. 確度順候補者リスト」から人を選ぶ。
+              </p>
+            </section>
+          )}
+
+          {sheet && panel && (
+            <section className="panel-card">
+              <header className="hh-person-head">
+                <div className="bl-person-head">
+                  <Avatar src={panel.photo_data_url} name={panel.person_name} />
+                  <div>
+                    <h2 className="hh-person-name">{panel.person_name}</h2>
+                    {panel.person_kana && <p className="hh-person-kana">{panel.person_kana}</p>}
                   </div>
-                  <div className="bl-person-chips">
-                    <span className="chip-green"><Confidence ratio={panel.confidence_ratio} /></span>
-                    {panel.approach_code && panel.approach_label && (
-                      <ApproachChip code={panel.approach_code} label={panel.approach_label} />
-                    )}
-                  </div>
-                </header>
-
-                <div className="scroll-pane">
-                {/* 採点（実行⑩）。選考タブで、その人がその段に居るときだけ出す。
-                    出す条件は一覧と同じ行から来ている ―― 一覧に居ない人の
-                    採点欄は出ない（母集団の一致。CLAUDE.md）。 */}
-                {sheet && (
-                  <>
-                    {(savedScore || savedDecide) && (
-                      <>
-                        {savedScore && (
-                          <p className={`callout${savedScore === 'saved' ? ' ok' : ''}`}>
-                            {SAVE_SCORE_CODE_MESSAGE[savedScore]}
-                          </p>
-                        )}
-                        {/* ★ AIの点を入れた結果（C-211）。文言は
-                            `APPLY_AI_LOGIC_MESSAGE` の1箇所だけにある。 */}
-                        {typeof sp.ai === 'string' && APPLY_AI_LOGIC_MESSAGE[sp.ai] && (
-                          <p className={`callout${sp.ai === 'applied' ? ' ok' : ''}`}>
-                            {APPLY_AI_LOGIC_MESSAGE[sp.ai]}
-                          </p>
-                        )}
-                        {savedDecide && (
-                          <p className={`callout${savedDecide === 'submitted' ? ' ok' : ''}`}>
-                            {DECIDE_CODE_MESSAGE[savedDecide]}
-                          </p>
-                        )}
-                      </>
-                    )}
-                    <ScoreSheet
-                      sheet={sheet}
-                      showAi={showAi}
-                      context={{
-                        seasonId: season.id,
-                        tab: tab.id,
-                        personId: sheet.person_id,
-                        week: monday,
-                      }}
-                    />
-                  </>
-                )}
-
-                <h3 className="hh-sub">基本情報</h3>
-                <dl className="hh-facts">
-                  <dt>学校</dt><dd>{panel.school}</dd>
-                  <dt>学部・学科</dt><dd>{filled(panel.faculty)}</dd>
-                  <dt>メール</dt><dd>{panel.email}</dd>
-                  <dt>電話番号</dt><dd>{filled(panel.phone)}</dd>
-                  <dt>生年月日</dt><dd>{jstDay(panel.birth_date)}（{panel.age} 歳）</dd>
-                  <dt>最終接触日</dt>
-                  <dd>{panel.last_touchpoint_on ? jstDay(panel.last_touchpoint_on) : 'この年度は接点なし'}</dd>
-                  <dt>順位</dt>
-                  <dd>{panel.rank_in_season !== null
-                    ? `${panel.rank_in_season} 位` : <NotDerived>確度がまだ無い</NotDerived>}</dd>
-                  <dt>成績（100点換算）</dt>
-                  <dd>{panel.score_100 ?? <NotDerived>評価がまだ無い</NotDerived>}</dd>
-                </dl>
-
-                {panel.note && (
-                  <>
-                    <h3 className="hh-sub">メモ</h3>
-                    <p className="hh-memo">{panel.note}</p>
-                  </>
-                )}
-
-                <Link href={`/people/${panel.person_id}?season=${season.id}`} className="hh-more">
-                  詳細を見る ›
-                </Link>
                 </div>
-              </>
-            )}
-          </section>
+                <div className="bl-person-chips">
+                  <span className="chip-green"><Confidence ratio={panel.confidence_ratio} /></span>
+                  {panel.approach_code && panel.approach_label && (
+                    <ApproachChip code={panel.approach_code} label={panel.approach_label} />
+                  )}
+                </div>
+              </header>
+
+              <div className="scroll-pane">
+                {(savedScore || savedDecide) && (
+                  <>
+                    {savedScore && (
+                      <p className={`callout${savedScore === 'saved' ? ' ok' : ''}`}>
+                        {SAVE_SCORE_CODE_MESSAGE[savedScore]}
+                      </p>
+                    )}
+                    {typeof sp.ai === 'string' && APPLY_AI_LOGIC_MESSAGE[sp.ai] && (
+                      <p className={`callout${sp.ai === 'applied' ? ' ok' : ''}`}>
+                        {APPLY_AI_LOGIC_MESSAGE[sp.ai]}
+                      </p>
+                    )}
+                    {savedDecide && (
+                      <p className={`callout${savedDecide === 'submitted' ? ' ok' : ''}`}>
+                        {DECIDE_CODE_MESSAGE[savedDecide]}
+                      </p>
+                    )}
+                  </>
+                )}
+                <ScoreSheet
+                  sheet={sheet}
+                  showAi={showAi}
+                  context={{
+                    seasonId: season.id,
+                    tab: tab.id,
+                    personId: sheet.person_id,
+                    week: monday,
+                  }}
+                />
+              </div>
+            </section>
+          )}
 
           {/* --- 日程カレンダー --- */}
           <section className="panel-card">
@@ -523,7 +454,6 @@ export default async function BorderlinePage({
         </div>
       </div>
 
-      {/* --- メモ（実行⑪。依頼者の指示）--- */}
       {memoPersonId && panel && (
         <MemoPopup
           personName={panel.person_name}
@@ -537,7 +467,6 @@ export default async function BorderlinePage({
         />
       )}
 
-      {/* --- 予定の参加者（実行⑪。依頼者の指示）--- */}
       {appointment && (
         <AttendancePopup
           appointment={appointment}
@@ -551,3 +480,4 @@ export default async function BorderlinePage({
     </Shell>
   )
 }
+

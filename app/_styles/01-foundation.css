@@ -34,18 +34,10 @@
   /* 操作柱と上の帯の面。骨組みも同じ面を敷く（敷かないと器が崩れて見える）。 */
   --rail-face: var(--color-canvas);
 
-  /* スペクトラムの細線。**面ではなく線**として使う唯一の形（DESIGN.md
-     activeIndicator / accentBorder）。7色を等幅に並べない。 */
-  --spectrum-line: linear-gradient(90deg,
-    var(--color-brand-lime) 0%, var(--color-brand-yellow) 14%,
-    var(--color-brand-coral) 30%, var(--color-brand-pink) 42%,
-    var(--color-brand-cyan) 62%, var(--color-brand-periwinkle) 80%,
-    var(--color-brand-lavender) 100%);
-  --spectrum-line-v: linear-gradient(180deg,
-    var(--color-brand-lime) 0%, var(--color-brand-yellow) 14%,
-    var(--color-brand-coral) 30%, var(--color-brand-pink) 42%,
-    var(--color-brand-cyan) 62%, var(--color-brand-periwinkle) 80%,
-    var(--color-brand-lavender) 100%);
+  /* NEO ACADEMIA オフィシャルロゴのスペクトラムグラデーション
+     Lime (#88d840) -> Cyan (#3bb5e4) -> Violet (#9b62f8) -> Pink (#f272a1) -> Amber (#ffc820) */
+  --spectrum-line: linear-gradient(90deg, #88d840 0%, #3bb5e4 25%, #9b62f8 50%, #f272a1 75%, #ffc820 100%);
+  --spectrum-line-v: linear-gradient(180deg, #88d840 0%, #3bb5e4 25%, #9b62f8 50%, #f272a1 75%, #ffc820 100%);
 
   /* ★ 明るい地の上に敷く光の場。
        `--gradient-brand-spectrum-soft`（生成物）は**最後に黒を敷いている**
@@ -96,6 +88,7 @@ a:hover { color: var(--color-brand-cyan-deep); text-decoration: underline; }
 h1, h2, h3, p, ul, ol, dl, dd { margin: 0; }
 ul { padding: 0; list-style: none; }
 button, input, select, textarea { font-family: inherit; }
+[hidden] { display: none !important; }
 
 /* -------------------------------------------------------------
    書体の役どころ（DESIGN.md「Typography」）

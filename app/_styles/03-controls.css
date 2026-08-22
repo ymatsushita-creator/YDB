@@ -20,57 +20,78 @@
 .btn-physical, .button-primary, .button-secondary,
 .hh-search-go, .hh-year-go, .hh-signout, .popup-close, .row-detail-button {
   display: inline-flex; align-items: center; justify-content: center;
-  /* ★ 押せる物は**内容の幅**で置く。器が flex/grid の子になったときに
-       伸び切らないよう、明示的に縮める（やることの札で全幅に伸びていた）。 */
   align-self: flex-start; width: fit-content;
   gap: var(--space-xxs);
   border: 0;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+  transition: transform .08s cubic-bezier(0.2, 0, 0, 1), background-color .12s ease, color .12s ease, border-color .12s ease, box-shadow .12s ease;
 }
-.btn-physical:hover, .button-primary:hover, .button-secondary:hover { text-decoration: none; }
+.btn-physical:hover, .button-primary:hover, .button-secondary:hover {
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.btn-physical:active, .button-primary:active, .button-secondary:active,
+.hh-search-go:active, .hh-year-go:active, .hh-signout:active, .popup-close:active, .row-detail-button:active {
+  transform: scale(0.97) translateY(1px);
+  box-shadow: none;
+}
 
-/* 主操作。DESIGN.md `button-primary` ―― 面は near-black、丸は pill。 */
+/* 主操作。Google Filled Blue Pill Button */
 .button-primary {
-  height: 40px;
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
+  height: 38px;
+  padding: 0 var(--space-md);
+  border-radius: 20px;
+  background-color: #1a73e8;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
-.button-primary:hover { background-color: var(--color-canvas-dark-2); }
-.button-primary:active { background-color: var(--color-canvas-dark-soft); }
+.button-primary:hover {
+  background-color: #1557d0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+}
+.button-primary:active { background-color: #0b57d0; transform: scale(0.98); }
 .button-primary[disabled], .button-secondary[disabled] {
-  background-color: var(--color-canvas-soft-2);
-  color: var(--color-mute);
-  border-color: var(--color-hairline);
+  background-color: #f1f3f4;
+  color: #80868b;
+  border-color: #dadce0;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
-/* 副操作。白面＋hairline。 */
+/* 副操作。Google Outlined Pill Button */
 .button-secondary {
-  height: 40px;
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  border: 1px solid var(--color-hairline);
+  height: 38px;
+  padding: 0 var(--space-md);
+  border-radius: 20px;
+  background-color: #ffffff;
+  color: #1a73e8;
+  border: 1px solid #dadce0;
+  font-weight: 500;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.button-secondary:hover { background-color: var(--color-canvas-soft-2); border-color: var(--color-hairline-strong); }
+.button-secondary:hover { background-color: #f8f9fa; border-color: #1a73e8; color: #1557d0; text-decoration: none; }
+
 
 /* 小さい方（表の行・カードの中）。DESIGN.md `button-*-sm` の字面。 */
 .button-primary-sm, .button-secondary-sm, .row-detail-button, .zoom-back {
   height: 28px;
-  padding: 0 var(--space-sm);
-  border-radius: var(--rounded-pill);
+  padding: 0 var(--space-md);
+  border-radius: 20px;
   font-size: var(--type-button-md-font-size);
-  font-weight: var(--type-button-md-font-weight);
+  font-weight: 500;
   line-height: var(--type-button-md-line-height);
 }
 .row-detail-button, .zoom-back {
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  border: 1px solid var(--color-hairline);
+  background-color: #ffffff;
+  color: #1a73e8;
+  border: 1px solid #dadce0;
 }
-.row-detail-button:hover, .zoom-back:hover { background-color: var(--color-canvas-soft-2); }
+.row-detail-button:hover, .zoom-back:hover { background-color: #e8f0fe; border-color: #c2e7ff; color: #1557d0; text-decoration: none; }
 
 /* 表や一覧の中の主操作は、帯の主操作より小さくする。 */
 .task-item .button-primary, .criteria-row .button-primary,
@@ -102,41 +123,44 @@ table .button-primary, table .button-secondary {
 .zoom-bar .btn-physical { align-self: center; }
 
 /* -------------------------------------------------------------
-   タブ（絞り込み） —— DESIGN.md `tab-ghost` / `tab-active`
+   タブ（絞り込み） —— Google Material 3 Filter Chips
    ------------------------------------------------------------- */
 .bl-tabs, .owner-filter-tabs {
-  display: flex; flex-wrap: wrap; gap: var(--space-xxs);
+  display: flex; flex-wrap: wrap; gap: var(--space-xs);
   padding-bottom: var(--space-sm);
 }
 .bl-tab, .owner-filter-tabs > a {
   display: inline-flex; align-items: center;
-  height: 30px;
+  height: 32px;
   padding: 0 var(--space-md);
-  border-radius: var(--rounded-pill-sm);
-  background-color: var(--color-canvas);
-  border: 1px solid var(--color-hairline);
-  color: var(--color-ink);
+  border-radius: 100px;
+  background-color: #f1f3f4;
+  border: 1px solid #dadce0;
+  color: #3c4043;
   font-size: var(--type-body-sm-font-size);
+  font-weight: 500;
   line-height: var(--type-body-sm-line-height);
   letter-spacing: var(--type-body-sm-letter-spacing);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .bl-tab:hover, .owner-filter-tabs > a:hover {
-  background-color: var(--color-canvas-soft-2);
+  background-color: #e8eaed;
   text-decoration: none;
-  color: var(--color-ink);
+  color: #202124;
 }
-/* 選ばれている札。**面は near-black、下に細いスペクトラム。** */
+.bl-tab:active, .owner-filter-tabs > a:active {
+  transform: scale(0.97);
+}
+/* 選ばれている札。Google Blue Tonal Chip */
 .bl-tab.is-on, .bl-tab[aria-current='page'], .owner-filter-tabs > a.active {
   position: relative; overflow: hidden;
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-on-primary);
-  font-weight: var(--type-body-sm-strong-font-weight);
+  background-color: #e8f0fe;
+  border-color: #c2e7ff;
+  color: #1a73e8;
+  font-weight: 600;
 }
 .bl-tab.is-on::after, .bl-tab[aria-current='page']::after, .owner-filter-tabs > a.active::after {
-  content: '';
-  position: absolute; left: var(--space-md); right: var(--space-md); bottom: 3px; height: 2px;
-  background: var(--spectrum-line);
+  display: none;
 }
 
 /* -------------------------------------------------------------
@@ -246,26 +270,61 @@ table .button-primary, table .button-secondary {
 /* 確度 */
 .conf-row { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; }
 .conf-mark {
-  display: inline-flex; align-items: center;
-  height: 20px; padding: 0 var(--space-xs);
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 22px; padding: 0 var(--space-xs);
   border-radius: var(--rounded-full);
-  background: var(--color-canvas-soft-2);
-  color: var(--color-body);
   font-family: var(--font-mono);
   font-size: var(--type-caption-mono-font-size);
+  font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.conf-mark.conf-S {
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFE082 100%);
+  color: #B78103;
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  box-shadow: 0 2px 6px rgba(255, 193, 7, 0.2);
+}
+.conf-mark.conf-A {
+  background: linear-gradient(135deg, #E0F7FA 0%, #80DEEA 100%);
+  color: #007788;
+  border: 1px solid rgba(0, 188, 212, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 188, 212, 0.2);
+}
+.conf-mark.conf-B {
+  background: linear-gradient(135deg, #F3E5F5 0%, #CE93D8 100%);
+  color: #6A1B9A;
+  border: 1px solid rgba(156, 39, 176, 0.4);
+}
+.conf-mark.conf-C {
+  background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+  color: #475569;
+  border: 1px solid #CBD5E1;
 }
 .conf-current { background: var(--color-primary); color: var(--color-on-primary); }
 .conf-none { color: var(--color-mute); font-size: var(--type-caption-font-size); }
-.conf-grades { display: flex; flex-wrap: wrap; gap: var(--space-xxs); }
+.conf-grades { display: flex; flex-direction: column; gap: var(--space-xs); }
 .conf-grade {
-  display: inline-flex; align-items: baseline; gap: var(--space-xxs);
-  padding: 2px var(--space-xs);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-sm);
-  font-size: var(--type-caption-font-size);
+  position: relative;
+  display: flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid rgba(220, 226, 235, 0.9);
+  border-radius: var(--rounded-md);
+  background: var(--color-canvas);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.conf-grade-code { font-family: var(--font-mono); font-weight: 500; color: var(--color-ink); }
-.conf-grade-def { color: var(--color-body); }
+.conf-grade input[type="radio"] { display: none; }
+.conf-grade:hover {
+  border-color: rgba(0, 190, 215, 0.4);
+  background: rgba(0, 190, 215, 0.03);
+}
+.conf-grade.is-on {
+  border-color: var(--color-brand-cyan-deep);
+  background: rgba(0, 190, 215, 0.07);
+  box-shadow: 0 2px 8px rgba(0, 190, 215, 0.12);
+}
+.conf-grade-code { font-family: var(--font-mono); font-weight: 700; font-size: 15px; min-width: 20px; text-align: center; color: var(--color-ink); }
+.conf-grade-def { font-size: var(--type-caption-font-size); color: var(--color-body); line-height: 1.35; }
 
 /* 順位。王冠は飾りなので、**数字を主役にする。** */
 .rank-number {
@@ -306,3 +365,94 @@ table .button-primary, table .button-secondary {
   overflow: hidden;
 }
 .avatar, .hh-photo { flex: 0 0 auto; }
+
+/* -------------------------------------------------------------
+   候補者ホバーポップオーバー (Person Hover Card)
+   ------------------------------------------------------------- */
+.person-hover-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.person-hover-card {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 120;
+  width: 250px;
+  padding: var(--space-sm);
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-md);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translateY(4px);
+}
+
+.person-hover-wrapper:hover .person-hover-card {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.person-hover-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-hairline);
+  margin-bottom: var(--space-xs);
+}
+
+.person-hover-card-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.person-hover-card-name {
+  font-size: var(--type-body-sm-font-size);
+  font-weight: var(--type-body-sm-strong-font-weight);
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-hover-card-link {
+  font-size: var(--type-caption-font-size);
+  color: var(--color-link);
+}
+
+.person-hover-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xs);
+}
+
+.person-hover-card-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.person-hover-card-label {
+  font-size: var(--type-caption-font-size);
+  color: var(--color-mute);
+}
+
+.person-hover-card-value {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  color: var(--color-ink);
+}
+
+.person-hover-card-value.strong {
+  font-weight: 600;
+}
+

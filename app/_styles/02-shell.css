@@ -73,14 +73,15 @@
 }
 .hh-nav a:hover, .sidebar-item:hover { background: var(--color-canvas-soft-2); text-decoration: none; color: var(--color-ink); }
 .sidebar-item-active {
-  background: var(--color-canvas-soft-2);
-  color: var(--color-ink);
-  font-weight: var(--type-body-sm-strong-font-weight);
+  background: #0f172a;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
 }
-/* 現在地の印。**細い線だけ。** */
+/* 現在地の印。ロゴのスペクトラムグラデーションバー */
 .sidebar-item-active::before {
   content: '';
-  position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+  position: absolute; left: 0; top: 4px; bottom: 4px; width: 4px;
   border-radius: var(--rounded-full);
   background: var(--spectrum-line-v);
 }

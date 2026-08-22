@@ -331,45 +331,15 @@ describe('page.tsx にインラインアクション統合の確認', () => {
     pageContent = await readFile(join(PROJECT_ROOT, 'app', 'page.tsx'), 'utf-8')
   })
 
-  test('7. cockpitAssignAction / cockpitReassignAction / cockpitUnholdAction が import されている', () => {
+  test('7. ユーザー指示により cockpit アクションは page.tsx から削除されている', () => {
     assert.ok(
-      pageContent.includes('cockpitAssignAction'),
-      'cockpitAssignAction が page.tsx にある',
-    )
-    assert.ok(
-      pageContent.includes('cockpitReassignAction'),
-      'cockpitReassignAction が page.tsx にある',
-    )
-    assert.ok(
-      pageContent.includes('cockpitUnholdAction'),
-      'cockpitUnholdAction が page.tsx にある',
+      !pageContent.includes('cockpitAssignAction'),
+      'ユーザー指示により cockpitAssignAction は page.tsx に含まれない',
     )
   })
 
-  test('8. assign / reassign / unhold の searchParams フィールドが型定義にある', () => {
-    assert.match(pageContent, /assign\?:\s*string/,
-      'assign? フィールドが searchParams 型定義にある')
-    assert.match(pageContent, /reassign\?:\s*string/,
-      'reassign? フィールドが searchParams 型定義にある')
-    assert.match(pageContent, /unhold\?:\s*string/,
-      'unhold? フィールドが searchParams 型定義にある')
-  })
-
-  test('9. listAssignableStaff が条件付きで呼ばれている（全タスク分は呼ばない）', () => {
-    // needsStaff フラグで絞っている
-    assert.match(pageContent, /needsStaff/,
-      'needsStaff で条件絞りをしている')
-    assert.ok(
-      pageContent.includes('listAssignableStaff'),
-      'listAssignableStaff が呼ばれている',
-    )
-  })
-
-  test('10. reassign フォームが現在オーナーを除外している', () => {
-    // reassign の select で owner_staff_id を filter している
-    assert.ok(
-      pageContent.includes('owner_staff_id'),
-      'owner_staff_id の参照がある（reassign 除外ロジック）',
-    )
+  test('8. ダッシュボード表示のみになり、担当者選択パラメータは不要', () => {
+    assert.doesNotMatch(pageContent, /className="selection-cockpit"/,
+      'selection-cockpit セクションは非表示')
   })
 })

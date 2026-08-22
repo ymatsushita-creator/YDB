@@ -16,19 +16,23 @@
 input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='image']):not([type='range']):not([type='color']),
 select, textarea,
 .text-input, .score-input, .rationale-input, .memo-field, .iv-field, .iv-field-wide {
-  /* ★ 幅は器が決める。**既定で 100% にしない** ―― 画面が横1列に並べている
-       絞り込みの欄まで全幅に伸び、1つずつ改行されていた。 */
   width: auto;
   max-width: 100%;
   min-width: 0;
   height: 36px;
-  padding: 0 var(--space-sm);
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-sm);
+  padding: 0 16px;
+  background-color: #ffffff;
+  color: #202124;
+  border: 1px solid #dadce0;
+  border-radius: 20px;
   font-size: var(--type-body-sm-font-size);
   line-height: var(--type-body-sm-line-height);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input:focus, select:focus, textarea:focus, .text-input:focus {
+  border-color: #1a73e8;
+  box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+  outline: none;
 }
 /* 全幅にするのは、縦に積む器の中だけ。 */
 .field > input, .field > select, .field > textarea,
@@ -74,20 +78,10 @@ label { color: var(--color-body); font-size: var(--type-caption-font-size); line
 /* 直せる場所。**面を塗らず、破線の枠で囲む。** */
 .editable-region {
   position: relative;
-  padding: var(--space-md);
-  border: 1px dashed var(--color-hairline-strong);
-  border-radius: var(--rounded-md);
-  background: var(--color-canvas);
+  display: flex; flex-direction: column; gap: var(--space-sm);
 }
 .editable-region::before {
-  content: '直せる';
-  position: absolute; top: calc(var(--space-xs) * -1); left: var(--space-sm);
-  padding: 0 var(--space-xxs);
-  background: var(--color-canvas);
-  color: var(--color-mute);
-  font-family: var(--font-mono);
-  font-size: var(--type-caption-mono-font-size);
-  line-height: var(--type-caption-mono-line-height);
+  display: none !important;
 }
 .editable-inline input, .editable-inline select, .editable-inline textarea {
   height: 30px;

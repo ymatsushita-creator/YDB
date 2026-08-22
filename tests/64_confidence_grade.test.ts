@@ -126,7 +126,7 @@ describe('確度の記入（C-151）', () => {
   })
 
   test('★ 画面は「確度の算出規則が未登録」を出さない ―― 規則で決めるのをやめた', async () => {
-    const page = await readFile(join(ROOT, 'app/headhunting/page.tsx'), 'utf8')
+    const page = await readFile(join(ROOT, 'app/people/[id]/page.tsx'), 'utf8')
     assert.doesNotMatch(page, /確度の算出規則が未登録/)
     assert.match(page, /setConfidenceAction/, '記入する道が画面に無い')
   })

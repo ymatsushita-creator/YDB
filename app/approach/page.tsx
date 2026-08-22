@@ -78,13 +78,25 @@ export default async function ApproachPage(
   const openPartner = partnerRows.find((p) => p.partner_id === openPartnerId) ?? null
   const reaches = openPartner ? await listReachSheetRows(db, openPartner.partner_id) : []
 
+const PARTNER_CATEGORY_OPTIONS = [
+  { id: 'アプローチ対象', label: 'アプローチ対象' },
+  { id: '提携団体', label: '提携団体' },
+  { id: '大学', label: '大学' },
+  { id: '専門学校', label: '専門学校' },
+  { id: '高校', label: '高校' },
+  { id: 'NPO・社協', label: 'NPO・社協' },
+  { id: '自治体・行政', label: '自治体・行政' },
+  { id: 'パートナー企業', label: 'パートナー企業' },
+  { id: 'その他', label: 'その他' },
+]
+
   const partnerColumns: SheetColumn[] = [
-    { key: 'category', label: '分類', type: 'text', width: 120 },
-    { key: 'contactName', label: '窓口', type: 'text', width: 120 },
+    { key: 'category', label: '団体区分', type: 'select', options: PARTNER_CATEGORY_OPTIONS, width: 140 },
+    { key: 'contactName', label: '先方担当者名', type: 'text', width: 130 },
     // 先方のどの部署か／NEO 側の受け持ち（0034。応募管理表 011 にあってDBに無かった）。
-    { key: 'contactDepartment', label: '担当部署', type: 'text', width: 180 },
-    { key: 'contactEmail', label: '窓口のメール', type: 'email', width: 190 },
-    { key: 'internalOwner', label: '社内担当', type: 'text', width: 110 },
+    { key: 'contactDepartment', label: '先方部署名', type: 'text', width: 160 },
+    { key: 'contactEmail', label: '窓口メール', type: 'email', width: 180 },
+    { key: 'internalOwner', label: '社内担当者', type: 'text', width: 120 },
     // ★ 応募管理表 011 にあってDBに無かった枠（0046。C-180。依頼者の指示）。
     //   空は「聞いていない」、0 は「枠が無い」。**別物なので埋めない。**
     { key: 'recommendationSeats', label: '推薦可能人数', type: 'number', width: 110 },
@@ -92,13 +104,13 @@ export default async function ApproachPage(
     { key: 'bestContactPeriod', label: '最適連絡時期', type: 'text', width: 150 },
     { key: 'location', label: '所在地', type: 'text', width: 140 },
     // NEO としてどう関わるか（0031）。自由入力の1行（依頼者の判断）。
-    { key: 'engagement', label: 'NEO としての関わり', type: 'text', width: 220 },
+    { key: 'engagement', label: '関わり・連携メモ', type: 'text', width: 220 },
     // 推薦枠ステイタス（0035）。**その期のもの**を出す（期を変えれば変わる）。
     {
       key: 'recommendationStateId', label: '推薦枠', type: 'select', width: 150,
       options: recommendationStates.map((s) => ({ id: s.id, label: s.label })),
     },
-    { key: 'staffId', label: '入力者', type: 'select', options: options.staffs, width: 130 },
+    { key: 'staffId', label: '記録担当者', type: 'select', options: options.staffs, width: 130 },
   ]
 
   const reachColumns: SheetColumn[] = [
@@ -109,6 +121,15 @@ export default async function ApproachPage(
     { key: 'note', label: '記録', type: 'text', width: 260 },
     { key: 'staffId', label: '入力者', type: 'select', options: options.staffs, width: 130 },
   ]
+
+  // 検索クエリの適用
+  const query = (one((sp as Record<string, string | string[] | undefined>).q) ?? '').trim().toLowerCase()
+  const filteredPartnerRows = query
+    ? partnerRows.filter((p) => p.name.toLowerCase().includes(query) || p.category?.toLowerCase().includes(query))
+    : partnerRows
+  const filteredPartners = query
+    ? partners.filter((p) => p.partner_name.toLowerCase().includes(query))
+    : partners
 
   return (
     <Shell active="approach" seasonId={season.id}
@@ -122,7 +143,6 @@ export default async function ApproachPage(
 
       <div className="page-head">
         <div>
-
           <p className="page-sub">
             {season.is_live ? '進行中' : '終了'}
           </p>
@@ -141,55 +161,32 @@ export default async function ApproachPage(
              meta="人" />
       </div>
 
-      {/*
-        「推定リーチに対する識別率」は出さない。分母は推定した接触機会、
-        分子は実人数で、単位も数え方も違う。接点継続中から応募への比率を
-        削除したのと同じ理由（DECISIONS D-3）。推定リーチから実人数への歩留まりを
-        指標にしたいなら、estimated_reach が実測に置き換わってからにする。
-      */}
-
-      <div className="section">
-        <Link href={`/approach/new?season=${season.id}`} className="hh-more">
-          連携団体を編集 ›
-        </Link>
-      </div>
-
-      <div className="section section-fixed">
+      <div className="section section-fixed" style={{ marginTop: 'var(--space-md)' }}>
         <div className="bl-tabs">
+          <Link href={tabHref('list')}
+                className={view !== 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
+                aria-current={view !== 'partner' ? 'page' : undefined}>
+            連携団体一覧・編集
+          </Link>
           <Link href={tabHref('partner')}
                 className={view === 'partner' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
                 aria-current={view === 'partner' ? 'page' : undefined}>
             団体別のリーチ
           </Link>
-          {/* ★ 「チャネル別のアトリビューション」は**いったんしまった**
-              （依頼者の指示。実行⑰。C-171）。
-              ★ 消していない ―― 下の表も集計もそのまま残してある。
-                `?view=channel` を打てば今でも開く。戻すのはこの札を戻すだけ。
-                消すと、帰属の集計を書き直すところからやり直しになる。 */}
-          <Link href={tabHref('list')}
-                className={view === 'list' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
-                aria-current={view === 'list' ? 'page' : undefined}>
-            連携団体一覧
-          </Link>
-          {/* 実行⑫。依頼者の指示で、団体の属性をここで直せるようにした。 */}
-          <Link href={tabHref('edit')}
-                className={view === 'edit' ? 'bl-tab is-on btn-physical' : 'bl-tab btn-physical'}
-                aria-current={view === 'edit' ? 'page' : undefined}>
-            団体を直す
-          </Link>
         </div>
       </div>
 
-      <div className="section" hidden={view !== 'edit'}>
-        <Card title="団体">
+      <div className="section" hidden={view === 'partner'}>
+        <Card title={`連携団体一覧・編集（${num(filteredPartnerRows.length)} 件）`}>
           {partnerRows.length === 0 ? (
-            <Empty>団体がまだ1件も登録されていない</Empty>
+            <Empty>連携団体がまだ1件も登録されていない</Empty>
+          ) : filteredPartnerRows.length === 0 ? (
+            <Empty>該当する連携団体がありません</Empty>
           ) : (
             <Sheet
               columns={partnerColumns}
-              rows={partnerRows.map((p) => ({
+              rows={filteredPartnerRows.map((p) => ({
                 id: p.partner_id,
-                // 名前は表で直せない。**団体の同一性そのもの**である。
                 lead: p.name,
                 values: {
                   category: p.category ?? '',
@@ -215,19 +212,14 @@ export default async function ApproachPage(
                 href: `/approach?season=${season.id}&view=edit&partner={id}`,
                 label: '接触を開く',
               }}
-              addLabel="行を追加（団体は「連携団体を編集」から）"
+              addLabel="新しい団体の行を追加"
             />
           )}
         </Card>
       </div>
 
-      {/* 団体の行を開いた先。**その団体の接触だけ**を並べる（依頼者の指示）。 */}
       {openPartner && (
-        <div className="section" hidden={view !== 'edit'}>
-          {/* ★ この団体の面（`/reach-zones/{id}`）へ行けるようにする。
-              その画面はパンくずに「連携団体 › 団体名」を出しているのに、
-              **どこからもリンクされていなかった** ―― 名指しの URL を打つ以外に
-              入る道が無い階層は、無いのと同じである。 */}
+        <div className="section" hidden={view === 'partner'}>
           <p>
             <Link className="hh-more"
                   href={`/reach-zones/${openPartner.partner_id}?season=${season.id}`}>
@@ -239,7 +231,6 @@ export default async function ApproachPage(
               columns={reachColumns}
               rows={reaches.map((r) => ({
                 id: r.reach_id,
-                // 期は日付から決まるので表では直せない（読み取りで添える）。
                 lead: r.season_label ?? '期なし',
                 values: {
                   occurredOn: r.occurred_on,
@@ -257,54 +248,10 @@ export default async function ApproachPage(
         </div>
       )}
 
-      {/* ★ 連携団体一覧（C-178）。**全団体を出す** ―― 接点の有無で落とさない。
-          「団体別のリーチ」は接点のある団体しか出ないので、
-          声を掛けていない相手が画面から消えていた。 */}
-      <div className="section" hidden={view !== 'list'}>
-        <Card title={`連携団体一覧（${num(partnerRows.length)} 件）`}>
-          {/* ★ 団体は期を持たない（C-213）。空表示に「この年度に」と書くと、
-              期を替えれば出てくるように読める ―― 出てこない。
-              経営層ペルソナ試験で見つけた（C-217）。 */}
-          {partnerRows.length === 0 ? (
-            <Empty>連携団体がまだ1件も登録されていない</Empty>
-          ) : (
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>団体</th><th>分類</th><th>窓口</th>
-                    <th>推薦枠</th><th>社内担当</th><th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {partnerRows.map((p) => (
-                    <tr key={p.partner_id}>
-                      <th scope="row">{p.name}</th>
-                      <td>{p.category || <span className="section-note">—</span>}</td>
-                      <td>{p.contact_name || <span className="section-note">—</span>}</td>
-                      <td>
-                        {recommendationStates
-                          .find((s) => s.id === p.recommendation_state_id)?.label
-                          ?? <span className="section-note">未設定</span>}
-                      </td>
-                      <td>{p.internal_owner || <span className="section-note">—</span>}</td>
-                      <td className="nowrap">
-                        <Link href={tabHref('edit', { partner: p.partner_id })}
-                              className="hh-more">直す ›</Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      </div>
-
       <div className="section" hidden={view !== 'partner'}>
         <Card title="団体別のリーチ">
-          {partners.length === 0 ? (
-            <Empty>この年度の団体リーチは記録されていない</Empty>
+          {filteredPartners.length === 0 ? (
+            <Empty>該当する団体リーチがありません</Empty>
           ) : (
             <div className="table-wrap">
               <table className="data">
@@ -318,10 +265,9 @@ export default async function ApproachPage(
                   </tr>
                 </thead>
                 <tbody>
-                  {partners.map((p) => (
+                  {filteredPartners.map((p) => (
                     <tr key={p.partner_id}>
                       <td className="cell-name">
-                        {/* 一覧で終わらせない（C-62）。押すとその団体の接触の表へ。 */}
                         <Link href={tabHref('edit', { partner: p.partner_id })}
                               className="bl-person">
                           <Avatar src={p.photo_data_url} name={p.partner_name} />
@@ -342,6 +288,7 @@ export default async function ApproachPage(
           )}
         </Card>
       </div>
+
 
       <div className="section" hidden={view !== 'channel'}>
         <Card title="チャネル別のアトリビューション">

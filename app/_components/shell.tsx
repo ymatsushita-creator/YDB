@@ -64,29 +64,15 @@ export type Tab = 'home' | 'headhunting' | 'borderline' | 'approach' | 'intervie
  */
 const TABS: Array<{ id: Tab; href: string; label: string }> = [
   { id: 'home', href: '/', label: 'ホーム' },
-  { id: 'headhunting', href: '/headhunting', label: '特別選考' },
   { id: 'borderline', href: '/borderline', label: '通常選考' },
+  { id: 'headhunting', href: '/headhunting', label: '特別選考' },
+  { id: 'interview', href: '/interviews', label: '面接・評価' },
   { id: 'approach', href: '/approach', label: '連携団体' },
-  // 面接は団体アプローチの下（依頼者の指示。実行⑩）。
-  { id: 'interview', href: '/interviews', label: '面接' },
 ]
 
-/**
- * ★ 「入力者を追加」を足した（実行⑫）。
- *   表の「記録した人」は職員を選ばせるのに、**選択肢を増やす画面が無かった**
- *   ―― 取り込みが唯一の経路だった（C-75）。
- */
-/*
- * ★ 呼び名を「追加」から「編集」へ（依頼者の指示。実行⑰。C-168）。
- *   この画面は前から**一覧して直せる表**で、追加はその一部でしかなかった。
- *   「追加」と書いてあると、既にある行を直しに来る道が名前から見えない。
- *   ★ 行き先は変えない ―― 貼られたURLを切らない。
- */
 const ADD_LINKS = [
-  { href: '/people/new', label: '候補者を編集' },
+  { href: '/people/new', label: '候補者データ登録' },
   { href: '/approach/new', label: '連携団体を編集' },
-  // ★ 依頼者の指示（実行⑯）――「連携団体を追加タブの下に、イベントを追加タブ」。
-  //   並びは指示のとおり、連携団体の**すぐ下**に置く。
   { href: '/events/new', label: 'イベントを編集' },
 ]
 

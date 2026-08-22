@@ -89,6 +89,9 @@ export function Confidence({ ratio }: { ratio: number | null }) {
  * 1つの型で作ると「書類選考を担当を決める」になる。
  * 短い文ほど、助詞の間違いがそのまま読みにくさになる。
  */
+import Link from 'next/link'
+import { Avatar } from './borderline.tsx'
+
 export function taskSentence(kind: string, person: string, step: string): string {
   switch (kind) {
     case 'evaluate': return `${person} さんの${step}を評価する`
@@ -98,3 +101,71 @@ export function taskSentence(kind: string, person: string, step: string): string
     default: return `${person} さんの${step}`
   }
 }
+
+/**
+ * 候補者名/行のホバー時に顔写真・名前・確度・欲しい度を表示するポップオーバーカード。
+ * クリックで直接詳細画面 (/people/${personId}) へ遷移する。
+ */
+export function PersonHoverCard({
+  personId,
+  seasonId,
+  name,
+  photoUrl,
+  gradeCode,
+  confidenceRatio,
+  score100,
+  children,
+  className = '',
+}: {
+  personId: string
+  seasonId: string
+  name: string
+  photoUrl?: string | null
+  gradeCode?: string | null
+  confidenceRatio?: number | null
+  score100?: number | string | null
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`person-hover-wrapper ${className}`}>
+      <Link href={`/people/${personId}?season=${seasonId}`} className="bl-person">
+        {children}
+      </Link>
+      <div className="person-hover-card" role="tooltip">
+        <div className="person-hover-card-head">
+          <Avatar src={photoUrl ?? null} name={name} />
+          <div className="person-hover-card-identity">
+            <span className="person-hover-card-name">{name}</span>
+            <span className="person-hover-card-link">詳細画面を開く ›</span>
+          </div>
+        </div>
+        <div className="person-hover-card-metrics">
+          <div className="person-hover-card-metric">
+            <span className="person-hover-card-label">確度</span>
+            <span className="person-hover-card-value">
+              {gradeCode ? (
+                <span className={`conf-mark conf-${gradeCode}`}>{gradeCode}</span>
+              ) : confidenceRatio !== undefined && confidenceRatio !== null ? (
+                <Confidence ratio={confidenceRatio} />
+              ) : (
+                <span className="muted-note">未記入</span>
+              )}
+            </span>
+          </div>
+          <div className="person-hover-card-metric">
+            <span className="person-hover-card-label">欲しい度</span>
+            <span className="person-hover-card-value strong">
+              {score100 !== undefined && score100 !== null ? (
+                `${score100} 点`
+              ) : (
+                <span className="muted-note">評価なし</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+

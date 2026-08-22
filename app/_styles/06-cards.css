@@ -10,10 +10,16 @@
    ============================================================= */
 
 .card-base, .panel-card, .template-card, .pick-card, .kpi-result-card {
-  background: var(--color-canvas);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-md);
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 16px;
   padding: var(--space-lg);
+  box-shadow: 0 1px 3px 0 rgba(60,64,67,0.1), 0 1px 2px 0 rgba(60,64,67,0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.panel-card:hover, .card-base:hover {
+  border-color: #bdc1c6;
+  box-shadow: 0 4px 14px 0 rgba(60,64,67,0.15);
 }
 .panel-card, .card-base { display: flex; flex-direction: column; min-height: 0; }
 .panel-card > .hh-head, .panel-card > .hh-note, .panel-card > .bl-tabs,

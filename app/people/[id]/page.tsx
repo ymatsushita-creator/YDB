@@ -8,6 +8,8 @@ import {
 import { listPersonInterviews } from '../../../src/queries/interview.ts'
 import { listNoteHistory } from '../../../src/queries/intake.ts'
 import { startSelectionAction } from './actions.ts'
+import { setConfidenceAction } from '../../headhunting/actions.ts'
+import { listConfidenceGrades } from '../../../src/commands/confidence.ts'
 import { RECOMMENDATION_LABEL } from '../../../src/commands/interview.ts'
 import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime, filled,
@@ -45,7 +47,7 @@ export default async function PersonPage({ params, searchParams }: {
   // 削除済みだけ別の応答にすると、その差が「その人は存在した」を漏らす。
   if (!person) notFound()
 
-  const [states, applications, touchpoints, interviews, noteHistory] = await Promise.all([
+  const [states, applications, touchpoints, interviews, noteHistory, confidenceGrades] = await Promise.all([
     getPersonSeasonStates(db, person.person_id),
     getPersonApplications(db, person.person_id),
     getPersonTouchpoints(db, person.person_id),
@@ -54,6 +56,7 @@ export default async function PersonPage({ params, searchParams }: {
     listPersonInterviews(db, person.person_id),
     // 担当者メモの履歴（C-177。依頼者の指示）。記録層は前から持っていた。
     listNoteHistory(db, person.person_id),
+    listConfidenceGrades(db),
   ])
 
   const kana = [person.family_name_kana, person.given_name_kana].filter(Boolean).join(' ')
@@ -161,6 +164,29 @@ export default async function PersonPage({ params, searchParams }: {
             </details>
           )}
         </Card>
+
+        {seasonId && opensHeadhunting && (
+          <Card title="確度の記入">
+            <form action={setConfidenceAction} className="conf-form">
+              <input type="hidden" name="personId" value={person.person_id} />
+              <input type="hidden" name="seasonId" value={seasonId} />
+              <div className="conf-grades">
+                {confidenceGrades.map((g) => (
+                  <label key={g.code} className="conf-grade">
+                    <input type="radio" name="grade" value={g.code} required />
+                    <span className={`conf-mark conf-${g.code}`}>{g.code}</span>
+                    <span className="conf-grade-def">{g.definition}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="conf-row" style={{ marginTop: 'var(--space-xs)' }}>
+                <input className="text-input" name="recordedBy" required maxLength={60} placeholder="記入者" style={{ flex: '1 1 120px' }} />
+                <input className="text-input" name="note" maxLength={2000} placeholder="補足（任意）" style={{ flex: '1 1 140px' }} />
+                <button className="button-primary" type="submit">記入する</button>
+              </div>
+            </form>
+          </Card>
+        )}
 
         <Card title="年度ごとの現在地">
           {states.length === 0 ? <Empty>どの年度の母集団にも入っていない</Empty> : (
