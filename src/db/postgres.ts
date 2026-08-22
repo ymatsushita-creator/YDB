@@ -28,16 +28,24 @@ export const actorName = (): string =>
  * PGlite の exec と同じく `;` 区切りの複数文をそのまま流せる。
  */
 export async function openPostgres(connectionString: string): Promise<Db> {
+  // Supabase Pooler では 5432 (session mode, pool上限15) ではなく
+  // 6543 (transaction pooler mode, Vercelサーバーレス最適化) を使う。
+  const tunedUrl = connectionString.replace(
+    /pooler\.supabase\.com:5432\b/g,
+    'pooler.supabase.com:6543',
+  )
+
   const pool = new Pool({
-    connectionString,
+    connectionString: tunedUrl,
     // Vercel は同じアプリの実行環境を複数立ち上げる。pg の既定値（各環境10本）だと
     // Supabase session pooler の上限を数環境だけで使い切るため、1環境あたりを絞る。
     //
     // ★ 1本にしていたが、**それは画面の `Promise.all` を直列に戻していた**（C-147）。
     //   各ページは問い合わせを5〜6本まとめて投げる作りで、接続が1本なら
     //   1本ずつ順番に流れる。本番DBへの実測で、6往復が 114 ms → 50 ms。
-    // 画面が並列に投げる Promise.all (5〜10件) の問い合わせを即時処理するため接続枠を10本にする。
-    max: 10,
+    // Supabase Session Pooler の上限（15本）を複数の Vercel サーバーレスインスタンスで共有するため、
+    // 1インスタンスあたりの最大接続数を 3 本に設定する。
+    max: 3,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
     allowExitOnIdle: true,
