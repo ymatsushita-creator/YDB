@@ -31,3 +31,30 @@ export const listAiPreAssessmentTargets = (
      GROUP BY n.person_id, s.id
      ORDER BY n.person_id`, [seasonId, personId || null])
 }
+
+export interface CompletedAiPreAssessment {
+  person_id: string
+  family_name: string
+  given_name: string
+  school: string
+  label: string
+  definition: string
+  rationale: string
+  occurred_at: Date
+}
+
+/** 本期で既にAI分析が完了している一覧を取得する。 */
+export const listCompletedAiPreAssessments = (
+  db: Db, seasonId: string | undefined,
+): Promise<CompletedAiPreAssessment[]> => {
+  if (!seasonId || !UUID.test(seasonId)) return Promise.resolve([])
+  return all<CompletedAiPreAssessment>(db, `
+    SELECT x.person_id, p.family_name, p.given_name,
+           coalesce(sc.name, '') AS school,
+           x.label, x.definition, x.rationale, x.occurred_at
+      FROM v_ai_pre_assessment x
+      JOIN persons p ON p.id = x.person_id AND p.deleted_at IS NULL
+      LEFT JOIN schools sc ON sc.id = p.school_id
+     WHERE x.season_id = $1
+     ORDER BY x.occurred_at DESC`, [seasonId])
+}
