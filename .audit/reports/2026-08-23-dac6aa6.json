@@ -1,0 +1,58 @@
+{
+  "kind": "deploy-gate",
+  "head": "dac6aa6",
+  "branch": "fix/quality-gate-false-pass",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1033,
+  "uploaded_untracked": 7,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [],
+  "unpushed_commits": 3,
+  "upstream": "origin/fix/quality-gate-false-pass",
+  "content_digest": "a65862285d269c77b913cd8b34fd1606",
+  "scan": {
+    "critical": 1,
+    "high": 0,
+    "medium": 0,
+    "files_scanned": 1027
+  },
+  "blocking_findings": [
+    {
+      "file": "mcp.json",
+      "line": 7,
+      "rule": "EMAIL",
+      "severity": "Critical",
+      "evidence": "K***"
+    }
+  ],
+  "result": "拒否",
+  "reasons": [
+    "送信対象に Critical/High が 1 件ある"
+  ],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作",
+    "未pushのコミットが 3 件ある —— 本番に出る内容が GitHub に無い"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:a65862285d269c77b913cd8b34fd1606",
+      "severity": "Critical",
+      "fact": "デプロイ拒否（1033ファイル）"
+    }
+  ],
+  "prev_digest": "bf7b3d72bfad5d89c32712529bdd3574ffed4051f13d71597af37039a713bc8b",
+  "saved_at": "2026-08-23T07:59:50+00:00",
+  "self_digest": "d6ab9e59d0af8023c9486d3fb990e953e3a6b065cc8f6c1d4459960d840c68b5"
+}
