@@ -784,13 +784,13 @@ export const listAcceptedCandidates = (
   all<AcceptedCandidateRow>(db, `
     SELECT p.id AS person_id,
            a.id AS application_id,
-           p.name AS person_name,
+           p.family_name || ' ' || p.given_name AS person_name,
            p.photo_data_url,
-           p.school
+           sc.name AS school
       FROM applications a
       JOIN persons p ON p.id = a.person_id
+      JOIN schools sc ON sc.id = p.school_id
       JOIN v_application_outcome o ON o.application_id = a.id
      WHERE a.season_id = $1 AND o.outcome = 'accepted'
-     ORDER BY p.name ASC
+     ORDER BY p.family_name, p.given_name, p.id
      LIMIT $2`, [seasonId, limit])
-

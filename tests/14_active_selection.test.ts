@@ -7,6 +7,7 @@ import {
 } from './support/fixtures.ts'
 import {
   getPendingEvaluations, getHeldEvaluations, getUnassignedSummary, getConflicts,
+  listAcceptedCandidates,
 } from '../src/queries/dashboard.ts'
 import { getApplication, getPersonApplications } from '../src/queries/drilldown.ts'
 
@@ -31,6 +32,29 @@ import { getApplication, getPersonApplications } from '../src/queries/drilldown.
 // -------------------------------------------------------------
 
 describe('応募の結末', () => {
+  test('ホームの合格者一覧は、Person の分割氏名と学校名を返す', async () => {
+    const db = await freshDb()
+    const base = await baseFixture(db)
+    const s = await makeSeason(db, { year: 2026 })
+    const person = await makePerson(db, base.schoolId, {
+      familyName: 'fixture_family', givenName: 'fixture_given',
+    })
+    const app = await makeApplication(db, person, s.id, jst('2025-11-01T10:00:00'))
+    await addHistory(db, {
+      applicationId: app, type: 'advance', stepId: s.finalStepId,
+      staffId: base.staffId, occurredAt: jst('2025-12-20T10:00:00'),
+    })
+
+    assert.deepEqual(await listAcceptedCandidates(db, s.id), [{
+      person_id: person,
+      application_id: app,
+      person_name: 'fixture_family fixture_given',
+      photo_data_url: null,
+      school: '架空高校',
+    }])
+    await db.close()
+  })
+
   test('無効化された応募は「選考中」ではない', async () => {
     // 「選考開始前の取り下げ」は counts_as_application = true なので、
     // v_countable_applications には残る。しかし accept も reject も
