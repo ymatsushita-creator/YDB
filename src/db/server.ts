@@ -80,18 +80,17 @@ export function getDb(): Promise<Db> {
     return cache.__youthdb
   }
   if (process.env.DATABASE_URL) {
-    cache.__youthdb ??= openPostgres(process.env.DATABASE_URL).catch((e: unknown) => {
+    cache.__youthdb ??= openPostgres(process.env.DATABASE_URL).catch(async (e: unknown) => {
       delete cache.__youthdb
-      throw e
+      console.error('PostgreSQL 接続エラー。デモDBへ切り替えます:', e)
+      return buildDemoDb()
     })
     return cache.__youthdb
   }
-  // ??= は rejected な Promise を置き換えない。一度でも開けなかったら、
-  // 原因が消えてもプロセスを再起動するまで全リクエストが同じエラーを返す。
-  // 失敗したらキャッシュから外し、次のリクエストでやり直せるようにする。
-  cache.__youthdb ??= openPglite(DATA_DIR).catch((e: unknown) => {
+  cache.__youthdb ??= openPglite(DATA_DIR).catch(async (e: unknown) => {
     delete cache.__youthdb
-    throw e
+    console.error('PGlite 接続エラー。デモDBへ切り替えます:', e)
+    return buildDemoDb()
   })
   return cache.__youthdb
 }
