@@ -22,16 +22,16 @@ select,
   min-width: 0;
   height: 40px;
   padding: 0 14px;
-  background-color: #ffffff;
-  color: #202124;
-  border: 1px solid #e5e7eb;
-  border-radius: 20px;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-full);
   font-size: var(--type-body-sm-font-size);
   line-height: var(--type-body-sm-line-height);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 input:focus, select:focus, textarea:focus, .text-input:focus {
-  border-color: #1a73e8;
+  border-color: var(--color-brand-cyan);
   box-shadow: 0 1px 6px rgba(32,33,36,0.28);
   outline: none;
 }
@@ -54,8 +54,8 @@ textarea, .memo-field {
   min-height: 90px;
   padding: 10px 14px !important;
   resize: vertical;
-  border-radius: 12px !important;
-  border: 1px solid #e5e7eb;
+  border-radius: var(--rounded-lg) !important;
+  border: 1px solid var(--color-hairline-strong);
   line-height: 1.5;
 }
 
@@ -152,13 +152,12 @@ label { color: var(--color-body); font-size: var(--type-caption-font-size); font
   cursor: pointer;
   padding: 6px 12px;
   background: var(--color-canvas-soft-2);
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--rounded-xl);
 }
 .iv-radio input[type='radio'] {
   width: 16px !important;
   height: 16px !important;
-  accent-color: #1a73e8;
 }
 
 /* メモの履歴 */

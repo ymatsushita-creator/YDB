@@ -4,7 +4,6 @@ import { defaultSeason, getSeason, listSeasons } from '../../src/queries/dashboa
 import { listKpis } from '../../src/queries/kpi.ts'
 import { Card, Empty, num } from '../_components/ui.tsx'
 import { Breadcrumb, Shell, YearSwitch, seasonLabel } from '../_components/shell.tsx'
-import { AutoSaveForm } from '../_components/auto_save.tsx'
 import { archiveKpiAction, saveKpiAction } from './actions.ts'
 import { listKpiMetrics, countKpiMetric } from '../../src/queries/kpi_metrics.ts'
 
@@ -112,7 +111,7 @@ export default async function KpisPage({ searchParams }: {
           <div className="kpi-manage-list">
             {kpis.map((kpi) => editable ? (
               <div className="kpi-manage-row" key={kpi.id}>
-                <AutoSaveForm action={saveKpiAction} className="kpi-edit-form editable-region">
+                <form action={saveKpiAction} className="kpi-edit-form editable-region">
                   <input type="hidden" name="seasonId" value={season.id} />
                   <input type="hidden" name="kpiId" value={kpi.id} />
                   <label>題名<input name="title" required defaultValue={kpi.title} maxLength={120} /></label>
@@ -128,7 +127,7 @@ export default async function KpisPage({ searchParams }: {
                   <label>数<input name="value" required inputMode="decimal" defaultValue={kpi.value} /></label>
                   <label>メモ<textarea name="memo" rows={2} defaultValue={kpi.memo ?? ''} maxLength={2000} /></label>
                   <button className="button-primary" type="submit">保存する</button>
-                </AutoSaveForm>
+                </form>
                 <form action={archiveKpiAction} className="editable-inline">
                   <input type="hidden" name="seasonId" value={season.id} />
                   <input type="hidden" name="kpiId" value={kpi.id} />

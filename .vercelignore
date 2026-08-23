@@ -26,3 +26,6 @@ Codexから移行した旧YouthDBデータ_*
 .env
 .env.*
 .claude-tmp
+
+# MCPクライアント設定。DB接続文字列を持つ（.gitignore と同じ理由）。
+mcp.json

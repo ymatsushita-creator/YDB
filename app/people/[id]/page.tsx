@@ -15,7 +15,6 @@ import {
   Card, Kpi, Empty, LevelBadge, num, ymd, jstDay, jstDateTime, filled,
 } from '../../_components/ui.tsx'
 import { Shell, Breadcrumb } from '../../_components/shell.tsx'
-import { AutoSaveForm } from '../../_components/auto_save.tsx'
 import { currentTier } from '../../../src/auth/current.ts'
 import { canOpen } from '../../../src/auth/tiers.ts'
 
@@ -168,7 +167,7 @@ export default async function PersonPage({ params, searchParams }: {
 
         {seasonId && opensHeadhunting && (
           <Card title="確度の記入">
-            <AutoSaveForm action={setConfidenceAction} className="conf-form">
+            <form action={setConfidenceAction} className="conf-form editable-region">
               <input type="hidden" name="personId" value={person.person_id} />
               <input type="hidden" name="seasonId" value={seasonId} />
               <div className="conf-grades">
@@ -185,7 +184,7 @@ export default async function PersonPage({ params, searchParams }: {
                 <input className="text-input" name="note" maxLength={2000} placeholder="補足（任意）" style={{ flex: '1 1 140px' }} />
                 <button className="button-primary" type="submit">記入する</button>
               </div>
-            </AutoSaveForm>
+            </form>
           </Card>
         )}
 
