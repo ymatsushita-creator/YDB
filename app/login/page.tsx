@@ -10,10 +10,11 @@ export const dynamic = 'force-dynamic'
  * ★ `editable-region` を付けない ―― あれは**記録を編集できる場所**の印（C-47）で、
  *   付けると「記入できます」の札が出る。合言葉は記録ではない（C-82）。
  */
-export default async function LoginPage({
-  searchParams,
-}: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const sp = await searchParams
+export default async function LoginPage(props: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const sp = props?.searchParams ? (await props.searchParams) ?? {} : {}
+
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
   const failed = one(sp.e) === '1'
   const next = one(sp.next) ?? ''
