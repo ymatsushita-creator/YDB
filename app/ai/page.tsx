@@ -66,7 +66,7 @@ export default async function AiPage({ searchParams }: {
           label: '採点',
           href: `/borderline/${personId}?season=${season.id}&tab=step1`,
         }] : [{ label: '採点', href: `/borderline?season=${season.id}&tab=step1` }]),
-        { label: 'AI分析' },
+        { label: 'AI分析コパイロット' },
       ]} />
 
       <div className="page-head">
@@ -99,7 +99,7 @@ export default async function AiPage({ searchParams }: {
                 placeholder="sk-ant-…" spellCheck={false} />
               <small>一度登録すれば以後も自動使用します。暗号化してDBへ保存し、画面には戻しません。</small>
             </label>
-            <p style={{ fontWeight: 600, color: keyConfigured ? 'var(--color-success-deep)' : 'var(--color-error-deep)' }}>
+            <p style={{ fontWeight: 600, color: keyConfigured ? '#388e3c' : '#d32f2f' }}>
               {keyConfigured ? '✓ APIキー登録済み。新しいキーへ上書き変更できます。' : '⚠️ APIキー未登録です。分析実行前にキーを入力してください。'}
             </p>
             <button className="button-primary" type="submit">
@@ -112,7 +112,7 @@ export default async function AiPage({ searchParams }: {
       {/* 2. 記録に聞く (AI RAG Assistant) */}
       <div className="section">
         <Card title="💬 記録に聞く (データベース AI アシスタント)">
-          <form action={askDatabaseAction} className="editable-region">
+          <form action={askDatabaseAction}>
             <input type="hidden" name="seasonId" value={season?.id ?? ''} />
             <AiQuickPrompts />
             <button className="button-primary" type="submit" style={{ marginTop: '12px' }}>
@@ -120,11 +120,11 @@ export default async function AiPage({ searchParams }: {
             </button>
           </form>
           {asked && (
-            <div className="ask-answer" style={{ marginTop: '16px', padding: '16px', background: 'var(--color-canvas-soft-2)', borderRadius: '8px', borderLeft: '4px solid var(--color-primary)' }}>
-              <p className="section-note" style={{ fontWeight: 600, color: 'var(--color-ink)' }}>質問: {asked.q}</p>
+            <div className="ask-answer" style={{ marginTop: '16px', padding: '16px', background: 'var(--surface-variant)', borderRadius: '8px', borderLeft: '4px solid var(--brand-primary)' }}>
+              <p className="section-note" style={{ fontWeight: 600, color: 'var(--text-strong)' }}>質問: {asked.q}</p>
               <div style={{ marginTop: '8px', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{asked.answer}</div>
               {asked.steps.length > 0 && (
-                <p className="section-note" style={{ marginTop: '12px', fontSize: '11px', color: 'var(--color-mute)' }}>
+                <p className="section-note" style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
                   🔍 参照したデータベーステーブル: {asked.steps.join(' / ')}
                 </p>
               )}
@@ -181,10 +181,10 @@ export default async function AiPage({ searchParams }: {
                       </td>
                       <td>{item.school || '未設定'}</td>
                       <td>
-                        <span className="chip-blue" style={{ fontWeight: 600 }}>
+                        <span className="chip" style={{ background: 'var(--brand-surface)', fontWeight: 600 }}>
                           {item.label}
                         </span>
-                        {item.definition && <small style={{ display: 'block', color: 'var(--color-mute)' }}>{item.definition}</small>}
+                        {item.definition && <small style={{ display: 'block', color: 'var(--text-muted)' }}>{item.definition}</small>}
                       </td>
                       <td style={{ maxWidth: '360px', fontSize: '12px', lineHeight: 1.4 }}>
                         {item.rationale}

@@ -9,9 +9,9 @@
    ============================================================= */
 
 .table-wrap {
-  background: var(--color-canvas);
-  border: 1px solid var(--color-hairline-strong);
-  border-radius: var(--rounded-lg);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
   overflow: hidden;
 }
 /* 表は自分の器の中で横に送る。**ページを横に送らせない。** */
@@ -26,29 +26,29 @@ table.data, table.hh-table, table.bl-table, table.candidate-unified-table {
   letter-spacing: var(--type-body-sm-letter-spacing);
 }
 
-/* 見出しは mono。 */
+/* 見出しは mono。Google Workspace Style Header */
 table.data th, table.hh-table th, table.bl-table th, table.candidate-unified-table th {
   position: sticky; top: 0; z-index: 1;
   text-align: left;
   padding: var(--space-xs) var(--space-sm);
-  background: var(--color-canvas-soft);
-  color: var(--color-body);
+  background: #f8f9fa;
+  color: #5f6368;
   font-family: var(--font-mono);
   font-size: var(--type-caption-mono-font-size);
   font-weight: 600;
   line-height: var(--type-caption-mono-line-height);
   letter-spacing: 0.02em;
   white-space: nowrap;
-  border-bottom: 1px solid var(--color-hairline-strong);
+  border-bottom: 1px solid #e5e7eb;
 }
 table.data td, table.hh-table td, table.bl-table td, table.candidate-unified-table td {
   padding: var(--space-xs) var(--space-sm);
-  border-bottom: 1px solid var(--color-hairline);
+  border-bottom: 1px solid #e8eaed;
   vertical-align: middle;
   white-space: nowrap;
 }
 table.data tr:hover, table.hh-table tr:hover, table.bl-table tr:hover, table.candidate-unified-table tr:hover {
-  background-color: var(--color-canvas-soft);
+  background-color: #f8f9fa;
 }
 /* 記録の本文が入る欄だけは畳む。 */
 table td .hh-memo, table td .memo-body, table td .task-detail,
@@ -149,7 +149,7 @@ table.candidate-unified-table th { white-space: nowrap; }
   padding: 8px var(--space-sm);
   background: var(--color-canvas-soft-2);
   border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-lg);
+  border-radius: 12px;
   margin-bottom: 16px !important;
   flex-wrap: wrap;
 }
@@ -177,20 +177,20 @@ table.candidate-unified-table th { white-space: nowrap; }
   font-size: 13px !important;
   font-weight: 600 !important;
   line-height: 1 !important;
-  border-radius: var(--rounded-pill) !important;
+  border-radius: 20px !important;
   padding: 0 16px !important;
   margin: 0 !important;
 }
 
 .sheet-filter-bar input.text-input {
   background: var(--color-canvas);
-  border: 1px solid var(--color-hairline-strong);
+  border: 1px solid #e5e7eb;
   color: var(--color-ink);
   min-width: 220px;
 }
 .sheet-filter-bar input.text-input:focus {
-  border-color: var(--color-brand-cyan);
-  box-shadow: 0 0 0 2px var(--color-brand-cyan-soft);
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
 table.data.sheet {
@@ -212,7 +212,7 @@ table.data.sheet th {
   font-size: 12px;
   font-weight: 600;
   padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--color-hairline-strong);
+  border: 1px solid #e5e7eb;
   text-align: left;
   white-space: nowrap;
 }
@@ -223,7 +223,7 @@ table.data.sheet th.sheet-lead {
   left: 0;
   z-index: 4;
   background: var(--color-canvas-soft-2);
-  border: 1px solid var(--color-hairline-strong);
+  border: 1px solid #e5e7eb;
   text-align: center;
   font-family: var(--font-mono);
   font-size: 12px;

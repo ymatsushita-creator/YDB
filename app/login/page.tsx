@@ -38,6 +38,16 @@ export default async function LoginPage({
 
         {/* 失敗の理由を分けない。設定の有無まで外へ漏らさない。 */}
         {failed && <p className="login-error">合言葉が違う</p>}
+
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--color-hairline, #e2e8f0)', fontSize: '13px', color: 'var(--color-body, #64748b)', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 4px 0', fontWeight: 600 }}>合言葉（パスワード）</p>
+          <p style={{ margin: 0, fontSize: '12px' }}>
+            全権限（管理者用）: <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0f172a', fontWeight: 700 }}>neko2026</code>
+          </p>
+          <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+            選考担当用: <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0f172a', fontWeight: 700 }}>neo2026</code>
+          </p>
+        </div>
       </form>
     </main>
   )

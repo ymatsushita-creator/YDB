@@ -15,6 +15,7 @@ import { jstDay, num, jstDateTime } from '../../_components/ui.tsx'
 import { shownRationale } from '../../../src/records/placeholder.ts'
 import { Shell, Breadcrumb, seasonLabel } from '../../_components/shell.tsx'
 import { Avatar } from '../../_components/borderline.tsx'
+import { AutoSaveForm } from '../../_components/auto_save.tsx'
 
 export const dynamic = 'force-dynamic'
 
@@ -170,7 +171,7 @@ export default async function InterviewPage({
       {/* --- 記入事項・最終判定。まとめて1回で保存する ---
           `editable-region` は「ここは書ける」という印（C-56）。
           **書ける場所は面の色で分かるようにする**ので、書き込む form には必ず付ける。 */}
-      <form action={saveInterviewAction} className="editable-region">
+      <AutoSaveForm action={saveInterviewAction} className="editable-region">
         {hidden}
 
         <div className="section">
@@ -226,7 +227,7 @@ export default async function InterviewPage({
             <button type="submit" className="button-primary">面接シートを保存する</button>
           </section>
         </div>
-      </form>
+      </AutoSaveForm>
 
       {/* --- 提出された書類（フォームの回答）。実行⑫。依頼者の指示 ---
 

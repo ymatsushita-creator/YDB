@@ -38,48 +38,60 @@
   box-shadow: none;
 }
 
-/* 主操作。色と角丸は tokens.css（DESIGN.md 生成）が持つ。高さと押した感じだけ足す。 */
+/* 主操作。Google Filled Blue Pill Button */
 .button-primary {
   height: 38px;
   padding: 0 var(--space-md);
-  background-color: var(--color-primary);
-  box-shadow: var(--shadow-1);
+  border-radius: 20px;
+  background-color: #1a73e8;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
   transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
-.button-primary:hover { box-shadow: var(--shadow-2); }
-.button-primary:active { transform: scale(0.98); }
+.button-primary:hover {
+  background-color: #1557d0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+}
+.button-primary:active { background-color: #0b57d0; transform: scale(0.98); }
 .button-primary[disabled], .button-secondary[disabled] {
-  background-color: var(--color-canvas-soft-2);
-  color: var(--color-mute);
-  border-color: var(--color-hairline-strong);
+  background-color: #f1f3f4;
+  color: #80868b;
+  border-color: #dadce0;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-/* 副操作。色は tokens.css が持つ。高さだけ足す。 */
+/* 副操作。Google Outlined Pill Button */
 .button-secondary {
   height: 38px;
   padding: 0 var(--space-md);
+  border-radius: 20px;
+  background-color: #ffffff;
+  color: #1a73e8;
+  border: 1px solid #dadce0;
+  font-weight: 500;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.button-secondary:hover { background-color: var(--color-canvas-soft-2); text-decoration: none; }
+.button-secondary:hover { background-color: #f8f9fa; border-color: #1a73e8; color: #1557d0; text-decoration: none; }
 
 
 /* 小さい方（表の行・カードの中）。DESIGN.md `button-*-sm` の字面。 */
 .button-primary-sm, .button-secondary-sm, .row-detail-button, .zoom-back {
   height: 28px;
   padding: 0 var(--space-md);
-  border-radius: var(--rounded-pill);
+  border-radius: 20px;
   font-size: var(--type-button-md-font-size);
   font-weight: 500;
   line-height: var(--type-button-md-line-height);
 }
 .row-detail-button, .zoom-back {
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  border: 1px solid var(--color-hairline);
+  background-color: #ffffff;
+  color: #1a73e8;
+  border: 1px solid #dadce0;
 }
-.row-detail-button:hover, .zoom-back:hover { background-color: var(--color-canvas-soft-2); text-decoration: none; }
+.row-detail-button:hover, .zoom-back:hover { background-color: #e8f0fe; border-color: #c2e7ff; color: #1557d0; text-decoration: none; }
 
 /* 表や一覧の中の主操作は、帯の主操作より小さくする。 */
 .task-item .button-primary, .criteria-row .button-primary,
@@ -121,10 +133,10 @@ table .button-primary, table .button-secondary {
   display: inline-flex; align-items: center;
   height: 32px;
   padding: 0 var(--space-md);
-  border-radius: var(--rounded-pill);
-  background-color: var(--color-hairline);
-  border: 1px solid var(--color-hairline-strong);
-  color: var(--color-ink);
+  border-radius: 100px;
+  background-color: #f1f3f4;
+  border: 1px solid #dadce0;
+  color: #3c4043;
   font-size: var(--type-body-sm-font-size);
   font-weight: 500;
   line-height: var(--type-body-sm-line-height);
@@ -132,19 +144,19 @@ table .button-primary, table .button-secondary {
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .bl-tab:hover, .owner-filter-tabs > a:hover {
-  background-color: var(--color-canvas-soft-2);
+  background-color: #e8eaed;
   text-decoration: none;
-  color: var(--color-ink);
+  color: #202124;
 }
 .bl-tab:active, .owner-filter-tabs > a:active {
   transform: scale(0.97);
 }
-/* 選ばれている札。DESIGN.md `tab-active` ―― near-black で塗る。 */
+/* 選ばれている札。Google Blue Tonal Chip */
 .bl-tab.is-on, .bl-tab[aria-current='page'], .owner-filter-tabs > a.active {
   position: relative; overflow: hidden;
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-on-primary);
+  background-color: #e8f0fe;
+  border-color: #c2e7ff;
+  color: #1a73e8;
   font-weight: 600;
 }
 .bl-tab.is-on::after, .bl-tab[aria-current='page']::after, .owner-filter-tabs > a.active::after {
@@ -206,18 +218,17 @@ table .button-primary, table .button-secondary {
   width: 100%; height: 8px;
   border-radius: var(--rounded-full);
   overflow: hidden;
-  background: var(--color-canvas-soft-2);
+  background: #e8eaed;
 }
 .meter { display: block; margin-top: var(--space-xxs); }
-.meter::-webkit-meter-bar { border: 0; border-radius: var(--rounded-full); background: var(--color-canvas-soft-2); }
-/* 棒は面。スペクトラムの線（④）は細い印だけに使うので、ここは無彩色。 */
-.meter::-webkit-meter-optimum-value { border-radius: var(--rounded-full); background: var(--color-primary); }
+.meter::-webkit-meter-bar { border: 0; border-radius: var(--rounded-full); background: #e8eaed; }
+.meter::-webkit-meter-optimum-value { border-radius: var(--rounded-full); background: var(--spectrum-line); }
 .meter.over::-webkit-meter-optimum-value { background: var(--color-warning); }
 .meter.good::-webkit-meter-optimum-value { background: var(--color-success); }
 .bar-fill, .kpi-viz-bar, .meter-fill {
   display: block; height: 100%;
   border-radius: var(--rounded-full);
-  background: var(--color-primary);
+  background: var(--spectrum-line);
 }
 .bar-list { display: flex; flex-direction: column; gap: var(--space-xs); }
 .bar-label { font-size: var(--type-body-sm-font-size); color: var(--color-ink); }
@@ -267,10 +278,28 @@ table .button-primary, table .button-secondary {
   font-weight: 700;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.conf-mark.conf-S { background: var(--color-success-soft); color: var(--color-success-deep); }
-.conf-mark.conf-A { background: var(--color-info-soft); color: var(--color-info-deep); }
-.conf-mark.conf-B { background: var(--color-brand-lavender-soft); color: var(--color-brand-lavender-deep); }
-.conf-mark.conf-C { background: var(--color-canvas-soft-2); color: var(--color-body); }
+.conf-mark.conf-S {
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFE082 100%);
+  color: #B78103;
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  box-shadow: 0 2px 6px rgba(255, 193, 7, 0.2);
+}
+.conf-mark.conf-A {
+  background: linear-gradient(135deg, #E0F7FA 0%, #80DEEA 100%);
+  color: #007788;
+  border: 1px solid rgba(0, 188, 212, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 188, 212, 0.2);
+}
+.conf-mark.conf-B {
+  background: linear-gradient(135deg, #F3E5F5 0%, #CE93D8 100%);
+  color: #6A1B9A;
+  border: 1px solid rgba(156, 39, 176, 0.4);
+}
+.conf-mark.conf-C {
+  background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
 .conf-current { background: var(--color-primary); color: var(--color-on-primary); }
 .conf-none { color: var(--color-mute); font-size: var(--type-caption-font-size); }
 .conf-grades { display: flex; flex-direction: column; gap: var(--space-xs); }

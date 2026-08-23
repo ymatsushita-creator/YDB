@@ -175,7 +175,8 @@ describe('表（スプシ形式）', () => {
       }
     }
     await walk('app')
-    assert.deepEqual(found.sort(), ['app/_components/sheet.tsx'])
+    assert.deepEqual(found.sort(),
+      ['app/_components/auto_save.tsx', 'app/_components/sheet.tsx', 'app/ai/_components/ai_quick_prompt.tsx'])
   })
 
   test('★ 表は判定を持たない（コマンドを呼ぶだけ）', async () => {

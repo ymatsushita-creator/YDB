@@ -34,10 +34,10 @@
   /* 操作柱と上の帯の面。骨組みも同じ面を敷く（敷かないと器が崩れて見える）。 */
   --rail-face: var(--color-canvas);
 
-  /* ロゴのスペクトラムグラデーション（Lime → Cyan → Lavender → Pink → Yellow）。
-     色は `tokens.css`（DESIGN.md 生成）の brand-* から取る ―― 直値は置かない（⑥）。 */
-  --spectrum-line: linear-gradient(90deg, var(--color-brand-lime) 0%, var(--color-brand-cyan) 25%, var(--color-brand-lavender) 50%, var(--color-brand-pink) 75%, var(--color-brand-yellow) 100%);
-  --spectrum-line-v: linear-gradient(180deg, var(--color-brand-lime) 0%, var(--color-brand-cyan) 25%, var(--color-brand-lavender) 50%, var(--color-brand-pink) 75%, var(--color-brand-yellow) 100%);
+  /* NEO ACADEMIA オフィシャルロゴのスペクトラムグラデーション
+     Lime (#88d840) -> Cyan (#3bb5e4) -> Violet (#9b62f8) -> Pink (#f272a1) -> Amber (#ffc820) */
+  --spectrum-line: linear-gradient(90deg, #88d840 0%, #3bb5e4 25%, #9b62f8 50%, #f272a1 75%, #ffc820 100%);
+  --spectrum-line-v: linear-gradient(180deg, #88d840 0%, #3bb5e4 25%, #9b62f8 50%, #f272a1 75%, #ffc820 100%);
 
   /* ★ 明るい地の上に敷く光の場。
        `--gradient-brand-spectrum-soft`（生成物）は**最後に黒を敷いている**
