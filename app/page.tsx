@@ -38,13 +38,13 @@ function HomeKpi(
 }
 
 export default async function Home(
-  { searchParams }: {
-    searchParams: Promise<{
+  props: {
+    searchParams?: Promise<{
       season?: string; work?: string; owner?: string
     }>
   },
 ) {
-  const params = await searchParams
+  const params = props?.searchParams ? (await props.searchParams) ?? {} : {}
   const tier = await currentTier()
   if (tier === null) redirect('/headhunting')
 

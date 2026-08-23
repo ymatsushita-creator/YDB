@@ -16,10 +16,10 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 /** 一覧の上限。表示を切るためではなく、暴走を止めるための数である。 */
 const LIST_LIMIT = 2000
 
-export default async function HeadhuntingPage({
-  searchParams,
-}: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const sp = await searchParams
+export default async function HeadhuntingPage(props: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const sp = props?.searchParams ? (await props.searchParams) ?? {} : {}
   const db = await getDb()
 
   const [seasons, seasonByParam] = await Promise.all([
