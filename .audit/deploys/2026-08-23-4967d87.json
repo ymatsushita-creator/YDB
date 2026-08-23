@@ -1,0 +1,46 @@
+{
+  "kind": "deploy-gate",
+  "head": "4967d87",
+  "branch": "fix/quality-gate-false-pass",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1032,
+  "uploaded_untracked": 7,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [],
+  "unpushed_commits": 0,
+  "upstream": "origin/fix/quality-gate-false-pass",
+  "content_digest": "539c9df04a21181acddfadeb1c88c9ac",
+  "scan": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "files_scanned": 1026
+  },
+  "blocking_findings": [],
+  "human_approval": "スキップ（--allow-dirty）",
+  "result": "許可",
+  "reasons": [],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作",
+    "作業ツリーが汚れている（変更 0 / 未追跡 2） —— リポジトリに存在しないものが本番へ出る"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:539c9df04a21181acddfadeb1c88c9ac",
+      "severity": "Low",
+      "fact": "デプロイ許可（1032ファイル）"
+    }
+  ]
+}

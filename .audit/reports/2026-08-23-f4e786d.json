@@ -1,0 +1,48 @@
+{
+  "kind": "deploy-gate",
+  "head": "f4e786d",
+  "branch": "fix/quality-gate-false-pass",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1032,
+  "uploaded_untracked": 7,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [],
+  "unpushed_commits": 0,
+  "upstream": "origin/fix/quality-gate-false-pass",
+  "content_digest": "43a214e62dcec142c1609203de5e9ce2",
+  "scan": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "files_scanned": 1026
+  },
+  "blocking_findings": [],
+  "human_approval": "スキップ（--allow-dirty）",
+  "result": "許可",
+  "reasons": [],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:43a214e62dcec142c1609203de5e9ce2",
+      "severity": "Low",
+      "fact": "デプロイ許可（1032ファイル）"
+    }
+  ],
+  "prev_digest": "f3ce6802332e62f89b2ebda9e2a20ce651d13fddc450ab857e10777d40db945e",
+  "saved_at": "2026-08-23T08:02:22+00:00",
+  "self_digest": "072eb67d7829e0a054ba7b4eb745a9edd23c6de86fa4d4d73b8da3c1d1a67279"
+}
