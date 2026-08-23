@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "youthdb": {
+      "command": "npx",
+      "args": ["tsx", "scripts/mcp-server.ts"],
+      "env": {
+        "DATABASE_URL": "postgresql://postgres.qothvhajhnjbdkufwxrb:Kanigakijiro11091122@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
+      }
+    }
+  }
+}
