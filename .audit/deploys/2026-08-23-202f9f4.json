@@ -1,0 +1,79 @@
+{
+  "kind": "deploy-gate",
+  "head": "202f9f4",
+  "branch": "fix/quality-gate-false-pass",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1025,
+  "uploaded_untracked": 10,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "mcp.json",
+    "public/brand/youthdashboard-logo-black-bg.png",
+    "public/brand/youthdashboard-logo-white-bg.png",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [
+    ".agents/skills/source-command-audit/SKILL.md",
+    ".agents/skills/source-command-handoff/SKILL.md",
+    ".agents/skills/source-command-plan/SKILL.md",
+    ".agents/skills/source-command-structure/SKILL.md",
+    ".agents/skills/source-command-verify/SKILL.md",
+    ".codex/agents/investigator.toml",
+    ".codex/agents/reviewer.toml",
+    ".gitignore",
+    "app/_components/auto_save.tsx",
+    "app/_styles/01-foundation.css",
+    "app/_styles/02-shell.css",
+    "app/_styles/03-controls.css",
+    "app/_styles/04-tables.css",
+    "app/_styles/05-forms.css",
+    "app/_styles/06-cards.css",
+    "app/ai/_components/ai_quick_prompt.tsx",
+    "app/ai/page.tsx",
+    "app/interviews/[evaluation]/page.tsx",
+    "app/kpis/page.tsx",
+    "app/login/page.tsx"
+  ],
+  "unpushed_commits": 0,
+  "upstream": "origin/fix/quality-gate-false-pass",
+  "content_digest": "f7cbab76372d4d9c98fa5435bd4fd248",
+  "scan": {
+    "critical": 1,
+    "high": 0,
+    "medium": 0,
+    "files_scanned": 1019
+  },
+  "blocking_findings": [
+    {
+      "file": "mcp.json",
+      "line": 7,
+      "rule": "EMAIL",
+      "severity": "Critical",
+      "evidence": "K***"
+    }
+  ],
+  "result": "拒否",
+  "reasons": [
+    "送信対象に Critical/High が 1 件ある"
+  ],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作",
+    "作業ツリーが汚れている（変更 25 / 未追跡 2） —— リポジトリに存在しないものが本番へ出る"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:f7cbab76372d4d9c98fa5435bd4fd248",
+      "severity": "Critical",
+      "fact": "デプロイ拒否（1025ファイル）"
+    }
+  ]
+}
