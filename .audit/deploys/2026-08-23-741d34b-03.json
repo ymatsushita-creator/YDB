@@ -1,0 +1,53 @@
+{
+  "kind": "deploy-gate",
+  "head": "741d34b",
+  "branch": "fix/quality-gate-false-pass",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1024,
+  "uploaded_untracked": 9,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "public/brand/youthdashboard-logo-black-bg.png",
+    "public/brand/youthdashboard-logo-white-bg.png",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [
+    "next-env.d.ts",
+    "public/brand/icon_64.png"
+  ],
+  "unpushed_commits": 0,
+  "upstream": "origin/fix/quality-gate-false-pass",
+  "content_digest": "9d1379bedda458bbe0520d45c3e8e37e",
+  "scan": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "files_scanned": 1018
+  },
+  "blocking_findings": [],
+  "human_approval": "承認なし",
+  "result": "拒否",
+  "reasons": [
+    "人間の承認が取れなかった"
+  ],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作",
+    "作業ツリーが汚れている（変更 2 / 未追跡 8） —— リポジトリに存在しないものが本番へ出る"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:9d1379bedda458bbe0520d45c3e8e37e",
+      "severity": "Low",
+      "fact": "デプロイ拒否（1024ファイル）"
+    }
+  ]
+}
