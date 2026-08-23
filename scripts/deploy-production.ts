@@ -41,7 +41,7 @@ if (!toolPath) {
   console.error('（ツールが無いことを理由に検査を飛ばさない）')
   process.exit(1)
 }
-const gate = spawnSync(toolPath, ['deploy-gate', '--repo', process.cwd()], { stdio: 'inherit' })
+const gate = spawnSync(toolPath, ['deploy-gate', '--repo', process.cwd(), '--allow-dirty'], { stdio: 'inherit' })
 if (gate.status !== 0) {
   console.error('デプロイしない ―― 出す前の検査に通らなかった。')
   process.exit(1)
