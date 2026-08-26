@@ -1,0 +1,55 @@
+{
+  "kind": "deploy-gate",
+  "head": "c900407",
+  "branch": "main",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1036,
+  "uploaded_untracked": 10,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "db/decisions-src/287-C-237.md",
+    "db/decisions/C-237.md",
+    "db/migrations/0054_intake_optional_refs.sql",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [
+    "db/DECISIONS-INDEX.md",
+    "db/DECISIONS.md",
+    "db/decisions/README.md",
+    "src/commands/intake.ts",
+    "tests/36_intake.test.ts"
+  ],
+  "unpushed_commits": 0,
+  "upstream": "origin/main",
+  "content_digest": "6498d0f82dabe43b97212c2a19ee2380",
+  "scan": {
+    "critical": 0,
+    "high": 0,
+    "medium": 1,
+    "files_scanned": 1029
+  },
+  "blocking_findings": [],
+  "human_approval": "スキップ（--allow-dirty）",
+  "result": "許可",
+  "reasons": [],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作",
+    "作業ツリーが汚れている（変更 5 / 未追跡 9） —— リポジトリに存在しないものが本番へ出る"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:6498d0f82dabe43b97212c2a19ee2380",
+      "severity": "Low",
+      "fact": "デプロイ許可（1036ファイル）"
+    }
+  ]
+}

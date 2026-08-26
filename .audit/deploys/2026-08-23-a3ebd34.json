@@ -1,0 +1,75 @@
+{
+  "kind": "deploy-gate",
+  "head": "a3ebd34",
+  "branch": "main",
+  "target": {
+    "projectName": "youthdb",
+    "orgFingerprint": "48551b685373",
+    "projectFingerprint": "f40f66a0061a"
+  },
+  "uploaded_files": 1033,
+  "uploaded_untracked": 7,
+  "untracked_sample": [
+    ".DS_Store",
+    ".claude/settings.local.json",
+    ".vercel/README.txt",
+    ".vercel/project.json",
+    "app/.DS_Store",
+    "app/people/.DS_Store",
+    "tsconfig.tsbuildinfo"
+  ],
+  "modified": [
+    "public/brand/icon_64.png",
+    "public/favicon.ico",
+    "public/favicon.png",
+    "src/queries/dashboard.ts",
+    "tests/14_active_selection.test.ts"
+  ],
+  "unpushed_commits": 0,
+  "upstream": "origin/main",
+  "content_digest": "1537e81af26f08d0ab1f78f8637ec769",
+  "scan": {
+    "critical": 0,
+    "high": 3,
+    "medium": 0,
+    "files_scanned": 1026
+  },
+  "blocking_findings": [
+    {
+      "file": "tests/14_active_selection.test.ts",
+      "line": 51,
+      "rule": "JP_PERSON_NAME",
+      "severity": "High",
+      "evidence": "山***"
+    },
+    {
+      "file": "tests/14_active_selection.test.ts",
+      "line": 40,
+      "rule": "JP_PERSON_NAME",
+      "severity": "High",
+      "evidence": "山***"
+    },
+    {
+      "file": "tests/14_active_selection.test.ts",
+      "line": 40,
+      "rule": "JP_PERSON_NAME",
+      "severity": "High",
+      "evidence": "花***"
+    }
+  ],
+  "result": "拒否",
+  "reasons": [
+    "送信対象に Critical/High が 3 件ある"
+  ],
+  "needs_human": [
+    "本番へ出す（youthdb）—— 不可逆操作",
+    "作業ツリーが汚れている（変更 5 / 未追跡 0） —— リポジトリに存在しないものが本番へ出る"
+  ],
+  "observations": [
+    {
+      "fingerprint": "deploy:1537e81af26f08d0ab1f78f8637ec769",
+      "severity": "Critical",
+      "fact": "デプロイ拒否（1033ファイル）"
+    }
+  ]
+}
