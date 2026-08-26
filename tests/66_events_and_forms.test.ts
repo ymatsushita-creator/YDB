@@ -163,12 +163,17 @@ describe('画面の配置に、欠けが無い（実行⑯）', () => {
     }
   })
 
-  test("★ 'use client' は表と追従光の2つのまま（C-95 / C-104）", async () => {
+  // ★ 表・自動保存・AI入力の3つ（C-238。追従光は C-236 で退役済み）。
+  test("★ 'use client' は表・自動保存・AI入力の3つのまま（C-95 / C-104 / C-238）", async () => {
     const found: string[] = []
     for (const f of await readdir(join(ROOT, 'app'), { recursive: true })) {
       if (typeof f !== 'string' || !/\.tsx?$/.test(f)) continue
       if ((await read(join('app', f))).startsWith("'use client'")) found.push(f)
     }
-    assert.deepEqual(found.sort(), ['_components/sheet.tsx'])
+    assert.deepEqual(found.sort(), [
+      '_components/auto_save.tsx',
+      '_components/sheet.tsx',
+      'ai/_components/ai_quick_prompt.tsx',
+    ])
   })
 })

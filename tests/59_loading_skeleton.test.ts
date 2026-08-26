@@ -35,7 +35,18 @@ describe('押した直後の骨組み（C-142）', () => {
     assert.match(src, /role="status"/, '読み上げに拾われない（見えない人に伝わらない）')
   })
 
-  test("★ 'use client' を増やしていない（いまは表だけ。C-95 / C-104）", async () => {
+  /**
+   * ★ 許すのは3つだけである（C-238。依頼者の指示 2026-08-26）。
+   *
+   *   `_components/sheet.tsx`          表。行の状態を持つ（C-95 / C-104）
+   *   `_components/auto_save.tsx`      記入完了時の自動保存。**依頼者が残すと決めた**
+   *   `ai/_components/ai_quick_prompt.tsx`  AI への定型入力の差し込み
+   *
+   * ★ 自動保存は**書き込みの契機**を画面側に持つ。数を数えているのはこのためで、
+   *   増やすときは「何が書き込みを起こすのか」を言えるものだけにする。
+   *   判定そのものは `src/commands/` に在り、画面は契機だけを持つ。
+   */
+  test("★ 'use client' を増やしていない（表・自動保存・AI入力の3つ。C-95 / C-104 / C-238）", async () => {
     const clients: string[] = []
     for (const dir of ['app', 'src']) {
       for (const f of await readdir(join(ROOT, dir), { recursive: true })) {
@@ -44,8 +55,11 @@ describe('押した直後の骨組み（C-142）', () => {
         if (/^'use client'/m.test(src.split('\n').slice(0, 3).join('\n'))) clients.push(join(dir, f))
       }
     }
-    assert.deepEqual(clients.sort(), ['app/_components/sheet.tsx'],
-      "'use client' が増えている")
+    assert.deepEqual(clients.sort(), [
+      'app/_components/auto_save.tsx',
+      'app/_components/sheet.tsx',
+      'app/ai/_components/ai_quick_prompt.tsx',
+    ], "'use client' が増えている")
   })
 
   test('★ 中身のふりをしない（数字や行の形をした箱を並べない）', async () => {

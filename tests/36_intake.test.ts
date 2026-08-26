@@ -162,6 +162,78 @@ describe('候補者追加とフォーム回答', () => {
     assert.equal(r.ok, true)
   })
 
+  /**
+   * ★ 必須は姓だけである（0054。依頼者の指示 2026-08-24）。
+   *
+   *   固定したいのは「通ること」だけではない ――
+   *   **未選択が非活性のプレースホルダへ寄り、人が一覧から消えないこと。**
+   *   NULL 可にしていたら、ここで内部結合に落ちて消えていた（0023）。
+   */
+  test('学校も流入元も入力者も未選択で登録できる（0054）', async () => {
+    const r = await add({ schoolId: '', channelId: '', staffId: '' })
+    assert.equal(r.ok, true)
+  })
+
+  test('★ 未選択は非活性のプレースホルダへ寄る。人は消えない（0054）', async () => {
+    const r = await add({ schoolId: '', channelId: '', staffId: '' })
+    assert.equal(r.ok, true)
+    const personId = r.ok ? r.personId : ''
+
+    const school = await maybeOne<{ name: string; is_active: boolean }>(db, `
+      SELECT s.name, s.is_active FROM persons p
+        JOIN schools s ON s.id = p.school_id
+       WHERE p.id = $1`, [personId])
+    assert.equal(school?.name, '学校未記録')
+    assert.equal(school?.is_active, false)
+
+    const channel = await maybeOne<{ name: string; is_active: boolean }>(db, `
+      SELECT c.name, c.is_active FROM touchpoints t
+        JOIN channels c ON c.id = t.channel_id
+       WHERE t.person_id = $1`, [personId])
+    assert.equal(channel?.name, '流入元不明')
+    assert.equal(channel?.is_active, false)
+
+    // ★ 入力者だけは寄せ先を作らない。**NULL のまま記録する**（0054）。
+    //   「入力者未記録」という職員を1人置くと、本番シードが職員を持たない
+    //   という壁（tests/22）と 0007 の引き継ぎ（tests/52）が壊れる。
+    const staff = await maybeOne<{ recorded_by_staff_id: string | null }>(db,
+      `SELECT recorded_by_staff_id FROM approach_events WHERE person_id = $1`,
+      [personId])
+    assert.equal(staff?.recorded_by_staff_id, null)
+
+    // ★ 一覧から消えないこと。ここが 0023 が守った点である。
+    const listed = await maybeOne(db,
+      `SELECT 1 FROM v_headhunting_list WHERE person_id = $1`, [personId])
+    assert.ok(listed, '未選択で登録した人が一覧から消えている')
+  })
+
+  test('寄せ先は選択肢に出ない（非活性）（0054）', async () => {
+    const active = await all<{ name: string }>(db,
+      `SELECT name FROM channels WHERE is_active`)
+    assert.ok(!active.some((c) => c.name === '流入元不明'))
+    // 入力者の寄せ先は**そもそも作っていない**（0054）。
+    const staffs = await all<{ display_name: string }>(db,
+      `SELECT display_name FROM staffs`)
+    assert.ok(!staffs.some((s) => s.display_name === '入力者未記録'))
+  })
+
+  /**
+   * ★ 未選択と「形が違う値」は別である。
+   *   未選択は寄せるが、UUID でない値や実在しない UUID は今まで通り落とす ――
+   *   黙って別の行へ入れない。
+   */
+  test('選ばれた値が実在しなければ、今まで通り落ちる（0054）', async () => {
+    const gone = '00000000-0000-4000-8000-000000000000'
+    const bad = await add({ schoolId: 'not-a-uuid' })
+    assert.equal(!bad.ok && bad.reason, 'school_not_found')
+    const a = await add({ schoolId: gone })
+    assert.equal(!a.ok && a.reason, 'school_not_found')
+    const b = await add({ channelId: gone })
+    assert.equal(!b.ok && b.reason, 'channel_not_found')
+    const c = await add({ staffId: gone })
+    assert.equal(!c.ok && c.reason, 'staff_not_found')
+  })
+
   test('★ フォーム回答は2回届いても1件', async () => {
     const a = await ingestFormResponse(db, { ...EMPTY_RESPONSE, responseKey: 'R1' })
     const b = await ingestFormResponse(db, { ...EMPTY_RESPONSE, responseKey: 'R1' })

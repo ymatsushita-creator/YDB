@@ -133,7 +133,8 @@ describe('入口の形（C-146）', () => {
     await db.close()
   })
 
-  test("'use client' は2つのまま（入口を触っても増やしていない）", async () => {
+  // ★ 許すのは3つ（C-238）。入口を触ってここが増えていないことを見る。
+  test("'use client' は3つのまま（入口を触っても増やしていない。C-238）", async () => {
     const clients: string[] = []
     for (const dir of ['app', 'src']) {
       for (const f of await readdir(join(ROOT, dir), { recursive: true })) {
@@ -144,6 +145,10 @@ describe('入口の形（C-146）', () => {
         }
       }
     }
-    assert.deepEqual(clients.sort(), ['app/_components/sheet.tsx'])
+    assert.deepEqual(clients.sort(), [
+      'app/_components/auto_save.tsx',
+      'app/_components/sheet.tsx',
+      'app/ai/_components/ai_quick_prompt.tsx',
+    ])
   })
 })

@@ -239,7 +239,7 @@ describe('APIキー入力画面', () => {
     assert.match(action, /loadAnthropicApiKey/)
     assert.doesNotMatch(shell, /href: '\/ai'/, '左サイドバーへAI分析を追加しない')
     assert.match(scoring, /sheet\.step_name === '書類選考'/)
-    assert.match(page, /label: '通常選考'[\s\S]*label: '書類選考'[\s\S]*label: '採点'[\s\S]*label: 'AI分析'/)
+    assert.match(page, /label: '通常選考'[\s\S]*label: '書類選考'[\s\S]*label: '採点'[\s\S]*label: 'AI分析コパイロット'/)
     // ★ 狙いは**鍵をブラウザ側へ置かないこと**であって、Cookie の禁止ではない。
     //   C-200 で「記録に聞く」の答えを短命な Cookie で戻すようにしたので、
     //   `cookies(` そのものを禁じると、鍵と無関係な用途まで落ちる。

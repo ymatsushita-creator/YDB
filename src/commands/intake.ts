@@ -15,6 +15,12 @@ import { BLANK_CHARS, blank as blankText } from './text.ts'
  *   残る。**まとめて1つの取引にする。**
  *
  * ★ 足りない値を作らない。生年月日もメールも無いまま登録できる（0023）。
+ *
+ * ★ **必須は姓だけである**（0054。依頼者の指示 2026-08-24）。
+ *   学校・流入元・入力者も未選択で登録できる。学校と流入元は内部結合されて
+ *   いるので NULL 可にすると**その人が一覧から黙って消える**（0023）――
+ *   記録層は変えず、非活性のプレースホルダ行へ寄せる（下の `PLACEHOLDER`）。
+ *   入力者は誰も結合していないので NULL のまま記録する（誰かを作らない）。
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -22,6 +28,29 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/
 /** 空白だけなら null。集合の定義は text.ts（C-126）。 */
 const blank = blankText
 const PHOTO = /^data:image\/(jpeg|png|webp);base64,/
+
+/**
+ * 未選択のときの寄せ先（0054。依頼者の指示 2026-08-24）。
+ *
+ * ★ **記録層は変えない。** 学校・流入元・入力者は NOT NULL のままで、
+ *   未選択なら非活性のプレースホルダ行へ寄せる。NULL 可にすると内部結合で
+ *   **その人が一覧から黙って消える**（0023 が学校について却下済み）。
+ * ★ 非活性なので選ぶ画面には出ない。運営が「不明」を選べるようにする話ではない。
+ * ★ 行が無ければ寄せられないので、そのときは**今まで通り落とす。**
+ *   黙って別の行へ入れない。
+ */
+const PLACEHOLDER = {
+  school: '学校未記録',
+  channel: '流入元不明',
+} as const
+
+const placeholderId = async (
+  db: Db, table: 'schools' | 'channels', name: string,
+): Promise<string | null> => {
+  const row = await maybeOne<{ id: string }>(db,
+    `SELECT id FROM ${table} WHERE name = $1`, [name])
+  return row?.id ?? null
+}
 
 export interface NewCandidateInput {
   seasonId: string
@@ -37,11 +66,16 @@ export interface NewCandidateInput {
   lineUserId: string
   note: string
   photoDataUrl?: string
-  /** どこで知ったか。**接点はこのチャネルで積む。** */
+  /** どこで知ったか。**接点はこのチャネルで積む。** 空なら「流入元不明」（0054）。 */
   channelId: string
   /** 接点の日。空なら今日。 */
   contactedOn: string
-  /** 記録した人。認証が無いので画面が選ぶ。 */
+  /**
+   * 記録した人。認証が無いので画面が選ぶ。**空でよい**（0054）。
+   * ★ 空のときは NULL のまま記録する。誰かを作らない。
+   * ★ 券は `staffId` を持てるが `app/login/actions.ts` は渡していないので、
+   *   「いま入っている職員」に寄せることは今日はできない。
+   */
   staffId: string
   /** 接合するフォーム回答。空なら接合しない。 */
   formResponseId: string
@@ -79,9 +113,14 @@ export async function addCandidate(
   if (!UUID.test(input.seasonId)) return { ok: false, reason: 'season_not_found' }
   // 姓だけは要る。無ければその人を指す手段が1つも無い（0023 と同じ規律）。
   if (!blank(input.familyName)) return { ok: false, reason: 'required' }
-  if (!UUID.test(input.schoolId)) return { ok: false, reason: 'school_not_found' }
-  if (!UUID.test(input.channelId)) return { ok: false, reason: 'channel_not_found' }
-  if (!UUID.test(input.staffId)) return { ok: false, reason: 'staff_not_found' }
+  // ★ 学校・流入元・入力者は**任意**（0054）。未選択なら下で寄せ先を引く。
+  //   形が違う値が入っているのは未選択ではないので、これは今まで通り落とす。
+  const wantSchool = blank(input.schoolId)
+  if (wantSchool && !UUID.test(wantSchool)) return { ok: false, reason: 'school_not_found' }
+  const wantChannel = blank(input.channelId)
+  if (wantChannel && !UUID.test(wantChannel)) return { ok: false, reason: 'channel_not_found' }
+  const wantStaff = blank(input.staffId)
+  if (wantStaff && !UUID.test(wantStaff)) return { ok: false, reason: 'staff_not_found' }
 
   const email = blank(input.email)
   if (email && !/^\S+@\S+\.\S+$/.test(email)) return { ok: false, reason: 'bad_email' }
@@ -94,14 +133,32 @@ export async function addCandidate(
 
   const season = await maybeOne(db, `SELECT 1 FROM seasons WHERE id = $1`, [input.seasonId])
   if (!season) return { ok: false, reason: 'season_not_found' }
-  const school = await maybeOne(db,
-    `SELECT 1 FROM schools WHERE id = $1`, [input.schoolId])
-  if (!school) return { ok: false, reason: 'school_not_found' }
-  const channel = await maybeOne(db,
-    `SELECT 1 FROM channels WHERE id = $1`, [input.channelId])
-  if (!channel) return { ok: false, reason: 'channel_not_found' }
-  const staff = await maybeOne(db, `SELECT 1 FROM staffs WHERE id = $1`, [input.staffId])
-  if (!staff) return { ok: false, reason: 'staff_not_found' }
+
+  // 選ばれていれば実在を確かめ、選ばれていなければ寄せ先を引く。
+  // どちらも取れなければ落とす ―― 寄せ先が無いのに別の行へ入れない。
+  const schoolId = wantSchool
+    ? (await maybeOne(db, `SELECT 1 FROM schools WHERE id = $1`, [wantSchool])
+      ? wantSchool : null)
+    : await placeholderId(db, 'schools', PLACEHOLDER.school)
+  if (!schoolId) return { ok: false, reason: 'school_not_found' }
+
+  const channelId = wantChannel
+    ? (await maybeOne(db, `SELECT 1 FROM channels WHERE id = $1`, [wantChannel])
+      ? wantChannel : null)
+    : await placeholderId(db, 'channels', PLACEHOLDER.channel)
+  if (!channelId) return { ok: false, reason: 'channel_not_found' }
+
+  // ★ 入力者は寄せ先を作らない。**未選択なら NULL のまま記録する**（0054）――
+  //   「入力者未記録」という職員の行を置くと、本番シードが職員を持たない
+  //   という壁（tests/22）と、職員が居ると走る 0007 の引き継ぎ（tests/52）が
+  //   両方壊れる。居ない人を作るより、分からないと書くほうが正しい。
+  let staffId: string | null = null
+  if (wantStaff) {
+    if (!await maybeOne(db, `SELECT 1 FROM staffs WHERE id = $1`, [wantStaff])) {
+      return { ok: false, reason: 'staff_not_found' }
+    }
+    staffId = wantStaff
+  }
 
   const formResponseId = blank(input.formResponseId)
   if (formResponseId) {
@@ -129,7 +186,7 @@ export async function addCandidate(
       RETURNING id`, [
       blank(input.familyName), blank(input.givenName) ?? '',
       blank(input.familyNameKana), blank(input.givenNameKana),
-      birthDate, input.schoolId, blank(input.faculty), email,
+      birthDate, schoolId, blank(input.faculty), email,
       blank(input.phone), blank(input.lineUserId), blank(input.note), photoDataUrl,
       input.seasonId,
     ])
@@ -143,7 +200,7 @@ export async function addCandidate(
     await db.query(`
       INSERT INTO touchpoints (person_id, channel_id, occurred_at)
       VALUES ($1, $2, coalesce($3::date, jst_today()))`,
-    [person.id, input.channelId, contactedOn])
+    [person.id, channelId, contactedOn])
 
     // アプローチ状態の初期値。これが無いと一覧（`v_headhunting_list`）に載らない。
     await db.query(`
@@ -151,14 +208,14 @@ export async function addCandidate(
         (person_id, season_id, approach_state_id, occurred_at, recorded_by_staff_id, note)
       SELECT $1, $2, s.id, now(), $3, $4
         FROM approach_states s WHERE s.code = 'not_approached'`,
-    [person.id, input.seasonId, input.staffId, '候補者として登録した'])
+    [person.id, input.seasonId, staffId, '候補者として登録した'])
 
     if (formResponseId) {
       await db.query(`
         UPDATE form_responses
            SET person_id = $2, matched_at = now(),
                matched_by_staff_id = $3, match_method = 'manual'
-         WHERE id = $1`, [formResponseId, person.id, input.staffId])
+         WHERE id = $1`, [formResponseId, person.id, staffId])
     }
 
     await db.exec('COMMIT')
@@ -181,9 +238,13 @@ export const ADD_CANDIDATE_MESSAGE: Record<AddCandidateCode, string> = {
   required: '姓は空にできない。',
   bad_email: 'メールの形が違う。',
   bad_date: '日付は YYYY-MM-DD で入れる。',
+  // ★ この3つは**未選択では出ない**（0054）。出るのは次のどちらかである ――
+  //   ① 形が違う値・実在しない値が入っている（未選択ではない）
+  //   ② 未選択だが、寄せ先の行が無い（学校「学校未記録」/ 流入元「流入元不明」）
+  //   ②のとき運用者に選ばせても直らないので、「選べ」と言わない。
   school_not_found: 'その学校は選べない。',
-  channel_not_found: '流入元を選ぶ。',
-  staff_not_found: '記録した人を選ぶ。',
+  channel_not_found: 'その流入元は選べない。',
+  staff_not_found: 'その記録者は選べない。',
   form_response_not_found: 'そのフォーム回答は見つからなかった。',
   form_response_taken: 'そのフォーム回答は、すでに別の人へ結び付いている。',
   duplicate_line: 'その LINE ID は別の人が使っている。',
