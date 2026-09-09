@@ -1,0 +1,108 @@
+{
+  "案件": "YouthDB — 第1フェーズ: 候補者数の定義を1本に寄せ、アワード参加人数をKPIに数え、個人ページにイベント名を出す",
+  "対象": "/Volumes/KIOXIA_2TB/NEO/YouthDB",
+  "ベース": "origin/main",
+  "ブランチ": "feat/phase1-candidate-count-kpi-event",
+  "触らない": [
+    "認証",
+    "課金",
+    "個人情報",
+    "本番設定",
+    "db/migrations/0049_kpi_metric.sql",
+    "db/migrations/0050_kpi_confidence_metrics.sql",
+    "db/migrations/0016_approach.sql",
+    "package.json",
+    "scripts/test-preflight.ts"
+  ],
+  "やること": [
+    {
+      "id": "R2",
+      "要件": "対象外(F)を declined の表示ラベルとして出し、候補者数を「全体数 − v_person_approach_state.is_terminal」の1定義に寄せ、S/A/B/C内訳を出す",
+      "変更": [
+        "db/migrations/0055_candidate_population.sql(新規)",
+        "src/queries/dashboard.ts:187-214",
+        "src/queries/kpi_metrics.ts:36-43",
+        "src/queries/borderline.ts:130-181",
+        "src/ai/ask.ts:58-75",
+        "tests/28_headhunting.test.ts:308-327"
+      ],
+      "受け入れ": "node --test --experimental-test-isolation=none tests/28_headhunting.test.ts",
+      "工数": "55分"
+    },
+    {
+      "id": "R7-アワード連携",
+      "要件": "イベント参加人数をKPIの実績として数えられるようにする（同一イベント・同一人物は重複排除）",
+      "変更": [
+        "db/migrations/0056_kpi_event_attendance.sql(新規)",
+        "src/queries/kpi_metrics.ts:36-80",
+        "tests/72_kpi_metric.test.ts:38-72"
+      ],
+      "受け入れ": "node --test --experimental-test-isolation=none tests/72_kpi_metric.test.ts",
+      "工数": "90分"
+    },
+    {
+      "id": "R3",
+      "要件": "個人ページの接点一覧に、イベント参加のときはイベント名を出す（通常接点は空のまま）",
+      "変更": [
+        "src/queries/drilldown.ts:314-345",
+        "app/people/[id]/page.tsx:51-54",
+        "app/people/[id]/page.tsx:363-411",
+        "tests/12_drilldown.test.ts:159-163"
+      ],
+      "受け入れ": "node --test --experimental-test-isolation=none tests/12_drilldown.test.ts",
+      "工数": "35分"
+    },
+    {
+      "id": "記録",
+      "要件": "この改修の入力と引き継ぎを、会話ではなくファイルに残す（前回、要件が会話の中にしか無く復元に時間を使った）",
+      "変更": [
+        "docs/product/改修要件-2026-09.md(新規)",
+        "HANDOFF.md",
+        ".plans/",
+        ".agents/skills/source-command-decisions/"
+      ],
+      "受け入れ": "test -f docs/product/改修要件-2026-09.md && test -f .plans/2026-09-09-第1フェーズ.json",
+      "工数": "0分"
+    }
+  ],
+  "やらないこと": [
+    "F を新規ステータスとして approach_states に追加すること — declined 70人中67人が復帰しており、終端を新設すると復帰運用と二重管理になる",
+    "confidence_grades への F 追加 — 確度と対象可否の二重管理になる。設計として誤り",
+    "テストランナーの改修（package.json / scripts/test-preflight.ts / 新規 test-runner.ts） — node --test を直接叩けば1ファイルで走ることを実測で確認した（tests/12_drilldown.test.ts で18件・15秒）。npm test -- の絞り込み不具合は本フェーズのスコープ外",
+    "247人の一括対象外印の是正 — 2期で応募0の未応募者であり、対象外扱いのままで候補者数の定義は成立する。是正は運用判断であって本フェーズのコード改修ではない",
+    "追わない扱いなのに確度が付いている33人の掃除 — データ不整合の是正であって算出ロジックの改修ではない。R2 の除外は is_terminal 側で効くため数字には影響しない",
+    "R1 ブラウザCSV / R4 対応者リスト / R5 チェックリスト / R8 自由記述 / R9 団体プロフィール / R7 マイルストーン — 第2・第3フェーズ",
+    ".agents/skills/source-command-decisions/ の整理 — この改修の前から在る未追跡物で、今回触っていない（開始時刻以降に更新されていないことを find で確認済み）。宣言だけして中身に手を入れない"
+  ],
+  "リスク": [
+    {
+      "壊れるもの": "終端状態からの除外と確度凍結",
+      "確認": "node --test --experimental-test-isolation=none tests/28_headhunting.test.ts"
+    },
+    {
+      "壊れるもの": "ホームの確度推移",
+      "確認": "node --test --experimental-test-isolation=none tests/57_confidence_axis.test.ts"
+    },
+    {
+      "壊れるもの": "確度順一覧の列と取得値",
+      "確認": "node --test --experimental-test-isolation=none tests/73_candidate_list_columns.test.ts"
+    },
+    {
+      "壊れるもの": "AI集計の権限境界",
+      "確認": "node --test --experimental-test-isolation=none tests/73_ask_tiers.test.ts"
+    },
+    {
+      "壊れるもの": "イベント参加の重複防止・解除・接点連携",
+      "確認": "node --test --experimental-test-isolation=none tests/39_notes_attendance.test.ts"
+    },
+    {
+      "壊れるもの": "個人ページの導線",
+      "確認": "node --test --experimental-test-isolation=none tests/55_drilldown_pages.test.ts"
+    },
+    {
+      "壊れるもの": "型検査",
+      "確認": "npm run typecheck"
+    }
+  ],
+  "要確認": []
+}

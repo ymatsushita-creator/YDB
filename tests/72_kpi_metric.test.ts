@@ -98,3 +98,87 @@ describe('KPIの変数（C-199）', () => {
     assert.equal(versions, 2, '書き換えが履歴に積まれていない')
   })
 })
+
+// -------------------------------------------------------------
+// イベント参加人数（R7・2026-09 改修）
+//
+// 依頼者の指摘 ――「アワード参加人数との連携も欲しい。俺が見た限りでは
+// 連携できていなかったはず」。事実だった。`touchpoints` は**全接点**を数え、
+// イベント参加者を人数として区別しない。数えられない語は選ばせない規則
+// （① の検査）に従い、語と数え方を対で足す。
+//
+// ここで固定するのは、語が在ることではなく **同じ予定の同じ人が二重に
+// 数えられないこと**。重複排除は `event_attendances` の一意制約が持つ。
+// -------------------------------------------------------------
+
+describe('イベント参加人数のKPI（R7）', () => {
+  let db: Db
+  let seasonId: string
+  let schoolId: string
+
+  before(async () => {
+    db = await freshDb({ seeds: 'production' })
+    const base = await baseFixture(db)
+    schoolId = base.schoolId
+    const season = await makeSeason(db, { year: 2032 })
+    seasonId = season.id
+  })
+
+  after(async () => { await db.close() })
+
+  const makeEvent = (title: string, day: string) => scalar<string>(db, `
+    INSERT INTO appointments (season_id, kind_id, title, starts_at, ends_at)
+    SELECT $1, k.id, $2, ($3 || ' 13:00+09')::timestamptz, ($3 || ' 17:00+09')::timestamptz
+      FROM appointment_kinds k WHERE k.code = 'event'
+    RETURNING id`, [seasonId, title, day])
+
+  const attend = async (appointmentId: string, personId: string, at: string) => {
+    const tp = await scalar<string>(db, `
+      INSERT INTO touchpoints (person_id, channel_id, occurred_at)
+      SELECT $1, c.id, $2::timestamptz FROM channels c ORDER BY c.name LIMIT 1
+      RETURNING id`, [personId, at])
+    await db.query(`
+      INSERT INTO event_attendances (appointment_id, person_id, touchpoint_id)
+      VALUES ($1, $2, $3)`, [appointmentId, personId, tp])
+  }
+
+  test('語が在り、数え方が対で存在する', async () => {
+    const metrics = await listKpiMetrics(db)
+    const m = metrics.find((x) => x.key === 'event_attendees')
+    assert.ok(m, 'イベント参加人数が選べる語として在る')
+    assert.equal(m!.unit, '人')
+    assert.notEqual(await countKpiMetric(db, 'event_attendees', seasonId), null,
+      '数え方が無い語を選ばせてはいけない')
+  })
+
+  test('★ 同じ予定の同じ人は二重に数えない。別の予定なら別に数える', async () => {
+    const award = await makeEvent('NEO AWARD 2032', '2032-03-10')
+    const briefing = await makeEvent('説明会 2032', '2032-04-05')
+    // 氏名は既定値のまま使う（テスト内に氏名リテラルを置かない）
+    const a = await makePerson(db, schoolId)
+    const b = await makePerson(db, schoolId)
+
+    await attend(award, a, '2032-03-10T13:00:00+09:00')
+    await attend(award, b, '2032-03-10T13:00:00+09:00')
+    assert.equal(await countKpiMetric(db, 'event_attendees', seasonId), 2)
+
+    // 同じ予定に同じ人をもう一度入れられないこと自体が重複排除の実体
+    await assert.rejects(
+      () => attend(award, a, '2032-03-10T13:00:00+09:00'),
+      '同じ予定×同じ人は2行目を作れない',
+    )
+    assert.equal(await countKpiMetric(db, 'event_attendees', seasonId), 2,
+      '押し直しても人数は増えない')
+
+    await attend(briefing, a, '2032-04-05T13:00:00+09:00')
+    assert.equal(await countKpiMetric(db, 'event_attendees', seasonId), 3,
+      '別の予定への参加は別に数える')
+  })
+
+  test('接点の総数とは別物である（連携できていなかった箇所）', async () => {
+    const touchpoints = await countKpiMetric(db, 'touchpoints', seasonId)
+    const attendees = await countKpiMetric(db, 'event_attendees', seasonId)
+    assert.notEqual(touchpoints, attendees,
+      'イベント参加人数を接点総数で代用できない。代用できるなら語を足す意味が無い')
+  })
+})

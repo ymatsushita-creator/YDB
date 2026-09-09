@@ -34,6 +34,47 @@ export interface AskResult {
   model: string
 }
 
+export interface SeasonOverviewRow {
+  年度: number
+  期: number | null
+  候補者: number
+  S: number
+  A: number
+  B: number
+  C: number
+  応募: number
+  合格: number
+  定員: number | null
+}
+
+// ★ S/A/B/C の別名は**引用符で囲う**。囲わないと Postgres が小文字へ畳み、
+// 型宣言（S/A/B/C）と実際のキー（s/a/b/c）が食い違う。年度・候補者は
+// 非ASCIIなので畳まれず、そこだけ通ってしまい気付けない（2026-09-09 に検出）。
+const SEASON_OVERVIEW_SQL = `
+  SELECT s.enrollment_year AS 年度, s.cohort_number AS 期,
+         (SELECT count(*) FROM v_candidate_population cp
+           WHERE cp.season_id = s.id) AS 候補者,
+         (SELECT count(*) FROM v_candidate_population cp
+           WHERE cp.season_id = s.id AND cp.grade_code = 'S') AS "S",
+         (SELECT count(*) FROM v_candidate_population cp
+           WHERE cp.season_id = s.id AND cp.grade_code = 'A') AS "A",
+         (SELECT count(*) FROM v_candidate_population cp
+           WHERE cp.season_id = s.id AND cp.grade_code = 'B') AS "B",
+         (SELECT count(*) FROM v_candidate_population cp
+           WHERE cp.season_id = s.id AND cp.grade_code = 'C') AS "C",
+         (SELECT count(*) FROM applications a
+           WHERE a.season_id = s.id AND a.voided_at IS NULL
+             AND a.deleted_at IS NULL) AS 応募,
+         (SELECT count(*) FROM v_application_outcome o
+            JOIN applications a2 ON a2.id = o.application_id
+           WHERE a2.season_id = s.id AND o.outcome = 'accepted') AS 合格,
+         s.capacity AS 定員
+    FROM seasons s WHERE NOT s.is_demo
+   ORDER BY s.enrollment_year`
+
+/** AIの season_overview が読む、期ごとの候補者数と確度内訳。 */
+export const listSeasonOverviews = (db: Db) => all<SeasonOverviewRow>(db, SEASON_OVERVIEW_SQL)
+
 /**
  * 層ごとに使える道具。**`canOpen` と同じ線を引く**（`/headhunting` は all の持ち物）。
  * ★ 判定を2箇所に散らさないため、線の意味はここに書いて `tiers.ts` を参照する。
@@ -60,17 +101,7 @@ const TOOLS: Record<string, {
       + '「今年は何人応募したか」のような問いはまずこれを見る。',
     schema: { type: 'object', properties: {}, additionalProperties: false },
     sql: () => ({
-      text: `
-        SELECT s.enrollment_year AS 年度, s.cohort_number AS 期,
-               (SELECT count(*) FROM applications a
-                 WHERE a.season_id = s.id AND a.voided_at IS NULL
-                   AND a.deleted_at IS NULL) AS 応募,
-               (SELECT count(*) FROM v_application_outcome o
-                  JOIN applications a2 ON a2.id = o.application_id
-                 WHERE a2.season_id = s.id AND o.outcome = 'accepted') AS 合格,
-               s.capacity AS 定員
-          FROM seasons s WHERE NOT s.is_demo
-         ORDER BY s.enrollment_year`,
+      text: SEASON_OVERVIEW_SQL,
       params: [],
     }),
   },

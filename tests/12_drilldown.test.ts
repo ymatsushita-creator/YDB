@@ -458,3 +458,47 @@ describe('応募の評価', () => {
     await db.close()
   })
 })
+
+// -------------------------------------------------------------
+// 接点に出るイベント名（R3・2026-09 改修）
+//
+// 個人ページの接点表は「いつ・どの経路で触れたか」を出す。イベント参加も
+// 接点として1件入るが、名称を引いていなかったため「どのイベントか」が
+// 分からなかった。イベントに紐づく接点だけ名称が出て、それ以外は空のまま
+// であることを固定する。**空のままであること**の方が壊れやすい。
+// -------------------------------------------------------------
+
+describe('接点のイベント名（R3）', () => {
+  test('イベント参加の接点は名称を返し、通常の接点は null のまま', async () => {
+    const db = await freshDb()
+    try {
+      const base = await baseFixture(db)
+      const season = await makeSeason(db, { year: 2027 })
+      const personId = await makePerson(db, base.schoolId)
+      const channelId = await makeChannel(db, 'イベント受付')
+
+      const plainTp = await makeTouchpoint(db, personId, channelId, jst('2026-10-01T10:00:00'))
+      const eventTp = await makeTouchpoint(db, personId, channelId, jst('2026-11-01T13:00:00'))
+
+      const appointmentId = await scalar<string>(db, `
+        INSERT INTO appointments (season_id, kind_id, title, starts_at, ends_at)
+        SELECT $1, k.id, 'NEO AWARD 2026',
+               TIMESTAMPTZ '2026-11-01 13:00+09', TIMESTAMPTZ '2026-11-01 17:00+09'
+          FROM appointment_kinds k WHERE k.code = 'event'
+        RETURNING id`, [season.id])
+      await db.query(`
+        INSERT INTO event_attendances (appointment_id, person_id, touchpoint_id)
+        VALUES ($1, $2, $3)`, [appointmentId, personId, eventTp])
+
+      const rows = await getPersonTouchpoints(db, personId)
+      assert.equal(rows.length, 2, '接点は2件')
+
+      const event = rows.find((r) => r.touchpoint_id === eventTp)
+      const plain = rows.find((r) => r.touchpoint_id === plainTp)
+      assert.equal(event?.event_name, 'NEO AWARD 2026', 'イベント参加の接点は名称を返す')
+      assert.equal(plain?.event_name, null, 'イベントでない接点は null のまま')
+    } finally {
+      await db.close()
+    }
+  })
+})

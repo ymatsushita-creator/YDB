@@ -316,6 +316,7 @@ export interface PersonTouchpointRow {
   occurred_at: Date
   channel: string
   partner_name: string | null
+  event_name: string | null
   /** 年度帰属。どの年度にも属さない接点は null（(4)で「未割当」として出るもの）。 */
   enrollment_year: number | null
   is_self_reported: boolean
@@ -331,12 +332,14 @@ export const getPersonTouchpoints = (db: Db, personId: string | string[] | undef
   if (!id) return Promise.resolve([])
   return all<PersonTouchpointRow>(db, `
     SELECT t.id AS touchpoint_id, t.occurred_at, c.name AS channel,
-           pa.name AS partner_name, se.enrollment_year,
+           pa.name AS partner_name, ap.title AS event_name, se.enrollment_year,
            t.is_self_reported, t.is_scout, t.applied_at, t.attended_at, t.note
       FROM touchpoints t
       JOIN persons p ON p.id = t.person_id AND p.deleted_at IS NULL
       JOIN channels c ON c.id = t.channel_id
       LEFT JOIN partners pa ON pa.id = t.partner_id
+      LEFT JOIN event_attendances ea ON ea.touchpoint_id = t.id
+      LEFT JOIN appointments ap ON ap.id = ea.appointment_id
       -- 年度帰属の定義は v_touchpoint_season にある。ここで書き直さない。
       LEFT JOIN v_touchpoint_season ts ON ts.touchpoint_id = t.id
       LEFT JOIN seasons se ON se.id = ts.season_id

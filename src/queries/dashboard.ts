@@ -203,8 +203,8 @@ export const getHomeTrends = (db: Db, seasonId: string) =>
        WHERE sn.season_id = $1
     )
     SELECT d.as_of,
-      (SELECT count(*) FROM candidate_numbers n
-        WHERE n.season_id = $1 AND jst_date(n.assigned_at) <= d.as_of)::int AS candidates,
+      (SELECT count(*) FROM v_candidate_population cp
+        WHERE cp.season_id = $1 AND jst_date(cp.assigned_at) <= d.as_of)::int AS candidates,
       (SELECT count(DISTINCT pr.partner_id) FROM partner_reaches pr
         WHERE pr.season_id = $1 AND pr.occurred_on <= d.as_of)::int AS partners,
       (SELECT count(DISTINCT c.person_id) FROM confidence c

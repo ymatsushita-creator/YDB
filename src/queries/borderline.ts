@@ -140,7 +140,7 @@ export async function listCandidatesByConfidence(
   db: Db, seasonId: string, opts: { limit: number; offset: number },
 ): Promise<CandidatePage> {
   const rows = await all<CandidateRow>(db, `
-    SELECT h.person_id, n.number,
+    SELECT h.person_id, h.number,
            p.family_name, p.given_name, p.family_name_kana, p.given_name_kana,
            to_char(p.birth_date, 'YYYY-MM-DD') AS birth_date,
            p.family_name || ' ' || p.given_name AS person_name,
@@ -156,11 +156,9 @@ export async function listCandidatesByConfidence(
            first_touch.channel_name AS first_channel_name,
            to_char(first_touch.occurred_on, 'YYYY-MM-DD') AS first_contacted_on,
            h.approach_code, h.approach_label
-      FROM v_headhunting_list h
+      FROM v_candidate_population h
       JOIN persons p ON p.id = h.person_id
       JOIN schools sc ON sc.id = p.school_id
-      LEFT JOIN candidate_numbers n
-             ON n.person_id = h.person_id AND n.season_id = h.season_id
       LEFT JOIN v_candidate_confidence_latest c
              ON c.person_id = h.person_id AND c.season_id = h.season_id
       LEFT JOIN LATERAL (
@@ -176,7 +174,7 @@ export async function listCandidatesByConfidence(
      LIMIT $2 OFFSET $3`, [seasonId, opts.limit, opts.offset])
 
   const total = await maybeOne<{ n: number }>(db,
-    `SELECT count(*)::int AS n FROM v_headhunting_list WHERE season_id = $1`, [seasonId])
+    `SELECT count(*)::int AS n FROM v_candidate_population WHERE season_id = $1`, [seasonId])
 
   return { rows, total: total?.n ?? 0 }
 }

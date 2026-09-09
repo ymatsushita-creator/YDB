@@ -369,6 +369,7 @@ export default async function PersonPage({ params, searchParams }: {
                   <tr>
                     <th>日時</th>
                     <th>チャネル</th>
+                    <th>イベント</th>
                     <th>団体</th>
                     <th>年度</th>
                     <th>申込 / 参加</th>
@@ -387,6 +388,7 @@ export default async function PersonPage({ params, searchParams }: {
                           <span className="badge-tag-gray" style={{ marginLeft: 6 }}>自己申告</span>
                         )}
                       </td>
+                      <td>{t.event_name ?? '—'}</td>
                       <td>{t.partner_name ?? '—'}</td>
                       <td className="nowrap">
                         {t.enrollment_year

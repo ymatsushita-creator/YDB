@@ -6,6 +6,10 @@ import {
   baseFixture, makeSeason, makePerson, makeChannel, makeTouchpoint, deletePerson, jst,
   type Season,
 } from './support/fixtures.ts'
+import { getHomeTrends } from '../src/queries/dashboard.ts'
+import { countKpiMetric } from '../src/queries/kpi_metrics.ts'
+import { listCandidatesByConfidence } from '../src/queries/borderline.ts'
+import { listSeasonOverviews } from '../src/ai/ask.ts'
 
 /**
  * ヘッドハンティング（実行⑨。0016 / 0017）の検証。
@@ -378,5 +382,107 @@ describe('確度スコア（0017）', () => {
        WHERE season_id = $1`, [season.id])
     assert.equal(row!.has_previous_run, false)
     assert.equal(row!.rank_delta, null)
+  })
+})
+
+// -------------------------------------------------------------
+// 候補者数の母集団は1つ（R2・2026-09 改修）
+//
+// 依頼者の要件 ――「対象外を除外した候補者数の算出ロジックをダッシュボードに
+// 反映（全体数 − 対象外 = 候補者数）」。
+//
+// 中身は列を1つ足す話ではない。**同じ「候補者数」を4か所が別々に数えていた。**
+// 同じ語で違う数が出るのが最悪の壊れ方で、目視では見つからない（12節）。
+// 4経路が同じ母集団（v_candidate_population）を数えることを固定する。
+//
+// F（対象外）は確度ではなく**アプローチ状態**の側。確度側に置くと
+// 「確度」と「対象可否」の二重管理になる。既存 declined の表示ラベルであって
+// 新しい終端ではない（declined は過去70人中67人が復帰している）。
+// -------------------------------------------------------------
+
+describe('候補者数の母集団（R2）', () => {
+  test('★ 4経路が同じ候補者数を返し、終端の人はどこからも消える', async () => {
+    const db = await freshDb()
+    try {
+      const base = await baseFixture(db)
+      const season = await makeSeason(db, { year: 2029 })
+
+      const people: string[] = []
+      for (let i = 0; i < 5; i++) {
+        // 氏名は既定値のまま使う。テスト内に氏名リテラルを置くと PII 走査が拾う
+        const p = await makePerson(db, base.schoolId)
+        await db.query(`
+          INSERT INTO candidate_numbers (season_id, person_id, number)
+          VALUES ($1, $2, $3)`, [season.id, p, 100 + i])
+        people.push(p)
+      }
+
+      const 全体 = await scalar<number>(db,
+        `SELECT count(*)::int FROM candidate_numbers WHERE season_id = $1`, [season.id])
+      assert.equal(全体, 5)
+
+      // 2人を終端（対象外(F)＝declined）にする
+      for (const p of people.slice(0, 2)) {
+        await addApproach(db, {
+          personId: p, seasonId: season.id, code: 'declined',
+          staffId: base.staffId, occurredAt: jst('2028-10-01T10:00:00'),
+        })
+      }
+
+      const 期待 = 3
+
+      // ① ダッシュボード（日次累積の最終日）
+      const trends = await getHomeTrends(db, season.id)
+      assert.equal(trends.at(-1)?.candidates, 期待, 'ダッシュボード')
+
+      // ② KPI の変数
+      assert.equal(await countKpiMetric(db, 'candidates', season.id), 期待, 'KPI')
+
+      // ③ 確度順一覧の総数
+      const page = await listCandidatesByConfidence(db, season.id, { limit: 50, offset: 0 })
+      assert.equal(page.total, 期待, '確度順一覧の総数')
+      assert.equal(page.rows.length, 期待, '確度順一覧の行数')
+
+      // ④ AI の期サマリ（説明に候補者数があるのに SQL から欠落していた）
+      const overview = (await listSeasonOverviews(db)).find((r) => Number(r.年度) === 2029)
+      assert.ok(overview, 'AI の期サマリに 2029 年度が在る')
+      assert.equal(Number(overview!.候補者), 期待, 'AI の期サマリ')
+
+      // 4経路が一致していること自体を1本の等式で押さえる
+      const 全経路 = [
+        trends.at(-1)!.candidates,
+        await countKpiMetric(db, 'candidates', season.id),
+        page.total,
+        Number(overview!.候補者),
+      ].map(Number)
+      assert.equal(new Set(全経路).size, 1, `同じ語で違う数が出ている: ${全経路.join(' / ')}`)
+
+      // S/A/B/C は確度の軸。対象可否とは別に併記される
+      for (const g of ['S', 'A', 'B', 'C'] as const) {
+        assert.equal(typeof Number(overview![g]), 'number', `${g} の内訳が出る`)
+      }
+      const 内訳合計 = ['S', 'A', 'B', 'C'].reduce((n, g) => n + Number((overview as never)[g]), 0)
+      assert.ok(内訳合計 <= 期待, '確度の内訳が候補者数を超えない')
+    } finally {
+      await db.close()
+    }
+  })
+
+  test('F（対象外）は既存の declined の表示ラベルであって、新しい終端ではない', async () => {
+    const db = await freshDb()
+    try {
+      const states = await all<{ code: string; label: string; is_terminal: boolean }>(db,
+        `SELECT code, label, is_terminal FROM approach_states ORDER BY code`)
+      const declined = states.find((s) => s.code === 'declined')
+      assert.equal(declined?.label, '対象外(F)', 'declined の表示が対象外(F)')
+      assert.equal(declined?.is_terminal, true)
+      assert.equal(states.filter((s) => s.label.includes('対象外')).length, 1,
+        '対象外を名乗る状態が2つあってはいけない（二重管理になる）')
+      assert.equal(
+        await scalar<number>(db, `SELECT count(*)::int FROM confidence_grades WHERE code = 'F'`),
+        0, 'F を確度側に足してはいけない')
+    } finally {
+      await db.close()
+    }
   })
 })

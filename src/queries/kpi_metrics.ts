@@ -35,12 +35,8 @@ export const listKpiMetrics = (db: Db): Promise<KpiMetric[]> =>
  */
 const COUNTERS: Record<string, string> = {
   candidates: `
-    SELECT count(DISTINCT t.person_id)::int AS n
-      FROM touchpoints t
-      JOIN persons p ON p.id = t.person_id AND p.deleted_at IS NULL
-      JOIN seasons s ON s.id = $1
-     WHERE jst_date(t.occurred_at)
-           BETWEEN s.outreach_start_date AND s.selection_end_date`,
+    SELECT count(*)::int AS n FROM v_candidate_population
+     WHERE season_id = $1`,
   applicants: `
     SELECT count(*)::int AS n FROM applications
      WHERE season_id = $1 AND voided_at IS NULL AND deleted_at IS NULL`,
@@ -77,6 +73,11 @@ const COUNTERS: Record<string, string> = {
       FROM v_person_confidence v
       JOIN confidence_grades g ON g.code = v.grade_code
      WHERE v.season_id = $1 AND g.sort_order <= 3`,
+  event_attendees: `
+    SELECT count(*)::int AS n
+      FROM event_attendances ea
+      JOIN appointments a ON a.id = ea.appointment_id
+     WHERE a.season_id = $1`,
 }
 
 /** その変数の実績。数えられない語なら null（**0 と書かない**）。 */
