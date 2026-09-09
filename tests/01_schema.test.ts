@@ -146,6 +146,8 @@ describe('マイグレーション', () => {
       'v_ai_pre_viewpoints',
       // 0053: 判定可能ステップ。統合タスク一覧と getDecidableStep の共有ビュー
       'v_decidable_steps',
+      // 0055: 候補者数の母集団。番号を持つ全体から現在の終端状態を除いたもの
+      'v_candidate_population',
     ]
     const expected = [...fromOriginal, ...added].sort()
     const rows = await all<{ relname: string }>(

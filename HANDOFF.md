@@ -1,43 +1,25 @@
 # HANDOFF — いまの状態と、待っている判断
 
-## 2026-09-09 — 改修ループ 第1フェーズ（実装完了・commit 待ち）
+## 2026-09-09 — 改修要件（MTG原文）の達成確認まで完了
 
-**現状**: 第1フェーズ（R2 候補者数の定義統一 / R7 アワード参加人数のKPI連携 / R3 個人ページのイベント名）を
-実装し、`改修ゲート.py verify` **合格**（AC4本＋リスク7本すべて合格・プラン逸脱0本）。
-プランは `.plans/2026-09-09-第1フェーズ.json`、要件の正本は `docs/product/改修要件-2026-09.md`。
-記録は `~/Desktop/AI効率化/data/改修記録.tsv`。
+**現状**: 依頼の原文6分類を1件ずつ画面で確認した。達成＝対象外(F)／候補者数（全体6−対象外2＝ホーム「候補者」4）／
+個人ページのイベント履歴（接点表にイベント名）／KPIのアワード連携（イベント参加人数 5/150人・3%）／
+月カレンダーと参加者表示（R10）／UI刷新（C-239・意匠テスト15本緑）。
+半分＝S/A/B/C内訳（数える口はあるがホームに内訳カード無し）・AI自由記述。
+未着手＝CSV一括登録／イベント一括登録／対応者リスト／チェックリスト／マイルストーン／団体プロフィール／
+「所有権・編集権限・バックアップ体制の再確認」（原文の補足。要件表からも落としていた）。
+検証はデモデータの使い捨てDB（.pgdata-visual、後始末済み）で実施。テストは R10 6本・意匠15本・リスク9本＋typecheck すべて合格。
 
-- 新規: `db/migrations/0055_candidate_population.sql`（`v_candidate_population` = 候補者番号の全体 −
-  `is_terminal`。`declined` の表示を「対象外(F)」へ）／`0056_kpi_event_attendance.sql`（KPI指標 `event_attendees`）
-- 変更: `dashboard.ts` `kpi_metrics.ts` `borderline.ts` `ai/ask.ts` `drilldown.ts` `app/people/[id]/page.tsx`
-- テスト: 28_headhunting 17→19 / 72_kpi_metric 5→8 / 12_drilldown 18→19。**実装を外すと3本とも落ちることを確認済み**
-- typecheck・biome ともに通過
+**次の一手（利用者の判断が要る3点）**
+1. `.audit/reports/2026-08-19-*.json` の生年月日9本（Critical 10・今回の改修と無関係）をどうするか。commit がここで止まっている。
+2. **push だけでは足りない。** 0054/0055/0056 が未適用だとホームが 500 になることをローカルで実測した
+   （`relation "v_candidate_population" does not exist"`）。本番の適用状況を見ようとしたが、DB直結も Supabase MCP の SQL も
+   権限で拒否された。読み取り許可か、`npm run db:migrate:production` の実行判断が要る。
+3. R10 と C-239 が同じ作業ツリーに混ざっており、ゲートは「プラン外19ファイル」で不合格。2コミットに分ける許可。
 
-**この回で直した既存の欠陥3件**（いずれもテスト／ゲートが無ければ出荷されていた）
-1. 新ビューに `state_since` が無く `ORDER BY h.state_since` が壊れた（回帰1本で検出）
-2. `AS S` が Postgres で `s` に畳まれ、型宣言と実キーが不一致（AIの期サマリの内訳が読めない）。`AS "S"` に
-3. `改修ゲート.py` が `git status --porcelain` の1行目を1文字食う（`.strip()` × 固定長スライス）
-
-**次の一手（利用者の判断が要る1点）**: commit が**既存の欠陥で止まっている**。
-監査を実行した実数は **Critical 10 / High 8 / Medium 6 / Low 1**。
-**Critical 10 件はすべて D6-01** ——「`.audit/reports/2026-08-19-*.json` に BIRTHDATE」。
-追跡下の監査調書9本に生年月日が入っており、**2026-08 に一度指摘されて残ったまま**（★過去1回同じ指摘）。
-`git diff origin/main...HEAD -- .audit` は **0本** ＝ 今回の改修とは無関係。
-`CLAUDE.md` により `.audit/` の編集は禁止、allowlist を広げて通すのも禁止。
-**追跡下からの除去は不可逆（履歴に残る）ため、判断は人が持つ。** 選択肢は
-(a) 調書9本を追跡から外し履歴も落とす (b) 調書内の生年月日を伏字化して調書を作り直す
-(c) 限定事項として引き受け、commit だけ通す運用を明文化する。
-PII 走査側で私の変更に出た High 3件（テスト内の架空氏名）は、氏名リテラルを消して**0件**にした。
-
-その後は第2フェーズ（R1 ブラウザCSV 240分 → R4 対応者リスト 80分）。
-
-**触ったファイル（15本・すべて未コミット）**: 新規2 `db/migrations/0055` `0056`／変更6 `src/queries/{dashboard,kpi_metrics,borderline,drilldown}.ts` `src/ai/ask.ts` `app/people/[id]/page.tsx`／テスト3 `tests/{28_headhunting,72_kpi_metric,12_drilldown}.test.ts`／記録4 `HANDOFF.md` `docs/product/改修要件-2026-09.md` `.plans/` `.agents/skills/source-command-decisions/`（最後は改修前から在る未追跡物・未変更）。
-AI効率化側も未コミット: `bin/改修ゲート.py`（リスク実行・porcelain 解析）`hooks/check-code-plan.sh`（誤爆修正）`hooks/tests/check-code-plan.test.sh`（回帰3本追加）`bin/受け入れ判定.py` `docs/失敗台帳.md` `NEO-AI-ROUTING.md`。
-
-**決めたこと（データで決定・聞いていない）**: 対象外(F) = 既存 `declined` の表示ラベル。新規ステータスを足さない
-（`declined` 70人中67人が復帰しており、終端を新設すると復帰運用と二重管理になる）。
-247人の一括対象外印の是正と、追わない扱いで確度が付いた33人の掃除は**運用判断**でありコード改修の外。
-`is_terminal` 側で除外が効くため候補者数には影響しない。
+**触ったファイル**: 第1フェーズは `fea74a3`（未push）。未コミットは R10（`src/queries/calendar.ts` `app/_components/calendar.tsx`
+`app/borderline/calendar/` `tests/84` `tests/85`）と C-239（`app/_styles/*` `app/tokens.css` `basic/DESIGN.md`
+`tests/46_design_discipline.test.ts` ほか）。この確認セッション自体はプロダクトコードを1行も変えていない。
 
 ---
 

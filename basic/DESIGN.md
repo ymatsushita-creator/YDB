@@ -1,37 +1,34 @@
 ---
-version: alpha
-name: Iridescent-Black-design-system
+version: beta
+name: YouthDB-playful-operations-design-system
 description: >
-  A premium black-led interface system built around the brand's
-  iridescent mesh gradient. Near-black and white provide the dominant
-  structural surfaces, while lime, lemon yellow, coral pink, cyan,
-  periwinkle, and lavender blend into a luminous spectral gradient used
-  selectively as the primary brand signature. Typography, spacing,
-  geometry, and operational UI remain restrained and technical;
-  colour carries the emotional identity.
+  YouthDBの集客・候補者選定・選考を前へ進めるplayful operations system。
+  クリームの記録基盤と白い紙面を保ち、現在地はピンク、主操作は黄色、
+  情報は空色、完了はミント、AIと特別機能は紫で示す。太い輪郭と硬い影は
+  操作可能な要素に限定し、候補者情報・評価・表は静かに読みやすく保つ。
 
 colors:
   # ─── Core ───────────────────────────────────────────────
-  primary: "#050505"
-  on-primary: "#ffffff"
+  primary: "#352E45"
+  on-primary: "#FFFDF8"
 
-  ink: "#080808"
-  body: "#525252"
-  mute: "#8a8a8a"
+  ink: "#2B2635"
+  body: "#5D5668"
+  mute: "#8C8494"
 
   # ─── Surfaces ───────────────────────────────────────────
-  canvas: "#ffffff"
-  canvas-soft: "#fafafa"
-  canvas-soft-2: "#f4f4f4"
+  canvas: "#FFFDF8"
+  canvas-soft: "#FFF6E8"
+  canvas-soft-2: "#FCEFE6"
 
-  canvas-dark: "#050505"
-  canvas-dark-soft: "#0d0d0d"
-  canvas-dark-2: "#151515"
+  canvas-dark: "#352E45"
+  canvas-dark-soft: "#413850"
+  canvas-dark-2: "#4E435E"
 
-  hairline: "#e8e8e8"
-  hairline-strong: "#b8b8b8"
-  hairline-dark: "#262626"
-  hairline-dark-strong: "#3a3a3a"
+  hairline: "#E9DED5"
+  hairline-strong: "#C9B9B2"
+  hairline-dark: "#51485F"
+  hairline-dark-strong: "#685C77"
 
   # ─── Brand Spectrum ─────────────────────────────────────
   brand-lime: "#B6CF0B"
@@ -70,11 +67,11 @@ colors:
 
   success: "#73A900"
   success-soft: "#E8F5C3"
-  success-deep: "#527C00"
+  success-deep: "#3D6100"
 
   warning: "#E0AC18"
   warning-soft: "#FFF0BE"
-  warning-deep: "#A87700"
+  warning-deep: "#765100"
 
   error: "#D95B6D"
   error-soft: "#F9D9DD"
@@ -82,7 +79,7 @@ colors:
 
   info: "#52B4E1"
   info-soft: "#DDF3FC"
-  info-deep: "#267DA6"
+  info-deep: "#175B78"
 
   # ─── Brand Gradient Stops ───────────────────────────────
   gradient-lime: "#B6CF0B"
@@ -102,8 +99,8 @@ colors:
   gradient-cool-mid: "#7A86BF"
   gradient-cool-end: "#9C82C8"
 
-  selection-bg: "#050505"
-  selection-fg: "#ffffff"
+  selection-bg: "#F4D12A"
+  selection-fg: "#2B2635"
 
 gradients:
   brand-spectrum:
@@ -154,28 +151,28 @@ typography:
   display-xl:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 48px
-    fontWeight: 600
+    fontWeight: 850
     lineHeight: 48px
     letterSpacing: -2.4px
 
   display-lg:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 32px
-    fontWeight: 600
+    fontWeight: 850
     lineHeight: 40px
     letterSpacing: -1.28px
 
   display-md:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 24px
-    fontWeight: 600
+    fontWeight: 800
     lineHeight: 32px
     letterSpacing: -0.96px
 
   display-sm:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 20px
-    fontWeight: 600
+    fontWeight: 800
     lineHeight: 28px
     letterSpacing: -0.6px
 
@@ -195,7 +192,7 @@ typography:
   body-md-strong:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 16px
-    fontWeight: 500
+    fontWeight: 700
     lineHeight: 24px
 
   body-sm:
@@ -208,7 +205,7 @@ typography:
   body-sm-strong:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 14px
-    fontWeight: 500
+    fontWeight: 700
     lineHeight: 20px
     letterSpacing: -0.28px
 
@@ -233,22 +230,22 @@ typography:
   button-md:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 14px
-    fontWeight: 500
+    fontWeight: 800
     lineHeight: 20px
 
   button-lg:
     fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
     fontSize: 16px
-    fontWeight: 500
+    fontWeight: 800
     lineHeight: 24px
 
 rounded:
   none: 0px
-  xs: 4px
-  sm: 6px
-  md: 8px
-  lg: 12px
-  xl: 16px
+  xs: 8px
+  sm: 12px
+  md: 18px
+  lg: 24px
+  xl: 32px
   pill-sm: 64px
   pill: 100px
   full: 9999px
@@ -284,8 +281,9 @@ components:
   nav-link-active:
     textColor: "{colors.ink}"
     typography: "{typography.body-sm-strong}"
-    activeIndicator: "{gradients.brand-spectrum}"
-    rounded: "{rounded.full}"
+    backgroundColor: "{colors.brand-pink}"
+    borderColor: "{colors.primary}"
+    rounded: "{rounded.sm}"
     padding: "{spacing.xs} {spacing.sm}"
 
   nav-cta-signup:
@@ -314,10 +312,12 @@ components:
     height: 28px
 
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.brand-yellow-bright}"
+    textColor: "{colors.ink}"
+    border: "3px solid {colors.primary}"
+    shadow: "0 5px 0 {colors.primary}"
     typography: "{typography.button-lg}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.sm}"
     padding: "0px {spacing.sm}"
 
   button-secondary:
@@ -336,10 +336,12 @@ components:
     padding: "0px {spacing.sm}"
 
   button-primary-sm:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.brand-yellow-bright}"
+    textColor: "{colors.ink}"
+    border: "3px solid {colors.primary}"
+    shadow: "0 4px 0 {colors.primary}"
     typography: "{typography.button-md}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.sm}"
     padding: "0px {spacing.xs}"
 
   button-secondary-sm:
@@ -665,263 +667,117 @@ components:
 
 ---
 
-## Overview
+## 1. Design concept
 
-The visual identity is built around a strict contrast between near-black space and a luminous iridescent spectrum derived directly from the brand mark.
+### Playful operations
 
-Black is not merely a background colour. It is the dominant structural material of the system. The gradient acts as light moving across that structure.
+YouthDBは、起業家アカデミーの集客・候補者選定・選考を前へ進める運営コックピットである。楽しさは装飾ではなく、「現在地」「次の行動」「完了」を迷わず読めることに使う。
 
-The signature spectrum moves through lime, lemon yellow, coral pink, cyan, periwinkle, and lavender. Unlike a conventional rainbow or linear gradient, the colours should appear to bleed into one another spatially, creating an atmospheric mesh effect.
+- 情報構造は静かに、操作のきっかけだけを明るくする
+- 主操作は太い輪郭と硬い影で「押せる」と伝える
+- 候補者情報、評価、入力値は装飾より読みやすさを優先する
+- ゲーム用語や報酬表現は持ち込まない
+- 子どもっぽさではなく、本気で人を応援するチームの温度を目指す
 
-No individual hue should become the standalone brand colour.
+### Two-layer system
 
-**The spectrum itself is the brand.**
+1. **Record foundation** — クリームの背景、白い紙面、濃い紫灰の文字、細い区切り。個人情報、表、検索、入力、長文を支える。
+2. **Momentum layer** — ピンク、黄色、空色、ミント、紫、太い輪郭、硬い影。現在地、主操作、情報、完了、AIを支える。
 
-Most product UI remains intentionally monochrome. Cards, tables, navigation, inputs, operational controls, filters, and dense information surfaces use black, white, and restrained neutral grays.
+全面をカラフルにしない。通常情報はfoundation、動かしたい箇所だけmomentum layerに置く。
 
-The spectrum appears only where hierarchy or identity requires it:
+## 2. Product translation
 
-- Hero imagery
-- Brand moments
-- Selected states
-- Active indicators
-- Focus states
-- Major visualizations
-- High-priority accents
-- Occasional borders or light fields
+| YouthDBの仕事 | 表現 |
+| --- | --- |
+| 現在開いている業務 | ピンクの面と濃い文字 |
+| 次に行う主操作 | 黄色、3pxの輪郭、硬い下影 |
+| 補足情報・通常進捗 | 空色 |
+| 完了・合格・安全な状態 | ミント |
+| AI・特別な分析 | 紫 |
+| 注意・期限確認 | 黄色。文言を必ず併記 |
+| 修正必須 | 赤。文言と形を必ず併記 |
 
-This produces a visual ratio of approximately **85–90% neutral surface to 10–15% spectral colour**.
+「クエスト」「XP」「ランク」「報酬」などのゲーム語彙は使わない。YouthDBでは既存の業務語彙である「やること」「候補者」「通常選考」「特別選考」「面接・評価」「連携団体」を使う。
 
-Preserving this ratio is essential. Increasing the amount of gradient reduces its perceived value and makes the interface feel decorative rather than premium.
+## 3. Shape and depth
 
-Typography remains geometric, technical, and restrained. Geist carries the narrative layer while Geist Mono carries system labels, metadata, and technical information.
+- 入力・小さな操作: 10–14px
+- 通常カード: 18px
+- 主要カード: 24px
+- ヒーロー・ダイアログ: 32px
+- Foundation UI: 1px solid hairline
+- 触れる主要要素: 2–3px solid primary
+- 硬い影はボタン、現在地、選択可能な主要カードだけに使う
+- 読むだけのカードと表には硬い影を使わない
 
-The typography deliberately competes as little as possible with the brand spectrum.
+## 4. Typography
 
-### Key Characteristics
+本文は角ゴシックで安定させる。ページタイトルと主要な数だけ太くし、丸みは書体ではなく形と余白でつくる。英字メタ情報は補足に限定し、操作に必要な日本語を12px未満にしない。
 
-- Near-black is the principal structural colour.
-- White remains the dominant operational surface in light contexts.
-- The logo-derived iridescent spectrum is the sole major brand decoration.
-- Lime → yellow → coral → cyan → periwinkle → lavender forms the canonical colour journey.
-- Gradient colours blend spatially rather than appearing as equal-width bands.
-- Operational UI remains predominantly monochrome.
-- Spectral colour is reserved for identity, state emphasis, focus, and high-level visualization.
-- Black and white are equally valid canvases; the gradient bridges the two.
-- Geist + Geist Mono preserve the engineered, product-led character of the interface.
-- Colour is treated as light, not paint.
+## 5. Core patterns
 
----
+### App shell
 
-## Colors
+デスクトップは固定サイドバーと上部の現在地。現在地はピンクの面、通常項目は白い面にする。モバイルは5項目以内のボトムナビへ落とす。
 
-### Structural Black
+### Primary action
 
-**Primary / Near Black**  
-`{colors.primary}` — `#050505`
+1画面の主役は原則1つ。黄色の面、濃い3px枠、硬い下影を使い、文言は操作結果を動詞で示す。押下時は影を縮めて物理的な反応を返す。
 
-The principal structural colour of the system.
+### Cards and tables
 
-Used for:
+白いカードと細い境界を基本とする。業務のまとまりには十分な余白を与えるが、候補者一覧や評価表の密度は維持する。行ホバーは淡いピンク、選択行はピンクの左線と淡い面で示す。
 
-- Hero surfaces
-- Primary CTAs
-- Navigation emphasis
-- Dark application shells
-- Featured cards
-- Code environments
-- Large polarity-flipped sections
+### Forms
 
-Avoid replacing this with medium charcoal. The extreme contrast against the spectral gradient is a core part of the identity.
+ラベルは常に入力欄の上へ置く。入力欄は白、2pxの淡い境界、14px角丸。フォーカスは紫の境界と半透明リング。エラー、必須、補足をプレースホルダーだけで伝えない。
 
-### White & Neutral Surfaces
+### Progress and state
 
-**Canvas**  
-`{colors.canvas}` — `#ffffff`
+進捗は数値だけでなく、現在値と次の状態を同時に読めるようにする。完了は色だけに頼らず、状態ラベルと文言を併記する。確度や順位は業務上の事実なので、過剰な報酬演出を加えない。
 
-Primary light surface for cards, forms, dialogs, data tables, and application UI.
+## 6. Motion
 
-**Canvas Soft**  
-`{colors.canvas-soft}` — `#fafafa`
+- Hover: 150–220ms、最大3pxの移動
+- Press: 硬い影を縮める
+- Progress: 約500msで補間
+- ナビゲーションの選択: 1回だけ小さく反応
+- `prefers-reduced-motion: reduce`では装飾的な動きを停止する
 
-Default soft page surface.
+## 7. Accessibility
 
-**Canvas Soft 2**  
-`{colors.canvas-soft-2}` — `#f4f4f4`
+- `:focus-visible`に3pxの紫アウトラインを出す
+- タップ領域は44×44pxを目安にする
+- 色だけでactive、error、completeを伝えない
+- 本文は12px以上を基本とする
+- モーダルはEscapeと閉じる操作を提供する
+- 横スクロール領域をキーボードでも辿れるようにする
 
-Inset areas, hover surfaces, disabled areas, and nested containers.
+## 8. Composition recipe
 
-### Dark Surface Ladder
+1. クリームのキャンバスと静かなナビゲーションを置く
+2. ページ名と現在の期を一つの見出し領域にまとめる
+3. 状態の要約を小カードで示す
+4. 主タスクを白いカードまたは表で並べる
+5. 選択中、主操作、達成済みだけにmomentum colorsを使う
+6. 個人情報、長文、管理、検索はfoundation stylingへ戻す
+7. モバイルで一列化し、主操作が迷子にならないか確認する
 
-- `{colors.canvas-dark}` — `#050505`
-- `{colors.canvas-dark-soft}` — `#0d0d0d`
-- `{colors.canvas-dark-2}` — `#151515`
+## 9. Do / Don't
 
-Dark interfaces should still preserve surface hierarchy. Do not render every dark element as the same black rectangle.
+### Do
 
-### Neutral Text
-
-- `{colors.ink}` — `#080808`
-- `{colors.body}` — `#525252`
-- `{colors.mute}` — `#8a8a8a`
-- `{colors.on-primary}` — `#ffffff`
-
-Use strong contrast for information hierarchy rather than introducing additional colours.
-
----
-
-## Brand Spectrum
-
-The signature palette is derived from the attached brand mark.
-
-### Lime
-
-`{colors.brand-lime}` — `#B6CF0B`
-
-The sharpest and most energetic hue in the spectrum.
-
-It should normally exist as part of a gradient rather than as a standalone large surface.
-
-### Yellow
-
-`{colors.brand-yellow}` — `#F1D370`
-
-Acts as the warm bridge between lime and coral.
-
-The yellow should feel warm and luminous rather than orange.
-
-### Coral
-
-`{colors.brand-coral}` — `#ED808A`
-
-Forms the principal warm transition zone between yellow and the cooler spectral region.
-
-### Pink
-
-`{colors.brand-pink}` — `#F1849A`
-
-Used as a secondary transition hue around coral. It should rarely appear as an isolated brand accent.
-
-### Cyan
-
-`{colors.brand-cyan}` — `#52B4E1`
-
-Provides the strongest cool contrast to the warm yellow and coral region.
-
-Cyan may also be used sparingly for focus indicators and links where a conventional interactive colour is required.
-
-### Periwinkle
-
-`{colors.brand-periwinkle}` — `#7A86BF`
-
-Acts as the bridge between cyan and lavender.
-
-Its muted character prevents the cool end of the spectrum from becoming overly saturated.
-
-### Lavender
-
-`{colors.brand-lavender}` — `#9C82C8`
-
-The terminal cool hue in the canonical brand journey.
-
-It works particularly well when the gradient fades into black.
-
----
-
-## Brand Gradient
-
-The primary brand asset is an **iridescent mesh spectrum** derived directly from the logo.
-
-Canonical colour family:
-
-- Lime — `#B6CF0B`
-- Warm Yellow — `#F1D370`
-- Coral Pink — `#ED808A`
-- Pink — `#F1849A`
-- Sky Cyan — `#52B4E1`
-- Periwinkle — `#7A86BF`
-- Lavender — `#9C82C8`
-
-The gradient must not behave like a conventional rainbow.
-
-Avoid evenly distributed colour bands.
-
-Instead, treat each colour as a soft light source whose influence overlaps neighbouring hues.
-
-The warm and cool regions should remain perceptible:
-
-**Warm**
-
-`Lime → Yellow → Coral`
-
-**Cool**
-
-`Cyan → Periwinkle → Lavender`
-
-The two regions may intersect through pale yellow, aqua, muted pink, soft blue, or desaturated transition zones.
-
-Black should remain visible around the gradient whenever possible.
-
-The perceived brightness of the spectrum comes from contrast with the black field.
-
-### Gradient Behaviour
-
-Preferred:
-
-- Mesh gradients
-- Multi-radial gradients
-- Blurred overlapping colour fields
-- Organic direction changes
-- Unequal colour distribution
-- Soft transitions
-- Partial fade into black
-- Large atmospheric scale
-
-Avoid:
-
-- Equal-width rainbow stripes
-- Standard seven-colour rainbow order
-- Hard colour boundaries
-- Highly repetitive gradient chips
-- Filling every component with the spectrum
-- Tiny gradients where individual colours cannot breathe
-
-### Suggested CSS Construction
-
-A production implementation may use several overlapping radial gradients rather than a single linear gradient.
-
-Example direction:
-
-```css
-background:
-  radial-gradient(
-    circle at 12% 18%,
-    rgba(182, 207, 11, 0.95),
-    transparent 30%
-  ),
-  radial-gradient(
-    circle at 36% 62%,
-    rgba(241, 211, 112, 0.95),
-    transparent 34%
-  ),
-  radial-gradient(
-    circle at 51% 42%,
-    rgba(237, 128, 138, 0.88),
-    transparent 34%
-  ),
-  radial-gradient(
-    circle at 67% 28%,
-    rgba(82, 180, 225, 0.92),
-    transparent 36%
-  ),
-  radial-gradient(
-    circle at 83% 38%,
-    rgba(122, 134, 191, 0.92),
-    transparent 34%
-  ),
-  radial-gradient(
-    circle at 96% 18%,
-    rgba(156, 130, 200, 0.92),
-    transparent 32%
-  ),
-  #050505;
+- 一画面に明確な主操作を一つ置く
+- 白い余白の中に鮮やかな色をポイントで使う
+- 太い枠と硬い影を、触れる要素の合図として統一する
+- 表や個人情報は静かな紙面で読みやすくする
+- NEOのスペクトラムはロゴと大きなブランド場面に限定する
+
+### Don't
+
+- 全カードを別々の鮮やかな色にしない
+- 候補者をゲームの駒や報酬として扱わない
+- すべてのボタンに強い影を付けない
+- 小さい英字だけで情報構造を成立させない
+- 遊び心を理由に、権限・エラー・個人情報の状態を曖昧にしない

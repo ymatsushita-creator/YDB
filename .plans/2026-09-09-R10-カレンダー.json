@@ -1,0 +1,121 @@
+{
+  "案件": "YouthDB — 予定の月カレンダーを新設し、予定を押すと参加者が分かるようにする（R10）",
+  "対象": "/Volumes/KIOXIA_2TB/NEO/YouthDB",
+  "ベース": "feat/phase1-candidate-count-kpi-event",
+  "ブランチ": "feat/calendar-attendees",
+  "触らない": [
+    "認証",
+    "課金",
+    "個人情報",
+    "本番設定",
+    "package.json",
+    "scripts/test-preflight.ts",
+    "db/migrations",
+    ".audit"
+  ],
+  "やること": [
+    {
+      "id": "R10-1",
+      "要件": "予定（appointments）を月ごとの暦に並べる画面を作る。イベント種別だけでなく既存の予定種別も出し、期(?season=)と月(?month=YYYY-MM)で絞る",
+      "変更": [
+        "src/queries/calendar.ts(新規)",
+        "app/borderline/calendar/page.tsx(新規)",
+        "app/_components/calendar.tsx(新規)",
+        "app/_styles/04-tables.css:307-357",
+        "app/borderline/page.tsx:434-455",
+        "tests/84_month_calendar.test.ts(新規)"
+      ],
+      "受け入れ": "node --test --experimental-test-isolation=none tests/84_month_calendar.test.ts",
+      "工数": "150分"
+    },
+    {
+      "id": "R10-2",
+      "要件": "暦の予定を押すと、その予定に誰が参加したかが分かる（氏名と、その期の確度 S/A/B/C を併記）。閲覧専用",
+      "変更": [
+        "src/queries/calendar.ts(新規)",
+        "app/_components/calendar.tsx(新規)",
+        "app/borderline/calendar/page.tsx(新規)",
+        "tests/85_calendar_attendance.test.ts(新規)"
+      ],
+      "受け入れ": "node --test --experimental-test-isolation=none tests/85_calendar_attendance.test.ts",
+      "工数": "45分"
+    },
+    {
+      "id": "R10-3",
+      "要件": "新しい画面が層の境界を守る（all と personal は開ける／input は開けない）",
+      "変更": [
+        "tests/37_session.test.ts:141-155"
+      ],
+      "受け入れ": "node --test --experimental-test-isolation=none tests/37_session.test.ts",
+      "工数": "15分"
+    },
+    {
+      "id": "記録",
+      "要件": "この改修の入力を会話ではなくファイルに残す",
+      "変更": [
+        "docs/product/改修要件-2026-09.md",
+        ".plans/",
+        "scripts/verify-phase1-rollback.mjs",
+        ".agents/skills/source-command-decisions/",
+        ".audit/reports/2026-09-09-1f90779.json",
+        ".audit/reports/2026-09-09-1f90779-01.json",
+        ".audit/reports/2026-09-09-1f90779-02.json",
+        "app/borderline/calendar/",
+        ".plans/2026-09-09-R10-カレンダー.json.基準.json",
+        "scripts/check-appointments.mjs"
+      ],
+      "受け入れ": "test -f docs/product/改修要件-2026-09.md && test -f .plans/2026-09-09-R10-カレンダー.json",
+      "工数": "0分"
+    }
+  ],
+  "やらないこと": [
+    "外部の EventDB との連携 — イベントは別DBではなく appointment_kinds.code='event' として既に予定表に統合済み（0040_event_kind.sql:21-23）。連携する相手が存在しない",
+    "Google カレンダーへの書き出し／取り込み — 依頼に無い。必要になったら別要件として起こす",
+    "暦からの参加者の編集 — 依頼は「誰が参加したか分かるように」。編集は既存の参加ポップアップに在る（app/_components/borderline.tsx:362-419）",
+    "新しい主タブの追加 — 既存の規律。/borderline/calendar に置く",
+    "日をまたぐ予定を複数の升へ展開すること — 既存 starts_on の挙動どおり開始日の升に載せる。新しい規則を作らない",
+    "appointment_revisions.owner_staff_id の必須/任意の不整合の是正（0019:143 と 0051）— 今回は読み取りのみで影響しない。別途判断",
+    "tests/46_design_discipline.test.ts の既存の赤4件の是正 — この改修の前から赤。混ぜない",
+    "DBスキーマの変更 — 予定も参加も既存の表で足りる",
+    "第1フェーズ（R2/R7/R3）の再実装 — 同ブランチに commit 済み（fea74a3）。本プランのベースはそのブランチで、差分には含めない"
+  ],
+  "リスク": [
+    {
+      "壊れるもの": "予定の取消・範囲・個人情報除外",
+      "確認": "node --test --experimental-test-isolation=none tests/31_schedule.test.ts"
+    },
+    {
+      "壊れるもの": "参加記録・接点・二重計上防止",
+      "確認": "node --test --experimental-test-isolation=none tests/39_notes_attendance.test.ts"
+    },
+    {
+      "壊れるもの": "深いリンクとポップアップ導線",
+      "確認": "node --test --experimental-test-isolation=none tests/55_drilldown_pages.test.ts"
+    },
+    {
+      "壊れるもの": "層の境界",
+      "確認": "node --test --experimental-test-isolation=none tests/37_session.test.ts"
+    },
+    {
+      "壊れるもの": "新規ルートの孤立・開けない導線",
+      "確認": "node --test --experimental-test-isolation=none tests/49_reachable_layers.test.ts"
+    },
+    {
+      "壊れるもの": "既存予定クエリの取得量",
+      "確認": "node --test --experimental-test-isolation=none tests/54_list_weight.test.ts"
+    },
+    {
+      "壊れるもの": "イベント登録から appointments への接続",
+      "確認": "node --test --experimental-test-isolation=none tests/66_events_and_forms.test.ts"
+    },
+    {
+      "壊れるもの": "第1フェーズの候補者数の定義",
+      "確認": "node --test --experimental-test-isolation=none tests/28_headhunting.test.ts"
+    },
+    {
+      "壊れるもの": "型検査",
+      "確認": "npm run typecheck"
+    }
+  ],
+  "要確認": []
+}

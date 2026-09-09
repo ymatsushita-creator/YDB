@@ -114,15 +114,15 @@ export default async function Home(
   //   規則が0件なら確度は誰にも付かないので、常に0の線になる ――
   //   それは「無いことを0と書く」ことである（0017）。
   const series = [
-    { key: 'candidates' as const, label: '候補者', color: '#f03090' },
-    { key: 'partners' as const, label: '連携団体数', color: '#f0f000' },
+    { key: 'candidates' as const, label: '候補者', color: 'var(--color-brand-pink)' },
+    { key: 'partners' as const, label: '連携団体数', color: 'var(--color-brand-yellow-deep)' },
     // ★ 「確度A以上」と名乗っていたのをやめた（C-127）。**A は記録に無い格付け**で、
     //   応募管理表では A〜C・D〜I が特別選考の軸の記号（別の意味）である。
     //   閾値は画面に書かない（C-62）。定義はクエリのコメントと DECISIONS に置く。
     ...(hasRules
-      ? [{ key: 'high_confidence' as const, label: '確度の高い候補者', color: '#50f000' }]
+      ? [{ key: 'high_confidence' as const, label: '確度の高い候補者', color: 'var(--color-success-deep)' }]
       : []),
-    { key: 'special' as const, label: '特別選考者', color: '#00c0f0', dashed: true },
+    { key: 'special' as const, label: '特別選考者', color: 'var(--color-info-deep)', dashed: true },
   ]
   const latest = trends.at(-1) ?? { candidates: 0, partners: 0, high_confidence: 0, special: 0 }
 

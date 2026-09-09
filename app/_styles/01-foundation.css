@@ -34,10 +34,9 @@
   /* 操作柱と上の帯の面。骨組みも同じ面を敷く（敷かないと器が崩れて見える）。 */
   --rail-face: var(--color-canvas);
 
-  /* NEO ACADEMIA オフィシャルロゴのスペクトラムグラデーション
-     Lime (#88d840) -> Cyan (#3bb5e4) -> Violet (#9b62f8) -> Pink (#f272a1) -> Amber (#ffc820) */
-  --spectrum-line: linear-gradient(90deg, #88d840 0%, #3bb5e4 25%, #9b62f8 50%, #f272a1 75%, #ffc820 100%);
-  --spectrum-line-v: linear-gradient(180deg, #88d840 0%, #3bb5e4 25%, #9b62f8 50%, #f272a1 75%, #ffc820 100%);
+  /* NEO ACADEMIA オフィシャルロゴの色順を、DESIGN.md のトークンで組む。 */
+  --spectrum-line: linear-gradient(90deg, var(--color-brand-lime) 0%, var(--color-brand-cyan) 25%, var(--color-brand-lavender) 50%, var(--color-brand-pink) 75%, var(--color-brand-yellow) 100%);
+  --spectrum-line-v: linear-gradient(180deg, var(--color-brand-lime) 0%, var(--color-brand-cyan) 25%, var(--color-brand-lavender) 50%, var(--color-brand-pink) 75%, var(--color-brand-yellow) 100%);
 
   /* ★ 明るい地の上に敷く光の場。
        `--gradient-brand-spectrum-soft`（生成物）は**最後に黒を敷いている**
@@ -246,4 +245,71 @@ button, input, select, textarea { font-family: inherit; }
 @media (max-width: 680px) {
   .page-title { font-size: var(--type-display-md-font-size); }
   .task-owner, .task-waiting { display: none; }
+}
+
+/* -------------------------------------------------------------
+   YouthDB beta — warm foundation
+   DESIGN.md の「record foundation」を全画面へ通す。
+   ------------------------------------------------------------- */
+html, body {
+  background: var(--color-canvas-soft);
+  color: var(--color-ink);
+}
+body {
+  background-image:
+    radial-gradient(circle at 7% 8%, color-mix(in srgb, var(--color-brand-pink-soft) 68%, transparent), transparent 24%),
+    radial-gradient(circle at 92% 92%, color-mix(in srgb, var(--color-brand-cyan-soft) 72%, transparent), transparent 28%);
+  background-attachment: fixed;
+}
+
+::selection { background: var(--color-brand-yellow); color: var(--color-ink); }
+
+:focus-visible {
+  outline: 3px solid var(--color-brand-lavender-deep);
+  outline-offset: 3px;
+}
+
+.page-head {
+  position: relative;
+  padding: var(--space-md) 0 var(--space-xs);
+}
+.page-title {
+  color: var(--color-ink);
+  font-weight: 850;
+  letter-spacing: -.045em;
+}
+.page-sub { color: var(--color-body); font-weight: 700; }
+.section-title, .review-heading {
+  color: var(--color-ink);
+  font-weight: 850;
+  letter-spacing: -.025em;
+}
+.review-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.review-heading::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--rounded-xs);
+  background: var(--color-brand-yellow);
+  transform: rotate(-8deg);
+}
+
+.empty, .hh-empty {
+  border: 1px dashed var(--color-hairline-strong);
+  background: color-mix(in srgb, var(--color-canvas-soft) 82%, var(--color-canvas));
+}
+.callout {
+  border: 1px solid var(--color-warning);
+  border-left-width: 5px;
+  border-radius: var(--rounded-sm);
+  background: var(--color-warning-soft);
+}
+.callout.ok {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
 }

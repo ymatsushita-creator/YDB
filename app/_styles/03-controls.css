@@ -42,23 +42,23 @@
 .button-primary {
   height: 38px;
   padding: 0 var(--space-md);
-  border-radius: 20px;
-  background-color: #1a73e8;
-  color: #ffffff;
+  border-radius: var(--rounded-sm);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
   transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 .button-primary:hover {
-  background-color: #1557d0;
+  background-color: var(--color-link-deep);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  color: #ffffff;
+  color: var(--color-on-primary);
 }
-.button-primary:active { background-color: #0b57d0; transform: scale(0.98); }
+.button-primary:active { background-color: var(--color-primary); transform: scale(0.98); }
 .button-primary[disabled], .button-secondary[disabled] {
-  background-color: #f1f3f4;
-  color: #80868b;
-  border-color: #dadce0;
+  background-color: var(--color-canvas-soft-2);
+  color: var(--color-mute);
+  border-color: var(--color-hairline);
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -67,31 +67,31 @@
 .button-secondary {
   height: 38px;
   padding: 0 var(--space-md);
-  border-radius: 20px;
-  background-color: #ffffff;
-  color: #1a73e8;
-  border: 1px solid #dadce0;
+  border-radius: var(--rounded-sm);
+  background-color: var(--color-canvas);
+  color: var(--color-link);
+  border: 1px solid var(--color-hairline);
   font-weight: 500;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.button-secondary:hover { background-color: #f8f9fa; border-color: #1a73e8; color: #1557d0; text-decoration: none; }
+.button-secondary:hover { background-color: var(--color-canvas-soft); border-color: var(--color-link); color: var(--color-link-deep); text-decoration: none; }
 
 
 /* 小さい方（表の行・カードの中）。DESIGN.md `button-*-sm` の字面。 */
 .button-primary-sm, .button-secondary-sm, .row-detail-button, .zoom-back {
   height: 28px;
   padding: 0 var(--space-md);
-  border-radius: 20px;
+  border-radius: var(--rounded-sm);
   font-size: var(--type-button-md-font-size);
   font-weight: 500;
   line-height: var(--type-button-md-line-height);
 }
 .row-detail-button, .zoom-back {
-  background-color: #ffffff;
-  color: #1a73e8;
-  border: 1px solid #dadce0;
+  background-color: var(--color-canvas);
+  color: var(--color-link);
+  border: 1px solid var(--color-hairline);
 }
-.row-detail-button:hover, .zoom-back:hover { background-color: #e8f0fe; border-color: #c2e7ff; color: #1557d0; text-decoration: none; }
+.row-detail-button:hover, .zoom-back:hover { background-color: var(--color-link-bg-soft); border-color: var(--color-brand-cyan); color: var(--color-link-deep); text-decoration: none; }
 
 /* 表や一覧の中の主操作は、帯の主操作より小さくする。 */
 .task-item .button-primary, .criteria-row .button-primary,
@@ -133,10 +133,10 @@ table .button-primary, table .button-secondary {
   display: inline-flex; align-items: center;
   height: 32px;
   padding: 0 var(--space-md);
-  border-radius: 100px;
-  background-color: #f1f3f4;
-  border: 1px solid #dadce0;
-  color: #3c4043;
+  border-radius: var(--rounded-pill);
+  background-color: var(--color-canvas-soft-2);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-body);
   font-size: var(--type-body-sm-font-size);
   font-weight: 500;
   line-height: var(--type-body-sm-line-height);
@@ -144,9 +144,9 @@ table .button-primary, table .button-secondary {
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .bl-tab:hover, .owner-filter-tabs > a:hover {
-  background-color: #e8eaed;
+  background-color: var(--color-hairline);
   text-decoration: none;
-  color: #202124;
+  color: var(--color-ink);
 }
 .bl-tab:active, .owner-filter-tabs > a:active {
   transform: scale(0.97);
@@ -154,9 +154,9 @@ table .button-primary, table .button-secondary {
 /* 選ばれている札。Google Blue Tonal Chip */
 .bl-tab.is-on, .bl-tab[aria-current='page'], .owner-filter-tabs > a.active {
   position: relative; overflow: hidden;
-  background-color: #e8f0fe;
-  border-color: #c2e7ff;
-  color: #1a73e8;
+  background-color: var(--color-brand-pink-soft);
+  border-color: var(--color-brand-pink);
+  color: var(--color-primary);
   font-weight: 600;
 }
 .bl-tab.is-on::after, .bl-tab[aria-current='page']::after, .owner-filter-tabs > a.active::after {
@@ -218,10 +218,10 @@ table .button-primary, table .button-secondary {
   width: 100%; height: 8px;
   border-radius: var(--rounded-full);
   overflow: hidden;
-  background: #e8eaed;
+  background: var(--color-hairline);
 }
 .meter { display: block; margin-top: var(--space-xxs); }
-.meter::-webkit-meter-bar { border: 0; border-radius: var(--rounded-full); background: #e8eaed; }
+.meter::-webkit-meter-bar { border: 0; border-radius: var(--rounded-full); background: var(--color-hairline); }
 .meter::-webkit-meter-optimum-value { border-radius: var(--rounded-full); background: var(--spectrum-line); }
 .meter.over::-webkit-meter-optimum-value { background: var(--color-warning); }
 .meter.good::-webkit-meter-optimum-value { background: var(--color-success); }
@@ -279,26 +279,26 @@ table .button-primary, table .button-secondary {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .conf-mark.conf-S {
-  background: linear-gradient(135deg, #FFF8E1 0%, #FFE082 100%);
-  color: #B78103;
+  background: var(--color-brand-yellow-soft);
+  color: var(--color-brand-yellow-deep);
   border: 1px solid rgba(255, 193, 7, 0.5);
   box-shadow: 0 2px 6px rgba(255, 193, 7, 0.2);
 }
 .conf-mark.conf-A {
-  background: linear-gradient(135deg, #E0F7FA 0%, #80DEEA 100%);
-  color: #007788;
+  background: var(--color-brand-cyan-soft);
+  color: var(--color-brand-cyan-deep);
   border: 1px solid rgba(0, 188, 212, 0.5);
   box-shadow: 0 2px 6px rgba(0, 188, 212, 0.2);
 }
 .conf-mark.conf-B {
-  background: linear-gradient(135deg, #F3E5F5 0%, #CE93D8 100%);
-  color: #6A1B9A;
+  background: var(--color-brand-lavender-soft);
+  color: var(--color-brand-lavender-deep);
   border: 1px solid rgba(156, 39, 176, 0.4);
 }
 .conf-mark.conf-C {
-  background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
-  color: #475569;
-  border: 1px solid #CBD5E1;
+  background: var(--color-canvas-soft-2);
+  color: var(--color-body);
+  border: 1px solid var(--color-hairline-strong);
 }
 .conf-current { background: var(--color-primary); color: var(--color-on-primary); }
 .conf-none { color: var(--color-mute); font-size: var(--type-caption-font-size); }
@@ -456,3 +456,107 @@ table .button-primary, table .button-secondary {
   font-weight: 600;
 }
 
+/* -------------------------------------------------------------
+   YouthDB beta — controls that feel pressable
+   ------------------------------------------------------------- */
+.button-primary {
+  min-height: 44px;
+  height: auto;
+  padding: 10px var(--space-md);
+  border: 3px solid var(--color-primary);
+  border-radius: var(--rounded-sm);
+  background: var(--color-brand-yellow);
+  color: var(--color-primary);
+  font-weight: 850;
+  box-shadow: 0 5px 0 var(--color-primary);
+}
+.button-primary:hover {
+  background: var(--color-brand-yellow-bright);
+  color: var(--color-primary);
+  box-shadow: 0 7px 0 var(--color-primary);
+  transform: translateY(-2px) rotate(-.5deg);
+}
+.button-primary:active {
+  background: var(--color-brand-yellow);
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--color-primary);
+}
+.button-primary[disabled], .button-primary[disabled]:hover,
+.button-primary[disabled]:active, .button-secondary[disabled],
+.button-secondary[disabled]:hover, .button-secondary[disabled]:active {
+  background: var(--color-canvas-soft-2);
+  color: var(--color-mute);
+  border-color: var(--color-hairline);
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+.button-secondary, .row-detail-button, .zoom-back, .button-secondary-sm {
+  min-height: 38px;
+  height: auto;
+  padding: 7px var(--space-md);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-primary);
+  font-weight: 800;
+}
+.button-secondary:hover, .row-detail-button:hover, .zoom-back:hover,
+.button-secondary-sm:hover {
+  background: var(--color-brand-cyan-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.task-item .button-primary, .criteria-row .button-primary,
+.score-form .button-primary, .row-action .button-primary,
+table .button-primary, table .button-secondary {
+  min-height: 34px;
+  height: auto;
+  padding-block: 4px;
+  border-width: 2px;
+  box-shadow: 0 3px 0 var(--color-primary);
+}
+.bl-tabs, .owner-filter-tabs { gap: var(--space-xs); }
+.bl-tab, .owner-filter-tabs > a {
+  min-height: 38px;
+  height: auto;
+  border: 2px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--color-body);
+  font-weight: 750;
+}
+.bl-tab:hover, .owner-filter-tabs > a:hover {
+  background: var(--color-brand-pink-soft);
+  border-color: var(--color-brand-pink);
+}
+.bl-tab.is-on, .bl-tab[aria-current='page'], .owner-filter-tabs > a.active {
+  overflow: visible;
+  background: var(--color-brand-pink);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 850;
+  box-shadow: 0 3px 0 var(--color-primary);
+}
+.badge-tag-green, .chip-green { border: 1px solid var(--color-success); }
+.badge-tag-blue, .chip-blue { border: 1px solid var(--color-info); }
+.badge-tag-purple { border: 1px solid var(--color-brand-lavender); }
+.badge-tag-orange, .chip-amber { border: 1px solid var(--color-warning); }
+.badge-tag-gray, .chip-gray { border: 1px solid var(--color-hairline); }
+.meter, .bar-track, .kpi-viz-track { background: var(--color-hairline); }
+.conf-mark {
+  min-width: 30px;
+  min-height: 28px;
+  border: 2px solid var(--color-primary) !important;
+  box-shadow: 0 2px 0 var(--color-primary) !important;
+  background: var(--color-brand-yellow-soft);
+  color: var(--color-primary);
+}
+.conf-mark.conf-A { background: var(--color-brand-cyan-soft); }
+.conf-mark.conf-B { background: var(--color-brand-lavender-soft); }
+.conf-mark.conf-C { background: var(--color-canvas-soft-2); }
+.conf-grade.is-on {
+  border: 2px solid var(--color-primary);
+  background: var(--color-brand-cyan-soft);
+  box-shadow: 0 3px 0 var(--color-primary);
+}

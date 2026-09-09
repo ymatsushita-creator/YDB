@@ -120,7 +120,7 @@ export default async function InterviewsPage({
 
         <div className="kpi-result-card">
           <div className="kpi-label">未記入（要対応）</div>
-          <div className="kpi-val" style={{ color: unwrittenCount > 0 ? '#d93025' : '#1f1f1f' }}>
+          <div className="kpi-val" style={{ color: unwrittenCount > 0 ? 'var(--color-error-deep)' : 'var(--color-ink)' }}>
             {num(unwrittenCount)} <span className="kpi-unit">件</span>
           </div>
           <div className="section-note">{unwrittenCount > 0 ? '早めの記入を推奨' : 'すべて記入完了'}</div>
@@ -128,7 +128,7 @@ export default async function InterviewsPage({
 
         <div className="kpi-result-card">
           <div className="kpi-label">評価記入済み</div>
-          <div className="kpi-val" style={{ color: '#188038' }}>
+          <div className="kpi-val" style={{ color: 'var(--color-success-deep)' }}>
             {num(writtenCount)} <span className="kpi-unit">件</span>
           </div>
           <div className="section-note">完了率 {totalCount ? Math.round((writtenCount / totalCount) * 100) : 0}%</div>
@@ -137,9 +137,9 @@ export default async function InterviewsPage({
         <div className="kpi-result-card">
           <div className="kpi-label">判定内訳</div>
           <div className="kpi-val" style={{ fontSize: '18px', gap: '8px', display: 'flex', alignItems: 'center' }}>
-            <span style={{ color: '#188038' }}>合格 {passCount}</span>
-            <span style={{ color: '#e37400' }}>保留 {borderCount}</span>
-            <span style={{ color: '#d93025' }}>見送 {failCount}</span>
+            <span style={{ color: 'var(--color-success-deep)' }}>合格 {passCount}</span>
+            <span style={{ color: 'var(--color-warning-deep)' }}>保留 {borderCount}</span>
+            <span style={{ color: 'var(--color-error-deep)' }}>見送 {failCount}</span>
           </div>
           <div className="section-note">面接官の最終所見</div>
         </div>
@@ -223,11 +223,11 @@ export default async function InterviewsPage({
                       )}</td>
                       <td>
                         {r.has_sheet ? (
-                          <span className="badge-tag-cyan" style={{ background: '#e6f4ea', color: '#137333', border: '1px solid #ceebe1' }}>
+                          <span className="badge-tag-cyan" style={{ background: 'var(--color-success-soft)', color: 'var(--color-success-deep)', border: '1px solid var(--color-success)' }}>
                             記入完了
                           </span>
                         ) : (
-                          <span className="badge-tag-orange" style={{ background: '#fef7e0', color: '#b06000', border: '1px solid #fce8b2' }}>
+                          <span className="badge-tag-orange" style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-deep)', border: '1px solid var(--color-warning)' }}>
                             未記入
                           </span>
                         )}
@@ -242,15 +242,15 @@ export default async function InterviewsPage({
                       <td>
                         {r.recommendation ? (
                           r.recommendation === 'pass' ? (
-                            <span className="badge-tag-cyan" style={{ background: '#e6f4ea', color: '#137333', border: '1px solid #ceebe1', fontWeight: 600 }}>
+                            <span className="badge-tag-cyan" style={{ background: 'var(--color-success-soft)', color: 'var(--color-success-deep)', border: '1px solid var(--color-success)', fontWeight: 700 }}>
                               合格
                             </span>
                           ) : r.recommendation === 'border' ? (
-                            <span className="badge-tag-orange" style={{ background: '#fef7e0', color: '#b06000', border: '1px solid #fce8b2', fontWeight: 600 }}>
+                            <span className="badge-tag-orange" style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-deep)', border: '1px solid var(--color-warning)', fontWeight: 700 }}>
                               ボーダー
                             </span>
                           ) : (
-                            <span className="badge-tag-orange" style={{ background: '#fce8e6', color: '#c5221f', border: '1px solid #fad2cf', fontWeight: 600 }}>
+                            <span className="badge-tag-orange" style={{ background: 'var(--color-error-soft)', color: 'var(--color-error-deep)', border: '1px solid var(--color-error)', fontWeight: 700 }}>
                               不合格
                             </span>
                           )

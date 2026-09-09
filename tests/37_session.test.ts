@@ -140,7 +140,7 @@ describe('層（実行⑪。依頼者の指示）', () => {
 
   test('personal はヘッドハンティング以外を開ける', () => {
     for (const p of ['/borderline', '/interviews', '/approach', '/people',
-      '/applications/x', '/operations', '/people/new']) {
+      '/applications/x', '/operations', '/people/new', '/borderline/calendar']) {
       assert.equal(canOpen('personal', p), true, p)
     }
   })
@@ -151,7 +151,7 @@ describe('層（実行⑪。依頼者の指示）', () => {
     // 入力者を追加（実行⑫）。表の「記録した人」の選択肢を増やす道である。
     assert.equal(canOpen('input', '/staff/new'), true)
     for (const p of ['/borderline', '/people', '/approach', '/interviews',
-      '/operations', '/funnel', '/applications/x']) {
+      '/operations', '/funnel', '/applications/x', '/borderline/calendar']) {
       assert.equal(canOpen('input', p), false, p)
     }
   })

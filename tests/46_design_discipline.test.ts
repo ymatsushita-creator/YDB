@@ -6,8 +6,8 @@ import { join } from 'node:path'
 import { appCss } from './support/css.ts'
 
 /**
- * 意匠の規律（C-236。依頼者の指示 2026-08-20 ――
- * 「今のフロントエンドから何も引き継ぐ必要はない。DESIGN.md に従って」）。
+ * 意匠の規律（C-239。依頼者の指示 2026-09-09 ――
+ * NEO CAMPUSの見本をYouthDBへ翻訳し、UIを一新する）。
  *
  * ★ この位置には**リキッドグラス**の契約テストが在った（実行⑫。仕様書を受領）。
  *   意匠の刷新でガラスは退役した ―― `basic/DESIGN.md`（Iridescent-Black）は
@@ -22,8 +22,8 @@ import { appCss } from './support/css.ts'
  *   ② 原典（`basic/DESIGN.md`）と生成物（`app/tokens.css`）を触っていない
  *   ③ 退役した層が復活していない（白黒の土台・ブランド線・ガラス・追従光）
  *   ④ **面をスペクトラムで塗らない。** 出るのは
- *      暗い面の光・細い線・低不透明度の場・大きな図に限る
- *   ⑤ 操作面（ボタン・タブ・表・入力）は**無彩色**
+ *      ブランド場面・低不透明度の場・大きな図に限る
+ *   ⑤ 主操作は黄色、現在地はピンク、focusは紫。表と入力は静かな紙面
  *   ⑥ 色・余白・角丸・書体を CSS の下の階層で**作らない**（トークン経由）
  *   ⑦ 動きを減らす設定に従う
  */
@@ -36,7 +36,7 @@ const missing = async (p: string) => {
 /** コメントを落とした本文。**注記は履歴なので数えない。** */
 const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 
-describe('意匠の規律（C-236）', () => {
+describe('意匠の規律（C-239）', () => {
   // -----------------------------------------------------------
   // ① 層は2枚
   // -----------------------------------------------------------
@@ -118,39 +118,56 @@ describe('意匠の規律（C-236）', () => {
     }
   })
 
-  test('④ 細い印は線である（2〜4px。面ではない）', async () => {
+  test('④ スペクトラムは線か、大きな進捗図に限る', async () => {
     const css = stripComments(await appCss())
     for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
       const decls = rule[2]!
-      if (rule[1]!.trim() === ':root') continue
+      const selector = rule[1]!.trim()
+      if (selector === ':root') continue
       if (!/--spectrum-line/.test(decls)) continue
+      if (/meter|bar-fill|kpi-viz/.test(selector)) continue
       assert.match(decls, /(height|width):\s*[234]px/,
-        `スペクトラムの線に太さの指定が無い: ${rule[1]!.trim()}`)
+        `進捗図でないスペクトラムに太さの指定が無い: ${selector}`)
     }
   })
 
   // -----------------------------------------------------------
-  // ⑤ 操作面は無彩色
+  // ⑤ 操作の意味色
   // -----------------------------------------------------------
-  test('⑤ 主ボタンの面は near-black（ブランド色で塗らない）', async () => {
+  test('⑤ 主ボタンは黄色の面・濃い枠・硬い影', async () => {
     const css = await appCss()
-    const rule = /\.button-primary \{([^}]*)\}/.exec(css)
+    const rules = [...css.matchAll(/\.button-primary \{([^}]*)\}/g)]
+    const rule = rules.at(-1)?.[1]
     assert.ok(rule, '.button-primary の規則がある')
-    assert.match(rule![1]!, /background-color:\s*var\(--color-primary\)/)
+    assert.match(rule!, /background:\s*var\(--color-brand-yellow\)/)
+    assert.match(rule!, /border:\s*3px solid var\(--color-primary\)/)
+    assert.match(rule!, /box-shadow:\s*0 5px 0 var\(--color-primary\)/)
   })
 
-  test('⑤ focus だけが色を持つ（DESIGN.md: cyan を focus に使う）', async () => {
+  test('⑤ focus-visible は紫の輪で、色だけに頼らない', async () => {
     const css = await appCss()
-    const rule = /:focus-visible \{([^}]*)\}/.exec(css)
-    assert.ok(rule, 'focus の指定がある')
-    assert.match(rule![1]!, /var\(--color-brand-cyan\)/)
+    const rules = [...css.matchAll(/:focus-visible \{([^}]*)\}/g)]
+    const rule = rules.at(-1)?.[1]
+    assert.ok(rule, 'focus-visible の指定がある')
+    assert.match(rule!, /3px solid var\(--color-brand-lavender-deep\)/)
+    assert.match(rule!, /outline-offset:\s*3px/)
   })
 
-  test('⑤ 表の見出しは mono、ふつうのセルに色を入れない', async () => {
+  test('⑤ 現在地はピンクの面と濃い枠で示す', async () => {
+    const css = await appCss()
+    const rules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+      .filter((match) => match[1]!.trim() === '.sidebar-item-active')
+    const rule = rules.at(-1)?.[2]
+    assert.ok(rule, '.sidebar-item-active の規則がある')
+    assert.match(rule!, /background:\s*var\(--color-brand-pink\)/)
+    assert.match(rule!, /border-color:\s*var\(--color-primary\)/)
+  })
+
+  test('⑤ 表の見出しは太い sans、ふつうのセルに色を入れない', async () => {
     const css = stripComments(await appCss())
-    const th = /table\.data th[^{]*\{([^}]*)\}/.exec(css)
+    const th = /table\.data thead th[^{]*\{([^}]*)\}/.exec(css)
     assert.ok(th, '表の見出しの規則がある')
-    assert.match(th![1]!, /font-family:\s*var\(--font-mono\)/)
+    assert.match(th![1]!, /font-family:\s*var\(--font-sans\)/)
     const td = /table\.data td[^{]*\{([^}]*)\}/.exec(css)
     assert.ok(td, '表のセルの規則がある')
     assert.doesNotMatch(td![1]!, /brand-|spectrum/, 'ふつうのセルにブランド色が入っている')
@@ -168,7 +185,7 @@ describe('意匠の規律（C-236）', () => {
       `色を直値で書いている: ${real.join(' ')} ―― 値は tokens.css から取る`)
   })
 
-  test('⑥ 余白・角丸・書体もトークン経由（生の px を並べない）', async () => {
+  test('⑥ 角丸はトークン経由（生の px を並べない）', async () => {
     const css = stripComments(await appCss())
     const radius = [...css.matchAll(/border-radius:\s*([^;]+);/g)].map((m) => m[1]!.trim())
     const rawRadius = radius.filter((v) => !/var\(--rounded-|^0$|^0 /.test(v))
@@ -179,11 +196,12 @@ describe('意匠の規律（C-236）', () => {
   // -----------------------------------------------------------
   // ⑦ 動きを減らす設定
   // -----------------------------------------------------------
-  test('⑦ 動きを減らす設定では、流れる帯を止める', async () => {
+  test('⑦ 動きを減らす設定では、流れる帯と装飾的な移動を止める', async () => {
     const css = await appCss()
     assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
     const block = /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/.exec(css)
     assert.ok(block, '動きを減らす設定の指定がある')
     assert.match(block![1]!, /animation:\s*none/)
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?transform:\s*none\s*!important/)
   })
 })

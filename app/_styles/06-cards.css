@@ -10,15 +10,15 @@
    ============================================================= */
 
 .card-base, .panel-card, .template-card, .pick-card, .kpi-result-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
   padding: var(--space-lg);
   box-shadow: 0 1px 3px 0 rgba(60,64,67,0.06), 0 1px 2px 0 rgba(60,64,67,0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .panel-card:hover, .card-base:hover {
-  border-color: #d1d5db;
+  border-color: var(--color-hairline-strong);
   box-shadow: 0 4px 14px 0 rgba(60,64,67,0.1);
 }
 .panel-card, .card-base { display: flex; flex-direction: column; min-height: 0; }
@@ -152,15 +152,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
   text-decoration: none;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .accepted-card:hover {
   background: var(--color-canvas-soft-2);
-  border-color: #d1d5db;
+  border-color: var(--color-hairline-strong);
   text-decoration: none;
 }
 .accepted-head {
@@ -182,12 +182,12 @@
   font-size: 12px;
 }
 .badge-tag-green {
-  background: #e6f4ea;
-  color: #137333;
+  background: var(--color-success-soft);
+  color: var(--color-success-deep);
   font-size: 12px;
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: 12px;
+  border-radius: var(--rounded-sm);
 }
 /* 数の札。**現在地でもないので、スペクトラムを当てない。** */
 .home-kpi {
@@ -223,9 +223,9 @@
 
 .kpi-result-card {
   padding: var(--space-lg);
-  border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid #dadce0;
+  border-radius: var(--rounded-md);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
 }
 
 /* KPI の可視化 */
@@ -386,4 +386,110 @@
 @media (max-width: 1100px) {
   .home-detail-grid { grid-template-columns: minmax(0, 1fr); }
   .home-dashboard { grid-template-rows: none; grid-auto-rows: minmax(0, auto); }
+}
+
+/* -------------------------------------------------------------
+   YouthDB beta — paper cards and momentum cards
+   ------------------------------------------------------------- */
+.card-base, .panel-card, .template-card, .pick-card, .kpi-result-card {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+.panel-card:hover, .card-base:hover {
+  border-color: var(--color-hairline-strong);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+.panel-card > .hh-head, .card-base > .section-title {
+  padding-bottom: var(--space-sm);
+  border-bottom: 2px dashed var(--color-hairline);
+}
+.task-item {
+  border: 2px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+  transition: transform .18s ease, border-color .18s ease, background-color .18s ease;
+}
+.task-item:hover {
+  background: var(--color-brand-cyan-soft);
+  border-color: var(--color-brand-cyan);
+  transform: translateY(-2px);
+}
+.task-item.selected {
+  border-color: var(--color-primary);
+  background: var(--color-brand-pink-soft);
+  box-shadow: 0 4px 0 var(--color-primary);
+}
+.home-dashboard { grid-template-rows: auto minmax(0, 1fr); gap: var(--space-lg); }
+.home-summary-grid { gap: var(--space-md); }
+.home-kpi {
+  min-height: 116px;
+  padding: var(--space-md);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--rounded-md);
+  background: var(--color-canvas);
+  box-shadow: 0 5px 0 var(--color-primary);
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.home-kpi:nth-child(4n + 1) { background: var(--color-brand-pink-soft); }
+.home-kpi:nth-child(4n + 2) { background: var(--color-brand-cyan-soft); }
+.home-kpi:nth-child(4n + 3) { background: var(--color-brand-yellow-soft); }
+.home-kpi:nth-child(4n + 4) { background: var(--color-success-soft); }
+.home-kpi-link:hover {
+  color: var(--color-ink);
+  transform: translateY(-3px) rotate(-.4deg);
+  box-shadow: 0 8px 0 var(--color-primary);
+}
+.home-kpi-label {
+  font-family: var(--font-sans);
+  color: var(--color-body);
+  font-weight: 850;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+.home-kpi-value { font-family: var(--font-sans); font-weight: 900; }
+.accepted-card, .pick-card {
+  border: 2px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+}
+.accepted-card:hover, .pick-card:hover {
+  background: var(--color-brand-pink-soft);
+  border-color: var(--color-brand-pink);
+  transform: translateY(-1px);
+}
+.kpi-result-card { border-left: 6px solid var(--color-brand-lavender); }
+.card-soft, .task-detail, .task-criteria, .hh-facts, .hh-memo, .ask-answer {
+  background: var(--color-canvas-soft);
+  border: 1px solid var(--color-hairline);
+}
+.hh-person-head, .bl-person-head {
+  border: 3px solid var(--color-primary);
+  background: var(--color-brand-pink-soft);
+  color: var(--color-ink);
+  box-shadow: 0 5px 0 var(--color-primary);
+}
+.hh-person-head::before, .bl-person-head::before {
+  background: radial-gradient(circle at 80% 20%, var(--color-brand-cyan), transparent 45%);
+  mix-blend-mode: normal;
+  opacity: .35;
+  filter: none;
+}
+.hh-person-kana { color: var(--color-body); }
+.hh-person-head .avatar, .hh-person-head .hh-photo, .hh-person-head .hh-photo-placeholder,
+.bl-person-head .avatar {
+  border: 2px solid var(--color-primary);
+  background: var(--color-canvas);
+}
+.pilot-step, .pilot-entry {
+  border-left: 5px solid var(--color-brand-yellow);
+  background: var(--color-brand-yellow-soft);
+}
+.pilot-step.is-current { border-left-color: var(--color-brand-pink); background: var(--color-brand-pink-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .button-primary, .sidebar-item-active, .task-item, .home-kpi,
+  .accepted-card, .pick-card {
+    transition: none !important;
+    transform: none !important;
+  }
 }

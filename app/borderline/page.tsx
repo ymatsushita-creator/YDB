@@ -436,6 +436,12 @@ export default async function BorderlinePage({
             <header className="hh-head">
               <h2>日程カレンダー</h2>
               <span className="bl-week-nav">
+                <Link
+                  className="bl-page btn-physical"
+                  href={`/borderline/calendar?${new URLSearchParams({
+                    season: season.id, month: monday.slice(0, 7),
+                  })}`}
+                >月で見る</Link>
                 <Link className="bl-page btn-physical" href={href({ week: addDays(monday, -7) })}>‹</Link>
                 <Link className="bl-page btn-physical" href={href({ week: today })}>今日</Link>
                 <Link className="bl-page btn-physical" href={href({ week: addDays(monday, 7) })}>›</Link>
@@ -482,4 +488,3 @@ export default async function BorderlinePage({
     </Shell>
   )
 }
-

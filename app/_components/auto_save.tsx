@@ -82,22 +82,7 @@ export function AutoSaveForm({
       </form>
       {saveStatus !== 'idle' && (
         <div
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: '16px',
-            zIndex: 10,
-            padding: '4px 12px',
-            borderRadius: '100px',
-            fontSize: '12px',
-            fontWeight: 600,
-            backgroundColor: saveStatus === 'saving' ? '#e8f0fe' : '#e6f4ea',
-            color: saveStatus === 'saving' ? '#1a73e8' : '#137333',
-            border: `1px solid ${saveStatus === 'saving' ? '#c2e7ff' : '#ceebe1'}`,
-            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-            pointerEvents: 'none',
-            transition: 'all 0.2s ease',
-          }}
+          className={`autosave-status ${saveStatus === 'saving' ? 'is-saving' : 'is-saved'}`}
         >
           {saveStatus === 'saving' ? '自動保存中...' : '✓ 自動保存済み'}
         </div>

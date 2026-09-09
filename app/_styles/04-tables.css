@@ -9,9 +9,9 @@
    ============================================================= */
 
 .table-wrap {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
   overflow: hidden;
 }
 /* 表は自分の器の中で横に送る。**ページを横に送らせない。** */
@@ -31,24 +31,24 @@ table.data th, table.hh-table th, table.bl-table th, table.candidate-unified-tab
   position: sticky; top: 0; z-index: 1;
   text-align: left;
   padding: var(--space-xs) var(--space-sm);
-  background: #f8f9fa;
-  color: #5f6368;
+  background: var(--color-canvas-soft);
+  color: var(--color-body);
   font-family: var(--font-mono);
   font-size: var(--type-caption-mono-font-size);
   font-weight: 600;
   line-height: var(--type-caption-mono-line-height);
   letter-spacing: 0.02em;
   white-space: nowrap;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-hairline);
 }
 table.data td, table.hh-table td, table.bl-table td, table.candidate-unified-table td {
   padding: var(--space-xs) var(--space-sm);
-  border-bottom: 1px solid #e8eaed;
+  border-bottom: 1px solid var(--color-hairline);
   vertical-align: middle;
   white-space: nowrap;
 }
 table.data tr:hover, table.hh-table tr:hover, table.bl-table tr:hover, table.candidate-unified-table tr:hover {
-  background-color: #f8f9fa;
+  background-color: var(--color-canvas-soft);
 }
 /* 記録の本文が入る欄だけは畳む。 */
 table td .hh-memo, table td .memo-body, table td .task-detail,
@@ -149,7 +149,7 @@ table.candidate-unified-table th { white-space: nowrap; }
   padding: 8px var(--space-sm);
   background: var(--color-canvas-soft-2);
   border: 1px solid var(--color-hairline);
-  border-radius: 12px;
+  border-radius: var(--rounded-sm);
   margin-bottom: 16px !important;
   flex-wrap: wrap;
 }
@@ -177,19 +177,19 @@ table.candidate-unified-table th { white-space: nowrap; }
   font-size: 13px !important;
   font-weight: 600 !important;
   line-height: 1 !important;
-  border-radius: 20px !important;
+  border-radius: var(--rounded-sm) !important;
   padding: 0 16px !important;
   margin: 0 !important;
 }
 
 .sheet-filter-bar input.text-input {
   background: var(--color-canvas);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-hairline);
   color: var(--color-ink);
   min-width: 220px;
 }
 .sheet-filter-bar input.text-input:focus {
-  border-color: #1a73e8;
+  border-color: var(--color-link);
   box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -212,7 +212,7 @@ table.data.sheet th {
   font-size: 12px;
   font-weight: 600;
   padding: var(--space-xs) var(--space-sm);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-hairline);
   text-align: left;
   white-space: nowrap;
 }
@@ -223,7 +223,7 @@ table.data.sheet th.sheet-lead {
   left: 0;
   z-index: 4;
   background: var(--color-canvas-soft-2);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-hairline);
   text-align: center;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -355,3 +355,99 @@ table.data.sheet td textarea:focus {
 .cal-list-kind, .cal-list-out { color: var(--color-mute); font-size: var(--type-caption-font-size); }
 .cal-list-link { color: var(--color-link); font-size: var(--type-caption-font-size); }
 .bl-week-nav { display: flex; align-items: center; gap: var(--space-xs); }
+
+/* -------------------------------------------------------------
+   月の予定（既存の週暦と同じ、線と紙面だけで組む）
+   ------------------------------------------------------------- */
+.month-cal-panel { min-width: 0; }
+.month-cal-title { margin-top: 0; }
+.month-cal-wrap { overflow-x: auto; }
+.month-cal {
+  min-width: 760px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--color-hairline);
+  border-left: 1px solid var(--color-hairline);
+}
+.month-cal-weekday {
+  padding: var(--space-xs);
+  border-right: 1px solid var(--color-hairline);
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-body);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+  text-align: center;
+}
+.month-cal-day {
+  min-height: 132px;
+  padding: var(--space-xs);
+  border-right: 1px solid var(--color-hairline);
+  border-bottom: 1px solid var(--color-hairline);
+}
+.month-cal-day.is-outside { background: var(--color-canvas-soft-2); }
+.month-cal-day.is-outside .month-cal-date { color: var(--color-mute); }
+.month-cal-date {
+  display: block;
+  margin-bottom: var(--space-xxs);
+  color: var(--color-body);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-mono-font-size);
+}
+.month-cal-events { display: flex; flex-direction: column; gap: 2px; }
+.month-cal-event {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px var(--space-xxs);
+  padding: 3px var(--space-xxs);
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-canvas-soft-2);
+  color: var(--color-ink);
+  font-size: var(--type-caption-font-size);
+}
+.month-cal-event time { font-family: var(--font-mono); }
+.month-cal-event strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.month-cal-event span { grid-column: 1 / -1; color: var(--color-mute); }
+.calendar-attendee-list { display: flex; flex-direction: column; }
+.calendar-attendee-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+/* -------------------------------------------------------------
+   YouthDB beta — dense information stays calm
+   ------------------------------------------------------------- */
+.table-wrap, .scroll-pane {
+  border-color: var(--color-hairline);
+  border-radius: var(--rounded-md);
+  background: var(--color-canvas);
+}
+table.data thead th, .hh-table thead th, table.data.sheet thead th {
+  background: var(--color-canvas-soft);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+  font-weight: 850;
+  letter-spacing: .02em;
+  border-bottom: 2px solid var(--color-hairline);
+}
+table.data tbody tr, .hh-table tbody tr {
+  transition: background-color .15s ease, box-shadow .15s ease;
+}
+table.data tbody tr:hover, .hh-table tbody tr:hover {
+  background: var(--color-brand-pink-soft);
+}
+.row-link.is-current, tr.is-current {
+  background: var(--color-brand-pink-soft) !important;
+  box-shadow: inset 5px 0 0 var(--color-brand-pink);
+}
+.cal-event, .month-cal-event {
+  border: 1px solid var(--color-info);
+  border-left: 5px solid var(--color-info-deep);
+  border-radius: var(--rounded-xs);
+  background: var(--color-info-soft);
+}
+.month-cal-day.is-outside { background: var(--color-canvas-soft); }
+.month-cal-weekday { background: var(--color-brand-yellow-soft); font-weight: 850; }

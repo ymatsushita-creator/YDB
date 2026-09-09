@@ -126,7 +126,7 @@ function gradientCss(name: string, g: Gradient, all: Record<string, Gradient>): 
     const [x, y, spread] = MESH_POSITIONS[i % MESH_POSITIONS.length]!
     return `radial-gradient(circle at ${x}% ${y}%, ${rgba(hex, alpha)}, transparent ${spread}%)`
   })
-  // 黒を最後に敷く。DESIGN.md「黒との対比で明るさが出る」。
+  // design system の dark canvas を最後に敷き、光源の色を読めるようにする。
   return [...layers, design.colors['canvas-dark'] ?? '#050505'].join(', ')
 }
 

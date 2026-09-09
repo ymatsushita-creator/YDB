@@ -22,16 +22,16 @@ select,
   min-width: 0;
   height: 40px;
   padding: 0 14px;
-  background-color: #ffffff;
-  color: #202124;
-  border: 1px solid #e5e7eb;
-  border-radius: 20px;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
   font-size: var(--type-body-sm-font-size);
   line-height: var(--type-body-sm-line-height);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 input:focus, select:focus, textarea:focus, .text-input:focus {
-  border-color: #1a73e8;
+  border-color: var(--color-link);
   box-shadow: 0 1px 6px rgba(32,33,36,0.28);
   outline: none;
 }
@@ -54,8 +54,8 @@ textarea, .memo-field {
   min-height: 90px;
   padding: 10px 14px !important;
   resize: vertical;
-  border-radius: 12px !important;
-  border: 1px solid #e5e7eb;
+  border-radius: var(--rounded-sm) !important;
+  border: 1px solid var(--color-hairline);
   line-height: 1.5;
 }
 
@@ -152,13 +152,13 @@ label { color: var(--color-body); font-size: var(--type-caption-font-size); font
   cursor: pointer;
   padding: 6px 12px;
   background: var(--color-canvas-soft-2);
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
 }
 .iv-radio input[type='radio'] {
   width: 16px !important;
   height: 16px !important;
-  accent-color: #1a73e8;
+  accent-color: var(--color-brand-lavender-deep);
 }
 
 /* メモの履歴 */
@@ -259,3 +259,106 @@ label { color: var(--color-body); font-size: var(--type-caption-font-size); }
 }
 .popup-sub { color: var(--color-body); font-size: var(--type-caption-font-size); }
 .popup-body { min-height: 0; overflow-y: auto; }
+
+/* -------------------------------------------------------------
+   YouthDB beta — forms and entry moments
+   ------------------------------------------------------------- */
+input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='image']):not([type='range']):not([type='color']),
+select, .text-input, .score-input, .rationale-input, .memo-field, textarea {
+  border: 2px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+}
+input:focus, select:focus, textarea:focus, .text-input:focus {
+  border-color: var(--color-brand-lavender);
+  box-shadow: 0 0 0 4px var(--color-brand-lavender-soft);
+}
+label { color: var(--color-body); font-weight: 800; }
+.iv-radio {
+  border: 2px solid var(--color-hairline);
+  background: var(--color-canvas-soft);
+}
+.login-frame {
+  background:
+    radial-gradient(circle at 18% 22%, var(--color-brand-pink-soft), transparent 34%),
+    radial-gradient(circle at 82% 18%, var(--color-brand-cyan-soft), transparent 32%),
+    radial-gradient(circle at 74% 82%, var(--color-brand-yellow-soft), transparent 32%),
+    var(--color-canvas-soft);
+}
+.login-frame::before {
+  inset: auto auto 8% 8%;
+  width: 140px;
+  height: 54px;
+  border: 3px solid var(--color-primary);
+  border-radius: var(--rounded-full);
+  background: var(--color-brand-lime);
+  opacity: .34;
+  filter: none;
+  transform: rotate(-12deg);
+  mask-image: none;
+  -webkit-mask-image: none;
+  mix-blend-mode: normal;
+}
+.login-card {
+  max-width: 420px;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  border: 3px solid var(--color-primary);
+  border-radius: var(--rounded-xl);
+  box-shadow: 0 8px 0 var(--color-primary);
+}
+.autosave-status {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+  padding: 5px 12px;
+  border: 2px solid;
+  border-radius: var(--rounded-full);
+  font-size: var(--type-caption-font-size);
+  font-weight: 850;
+  pointer-events: none;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+.autosave-status.is-saving {
+  border-color: var(--color-info);
+  background: var(--color-info-soft);
+  color: var(--color-info-deep);
+}
+.autosave-status.is-saved {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+  color: var(--color-success-deep);
+}
+.login-card::before {
+  content: 'WELCOME';
+  position: absolute;
+  top: -16px;
+  right: 28px;
+  padding: 5px 11px;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--rounded-xs);
+  background: var(--color-brand-pink);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  transform: rotate(2deg);
+  box-shadow: 2px 3px 0 var(--color-primary);
+}
+.login-logo { width: 184px; }
+.login-label { font-size: var(--type-body-sm-font-size); }
+.login-input { min-height: 50px; }
+.login-button { width: 100%; min-height: 50px; }
+.login-error {
+  border: 2px solid var(--color-error);
+  border-left-width: 5px;
+  border-radius: var(--rounded-sm);
+  background: var(--color-error-soft);
+}
+.popup-card {
+  border: 3px solid var(--color-primary);
+  border-radius: var(--rounded-xl);
+  box-shadow: 0 8px 0 var(--color-primary);
+}

@@ -99,10 +99,10 @@ export default async function AiPage({ searchParams }: {
                 placeholder="sk-ant-…" spellCheck={false} />
               <small>一度登録すれば以後も自動使用します。暗号化してDBへ保存し、画面には戻しません。</small>
             </label>
-            <p style={{ fontWeight: 600, color: keyConfigured ? '#388e3c' : '#d32f2f' }}>
+            <p style={{ fontWeight: 700, color: keyConfigured ? 'var(--color-success-deep)' : 'var(--color-error-deep)' }}>
               {keyConfigured ? '✓ APIキー登録済み。新しいキーへ上書き変更できます。' : '⚠️ APIキー未登録です。分析実行前にキーを入力してください。'}
             </p>
-            <button className="button-primary" type="submit">
+            <button className="button-secondary" type="submit">
               {keyConfigured ? 'APIキーを更新する' : 'APIキーを登録する'}
             </button>
           </form>
@@ -112,7 +112,7 @@ export default async function AiPage({ searchParams }: {
       {/* 2. 記録に聞く (AI RAG Assistant) */}
       <div className="section">
         <Card title="💬 記録に聞く (データベース AI アシスタント)">
-          <form action={askDatabaseAction}>
+          <form className="editable-region" action={askDatabaseAction}>
             <input type="hidden" name="seasonId" value={season?.id ?? ''} />
             <AiQuickPrompts />
             <button className="button-primary" type="submit" style={{ marginTop: '12px' }}>
@@ -146,7 +146,7 @@ export default async function AiPage({ searchParams }: {
             <p className="section-note" style={{ margin: '8px 0 16px 0' }}>
               実行すると、氏名・メール・電話番号を除いた安全な応募フォーム本文を Anthropic API へ送信し、思考力・相性を事前判定します。
             </p>
-            <button className="button-primary" type="submit">
+            <button className="button-secondary" type="submit">
               {keyConfigured
                 ? (targets.length > 0 ? `次の1件を分析する（残り ${targets.length} 件）` : '分析待ちの回答はありません')
                 : '先にAPIキーを登録する'}

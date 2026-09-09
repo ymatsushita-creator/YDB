@@ -8,7 +8,7 @@ import './tokens.css'
 import './base.css'
 
 export const metadata = {
-  title: 'YouthDB — TALENT INTELLIGENCE',
+  title: 'YouthDB — NEO ACADEMIA',
   description: '集客から選考までを、特別選考・通常選考・連携団体の3つに集約する',
   // ★ `/brand/` 配下を参照する。入口の proxy は `/favicon.png` を通さないため
   //   （許可は `/favicon` 完全一致と `/brand/`）、ここを `/favicon.png` にすると
