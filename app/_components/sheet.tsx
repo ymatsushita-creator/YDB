@@ -198,6 +198,19 @@ export function Sheet({
         <p className={`callout${state.ok ? ' ok' : ''}`}>{state.message}</p>
       )}
 
+      {/* ★ 落ちた理由は**件数の真下に出す。**
+          結果の列は右端にあり、列の多い表では横に送らないと読めない。
+          表の下に置いていたときは、行数が多いと画面の外へ出ていて
+          「3 行は入らなかった」だけが読めた ―― 理由の書いていない失敗は、
+          直しようが無い（2026-09-12 の指摘。C-65 と同じ扱い）。 */}
+      {errors.size > 0 && (
+        <ul className="sheet-errors">
+          {[...errors.entries()].map(([index, message]) => (
+            <li key={index}>{index + 1} 行目 ―― {message}</li>
+          ))}
+        </ul>
+      )}
+
       {/* スプレッドシートツールバー（検索バー＋保存アクション） */}
       <div className="sheet-filter-bar">
         <div className="sheet-tool-group">
@@ -317,17 +330,6 @@ export function Sheet({
           </tbody>
         </table>
       </div>
-
-      {/* ★ 落ちた理由を**表の外にも出す。**
-          結果の列は右端にあるので、列の多い表では横に送らないと読めない。
-          「切れて見える」ものは読めないのと同じである（C-65 と同じ扱い）。 */}
-      {errors.size > 0 && (
-        <ul className="sheet-errors">
-          {[...errors.entries()].map(([index, message]) => (
-            <li key={index}>{index + 1} 行目 ―― {message}</li>
-          ))}
-        </ul>
-      )}
 
       <div className="sheet-actions">
         <button type="button" className="button-secondary" onClick={addRow}>{addLabel}</button>

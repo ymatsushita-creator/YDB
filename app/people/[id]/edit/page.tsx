@@ -105,7 +105,10 @@ export default async function PersonEditPage({
             <input type="hidden" name="seasonId" value={season.id} />
             <div className="edit-grid two">
               <label>姓<input name="familyName" required defaultValue={panel.family_name} /></label>
-              <label>名<input name="givenName" required defaultValue={panel.given_name} /></label>
+              {/* ★ 必須は姓だけ（0023 / 0054）。名を必須にすると、
+                  名を受け取っていない人（旧システムからの移行者）の
+                  他の項目すら直せない。 */}
+              <label>名<input name="givenName" defaultValue={panel.given_name} /></label>
               <label>姓（かな）
                 <input name="familyNameKana" defaultValue={panel.family_name_kana ?? ''} />
               </label>
@@ -118,8 +121,19 @@ export default async function PersonEditPage({
               <label>生年月日
                 <input name="birthDate" type="date" defaultValue={ymd(panel.birth_date)} />
               </label>
+              {/* ★ 学校は任意（0054）。**必須にしない。**
+                  選択肢は活性の学校だけなので、学校未記録の人や
+                  畳んだ学校の人は `defaultValue` がどれにも当たらず、
+                  ブラウザが**先頭の学校を勝手に選んでいた** ――
+                  保存すると別の学校へ黙って移る。
+                  今の記録を選択肢に足し、空も選べるようにする。 */}
               <label>学校
-                <select name="schoolId" required defaultValue={panel.school_id}>
+                <select name="schoolId" defaultValue={panel.school_id ?? ''}>
+                  <option value="">―</option>
+                  {panel.school_id
+                    && !options.schools.some((o) => o.id === panel.school_id) && (
+                    <option value={panel.school_id}>{panel.school}</option>
+                  )}
                   {options.schools.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
               </label>

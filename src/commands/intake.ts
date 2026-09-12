@@ -39,12 +39,12 @@ const PHOTO = /^data:image\/(jpeg|png|webp);base64,/
  * ★ 行が無ければ寄せられないので、そのときは**今まで通り落とす。**
  *   黙って別の行へ入れない。
  */
-const PLACEHOLDER = {
+export const PLACEHOLDER = {
   school: '学校未記録',
   channel: '流入元不明',
 } as const
 
-const placeholderId = async (
+export const placeholderId = async (
   db: Db, table: 'schools' | 'channels', name: string,
 ): Promise<string | null> => {
   const row = await maybeOne<{ id: string }>(db,

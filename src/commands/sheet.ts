@@ -292,7 +292,8 @@ export const PROFILE_MESSAGE: Record<ProfileFailure, string> = {
   required: '姓は空にできない。',
   bad_email: 'メールの形が違う。',
   bad_date: '日付は YYYY-MM-DD で入れる。',
-  school_not_found: '学校を選ぶ。',
+  // 学校は任意（0054）。ここへ来るのは**選べない学校を指したとき**だけである。
+  school_not_found: 'その学校は選べない。',
   bad_referrer: '紹介者が選べない。',
   bad_photo: '写真は JPEG / PNG / WebP の 2MB 以下。',
   duplicate_line: 'その LINE ID は別の人が使っている。',

@@ -98,6 +98,39 @@ describe('候補者プロフィール編集（0018）', () => {
       { ok: false, reason: 'bad_photo' })
   })
 
+  /**
+   * ★ 0054（姓だけ必須）は**登録だけ**に効いていて、編集は取り残されていた。
+   *   学校が未記録の候補者は、表で名前を1文字直すだけで
+   *   `school_not_found` に落ちて保存できなかった（2026-09-12 の指摘）。
+   *   寄せ先は登録と同じ「学校未記録」である。
+   */
+  test('学校を未選択にしたまま編集できる。寄せ先は登録と同じ（0054）', async () => {
+    assert.deepEqual(await updatePersonProfile(db, input({ schoolId: '' })), { ok: true })
+    const school = await one<{ name: string; is_active: boolean }>(db, `
+      SELECT s.name, s.is_active FROM persons p
+        JOIN schools s ON s.id = p.school_id WHERE p.id = $1`, [personId])
+    assert.equal(school.name, '学校未記録')
+    assert.equal(school.is_active, false)
+  })
+
+  test('学校未記録の人を、そのプレースホルダのまま編集できる（0054）', async () => {
+    const placeholder = await scalar<string>(db,
+      `SELECT id FROM schools WHERE name = '学校未記録'`)
+    assert.deepEqual(
+      await updatePersonProfile(db, input({ schoolId: placeholder, familyName: '再々編集' })),
+      { ok: true })
+    assert.equal(await scalar(db,
+      `SELECT family_name FROM persons WHERE id = $1`, [personId]), '再々編集')
+  })
+
+  test('実在しない学校は今まで通り落とす', async () => {
+    assert.deepEqual(
+      await updatePersonProfile(db, input({ schoolId: '00000000-0000-0000-0000-000000000000' })),
+      { ok: false, reason: 'school_not_found' })
+    assert.deepEqual(await updatePersonProfile(db, input({ schoolId: 'not-a-uuid' })),
+      { ok: false, reason: 'school_not_found' })
+  })
+
   test('アプローチ状態の編集は担当者付きイベントとして追記する', async () => {
     const season = await makeSeason(db, { year: 2031 })
     // sort_order は 0016 が初期値5件で 10〜90 を使っている。

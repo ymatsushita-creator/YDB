@@ -1,5 +1,6 @@
 import { maybeOne, type Db } from '../db/client.ts'
 import { BLANK_CHARS, blank } from './text.ts'
+import { PLACEHOLDER, placeholderId } from './intake.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATA_IMAGE = /^data:image\/(jpeg|png|webp);base64,/
@@ -44,7 +45,15 @@ export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<
   if (input.birthDate.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) {
     return { ok: false, reason: 'bad_date' }
   }
-  if (!UUID.test(input.schoolId)) return { ok: false, reason: 'school_not_found' }
+  /**
+   * ★ 学校は**任意**である（0054。依頼者の指示 2026-08-24）。
+   *   0054 は登録（`addCandidate`）にだけ効いていて、編集は取り残されていた ――
+   *   学校が未記録の候補者は、表で名前を1文字直すだけで落ちて保存できなかった。
+   *   未選択なら登録と同じ寄せ先（非活性の「学校未記録」）へ寄せる。
+   *   形が違う値は未選択ではないので、今まで通り落とす。
+   */
+  const wantSchool = blank(input.schoolId)
+  if (wantSchool && !UUID.test(wantSchool)) return { ok: false, reason: 'school_not_found' }
   if (input.referrerPersonId && (!UUID.test(input.referrerPersonId) || input.referrerPersonId === input.personId)) {
     return { ok: false, reason: 'bad_referrer' }
   }
@@ -53,17 +62,28 @@ export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<
   }
 
   const target = await maybeOne<{ school_ok: boolean; referrer_ok: boolean }>(db, `
-    SELECT EXISTS (SELECT 1 FROM schools WHERE id = $2 AND is_active) AS school_ok,
+    SELECT EXISTS (
+             -- ★ 非活性の学校でも、**その人に今入っている学校なら通す。**
+             --   寄せ先（学校未記録）も統合で畳んだ学校も非活性で、
+             --   選ぶ画面に出ない ―― 出ない値を突き返すと、名前すら直せない。
+             SELECT 1 FROM schools s
+              WHERE s.id = $2 AND (s.is_active OR s.id = p.school_id)
+           ) AS school_ok,
            ($3::uuid IS NULL OR EXISTS (
               SELECT 1 FROM persons WHERE id = $3 AND deleted_at IS NULL
            )) AS referrer_ok
-      FROM persons
-     WHERE id = $1 AND deleted_at IS NULL`, [
-    input.personId, input.schoolId, input.referrerPersonId || null,
+      FROM persons p
+     WHERE p.id = $1 AND p.deleted_at IS NULL`, [
+    input.personId, wantSchool || null, input.referrerPersonId || null,
   ])
   if (!target) return { ok: false, reason: 'person_not_found' }
-  if (!target.school_ok) return { ok: false, reason: 'school_not_found' }
   if (!target.referrer_ok) return { ok: false, reason: 'bad_referrer' }
+
+  // 選ばれていれば実在を確かめ、選ばれていなければ寄せ先を引く（登録と同じ順序）。
+  const schoolId = wantSchool
+    ? (target.school_ok ? wantSchool : null)
+    : await placeholderId(db, 'schools', PLACEHOLDER.school)
+  if (!schoolId) return { ok: false, reason: 'school_not_found' }
 
   try {
     const { rows } = await db.query(`
@@ -97,7 +117,7 @@ export async function updatePersonProfile(db: Db, input: ProfileInput): Promise<
       input.personId,
       input.familyName, input.givenName,
       blankToNull(input.familyNameKana), blankToNull(input.givenNameKana),
-      blankToNull(input.birthDate), input.schoolId, blankToNull(input.faculty), input.email,
+      blankToNull(input.birthDate), schoolId, blankToNull(input.faculty), input.email,
       blankToNull(input.phone), blankToNull(input.lineUserId),
       blankToNull(input.referrerPersonId), blankToNull(input.note),
       input.photoDataUrl !== undefined, input.photoDataUrl ?? null,

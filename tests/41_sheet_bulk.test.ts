@@ -277,6 +277,51 @@ describe('表のまとめて保存', () => {
     assert.equal(await count(), 2, '同じ接点を二度積んでいる')
   })
 
+  /**
+   * ★ 学校が未記録の候補者を、表から直せること（2026-09-12 の指摘）。
+   *
+   *   0054 で登録は「姓だけ必須」になり、未選択の学校は非活性の
+   *   「学校未記録」へ寄る。ところが編集側（`updatePersonProfile`）は
+   *   活性の学校しか受け取らず、**その人は名前1文字すら直せなかった** ――
+   *   画面には「3 行は入らなかった」とだけ出ていた。
+   *   表は学校の選択肢に非活性を出さないので、行は空か寄せ先の ID で返ってくる。
+   *   **どちらでも通る。**
+   */
+  test('★ 学校が未記録の候補者を、表から直せる（0054）', async () => {
+    const made = await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, familyName: '架空未', givenName: '記録' }],
+    })
+    const m0 = made.rows[0]!
+    assert.equal(m0.ok, true, '学校未選択で登録できていない')
+    const personId = m0.ok ? (m0.id ?? '') : ''
+
+    const placeholder = await scalar<string>(db,
+      `SELECT id FROM schools WHERE name = '学校未記録'`)
+
+    // ① 画面が空で返す場合。
+    const blank = await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, personId, familyName: '架空未', givenName: '記録改' }],
+    })
+    assert.equal(blank.rows[0]!.ok, true,
+      !blank.rows[0]!.ok ? blank.rows[0]!.message : '')
+    assert.equal(blank.failed, 0)
+
+    // ② 画面が寄せ先の ID をそのまま返す場合。
+    const kept = await saveCandidateSheet(db, {
+      seasonId,
+      rows: [{ ...EMPTY_ROW, personId, familyName: '架空未', givenName: '記録再',
+        schoolId: placeholder }],
+    })
+    assert.equal(kept.rows[0]!.ok, true,
+      !kept.rows[0]!.ok ? kept.rows[0]!.message : '')
+
+    // 寄せ先は変わらない。**勝手に別の学校へ移さない。**
+    assert.equal(await scalar(db,
+      `SELECT school_id FROM persons WHERE id = $1`, [personId]), placeholder)
+  })
+
   test('★ アーカイブを選ぶと一覧から外れるが、記録は消えない（C-184）', async () => {
     const made = await saveCandidateSheet(db, {
       seasonId,

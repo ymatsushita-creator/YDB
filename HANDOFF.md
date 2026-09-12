@@ -1,25 +1,60 @@
 # HANDOFF — いまの状態と、待っている判断
 
-## 2026-09-09 — 改修要件（MTG原文）の達成確認まで完了
+## 2026-09-12 — 学校が未記録の候補者を編集できなかった欠陥を直した（未コミット）
 
-**現状**: 依頼の原文6分類を1件ずつ画面で確認した。達成＝対象外(F)／候補者数（全体6−対象外2＝ホーム「候補者」4）／
-個人ページのイベント履歴（接点表にイベント名）／KPIのアワード連携（イベント参加人数 5/150人・3%）／
-月カレンダーと参加者表示（R10）／UI刷新（C-239・意匠テスト15本緑）。
+**現状**: 表（`/people/new`）で「3 行は入らなかった。」だけが出て理由が読めない、という指摘。
+再現は学校が空の3行（中西・上木場・本田）。0054「姓だけ必須」が**登録にしか入っておらず**、
+編集（`updatePersonProfile`）は活性の学校を必須のまま残していた ―― 寄せ先「学校未記録」は
+選択肢に出ないので、その人は名前1文字も直せない。落ちた理由も表の下端にしかなく画面外だった。
+直した4点: ①`src/commands/profile.ts` 学校を任意化（未選択は登録と同じ寄せ先／非活性でも
+その人の現在の学校なら通す） ②`app/_components/sheet.tsx` 理由を件数の真下へ ③`app/people/[id]/edit/page.tsx`
+学校 select に空と現在の記録を足し `required` を外す（**先頭の学校が黙って選ばれていた**）
+④同 名の `required` を外す。先に落ちるテストを書いてから直した。
+実測: `tests/29`(9) `tests/41`(13) `tests/36` `tests/56` 全緑・typecheck・biome 通過。
+**`npm test` 全88ファイルの通しも実測で緑（918 pass / 0 fail・EXIT 0・約320秒）。**
+
+**次の一手**
+1. commit（`fix(profile): 学校が未記録の候補者を編集できるようにする`）。テストは通し済み。
+2. ブラウザ目視が未実施。**本番未反映**。デプロイ前に `/people/new` で学校が空の行を直せることを1回見る。
+3. 前セッションからの持ち越し（本番マイグレーション 0054〜0056 の適用状況・承認待ちのプラン
+   `.plans/2026-09-09-home-grade-partner-profile.json`）は下の 2026-09-09 節のまま。
+
+**触ったファイル**: `src/commands/profile.ts` `src/commands/intake.ts`（PLACEHOLDER を export）
+`src/commands/sheet.ts`（文言）`app/_components/sheet.tsx` `app/people/[id]/edit/page.tsx`
+`tests/29_profile_editing.test.ts` `tests/41_sheet_bulk.test.ts`
+
+
+## 2026-09-09（夜） — 達成状況をコードから判定し直した。プランは承認待ち
+
+**現状**: 9/2 MTG原文の12要件を、ドキュメントではなく**コードから**判定した（Codex read-only・各件で
+実体のパス:行／画面からの到達可否／テスト実測合否）。昼の自己申告と3件ずれた ――
+**「評価軸が流れ続けるUIの修正」は未実装**（`app/_styles/02-shell.css:297` で 90 秒周期の marquee が生きている。
+昼は C-239 で済としていた）。逆に**面接評価シートは実装済**（`app/interviews/[evaluation]/page.tsx:121`・テスト17件合格）、
+**対応者リストの編集も実装済**（`/staff/new`・テスト12件合格）で、残りはデータ作業。
+次バッチのプランはゲート合格（`.plans/2026-09-09-home-grade-partner-profile.json`・4件95分・
+ブランチ `feat/home-grade-partner-profile` は未作成）。`fea74a3` `ef8e975` は push 済み・デプロイ済み。
+
+**次の一手**
+1. **利用者の承認待ち。** 承認後に Codex へ1発注（プランの絶対パスを貼る）→ GLM レビュー → `改修ゲート.py verify`。
+2. **本番マイグレーション 0054〜0056 の適用状況が未確認。未適用ならホームが 500**
+   （ローカルで `relation "v_candidate_population" does not exist` を実測）。Vercel ログは 403、DB直結も権限で拒否。
+   `YOUTHDB_INTAKE_DIR=/Volumes/KIOXIA_2TB/YouthDB-private npm run db:migrate:production`
+   （ホスト名の入力承認あり。`applied: 0` なら既に当たっている）。不可逆なので人の判断。
+3. `.audit/reports/2026-08-19-*.json` の生年月日9本（Critical 10・今回の改修と無関係）の扱い。
+
+**触ったファイル**: `.plans/2026-09-09-home-grade-partner-profile.json`（新規）と同 `.基準.json`、この HANDOFF.md のみ。
+プロダクトコードは1行も変えていない。
+
+**教訓**: 達成判定を前セッションの HANDOFF から引き写した。自己申告は証拠ではない。コードとテスト実測で判定する。
+
+## 2026-09-09（昼） — 改修要件（MTG原文）の達成確認
+
+達成＝対象外(F)／候補者数（全体6−対象外2＝ホーム「候補者」4）／個人ページのイベント履歴／
+KPIのアワード連携（5/150人・3%）／月カレンダーと参加者表示（R10）／UI刷新（C-239・意匠テスト15本緑）。
 半分＝S/A/B/C内訳（数える口はあるがホームに内訳カード無し）・AI自由記述。
 未着手＝CSV一括登録／イベント一括登録／対応者リスト／チェックリスト／マイルストーン／団体プロフィール／
-「所有権・編集権限・バックアップ体制の再確認」（原文の補足。要件表からも落としていた）。
-検証はデモデータの使い捨てDB（.pgdata-visual、後始末済み）で実施。テストは R10 6本・意匠15本・リスク9本＋typecheck すべて合格。
-
-**次の一手（利用者の判断が要る3点）**
-1. `.audit/reports/2026-08-19-*.json` の生年月日9本（Critical 10・今回の改修と無関係）をどうするか。commit がここで止まっている。
-2. **push だけでは足りない。** 0054/0055/0056 が未適用だとホームが 500 になることをローカルで実測した
-   （`relation "v_candidate_population" does not exist"`）。本番の適用状況を見ようとしたが、DB直結も Supabase MCP の SQL も
-   権限で拒否された。読み取り許可か、`npm run db:migrate:production` の実行判断が要る。
-3. R10 と C-239 が同じ作業ツリーに混ざっており、ゲートは「プラン外19ファイル」で不合格。2コミットに分ける許可。
-
-**触ったファイル**: 第1フェーズは `fea74a3`（未push）。未コミットは R10（`src/queries/calendar.ts` `app/_components/calendar.tsx`
-`app/borderline/calendar/` `tests/84` `tests/85`）と C-239（`app/_styles/*` `app/tokens.css` `basic/DESIGN.md`
-`tests/46_design_discipline.test.ts` ほか）。この確認セッション自体はプロダクトコードを1行も変えていない。
+「所有権・編集権限・バックアップ体制の再確認」。
+検証はデモデータの使い捨てDB（.pgdata-visual、後始末済み）。R10 6本・意匠15本・リスク9本＋typecheck すべて合格。
 
 ---
 
