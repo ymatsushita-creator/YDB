@@ -78,6 +78,20 @@ describe('ホーム', () => {
     assert.doesNotMatch(src, /SELECT /)
   })
 
+  /**
+   * ★ KPIはホームでも**実績まで出す**（0049。C-199。2026-09-12 の指摘）。
+   *   数えていたのは `/kpis` だけで、ホームは題名と目標しか出しておらず
+   *   「アワード 150 ―」としか見えなかった。
+   *   数え方は増やさない ―― `countKpiMetric` を呼ぶ（画面で数え直さない）。
+   */
+  test('④ ホームのKPIは実績・達成率まで出す（変数を選んだものだけ）', async () => {
+    const src = await body('app/page.tsx')
+    assert.match(src, /countKpiMetric/, 'ホームで実績を数えていない')
+    assert.match(src, /kpi-viz-bar/, '達成率の棒が無い')
+    // 実績が無いものに 0% と描かない（未達に見える）。
+    assert.match(src, /rate !== null/, '変数の無いKPIにも棒を描いている')
+  })
+
   test('④ ピックアップは確度の上位3人（依頼者の指示）', async () => {
     const src = await read('app/page.tsx')
     assert.match(src, /listConfidence\(db, season\.id, 3\)/)

@@ -1,5 +1,27 @@
 # HANDOFF — いまの状態と、待っている判断
 
+## 2026-09-12（夜） — ホームのKPIが実績を数えていなかった（未コミット）
+
+**現状**: 指摘「KPI は連携してんのかよ」。ホームのKPIカードは題名と目標しか描いておらず、
+「アワード 150 ―」としか出ていなかった。`countKpiMetric`（0049・C-199 の数え方）を
+呼んでいたのは `/kpis` だけである。ホームにも実績・達成率・棒を出すよう直し
+（`/kpis` の `.kpi-viz` と**同じ部品・同じ数え方**を再利用。数え方は増やしていない）、
+`tests/45_home.test.ts` に契約テストを1本足した（**わざと壊して落ちることを確認済み**）。
+typecheck・biome 通過、KPI／ホーム関連 68 件緑。**`npm test` 全88ファイルの通しも緑（919 pass / 0 fail・EXIT 0）。**
+1つ前のコミット `c0cd900`（学校が未記録の候補者を編集できなかった欠陥）は**push・デプロイとも未実施**。
+
+**次の一手**
+1. **本番未反映のまま2件たまっている。** 打つのは利用者:
+   `cd /Volumes/KIOXIA_2TB/NEO/YouthDB && git push origin main`
+   → `cd /Volumes/KIOXIA_2TB/NEO/YouthDB && npm run deploy:production`
+   （先頭の「書き込み先 ―― …」が約束したプロジェクトかを見る。違えば止める）
+3. 反映後に `/people/new`（学校が空の行を直せるか）と `/`（KPIが 5/150・3% の形で出るか）を目視。
+
+**触ったファイル**: `app/page.tsx` `tests/45_home.test.ts`（この節）。
+`c0cd900` の分は `src/commands/profile.ts` `src/commands/intake.ts` `src/commands/sheet.ts`
+`app/_components/sheet.tsx` `app/people/[id]/edit/page.tsx` `tests/29` `tests/41`。
+
+
 ## 2026-09-12 — 学校が未記録の候補者を編集できなかった欠陥を直した（未コミット）
 
 **現状**: 表（`/people/new`）で「3 行は入らなかった。」だけが出て理由が読めない、という指摘。

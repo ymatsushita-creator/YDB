@@ -9,7 +9,7 @@ import {
 } from '../src/queries/dashboard.ts'
 import { listConfidence } from '../src/queries/headhunting.ts'
 import { listKpis } from '../src/queries/kpi.ts'
-import { listKpiMetrics } from '../src/queries/kpi_metrics.ts'
+import { listKpiMetrics, countKpiMetric } from '../src/queries/kpi_metrics.ts'
 import { saveKpiAction } from './kpis/actions.ts'
 import { Card, Empty, num, NotDerived } from './_components/ui.tsx'
 import { TimeSeries, Legend } from './_components/charts.tsx'
@@ -102,6 +102,16 @@ export default async function Home(
     listAcceptedCandidates(db, season.id, 5),
   ])
   const canEditKpi = tier === 'all'
+
+  /**
+   * ★ KPIの実績は、ホームでも**その期の記録から数える**（0049。C-199。2026-09-12 の指摘）。
+   *   数えていたのは `/kpis` だけで、ホームのカードは題名と目標しか出していなかった ――
+   *   変数を選んでも、ホームでは「アワード 150 ―」としか見えなかった。
+   *   数え方は `src/queries/kpi_metrics.ts` の1箇所のまま（画面ごとに数え直さない）。
+   */
+  const kpiActuals = new Map<string, number | null>(await Promise.all(
+    Array.from(new Set(kpis.map((k) => k.metric_key).filter(Boolean) as string[]))
+      .map(async (m) => [m, await countKpiMetric(db, m, season.id)] as const)))
 
   // ★ 応募の目標との比較（実行⑯。依頼者の指示。C-152 で引き継いだ値を使う）。
   //   目標が無い期（未受領）では出さない ―― 無い目標を出さない（C-127 と同じ形）。
@@ -213,16 +223,40 @@ export default async function Home(
               </form>
             )}
             {kpis.length === 0 ? <Empty>KPIはまだ登録されていない</Empty> : (
-              <div className="home-kpi-results">
-                {kpis.map((kpi) => (
-                  <article className="kpi-result-card" key={kpi.id}>
-                    <span>{kpi.title}</span>
-                    <strong>{num(kpi.value)}</strong>
-                    <small>{kpi.variable}</small>
-                    {kpi.memo && <p>{kpi.memo}</p>}
-                  </article>
-                ))}
-              </div>
+              /* ★ 見せ方は `/kpis` の「KPIの結果」と**同じ部品**を使う（`.kpi-viz`）。
+                 同じ数を2通りの形で見せると、どちらが本当か分からなくなる。 */
+              <ul className="kpi-viz">
+                {kpis.map((kpi) => {
+                  // ★ 棒も率も **実績 ÷ 目標**。単位の違う値は割らない（CLAUDE.md）。
+                  //   変数を選んでいないKPIは棒を描かない ―― 0%と描くと未達に見える。
+                  const metric = kpiMetrics.find((m) => m.key === kpi.metric_key)
+                  const actual = kpi.metric_key
+                    ? kpiActuals.get(kpi.metric_key) ?? null : null
+                  const target = Number(kpi.value)
+                  const rate = actual !== null && target > 0
+                    ? Math.round((actual / target) * 100) : null
+                  return (
+                    <li key={kpi.id} className="kpi-viz-row">
+                      <span className="kpi-viz-name">
+                        {kpi.title}
+                        {metric && <small>{metric.label}</small>}
+                      </span>
+                      <span className="kpi-viz-track">
+                        {rate !== null && (
+                          <span className="kpi-viz-bar"
+                                style={{ width: `${Math.min(rate, 100)}%` }} />
+                        )}
+                      </span>
+                      <span className="kpi-viz-value">
+                        {actual === null
+                          ? <em className="kpi-viz-none">実績を数えない</em>
+                          : <>{num(actual)} / {num(target)}
+                              <small>{metric?.unit}{rate !== null && ` ・ ${rate}%`}</small></>}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
             )}
           </Card>
         </div>
