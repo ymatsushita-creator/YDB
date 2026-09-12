@@ -290,7 +290,7 @@ describe('表のまとめて保存', () => {
   test('★ 学校が未記録の候補者を、表から直せる（0054）', async () => {
     const made = await saveCandidateSheet(db, {
       seasonId,
-      rows: [{ ...EMPTY_ROW, familyName: '架空未', givenName: '校' }],
+      rows: [{ ...EMPTY_ROW, familyName: '架空棚', givenName: '校' }],
     })
     const m0 = made.rows[0]!
     assert.equal(m0.ok, true, '学校未選択で登録できていない')
@@ -302,7 +302,7 @@ describe('表のまとめて保存', () => {
     // ① 画面が空で返す場合。
     const blank = await saveCandidateSheet(db, {
       seasonId,
-      rows: [{ ...EMPTY_ROW, personId, familyName: '架空未', givenName: '改' }],
+      rows: [{ ...EMPTY_ROW, personId, familyName: '架空棚', givenName: '改' }],
     })
     assert.equal(blank.rows[0]!.ok, true,
       !blank.rows[0]!.ok ? blank.rows[0]!.message : '')
@@ -311,7 +311,7 @@ describe('表のまとめて保存', () => {
     // ② 画面が寄せ先の ID をそのまま返す場合。
     const kept = await saveCandidateSheet(db, {
       seasonId,
-      rows: [{ ...EMPTY_ROW, personId, familyName: '架空未', givenName: '再',
+      rows: [{ ...EMPTY_ROW, personId, familyName: '架空棚', givenName: '再',
         schoolId: placeholder }],
     })
     assert.equal(kept.rows[0]!.ok, true,
