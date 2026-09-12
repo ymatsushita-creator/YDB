@@ -117,10 +117,10 @@ describe('候補者プロフィール編集（0018）', () => {
     const placeholder = await scalar<string>(db,
       `SELECT id FROM schools WHERE name = '学校未記録'`)
     assert.deepEqual(
-      await updatePersonProfile(db, input({ schoolId: placeholder, familyName: '再々編集' })),
+      await updatePersonProfile(db, input({ schoolId: placeholder, familyName: '再編集' })),
       { ok: true })
     assert.equal(await scalar(db,
-      `SELECT family_name FROM persons WHERE id = $1`, [personId]), '再々編集')
+      `SELECT family_name FROM persons WHERE id = $1`, [personId]), '再編集')
   })
 
   test('実在しない学校は今まで通り落とす', async () => {
